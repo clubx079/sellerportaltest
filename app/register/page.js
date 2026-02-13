@@ -1,12 +1,12 @@
 "use client"
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { User, Mail, Lock, Phone, CheckCircle, AlertCircle, Loader2, Building, FileText } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 
-export default function MagicLinkRegisterPage() {
+function MagicLinkRegisterContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const token = searchParams.get('token')
@@ -380,5 +380,21 @@ export default function MagicLinkRegisterPage() {
         </form>
       </motion.div>
     </div>
+  )
+}
+
+// Wrapper component with Suspense boundary
+export default function MagicLinkRegisterPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+        <div className="text-center">
+          <Loader2 className="w-12 h-12 text-[#112F58] animate-spin mx-auto mb-4" />
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    }>
+      <MagicLinkRegisterContent />
+    </Suspense>
   )
 }
