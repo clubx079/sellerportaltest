@@ -1,0 +1,614 @@
+"use client";
+
+import React, { useState, useEffect } from 'react';
+import { supabase } from '@/lib/supabase';
+import { Plus, Edit2, Trash2, Eye, Search, X, Building2, Filter, ChevronLeft, ChevronRight, MapPin, DollarSign, Archive, RotateCcw } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import DeleteConfirmModal from '@/components/properties/DeleteConfirmModal';
+import PropertyViewModal from '@/components/properties/PropertyViewModal';
+
+const PropertiesManagement = () => {
+  const router = useRouter();
+  const [properties, setProperties] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showArchiveModal, setShowArchiveModal] = useState(false);
+  const [showViewModal, setShowViewModal] = useState(false);
+  const [selectedProperty, setSelectedProperty] = useState(null);
+  const [entriesPerPage, setEntriesPerPage] = useState(10);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [filterStatus, setFilterStatus] = useState('');
+  const [filterPropertyStatus, setFilterPropertyStatus] = useState('');
+  const [userId, setUserId] = useState(null);
+  const [viewMode, setViewMode] = useState('active'); // 'active' or 'trash'
+
+  useEffect(() => {
+    const userStr = localStorage.getItem('seller_user');
+    if (userStr) {
+      const user = JSON.parse(userStr);
+      setUserId(user.id);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (userId) {
+      fetchProperties();
+    }
+  }, [userId, viewMode]);
+
+  const fetchProperties = async () => {
+    try {
+      setLoading(true);
+
+      // First, get the seller's temp_seller_id
+      const { data: sellerData, error: sellerError } = await supabase
+        .from('seller_applications')
+        .select('temp_seller_id')
+        .eq('id', userId)
+        .single();
+
+      if (sellerError) {
+        console.error('Error fetching seller data:', sellerError);
+        setLoading(false);
+        return;
+      }
+
+      if (!sellerData?.temp_seller_id) {
+        console.log('No temp_seller_id found for this seller');
+        setProperties([]);
+        setLoading(false);
+        return;
+      }
+
+      // Fetch wholesale deals for this temp seller
+      const { data, error } = await supabase
+        .from('wholesale_deals')
+        .select(`
+          *,
+          property_photos (
+            id,
+            photo_url,
+            display_order,
+            is_featured
+          )
+        `)
+        .eq('temp_seller_id', sellerData.temp_seller_id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      // Filter by view mode (archived vs active)
+      const filteredData = viewMode === 'trash'
+        ? data?.filter(p => p.status === 'archived') || []
+        : data?.filter(p => p.status !== 'archived') || [];
+
+      setProperties(filteredData);
+    } catch (error) {
+      console.error('Error fetching properties:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Filter properties based on search term and filters
+  const filteredProperties = properties.filter(property => {
+    const searchLower = searchTerm.toLowerCase();
+    const matchesSearch = !searchTerm ||
+      property.id?.toString().includes(searchTerm) ||
+      property.slug?.toLowerCase().includes(searchLower) ||
+      property.address?.toLowerCase().includes(searchLower) ||
+      property.full_address?.toLowerCase().includes(searchLower) ||
+      property.city?.toLowerCase().includes(searchLower) ||
+      property.state?.toLowerCase().includes(searchLower);
+
+    const matchesStatus = !filterStatus || property.status === filterStatus;
+    const matchesPropertyStatus = !filterPropertyStatus || property.property_status === filterPropertyStatus;
+
+    return matchesSearch && matchesStatus && matchesPropertyStatus;
+  });
+
+  // Pagination
+  const indexOfLastEntry = currentPage * entriesPerPage;
+  const indexOfFirstEntry = indexOfLastEntry - entriesPerPage;
+  const currentEntries = filteredProperties.slice(indexOfFirstEntry, indexOfLastEntry);
+  const totalPages = Math.ceil(filteredProperties.length / entriesPerPage);
+
+  // Handle view
+  const handleViewClick = (property) => {
+    setSelectedProperty(property);
+    setShowViewModal(true);
+  };
+
+  // Handle archive/restore
+  const handleArchiveClick = (property) => {
+    setSelectedProperty(property);
+    setShowArchiveModal(true);
+  };
+
+  const handleArchiveConfirm = async () => {
+    try {
+      const { error } = await supabase
+        .from('wholesale_deals')
+        .update({ status: 'archived' })
+        .eq('id', selectedProperty.id);
+
+      if (error) throw error;
+
+      setProperties(prev => prev.filter(p => p.id !== selectedProperty.id));
+      setShowArchiveModal(false);
+      setSelectedProperty(null);
+    } catch (error) {
+      console.error('Error archiving property:', error);
+      alert('Failed to archive property: ' + error.message);
+    }
+  };
+
+  const handleRestore = async (property) => {
+    try {
+      const { error } = await supabase
+        .from('wholesale_deals')
+        .update({ status: 'active' })
+        .eq('id', property.id);
+
+      if (error) throw error;
+
+      setProperties(prev => prev.filter(p => p.id !== property.id));
+    } catch (error) {
+      console.error('Error restoring property:', error);
+      alert('Failed to restore property: ' + error.message);
+    }
+  };
+
+  // Handle delete
+  const handleDeleteClick = (property) => {
+    setSelectedProperty(property);
+    setShowDeleteModal(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    try {
+      // Delete property photos first (CASCADE should handle this, but explicit is better)
+      const { error: photosError } = await supabase
+        .from('property_photos')
+        .delete()
+        .eq('deal_id', selectedProperty.id);
+
+      if (photosError) console.error('Error deleting photos:', photosError);
+
+      // Then delete wholesale deal
+      const { error } = await supabase
+        .from('wholesale_deals')
+        .delete()
+        .eq('id', selectedProperty.id);
+
+      if (error) throw error;
+
+      setProperties(prev => prev.filter(p => p.id !== selectedProperty.id));
+      setShowDeleteModal(false);
+      setSelectedProperty(null);
+    } catch (error) {
+      console.error('Error deleting property:', error);
+      alert('Failed to delete property: ' + error.message);
+    }
+  };
+
+  const getStatusColor = (status) => {
+    switch (status?.toLowerCase()) {
+      case 'active':
+      case 'published':
+        return 'bg-green-50 text-green-700 border-green-200';
+      case 'draft':
+      case 'pending':
+        return 'bg-yellow-50 text-yellow-700 border-yellow-200';
+      case 'archived':
+      case 'inactive':
+        return 'bg-red-50 text-red-700 border-red-200';
+      default:
+        return 'bg-gray-100 text-gray-700 border-gray-200';
+    }
+  };
+
+  const getPropertyStatusColor = (status) => {
+    switch (status?.toLowerCase()) {
+      case 'available':
+        return 'bg-green-50 text-green-700 border-green-200';
+      case 'sold':
+        return 'bg-blue-50 text-blue-700 border-blue-200';
+      case 'pending':
+        return 'bg-yellow-50 text-yellow-700 border-yellow-200';
+      case 'under_contract':
+        return 'bg-purple-50 text-purple-700 border-purple-200';
+      default:
+        return 'bg-gray-100 text-gray-700 border-gray-200';
+    }
+  };
+
+  const clearFilters = () => {
+    setFilterStatus('');
+    setFilterPropertyStatus('');
+    setSearchTerm('');
+  };
+
+  const getFeaturedImage = (property) => {
+    // Get featured image or first image by display_order
+    const featuredImage = property.property_photos?.find(p => p.is_featured);
+    if (featuredImage) return featuredImage.photo_url;
+
+    const sortedImages = property.property_photos?.sort((a, b) => (a.display_order || 0) - (b.display_order || 0));
+    return sortedImages?.[0]?.photo_url || null;
+  };
+
+  // Calculate stats
+  const totalProperties = properties.length;
+  const activeProperties = properties.filter(p => p.status === 'active').length;
+  const draftProperties = properties.filter(p => p.status === 'draft').length;
+  const availableProperties = properties.filter(p => p.property_status === 'available').length;
+
+  return (
+    <div className="space-y-3 md:space-y-4">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h1 className="text-lg md:text-xl font-semibold tracking-tight text-gray-900">Properties</h1>
+          <p className="text-xs text-gray-500 mt-0.5">Manage your wholesale property deals</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setViewMode(viewMode === 'active' ? 'trash' : 'active')}
+            className="flex items-center justify-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200"
+          >
+            {viewMode === 'active' ? <Archive size={16} /> : <RotateCcw size={16} />}
+            <span>{viewMode === 'active' ? 'Trash' : 'Active'}</span>
+          </button>
+          <button
+            onClick={() => router.push('/properties/new')}
+            className="flex items-center justify-center gap-2 bg-[#472F97] hover:bg-[#3a2578] text-white px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200"
+          >
+            <Plus size={16} />
+            <span>Add Property</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Compact Stats Cards - Responsive grid */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3">
+        <div className="bg-white rounded-lg border border-gray-200 p-3 hover:shadow-card-hover transition-shadow">
+          <div className="mb-2">
+            <span className="text-xs font-medium text-gray-600">Total Properties</span>
+          </div>
+          <p className="text-2xl font-semibold text-gray-900">{totalProperties}</p>
+        </div>
+
+        <div className="bg-white rounded-lg border border-gray-200 p-3 hover:shadow-card-hover transition-shadow">
+          <div className="mb-2">
+            <span className="text-xs font-medium text-gray-600">Active</span>
+          </div>
+          <p className="text-2xl font-semibold text-gray-900">{activeProperties}</p>
+        </div>
+
+        <div className="bg-white rounded-lg border border-gray-200 p-3 hover:shadow-card-hover transition-shadow">
+          <div className="mb-2">
+            <span className="text-xs font-medium text-gray-600">Draft</span>
+          </div>
+          <p className="text-2xl font-semibold text-gray-900">{draftProperties}</p>
+        </div>
+
+        <div className="bg-white rounded-lg border border-gray-200 p-3 hover:shadow-card-hover transition-shadow">
+          <div className="mb-2">
+            <span className="text-xs font-medium text-gray-600">Available</span>
+          </div>
+          <p className="text-2xl font-semibold text-gray-900">{availableProperties}</p>
+        </div>
+      </div>
+
+      {/* Table Card */}
+      <div className="bg-white rounded-lg border border-gray-200 overflow-hidden shadow-card">
+        {/* Controls - Responsive */}
+        <div className="px-4 py-3 border-b border-gray-200">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
+            <div className="flex items-center gap-2">
+              <Filter className="w-3.5 h-3.5 text-gray-400 hidden sm:block" />
+              <select
+                value={entriesPerPage}
+                onChange={(e) => {
+                  setEntriesPerPage(Number(e.target.value));
+                  setCurrentPage(1);
+                }}
+                className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-gray-400 bg-white text-gray-700"
+              >
+                <option value={10}>10 rows</option>
+                <option value={25}>25 rows</option>
+                <option value={50}>50 rows</option>
+                <option value={100}>100 rows</option>
+              </select>
+            </div>
+
+            <div className="relative flex-1 sm:max-w-sm">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-8 pr-8 py-1.5 text-xs border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-gray-400 bg-white"
+                placeholder="Search by title or location..."
+              />
+              {searchTerm && (
+                <button
+                  onClick={() => setSearchTerm('')}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Filters Row - Responsive */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            <select
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+              className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-gray-400 bg-white text-gray-700"
+            >
+              <option value="">Status</option>
+              <option value="draft">Draft</option>
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+            </select>
+            <select
+              value={filterPropertyStatus}
+              onChange={(e) => setFilterPropertyStatus(e.target.value)}
+              className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-gray-400 bg-white text-gray-700"
+            >
+              <option value="">Property Status</option>
+              <option value="available">Available</option>
+              <option value="pending">Pending</option>
+              <option value="sold">Sold</option>
+              <option value="under_contract">Under Contract</option>
+            </select>
+            <button
+              onClick={clearFilters}
+              className="text-xs bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg px-2 py-1.5 transition-colors"
+            >
+              Clear Filters
+            </button>
+          </div>
+        </div>
+
+        {/* Table */}
+        <div className="overflow-x-auto scrollbar-thin">
+          <table className="w-full min-w-[900px]">
+            <thead className="bg-gray-50 border-b border-gray-200">
+              <tr>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">#</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">Property</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">Location</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">Price</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">Type</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">Status</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">Property Status</th>
+                <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100 bg-white">
+              {loading ? (
+                [...Array(3)].map((_, i) => (
+                  <tr key={i} className="animate-pulse">
+                    <td className="px-4 py-3"><div className="h-4 w-6 bg-gray-100 rounded"></div></td>
+                    <td className="px-4 py-3"><div className="h-4 w-32 bg-gray-100 rounded"></div></td>
+                    <td className="px-4 py-3"><div className="h-4 w-24 bg-gray-100 rounded"></div></td>
+                    <td className="px-4 py-3"><div className="h-4 w-16 bg-gray-100 rounded"></div></td>
+                    <td className="px-4 py-3"><div className="h-4 w-20 bg-gray-100 rounded"></div></td>
+                    <td className="px-4 py-3"><div className="h-4 w-16 bg-gray-100 rounded"></div></td>
+                    <td className="px-4 py-3"><div className="h-4 w-16 bg-gray-100 rounded"></div></td>
+                    <td className="px-4 py-3"><div className="h-4 w-16 bg-gray-100 rounded ml-auto"></div></td>
+                  </tr>
+                ))
+              ) : currentEntries.length === 0 ? (
+                <tr>
+                  <td colSpan="8" className="px-6 py-10 text-center">
+                    <Building2 className="w-10 h-10 text-gray-300 mx-auto mb-2" />
+                    <p className="text-gray-500 text-sm font-medium">
+                      {viewMode === 'active' ? 'No properties found' : 'No properties in trash'}
+                    </p>
+                    <p className="text-xs text-gray-400 mt-1">
+                      {viewMode === 'active' ? 'Try adjusting your search or add a new property' : 'Deleted properties will appear here'}
+                    </p>
+                  </td>
+                </tr>
+              ) : (
+                currentEntries.map((property, index) => (
+                  <tr key={property.id} className="hover:bg-gray-50 transition-colors">
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <span className="text-xs font-medium text-gray-400">{indexOfFirstEntry + index + 1}</span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        {getFeaturedImage(property) && (
+                          <div className="w-10 h-10 rounded-lg bg-gray-100 overflow-hidden shrink-0">
+                            <img
+                              src={getFeaturedImage(property)}
+                              alt={property.full_address || property.address}
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                        )}
+                        <div>
+                          <p className="text-xs font-medium text-gray-900 line-clamp-1">{property.full_address || property.address || property.slug?.replace(/-/g, ' ') || 'N/A'}</p>
+                          <p className="text-[10px] text-gray-400">ID: {property.id.split('-')[0]}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-1.5">
+                        <MapPin className="w-3 h-3 text-gray-400" />
+                        <span className="text-xs text-gray-700 line-clamp-1">{property.city && property.state ? `${property.city}, ${property.state}` : property.address || 'N/A'}</span>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <span className="text-xs font-semibold text-gray-900">
+                        ${parseFloat(property.price || 0).toLocaleString()}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <span className="text-xs text-gray-700">{property.property_type || 'N/A'}</span>
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium border ${getStatusColor(property.status)}`}>
+                        {property.status?.charAt(0).toUpperCase() + property.status?.slice(1) || 'Draft'}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium border ${getPropertyStatusColor(property.property_status)}`}>
+                        {property.property_status?.replace('_', ' ').split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') || 'Available'}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <div className="flex items-center justify-end gap-1">
+                        {viewMode === 'trash' ? (
+                          <>
+                            <button
+                              onClick={() => handleRestore(property)}
+                              className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors"
+                              title="Restore"
+                            >
+                              <RotateCcw className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteClick(property)}
+                              className="p-1.5 rounded-lg hover:bg-gray-100 text-red-500 transition-colors"
+                              title="Delete Permanently"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <button
+                              onClick={() => handleViewClick(property)}
+                              className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors"
+                              title="View"
+                            >
+                              <Eye className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => router.push(`/properties/edit/${property.id}`)}
+                              className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors"
+                              title="Edit"
+                            >
+                              <Edit2 className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => handleArchiveClick(property)}
+                              className="p-1.5 rounded-lg hover:bg-gray-100 text-red-500 transition-colors"
+                              title="Move to Trash"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Footer - Pagination */}
+        <div className="px-4 py-3 bg-gray-50 border-t border-gray-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div className="text-xs text-gray-500">
+            Showing <span className="font-medium text-gray-700">{filteredProperties.length > 0 ? indexOfFirstEntry + 1 : 0}</span> to{' '}
+            <span className="font-medium text-gray-700">{Math.min(indexOfLastEntry, filteredProperties.length)}</span> of{' '}
+            <span className="font-medium text-gray-700">{filteredProperties.length}</span> entries
+          </div>
+
+          {totalPages > 1 && (
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+                className="p-1.5 rounded-lg border border-gray-200 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                title="Previous"
+              >
+                <ChevronLeft className="w-3.5 h-3.5" />
+              </button>
+
+              {[...Array(Math.min(totalPages, 5))].map((_, i) => {
+                let pageNum;
+                if (totalPages <= 5) {
+                  pageNum = i + 1;
+                } else if (currentPage <= 3) {
+                  pageNum = i + 1;
+                } else if (currentPage >= totalPages - 2) {
+                  pageNum = totalPages - 4 + i;
+                } else {
+                  pageNum = currentPage - 2 + i;
+                }
+
+                return (
+                  <button
+                    key={pageNum}
+                    onClick={() => setCurrentPage(pageNum)}
+                    className={`min-w-[28px] h-7 px-2 text-xs font-medium rounded-lg transition-colors ${currentPage === pageNum
+                      ? 'bg-[#472F97] text-white'
+                      : 'border border-gray-200 text-gray-600 hover:bg-gray-100'
+                      }`}
+                  >
+                    {pageNum}
+                  </button>
+                );
+              })}
+
+              <button
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                disabled={currentPage === totalPages}
+                className="p-1.5 rounded-lg border border-gray-200 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                title="Next"
+              >
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Modals */}
+      <DeleteConfirmModal
+        isOpen={showDeleteModal}
+        onClose={() => {
+          setShowDeleteModal(false);
+          setSelectedProperty(null);
+        }}
+        onConfirm={handleDeleteConfirm}
+        itemName={selectedProperty?.title || 'this property'}
+        isPermanent={true}
+      />
+
+      <DeleteConfirmModal
+        isOpen={showArchiveModal}
+        onClose={() => {
+          setShowArchiveModal(false);
+          setSelectedProperty(null);
+        }}
+        onConfirm={handleArchiveConfirm}
+        itemName={selectedProperty?.slug || 'this property'}
+        isPermanent={false}
+      />
+
+      {showViewModal && selectedProperty && (
+        <PropertyViewModal
+          property={selectedProperty}
+          onClose={() => {
+            setShowViewModal(false);
+            setSelectedProperty(null);
+          }}
+        />
+      )}
+    </div>
+  );
+};
+
+export default PropertiesManagement;

@@ -1,0 +1,156 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
+import { X, BedDouble, Building2, Layers, Users, CheckCircle2 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+
+const ViewForm = ({ isOpen, onClose, room }) => {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    return () => setMounted(false);
+  }, []);
+  const getHousekeepingStatusColor = (status) => {
+    switch (status?.toLowerCase()) {
+      case 'clean':
+        return 'bg-green-100 text-green-700 border-green-200';
+      case 'dirty':
+        return 'bg-red-100 text-red-700 border-red-200';
+      case 'inspected':
+        return 'bg-blue-100 text-blue-700 border-blue-200';
+      case 'out of service':
+        return 'bg-gray-100 text-gray-700 border-gray-200';
+      default:
+        return 'bg-yellow-100 text-yellow-700 border-yellow-200';
+    }
+  };
+
+  if (!mounted) return null;
+
+  return createPortal(
+    <AnimatePresence>
+      {isOpen && room && (
+        <>
+          {/* Backdrop */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={onClose}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[60]"
+          />
+
+          {/* Side Panel */}
+          <motion.div
+            initial={{ x: '100%' }}
+            animate={{ x: 0 }}
+            exit={{ x: '100%' }}
+            transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+            className="fixed right-0 top-0 h-screen w-full md:w-[600px] lg:w-[700px] bg-white shadow-2xl z-[60] flex flex-col"
+          >
+            {/* Header */}
+            <div className="bg-[#472F97] px-6 py-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center">
+                  <BedDouble className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-semibold text-white">Room Details</h2>
+                  <p className="text-xs text-white/70">View accommodation information</p>
+                </div>
+              </div>
+              <button
+                onClick={onClose}
+                className="p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
+              >
+                <X className="w-5 h-5 text-white" />
+              </button>
+            </div>
+
+            {/* Content - Scrollable */}
+            <div className="flex-1 overflow-y-auto">
+              <div className="p-6 space-y-6">
+                {/* Basic Information Section */}
+                <div className="bg-neutral-50 rounded-xl p-4 border border-neutral-200">
+                  <h3 className="text-sm font-semibold text-[#472F97] mb-4 flex items-center gap-2">
+                    <BedDouble className="w-4 h-4" />
+                    Basic Information
+                  </h3>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-xs font-medium text-neutral-600 mb-1.5">Room Number</label>
+                      <p className="text-sm font-semibold text-neutral-900">{room.room_number}</p>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-medium text-neutral-600 mb-1.5">Room Type</label>
+                        <p className="text-sm text-neutral-700">{room.room_types?.title || 'N/A'}</p>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-neutral-600 mb-1.5">Short Code</label>
+                        <p className="text-sm text-neutral-700">{room.room_types?.short_code || 'N/A'}</p>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium text-neutral-600 mb-1.5">Floor</label>
+                      <p className="text-sm text-neutral-700">
+                        {room.floors?.floor_number ? `${room.floors.floor_number} - ${room.floors.name}` : 'N/A'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Status Section */}
+                <div className="bg-neutral-50 rounded-xl p-4 border border-neutral-200">
+                  <h3 className="text-sm font-semibold text-[#472F97] mb-4 flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4" />
+                    Status Information
+                  </h3>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-xs font-medium text-neutral-600 mb-1.5">Housekeeping Status</label>
+                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border ${getHousekeepingStatusColor(room.housekeeping_status)}`}>
+                        {room.housekeeping_status?.charAt(0).toUpperCase() + room.housekeeping_status?.slice(1) || 'Clean'}
+                      </span>
+                    </div>
+
+                    {room.employees?.full_name && (
+                      <div>
+                        <label className="block text-xs font-medium text-neutral-600 mb-1.5">Assigned To</label>
+                        <p className="text-sm text-neutral-700">{room.employees.full_name}</p>
+                      </div>
+                    )}
+
+                    <div>
+                      <label className="block text-xs font-medium text-neutral-600 mb-1.5">Room Status</label>
+                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border ${room.is_active ? 'bg-green-100 text-green-700 border-green-200' : 'bg-red-100 text-red-700 border-red-200'}`}>
+                        {room.is_active ? 'Active' : 'Inactive'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Close Button - Sticky */}
+              <div className="sticky bottom-0 bg-white border-t border-neutral-200 px-6 py-4">
+                <button
+                  onClick={onClose}
+                  className="w-full px-4 py-2.5 bg-[#472F97] hover:bg-[#3a2578] text-white font-medium rounded-xl transition-colors"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        </>
+      )}
+    </AnimatePresence>,
+    document.body
+  );
+};
+
+export default ViewForm;
