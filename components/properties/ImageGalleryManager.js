@@ -7,7 +7,7 @@ import imageCompression from 'browser-image-compression';
 
 const MAX_CONCURRENT_UPLOADS = 4;
 
-export default function ImageGalleryManager({ images = [], onImagesChange, sellerId }) {
+export default function ImageGalleryManager({ images = [], onImagesChange, sellerId, storageBucket = 'sellerpropertyimages', uploadPathPrefix = null }) {
   const [localImages, setLocalImages] = useState(images);
   const [dragActive, setDragActive] = useState(false);
 
@@ -69,14 +69,16 @@ export default function ImageGalleryManager({ images = [], onImagesChange, selle
       const compressedFile = await compressImage(image.file);
       console.log('Compression complete');
 
-      // Generate unique filename
-      const fileExt = image.file.name.split('.').pop();
-      const fileName = `${sellerId}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+      // Generate unique filename (sellerId may be undefined for scraped until loaded; use fallback)
+      const uploadDir = sellerId != null && String(sellerId).trim() ? String(sellerId) : 'deals';
+      const fileExt = (image.file.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, 'jpg');
+      const pathSegment = uploadPathPrefix ? `${uploadPathPrefix}/${uploadDir}` : uploadDir;
+      const fileName = `${pathSegment}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
 
-      // Upload to Supabase
-      console.log('Uploading to Supabase:', fileName);
+      // Upload to Supabase (sellerpropertyimages for manual, scraperpropertyphotos for scraped deals)
+      console.log('Uploading to Supabase:', storageBucket, fileName);
       const { data, error } = await supabase.storage
-        .from('sellerpropertyimages')
+        .from(storageBucket)
         .upload(fileName, compressedFile, {
           cacheControl: '3600',
           upsert: false
@@ -87,7 +89,7 @@ export default function ImageGalleryManager({ images = [], onImagesChange, selle
 
       // Get public URL
       const { data: { publicUrl } } = supabase.storage
-        .from('sellerpropertyimages')
+        .from(storageBucket)
         .getPublicUrl(fileName);
 
       // Update local images with completed status
@@ -205,7 +207,7 @@ export default function ImageGalleryManager({ images = [], onImagesChange, selle
     if (imageKey) {
       try {
         await supabase.storage
-          .from('sellerpropertyimages')
+          .from(storageBucket)
           .remove([imageKey]);
       } catch (error) {
         console.error('Failed to delete image from storage:', error);

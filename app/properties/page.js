@@ -2,10 +2,13 @@
 
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { Plus, Edit2, Trash2, Eye, Search, X, Building2, Filter, ChevronLeft, ChevronRight, MapPin, DollarSign, Archive, RotateCcw } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { Plus, Edit2, Trash2, Eye, Search, X, Building2, Filter, ChevronLeft, ChevronRight, MapPin, DollarSign, RotateCcw, BarChart2 } from 'lucide-react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import DeleteConfirmModal from '@/components/properties/DeleteConfirmModal';
 import PropertyViewModal from '@/components/properties/PropertyViewModal';
+import PropertyAnalyticsSidebar from '@/components/properties/PropertyAnalyticsSidebar';
+
+const DEELMAP_VIEW_BASE_URL = process.env.NEXT_PUBLIC_DEELMAP_VIEW_BASE_URL || 'https://deelmap-production-16a1.up.railway.app';
 
 const PropertiesManagement = () => {
   const router = useRouter();
@@ -15,13 +18,22 @@ const PropertiesManagement = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showArchiveModal, setShowArchiveModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
+  const [showAnalyticsSidebar, setShowAnalyticsSidebar] = useState(false);
+  const [propertyForAnalytics, setPropertyForAnalytics] = useState(null);
   const [selectedProperty, setSelectedProperty] = useState(null);
   const [entriesPerPage, setEntriesPerPage] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
   const [filterStatus, setFilterStatus] = useState('');
   const [filterPropertyStatus, setFilterPropertyStatus] = useState('');
   const [userId, setUserId] = useState(null);
-  const [viewMode, setViewMode] = useState('active'); // 'active' or 'trash'
+  const searchParams = useSearchParams();
+  const viewFromUrl = searchParams.get('view') === 'trash' ? 'trash' : 'active';
+  const [viewMode, setViewMode] = useState(viewFromUrl); // 'active' or 'trash'
+
+  // Keep viewMode in sync with URL (e.g. when opening "View Archived" from dashboard)
+  useEffect(() => {
+    setViewMode(viewFromUrl);
+  }, [viewFromUrl]);
 
   useEffect(() => {
     const userStr = localStorage.getItem('seller_user');
@@ -41,69 +53,122 @@ const PropertiesManagement = () => {
     try {
       setLoading(true);
 
-      // First, get the seller's temp_seller_id
-      const { data: sellerData, error: sellerError } = await supabase
+      // Get seller's temp_seller_id (for scraped deals); use maybeSingle so we don't fail if no row
+      const { data: sellerData } = await supabase
         .from('seller_applications')
         .select('temp_seller_id')
         .eq('id', userId)
-        .single();
+        .maybeSingle();
 
-      if (sellerError) {
-        console.error('Error fetching seller data:', sellerError);
-        setLoading(false);
-        return;
-      }
-
-      if (!sellerData?.temp_seller_id) {
-        console.log('No temp_seller_id found for this seller');
-        setProperties([]);
-        setLoading(false);
-        return;
-      }
-
-      // Fetch wholesale deals for this temp seller
-      const { data, error } = await supabase
-        .from('wholesale_deals')
-        .select(`
-          *,
-          property_photos (
-            id,
-            photo_url,
-            display_order,
-            is_featured
-          )
-        `)
-        .eq('temp_seller_id', sellerData.temp_seller_id)
+      // 1) Manual listings: from properties table (seller_id = current seller)
+      const { data: manualList, error: manualError } = await supabase
+        .from('properties')
+        .select('*')
+        .eq('seller_id', userId)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (manualError) {
+        console.error('Error fetching manual properties:', manualError);
+      }
+      console.log('[Properties] Manual (properties table) query result:', { manualList: manualList ?? [], manualError: manualError ?? null });
 
-      // Filter by view mode (archived vs active)
+      // Fetch property_images separately (avoids join failures if relation differs)
+      let manualWithImages = manualList || [];
+      if (manualWithImages.length > 0) {
+        const ids = manualWithImages.map(p => p.id);
+        const { data: imagesData } = await supabase
+          .from('property_images')
+          .select('id, image_url, sort_order, property_id')
+          .in('property_id', ids)
+          .order('sort_order');
+        const imagesByProperty = {};
+        (imagesData || []).forEach(img => {
+          if (!imagesByProperty[img.property_id]) imagesByProperty[img.property_id] = [];
+          imagesByProperty[img.property_id].push(img);
+        });
+        manualWithImages = manualWithImages.map(p => ({
+          ...p,
+          property_images: (imagesByProperty[p.id] || []).sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+        }));
+      }
+
+      const manual = manualWithImages.map(p => ({
+        ...p,
+        _source: 'manual',
+        // Normalize for shared display (properties uses address, slug; no full_address in some schemas)
+        full_address: p.address || p.full_address,
+        property_status: p.property_status || 'available',
+      }));
+
+      // 2) Scraped listings: from wholesale_deals (email, URL import, SMS from call-and-sms)
+      let scraped = [];
+      if (sellerData?.temp_seller_id) {
+        const { data: wholesaleList, error: wholesaleError } = await supabase
+          .from('wholesale_deals')
+          .select(`
+            *,
+            property_photos (
+              id,
+              photo_url,
+              display_order,
+              is_featured
+            )
+          `)
+          .eq('temp_seller_id', sellerData.temp_seller_id)
+          .order('created_at', { ascending: false });
+
+        if (wholesaleError) {
+          console.error('Error fetching wholesale deals:', wholesaleError);
+        }
+        console.log('[Properties] Scraped (wholesale_deals) query result:', { wholesaleList: wholesaleList ?? [], wholesaleError: wholesaleError ?? null });
+        if (!wholesaleError) {
+          scraped = (wholesaleList || []).map(p => ({
+            ...p,
+            _source: 'scraped',
+          }));
+        }
+      }
+
+      // Combine and filter by view mode (archived vs active)
+      const combined = [...manual, ...scraped];
       const filteredData = viewMode === 'trash'
-        ? data?.filter(p => p.status === 'archived') || []
-        : data?.filter(p => p.status !== 'archived') || [];
+        ? combined.filter(p => (p.status || '') === 'archived')
+        : combined.filter(p => (p.status || '') !== 'archived');
 
+      // Sort by created_at descending
+      filteredData.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
       setProperties(filteredData);
     } catch (error) {
       console.error('Error fetching properties:', error);
+      setProperties([]);
     } finally {
       setLoading(false);
     }
   };
 
-  // Filter properties based on search term and filters
+  // Filter properties based on search term and filters (works for both manual + scraped)
   const filteredProperties = properties.filter(property => {
     const searchLower = searchTerm.toLowerCase();
+    const title = property.slug?.replace(/-/g, ' ') || '';
     const matchesSearch = !searchTerm ||
       property.id?.toString().includes(searchTerm) ||
-      property.slug?.toLowerCase().includes(searchLower) ||
-      property.address?.toLowerCase().includes(searchLower) ||
-      property.full_address?.toLowerCase().includes(searchLower) ||
-      property.city?.toLowerCase().includes(searchLower) ||
-      property.state?.toLowerCase().includes(searchLower);
+      title.toLowerCase().includes(searchLower) ||
+      (property.address || '').toLowerCase().includes(searchLower) ||
+      (property.full_address || '').toLowerCase().includes(searchLower) ||
+      (property.city || '').toLowerCase().includes(searchLower) ||
+      (property.state || '').toLowerCase().includes(searchLower);
 
-    const matchesStatus = !filterStatus || property.status === filterStatus;
-    const matchesPropertyStatus = !filterPropertyStatus || property.property_status === filterPropertyStatus;
+    // Status: normalize empty to 'active' for scraped; treat 'published' as 'active' when filtering Active
+    const status = (property.status || 'active').toLowerCase();
+    const filterStatusLower = (filterStatus || '').toLowerCase();
+    const matchesStatus = !filterStatus ||
+      status === filterStatusLower ||
+      (filterStatusLower === 'active' && status === 'published');
+
+    // Property Status: normalize null/undefined to 'available' (same fallback as display)
+    const propStatus = (property.property_status || 'available').toLowerCase();
+    const filterPropStatus = (filterPropertyStatus || '').toLowerCase();
+    const matchesPropertyStatus = !filterPropertyStatus || propStatus === filterPropStatus;
 
     return matchesSearch && matchesStatus && matchesPropertyStatus;
   });
@@ -114,9 +179,24 @@ const PropertiesManagement = () => {
   const currentEntries = filteredProperties.slice(indexOfFirstEntry, indexOfLastEntry);
   const totalPages = Math.ceil(filteredProperties.length / entriesPerPage);
 
-  // Handle view
+  // Normalize property for view modal (modal expects property_images; scraped has property_photos)
+  const getPropertyForModal = (property) => {
+    if (!property) return null;
+    if (property._source === 'scraped') {
+      return {
+        ...property,
+        slug: property.full_address || property.address || property.id,
+        floor_area: property.floor_area ?? property.sqft ?? null,
+        property_images: (property.property_photos || [])
+          .sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0))
+          .map((p, i) => ({ image_url: p.photo_url, sort_order: p.display_order ?? i })),
+      };
+    }
+    return property;
+  };
+
   const handleViewClick = (property) => {
-    setSelectedProperty(property);
+    setSelectedProperty(getPropertyForModal(property));
     setShowViewModal(true);
   };
 
@@ -127,14 +207,33 @@ const PropertiesManagement = () => {
   };
 
   const handleArchiveConfirm = async () => {
+    if (!selectedProperty) return;
     try {
-      const { error } = await supabase
-        .from('wholesale_deals')
-        .update({ status: 'archived' })
-        .eq('id', selectedProperty.id);
-
-      if (error) throw error;
-
+      if (selectedProperty._source === 'manual') {
+        const { error } = await supabase
+          .from('properties')
+          .update({ status: 'archived', property_status: 'unavailable' })
+          .eq('id', selectedProperty.id)
+          .eq('seller_id', userId);
+        if (error) throw error;
+      } else {
+        const { data: sellerRow } = await supabase
+          .from('seller_applications')
+          .select('temp_seller_id')
+          .eq('id', userId)
+          .maybeSingle();
+        const tempSellerId = sellerRow?.temp_seller_id;
+        if (!tempSellerId) {
+          alert('Unable to verify ownership. Please try again.');
+          return;
+        }
+        const { error } = await supabase
+          .from('wholesale_deals')
+          .update({ status: 'archived' })
+          .eq('id', selectedProperty.id)
+          .eq('temp_seller_id', tempSellerId);
+        if (error) throw error;
+      }
       setProperties(prev => prev.filter(p => p.id !== selectedProperty.id));
       setShowArchiveModal(false);
       setSelectedProperty(null);
@@ -146,13 +245,31 @@ const PropertiesManagement = () => {
 
   const handleRestore = async (property) => {
     try {
-      const { error } = await supabase
-        .from('wholesale_deals')
-        .update({ status: 'active' })
-        .eq('id', property.id);
-
-      if (error) throw error;
-
+      if (property._source === 'manual') {
+        const { error } = await supabase
+          .from('properties')
+          .update({ status: 'draft', property_status: 'available' })
+          .eq('id', property.id)
+          .eq('seller_id', userId);
+        if (error) throw error;
+      } else {
+        const { data: sellerRow } = await supabase
+          .from('seller_applications')
+          .select('temp_seller_id')
+          .eq('id', userId)
+          .maybeSingle();
+        const tempSellerId = sellerRow?.temp_seller_id;
+        if (!tempSellerId) {
+          alert('Unable to verify ownership. Please try again.');
+          return;
+        }
+        const { error } = await supabase
+          .from('wholesale_deals')
+          .update({ status: 'active' })
+          .eq('id', property.id)
+          .eq('temp_seller_id', tempSellerId);
+        if (error) throw error;
+      }
       setProperties(prev => prev.filter(p => p.id !== property.id));
     } catch (error) {
       console.error('Error restoring property:', error);
@@ -160,30 +277,49 @@ const PropertiesManagement = () => {
     }
   };
 
-  // Handle delete
   const handleDeleteClick = (property) => {
     setSelectedProperty(property);
     setShowDeleteModal(true);
   };
 
   const handleDeleteConfirm = async () => {
+    if (!selectedProperty) return;
     try {
-      // Delete property photos first (CASCADE should handle this, but explicit is better)
-      const { error: photosError } = await supabase
-        .from('property_photos')
-        .delete()
-        .eq('deal_id', selectedProperty.id);
-
-      if (photosError) console.error('Error deleting photos:', photosError);
-
-      // Then delete wholesale deal
-      const { error } = await supabase
-        .from('wholesale_deals')
-        .delete()
-        .eq('id', selectedProperty.id);
-
-      if (error) throw error;
-
+      if (selectedProperty._source === 'manual') {
+        const { error: imgErr } = await supabase
+          .from('property_images')
+          .delete()
+          .eq('property_id', selectedProperty.id);
+        if (imgErr) console.error('Error deleting property images:', imgErr);
+        const { error } = await supabase
+          .from('properties')
+          .delete()
+          .eq('id', selectedProperty.id)
+          .eq('seller_id', userId);
+        if (error) throw error;
+      } else {
+        const { data: sellerRow } = await supabase
+          .from('seller_applications')
+          .select('temp_seller_id')
+          .eq('id', userId)
+          .maybeSingle();
+        const tempSellerId = sellerRow?.temp_seller_id;
+        if (!tempSellerId) {
+          alert('Unable to verify ownership. Please try again.');
+          return;
+        }
+        const { error: photosError } = await supabase
+          .from('property_photos')
+          .delete()
+          .eq('deal_id', selectedProperty.id);
+        if (photosError) console.error('Error deleting photos:', photosError);
+        const { error } = await supabase
+          .from('wholesale_deals')
+          .delete()
+          .eq('id', selectedProperty.id)
+          .eq('temp_seller_id', tempSellerId);
+        if (error) throw error;
+      }
       setProperties(prev => prev.filter(p => p.id !== selectedProperty.id));
       setShowDeleteModal(false);
       setSelectedProperty(null);
@@ -231,76 +367,98 @@ const PropertiesManagement = () => {
   };
 
   const getFeaturedImage = (property) => {
-    // Get featured image or first image by display_order
+    if (property._source === 'manual') {
+      const sorted = (property.property_images || []).sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
+      return sorted[0]?.image_url || null;
+    }
     const featuredImage = property.property_photos?.find(p => p.is_featured);
     if (featuredImage) return featuredImage.photo_url;
-
-    const sortedImages = property.property_photos?.sort((a, b) => (a.display_order || 0) - (b.display_order || 0));
-    return sortedImages?.[0]?.photo_url || null;
+    const sorted = (property.property_photos || []).sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0));
+    return sorted[0]?.photo_url || null;
   };
 
-  // Calculate stats
+  // Calculate stats (active = active or published)
   const totalProperties = properties.length;
-  const activeProperties = properties.filter(p => p.status === 'active').length;
-  const draftProperties = properties.filter(p => p.status === 'draft').length;
-  const availableProperties = properties.filter(p => p.property_status === 'available').length;
+  const activeProperties = properties.filter(p => (p.status || '') === 'active' || (p.status || '') === 'published').length;
+  const draftProperties = properties.filter(p => (p.status || '') === 'draft').length;
+  const availableProperties = properties.filter(p => (p.property_status || 'available').toLowerCase() === 'available').length;
+
+  const setViewModeAndUrl = (mode) => {
+    setViewMode(mode);
+    if (mode === 'trash') {
+      router.replace('/properties?view=trash');
+    } else {
+      router.replace('/properties');
+    }
+  };
 
   return (
     <div className="space-y-3 md:space-y-4">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div>
-          <h1 className="text-lg md:text-xl font-semibold tracking-tight text-gray-900">Properties</h1>
-          <p className="text-xs text-gray-500 mt-0.5">Manage your wholesale property deals</p>
+      {/* Top row: Title | Active/Trash (centered) | Add Property */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <h1 className="text-lg md:text-xl font-semibold tracking-tight text-gray-900 shrink-0">Properties</h1>
+        <div className="flex justify-center flex-1 min-w-0">
+          <div className="flex items-center gap-1 p-1 rounded-xl bg-gray-100 border border-gray-200/80 w-full sm:w-auto sm:min-w-[200px] max-w-xs sm:max-w-none">
+            <button
+              onClick={() => setViewModeAndUrl('active')}
+              className={`flex-1 px-4 py-2.5 sm:py-3 text-sm font-semibold rounded-lg transition-all duration-200 ${
+                viewMode === 'active'
+                  ? 'bg-white text-primary shadow-sm border border-gray-200/80'
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50/80'
+              }`}
+            >
+              Active
+            </button>
+            <button
+              onClick={() => setViewModeAndUrl('trash')}
+              className={`flex-1 px-4 py-2.5 sm:py-3 text-sm font-semibold rounded-lg transition-all duration-200 ${
+                viewMode === 'trash'
+                  ? 'bg-white text-brandRed shadow-sm border border-gray-200/80'
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50/80'
+              }`}
+            >
+              Trash
+            </button>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setViewMode(viewMode === 'active' ? 'trash' : 'active')}
-            className="flex items-center justify-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200"
-          >
-            {viewMode === 'active' ? <Archive size={16} /> : <RotateCcw size={16} />}
-            <span>{viewMode === 'active' ? 'Trash' : 'Active'}</span>
-          </button>
-          <button
-            onClick={() => router.push('/properties/new')}
-            className="flex items-center justify-center gap-2 bg-[#472F97] hover:bg-[#3a2578] text-white px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200"
-          >
-            <Plus size={16} />
-            <span>Add Property</span>
-          </button>
-        </div>
+        <button
+          onClick={() => router.push('/properties/new')}
+          className="flex items-center justify-center gap-2 bg-primary hover:bg-primary-700 text-white px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 shrink-0"
+        >
+          <Plus size={16} />
+          <span>Add Property</span>
+        </button>
       </div>
+      <p className="text-xs text-gray-500 -mt-1 text-center sm:text-left">
+        {viewMode === 'active' ? 'Listings that are live or in draft' : 'Archived listings — restore or delete permanently'}
+      </p>
 
-      {/* Compact Stats Cards - Responsive grid */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3">
-        <div className="bg-white rounded-lg border border-gray-200 p-3 hover:shadow-card-hover transition-shadow">
-          <div className="mb-2">
-            <span className="text-xs font-medium text-gray-600">Total Properties</span>
+      {/* Stats: only on Active view; minimal and professional. Trash view shows a single summary line. */}
+      {viewMode === 'active' ? (
+        <div className="grid grid-cols-3 gap-3">
+          <div className="bg-white rounded-lg border border-gray-200 px-4 py-3">
+            <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Total</p>
+            <p className="text-xl font-semibold text-gray-900 mt-0.5">{totalProperties}</p>
           </div>
-          <p className="text-2xl font-semibold text-gray-900">{totalProperties}</p>
-        </div>
-
-        <div className="bg-white rounded-lg border border-gray-200 p-3 hover:shadow-card-hover transition-shadow">
-          <div className="mb-2">
-            <span className="text-xs font-medium text-gray-600">Active</span>
+          <div className="bg-white rounded-lg border border-gray-200 px-4 py-3">
+            <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Active</p>
+            <p className="text-xl font-semibold text-gray-900 mt-0.5">{activeProperties}</p>
           </div>
-          <p className="text-2xl font-semibold text-gray-900">{activeProperties}</p>
+          <button
+            type="button"
+            onClick={() => setFilterStatus('draft')}
+            className="bg-white rounded-lg border border-gray-200 px-4 py-3 text-left hover:border-gray-300 hover:bg-gray-50/50 transition-colors"
+          >
+            <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Draft</p>
+            <p className="text-xl font-semibold text-gray-900 mt-0.5">{draftProperties}</p>
+            <p className="text-xs text-gray-400 mt-1">Filter table by draft</p>
+          </button>
         </div>
-
-        <div className="bg-white rounded-lg border border-gray-200 p-3 hover:shadow-card-hover transition-shadow">
-          <div className="mb-2">
-            <span className="text-xs font-medium text-gray-600">Draft</span>
-          </div>
-          <p className="text-2xl font-semibold text-gray-900">{draftProperties}</p>
+      ) : (
+        <div className="bg-white rounded-lg border border-gray-200 px-4 py-3">
+          <p className="text-sm text-gray-600"><span className="font-semibold text-gray-900">{totalProperties}</span> {totalProperties === 1 ? 'listing' : 'listings'} in trash</p>
         </div>
-
-        <div className="bg-white rounded-lg border border-gray-200 p-3 hover:shadow-card-hover transition-shadow">
-          <div className="mb-2">
-            <span className="text-xs font-medium text-gray-600">Available</span>
-          </div>
-          <p className="text-2xl font-semibold text-gray-900">{availableProperties}</p>
-        </div>
-      </div>
+      )}
 
       {/* Table Card */}
       <div className="bg-white rounded-lg border border-gray-200 overflow-hidden shadow-card">
@@ -354,6 +512,8 @@ const PropertiesManagement = () => {
               <option value="">Status</option>
               <option value="draft">Draft</option>
               <option value="active">Active</option>
+              <option value="published">Published</option>
+              <option value="incomplete">Incomplete</option>
               <option value="inactive">Inactive</option>
             </select>
             <select
@@ -383,6 +543,7 @@ const PropertiesManagement = () => {
               <tr>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">#</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">Property</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">Source</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">Location</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">Price</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">Type</th>
@@ -397,6 +558,7 @@ const PropertiesManagement = () => {
                   <tr key={i} className="animate-pulse">
                     <td className="px-4 py-3"><div className="h-4 w-6 bg-gray-100 rounded"></div></td>
                     <td className="px-4 py-3"><div className="h-4 w-32 bg-gray-100 rounded"></div></td>
+                    <td className="px-4 py-3"><div className="h-4 w-14 bg-gray-100 rounded"></div></td>
                     <td className="px-4 py-3"><div className="h-4 w-24 bg-gray-100 rounded"></div></td>
                     <td className="px-4 py-3"><div className="h-4 w-16 bg-gray-100 rounded"></div></td>
                     <td className="px-4 py-3"><div className="h-4 w-20 bg-gray-100 rounded"></div></td>
@@ -407,7 +569,7 @@ const PropertiesManagement = () => {
                 ))
               ) : currentEntries.length === 0 ? (
                 <tr>
-                  <td colSpan="8" className="px-6 py-10 text-center">
+                  <td colSpan="9" className="px-6 py-10 text-center">
                     <Building2 className="w-10 h-10 text-gray-300 mx-auto mb-2" />
                     <p className="text-gray-500 text-sm font-medium">
                       {viewMode === 'active' ? 'No properties found' : 'No properties in trash'}
@@ -419,7 +581,7 @@ const PropertiesManagement = () => {
                 </tr>
               ) : (
                 currentEntries.map((property, index) => (
-                  <tr key={property.id} className="hover:bg-gray-50 transition-colors">
+                  <tr key={`${property._source}-${property.id}`} className="hover:bg-gray-50 transition-colors">
                     <td className="px-4 py-3 whitespace-nowrap">
                       <span className="text-xs font-medium text-gray-400">{indexOfFirstEntry + index + 1}</span>
                     </td>
@@ -436,9 +598,14 @@ const PropertiesManagement = () => {
                         )}
                         <div>
                           <p className="text-xs font-medium text-gray-900 line-clamp-1">{property.full_address || property.address || property.slug?.replace(/-/g, ' ') || 'N/A'}</p>
-                          <p className="text-[10px] text-gray-400">ID: {property.id.split('-')[0]}</p>
+                          <p className="text-[10px] text-gray-400">ID: {String(property.id).split('-')[0]}</p>
                         </div>
                       </div>
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium border ${property._source === 'manual' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-amber-50 text-amber-700 border-amber-200'}`}>
+                        {property._source === 'manual' ? 'Manual' : 'Scraped'}
+                      </span>
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1.5">
@@ -456,55 +623,67 @@ const PropertiesManagement = () => {
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
                       <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium border ${getStatusColor(property.status)}`}>
-                        {property.status?.charAt(0).toUpperCase() + property.status?.slice(1) || 'Draft'}
+                        {(property.status || 'draft')?.charAt(0).toUpperCase() + (property.status || '').slice(1) || 'Draft'}
                       </span>
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
                       <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium border ${getPropertyStatusColor(property.property_status)}`}>
-                        {property.property_status?.replace('_', ' ').split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') || 'Available'}
+                        {(property.property_status || 'available')?.replace('_', ' ').split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') || 'Available'}
                       </span>
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
-                      <div className="flex items-center justify-end gap-1">
+                      <div className="flex items-center justify-end gap-0.5">
                         {viewMode === 'trash' ? (
                           <>
                             <button
                               onClick={() => handleRestore(property)}
-                              className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors"
+                              className="flex items-center justify-center w-8 h-8 rounded-lg text-gray-400 hover:text-primary hover:bg-gray-100 transition-colors"
                               title="Restore"
                             >
-                              <RotateCcw className="w-3.5 h-3.5" />
+                              <RotateCcw className="w-4 h-4" strokeWidth={2} />
                             </button>
                             <button
                               onClick={() => handleDeleteClick(property)}
-                              className="p-1.5 rounded-lg hover:bg-gray-100 text-red-500 transition-colors"
+                              className="flex items-center justify-center w-8 h-8 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
                               title="Delete Permanently"
                             >
-                              <Trash2 className="w-3.5 h-3.5" />
+                              <Trash2 className="w-4 h-4" strokeWidth={2} />
                             </button>
                           </>
                         ) : (
                           <>
-                            <button
-                              onClick={() => handleViewClick(property)}
-                              className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors"
-                              title="View"
+                            <a
+                              href={`${DEELMAP_VIEW_BASE_URL.replace(/\/$/, '')}/${property.id}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center justify-center w-8 h-8 rounded-lg text-gray-400 hover:text-primary hover:bg-gray-100 transition-colors"
+                              title="View on site"
                             >
-                              <Eye className="w-3.5 h-3.5" />
-                            </button>
+                              <Eye className="w-4 h-4" strokeWidth={2} />
+                            </a>
                             <button
                               onClick={() => router.push(`/properties/edit/${property.id}`)}
-                              className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors"
+                              className="flex items-center justify-center w-8 h-8 rounded-lg text-gray-400 hover:text-primary hover:bg-gray-100 transition-colors"
                               title="Edit"
                             >
-                              <Edit2 className="w-3.5 h-3.5" />
+                              <Edit2 className="w-4 h-4" strokeWidth={2} />
+                            </button>
+                            <button
+                              onClick={() => {
+                                setPropertyForAnalytics(property);
+                                setShowAnalyticsSidebar(true);
+                              }}
+                              className="flex items-center justify-center w-8 h-8 rounded-lg text-gray-400 hover:text-primary hover:bg-gray-100 transition-colors"
+                              title="Analytics"
+                            >
+                              <BarChart2 className="w-4 h-4" strokeWidth={2} />
                             </button>
                             <button
                               onClick={() => handleArchiveClick(property)}
-                              className="p-1.5 rounded-lg hover:bg-gray-100 text-red-500 transition-colors"
+                              className="flex items-center justify-center w-8 h-8 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
                               title="Move to Trash"
                             >
-                              <Trash2 className="w-3.5 h-3.5" />
+                              <Trash2 className="w-4 h-4" strokeWidth={2} />
                             </button>
                           </>
                         )}
@@ -553,7 +732,7 @@ const PropertiesManagement = () => {
                     key={pageNum}
                     onClick={() => setCurrentPage(pageNum)}
                     className={`min-w-[28px] h-7 px-2 text-xs font-medium rounded-lg transition-colors ${currentPage === pageNum
-                      ? 'bg-[#472F97] text-white'
+                      ? 'bg-primary text-white'
                       : 'border border-gray-200 text-gray-600 hover:bg-gray-100'
                       }`}
                   >
@@ -583,7 +762,7 @@ const PropertiesManagement = () => {
           setSelectedProperty(null);
         }}
         onConfirm={handleDeleteConfirm}
-        itemName={selectedProperty?.title || 'this property'}
+        itemName={selectedProperty?.full_address || selectedProperty?.address || selectedProperty?.slug || selectedProperty?.title || 'this property'}
         isPermanent={true}
       />
 
@@ -594,7 +773,7 @@ const PropertiesManagement = () => {
           setSelectedProperty(null);
         }}
         onConfirm={handleArchiveConfirm}
-        itemName={selectedProperty?.slug || 'this property'}
+        itemName={selectedProperty?.full_address || selectedProperty?.address || selectedProperty?.slug || 'this property'}
         isPermanent={false}
       />
 
@@ -604,6 +783,17 @@ const PropertiesManagement = () => {
           onClose={() => {
             setShowViewModal(false);
             setSelectedProperty(null);
+          }}
+        />
+      )}
+
+      {showAnalyticsSidebar && propertyForAnalytics && (
+        <PropertyAnalyticsSidebar
+          propertyId={propertyForAnalytics.id}
+          propertyName={propertyForAnalytics.full_address || propertyForAnalytics.address || propertyForAnalytics.slug}
+          onClose={() => {
+            setShowAnalyticsSidebar(false);
+            setPropertyForAnalytics(null);
           }}
         />
       )}

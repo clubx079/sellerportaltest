@@ -1,15 +1,17 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
 import Image from 'next/image'
-import { LogIn, Mail, Lock, AlertCircle, Eye, EyeOff, TrendingUp, ShoppingCart, Users } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { LogIn, Mail, Lock, AlertCircle, Eye, EyeOff, MapPin, Shield } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 
-// Loader Component
 const InitialLoader = () => (
-  <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 via-indigo-50 to-slate-50">
-    <div className="w-10 h-10 border-2 border-[#472F97] border-t-transparent rounded-full animate-spin"></div>
+  <div className="min-h-screen flex items-center justify-center bg-[#f9fafb]">
+    <div
+      className="w-10 h-10 rounded-full border-2 border-gray-200 border-t-primary animate-spin"
+      aria-hidden
+    />
   </div>
 )
 
@@ -20,8 +22,10 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [isCheckingAuth, setIsCheckingAuth] = useState(true)
+  const [errorShake, setErrorShake] = useState(false)
+  const [logoError, setLogoError] = useState(false)
+  const [logoErrorLeft, setLogoErrorLeft] = useState(false) // left panel (dark bg) uses white logo
 
-  // Redirect if already logged in
   useEffect(() => {
     const userStr = localStorage.getItem('seller_user')
     if (userStr) {
@@ -42,7 +46,6 @@ export default function LoginPage() {
     setError('')
 
     try {
-      // Check email and password directly in seller_applications table
       const { data: application, error: appError } = await supabase
         .from('seller_applications')
         .select('*')
@@ -52,48 +55,60 @@ export default function LoginPage() {
 
       if (appError || !application) {
         setError('Invalid email or password')
+        setErrorShake(true)
+        setTimeout(() => setErrorShake(false), 500)
         setLoading(false)
         return
       }
 
-      // Check application status
       if (application.status === 'pending') {
         setError('Your application is pending review. Please wait for approval.')
+        setErrorShake(true)
+        setTimeout(() => setErrorShake(false), 500)
         setLoading(false)
         return
       }
 
       if (application.status === 'under_review') {
         setError('Your application is under review. We will notify you once approved.')
+        setErrorShake(true)
+        setTimeout(() => setErrorShake(false), 500)
         setLoading(false)
         return
       }
 
       if (application.status === 'on_hold') {
         setError('Your application is on hold. Please contact support for more information.')
+        setErrorShake(true)
+        setTimeout(() => setErrorShake(false), 500)
         setLoading(false)
         return
       }
 
       if (application.status === 'requires_info') {
         setError('Your application requires additional information. Please check your email.')
+        setErrorShake(true)
+        setTimeout(() => setErrorShake(false), 500)
         setLoading(false)
         return
       }
 
       if (application.status === 'rejected') {
         setError('Your application has been rejected. Please contact support for more information.')
+        setErrorShake(true)
+        setTimeout(() => setErrorShake(false), 500)
         setLoading(false)
         return
       }
 
       if (application.status !== 'approved') {
         setError('Your application status does not allow login. Please contact support.')
+        setErrorShake(true)
+        setTimeout(() => setErrorShake(false), 500)
         setLoading(false)
         return
       }
 
-      // Only approved sellers can proceed
       const userData = {
         id: application.id,
         email: application.email,
@@ -107,6 +122,8 @@ export default function LoginPage() {
       router.push('/dashboard')
     } catch {
       setError('An error occurred. Please try again.')
+      setErrorShake(true)
+      setTimeout(() => setErrorShake(false), 500)
       setLoading(false)
     }
   }
@@ -116,204 +133,213 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex bg-gradient-to-br from-purple-50 via-indigo-50 to-slate-50">
-      {/* Left Side - Branding */}
-      <div className="hidden lg:flex lg:w-1/2 bg-[#472F97] relative overflow-hidden">
-        {/* Animated Background Pattern */}
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute top-0 left-0 w-full h-full">
-            <svg className="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
-              <defs>
-                <pattern id="dealpattern" width="20" height="20" patternUnits="userSpaceOnUse">
-                  <circle cx="10" cy="10" r="1" fill="white" opacity="0.5"/>
-                  <path d="M 20 0 L 0 0 0 20" fill="none" stroke="white" strokeWidth="0.3"/>
-                </pattern>
-              </defs>
-              <rect width="100" height="100" fill="url(#dealpattern)" />
-            </svg>
-          </div>
-        </div>
+    <div className="min-h-screen flex flex-col lg:flex-row">
+      {/* Left: Brand panel (desktop) - Deelmap buyer colors */}
+      <div
+        className="hidden lg:flex lg:w-[48%] xl:w-[52%] flex-col justify-between p-10 xl:p-14 relative overflow-hidden"
+        style={{ background: 'linear-gradient(165deg, #022b41 0%, #034060 50%, #022b41 100%)' }}
+      >
+        <div
+          className="absolute inset-0 opacity-[0.04]"
+          style={{
+            backgroundImage: `
+              linear-gradient(to right, #fff 1px, transparent 1px),
+              linear-gradient(to bottom, #fff 1px, transparent 1px)
+            `,
+            backgroundSize: '24px 24px',
+          }}
+        />
+        <div
+          className="absolute top-1/4 -left-20 w-72 h-72 rounded-full opacity-20"
+          style={{ background: 'radial-gradient(circle, #b29578 0%, transparent 70%)' }}
+        />
+        <div
+          className="absolute bottom-1/4 -right-20 w-96 h-96 rounded-full opacity-10"
+          style={{ background: 'radial-gradient(circle, #b29578 0%, transparent 70%)' }}
+        />
 
-        {/* Floating Shapes */}
-        <div className="absolute top-20 right-20 w-32 h-32 bg-white/10 rounded-full blur-2xl"></div>
-        <div className="absolute bottom-32 left-20 w-40 h-40 bg-purple-400/20 rounded-full blur-3xl"></div>
-
-        {/* Content */}
-        <div className="relative z-10 flex flex-col justify-center items-center w-full px-16 py-12">
-          <div className="w-full max-w-lg">
-            <div className="mb-10">
+        <div className="relative z-10 flex items-center gap-2">
+          <div className="flex items-center justify-start h-10 w-[130px] shrink-0">
+            {!logoErrorLeft ? (
               <Image
-                src="/deelmap.png"
-                alt="Deelmap Logo"
-                width={320}
-                height={120}
-                className="object-contain"
+                src="/assets/logo.webp"
+                alt="DeelMap"
+                width={130}
+                height={40}
+                className="h-10 w-auto object-contain object-left"
                 priority
-                unoptimized
+                onError={() => setLogoErrorLeft(true)}
               />
-            </div>
-            <p className="text-2xl font-bold text-white mb-2">
-              Seller Dashboard
-            </p>
-            <p className="text-purple-200 text-lg leading-relaxed mb-12">
-              Manage your wholesale deals, reach more buyers, and grow your business with our powerful seller platform
-            </p>
-
-            {/* Feature List */}
-            <div className="space-y-4">
-              {[
-                { icon: ShoppingCart, text: 'List and manage wholesale deals' },
-                { icon: TrendingUp, text: 'Track sales and performance analytics' },
-                { icon: Users, text: 'Connect with verified buyers' }
-              ].map((feature, index) => (
-                <div key={index} className="flex items-center gap-4 text-white bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20 hover:bg-white/15 transition-all">
-                  <div className="w-11 h-11 bg-white/20 rounded-xl flex items-center justify-center flex-shrink-0">
-                    <feature.icon className="w-6 h-6 text-white" />
-                  </div>
-                  <span className="font-medium text-base">{feature.text}</span>
-                </div>
-              ))}
-            </div>
+            ) : (
+              <div className="w-11 h-11 bg-brandRed rounded-xl flex items-center justify-center shadow-lg shadow-brandRed/25">
+                <MapPin className="w-6 h-6 text-white" />
+              </div>
+            )}
           </div>
+          <span className="text-lg font-semibold text-white tracking-wide uppercase">Seller</span>
         </div>
 
-        {/* Bottom Gradient */}
-        <div className="absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-t from-black/30 to-transparent"></div>
+        <div className="relative z-10 max-w-md">
+          <h2 className="text-3xl xl:text-4xl font-normal text-white leading-tight">
+            List deals. Reach buyers.
+            <br />
+            <span className="text-secondary font-medium">Grow your business.</span>
+          </h2>
+          <p className="mt-4 text-slate-400 text-base leading-relaxed font-normal">
+            Sign in to manage your wholesale listings, track performance, and connect with verified buyers on the platform.
+          </p>
+        </div>
+
+        <div className="relative z-10 flex items-center gap-2 text-slate-500 text-sm">
+          <Shield className="w-4 h-4 text-slate-500" />
+          <span>Secure seller sign-in</span>
+        </div>
       </div>
 
-      {/* Right Side - Login Form */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 lg:p-12">
-        <div className="w-full max-w-lg mx-auto">
-          {/* Mobile Logo */}
-          <div className="lg:hidden text-center mb-8">
-            <div className="mb-4 bg-white rounded-2xl p-4 inline-block shadow-sm">
+      {/* Right: Form */}
+      <div className="flex-1 flex flex-col items-center justify-center min-h-screen relative px-4 sm:px-6 py-10 lg:py-12">
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            background: `
+              radial-gradient(ellipse 80% 60% at 50% 0%, rgba(2, 43, 65, 0.04) 0%, transparent 50%),
+              radial-gradient(ellipse 60% 40% at 80% 80%, rgba(0, 0, 0, 0.02) 0%, transparent 50%),
+              #f9fafb
+            `,
+          }}
+        />
+        <div
+          className="absolute inset-0 pointer-events-none opacity-[0.4]"
+          style={{
+            backgroundImage: 'radial-gradient(circle at 1px 1px, rgb(0 0 0 / 0.03) 1px, transparent 0)',
+            backgroundSize: '24px 24px',
+          }}
+        />
+
+        <div className="lg:hidden flex items-center justify-center gap-2 mb-8 relative z-10">
+          <div className="h-9 w-[120px] flex items-center justify-center shrink-0">
+            {!logoError ? (
               <Image
-                src="/deelmap.png"
-                alt="Deelmap Logo"
-                width={200}
-                height={70}
-                className="mx-auto object-contain"
+                src="/assets/logo copy.png"
+                alt="DeelMap"
+                width={120}
+                height={36}
+                className="h-9 w-auto object-contain"
                 priority
-                unoptimized
+                onError={() => setLogoError(true)}
               />
-            </div>
-            <p className="text-xl font-bold text-[#472F97]">Seller Dashboard</p>
+            ) : (
+              <div className="w-10 h-10 bg-brandRed rounded-xl flex items-center justify-center">
+                <MapPin className="w-5 h-5 text-white" />
+              </div>
+            )}
+          </div>
+          <span className="text-sm font-semibold text-slate-600 uppercase tracking-wide">Seller</span>
+        </div>
+
+        <div className="w-full max-w-[480px] animate-fade-in-up relative z-10">
+          <div className="text-center mb-10">
+            <h1 className="text-3xl sm:text-4xl font-normal text-slate-900">Welcome back</h1>
+            <p className="text-slate-600 mt-2 text-base sm:text-lg font-normal">Sign in to your seller account</p>
           </div>
 
-          {/* Header */}
-          <div className="mb-8 text-center">
-            <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-3">Welcome back, Seller!</h2>
-            <p className="text-gray-600 text-base lg:text-lg">Sign in to manage your wholesale deals and grow your business</p>
-          </div>
-
-          {/* Login Card */}
-          <div className="bg-white rounded-2xl lg:rounded-3xl shadow-xl border border-gray-100 p-8 lg:p-10 backdrop-blur-sm">
-            <form onSubmit={handleSubmit} className="space-y-5">
-              {/* Error Message */}
+          <div
+            className={`login-card bg-white rounded-2xl border border-slate-200 p-8 sm:p-10 transition-shadow ${errorShake ? 'animate-shake' : ''}`}
+          >
+            <form onSubmit={handleSubmit} className="space-y-6">
               {error && (
-                <div className="flex items-center gap-3 p-3 bg-red-50 border border-red-200 rounded-xl text-red-700">
-                  <AlertCircle className="w-5 h-5 flex-shrink-0" />
-                  <p className="text-sm font-medium">{error}</p>
+                <div
+                  role="alert"
+                  className="flex items-center gap-3 p-4 rounded-xl bg-red-50 border border-red-100 text-red-700 text-base"
+                >
+                  <AlertCircle className="w-5 h-5 shrink-0 text-red-500" />
+                  <span className="font-medium">{error}</span>
                 </div>
               )}
 
-              {/* Email */}
               <div>
-                <label htmlFor="email" className="block text-base font-semibold text-gray-700 mb-2">
-                  Email Address
+                <label htmlFor="email" className="block text-base font-medium text-slate-700 mb-2.5">
+                  Email address
                 </label>
-                <div className="relative">
-                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5 pointer-events-none" />
+                <div className="relative group">
+                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 group-focus-within:text-primary transition-colors pointer-events-none" />
                   <input
                     type="email"
                     id="email"
                     name="email"
                     value={formData.email}
                     onChange={handleChange}
-                    className="w-full pl-12 pr-4 py-3.5 rounded-xl border-2 border-gray-200 focus:ring-2 focus:ring-[#472F97] focus:border-[#472F97] outline-none transition-all text-base bg-gray-50 hover:bg-white"
-                    placeholder="seller@example.com"
+                    autoComplete="email"
+                    className="w-full pl-12 pr-4 py-3.5 sm:py-4 rounded-xl border border-slate-200 bg-slate-50/80 text-slate-900 placeholder:text-slate-400 text-base focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary focus:bg-white transition-all duration-200"
+                    placeholder="you@company.com"
                     required
                   />
                 </div>
               </div>
 
-              {/* Password */}
               <div>
-                <label htmlFor="password" className="block text-base font-semibold text-gray-700 mb-2">
+                <label htmlFor="password" className="block text-base font-medium text-slate-700 mb-2.5">
                   Password
                 </label>
-                <div className="relative">
-                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5 pointer-events-none" />
+                <div className="relative group">
+                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 group-focus-within:text-primary transition-colors pointer-events-none" />
                   <input
                     type={showPassword ? 'text' : 'password'}
                     id="password"
                     name="password"
                     value={formData.password}
                     onChange={handleChange}
-                    className="w-full pl-12 pr-12 py-3.5 rounded-xl border-2 border-gray-200 focus:ring-2 focus:ring-[#472F97] focus:border-[#472F97] outline-none transition-all text-base bg-gray-50 hover:bg-white"
+                    autoComplete="current-password"
+                    className="w-full pl-12 pr-12 py-3.5 sm:py-4 rounded-xl border border-slate-200 bg-slate-50/80 text-slate-900 placeholder:text-slate-400 text-base focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary focus:bg-white transition-all duration-200"
                     placeholder="Enter your password"
                     required
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition"
+                    className="absolute right-4 top-1/2 -translate-y-1/2 p-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
                   >
                     {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                   </button>
                 </div>
               </div>
 
-              {/* Remember / Forgot */}
-              <div className="flex items-center justify-between pt-2">
-                <label className="flex items-center space-x-2 cursor-pointer group">
-                  <input
-                    type="checkbox"
-                    className="w-4 h-4 text-[#472F97] border-gray-300 rounded focus:ring-[#472F97] focus:ring-2"
-                  />
-                  <span className="text-base text-gray-600 group-hover:text-gray-900 transition">Remember me</span>
-                </label>
-                <a href="#" className="text-base font-semibold text-[#472F97] hover:text-[#5B3FB8] transition">
-                  Forgot password?
-                </a>
-              </div>
-
-              {/* Submit */}
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-[#472F97] hover:bg-[#5B3FB8] text-white py-4 rounded-xl font-semibold flex items-center justify-center gap-2 transition-all disabled:opacity-60 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 text-base"
+                className="w-full py-4 rounded-xl bg-primary text-white text-base font-medium flex items-center justify-center gap-3 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-60 disabled:cursor-not-allowed transition-all duration-200 shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/25 active:scale-[0.99]"
               >
                 {loading ? (
                   <>
-                    <div className="h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    <span>Signing in...</span>
+                    <span
+                      className="w-5 h-5 rounded-full border-2 border-white border-t-transparent animate-spin"
+                      aria-hidden
+                    />
+                    Signing in...
                   </>
                 ) : (
                   <>
                     <LogIn className="w-5 h-5" />
-                    <span>Sign In to Dashboard</span>
+                    Sign in
                   </>
                 )}
               </button>
             </form>
 
-            {/* Sign Up Link */}
-            <div className="mt-6 pt-6 border-t border-gray-100 text-center">
-              <p className="text-base text-gray-600">
-                New to Deelmap?{' '}
-                <button
-                  onClick={() => router.push('/apply')}
-                  className="font-semibold text-[#472F97] hover:text-[#5B3FB8] transition"
-                >
-                  Create a seller account
-                </button>
-              </p>
-            </div>
+            <p className="mt-8 pt-6 border-t border-slate-100 text-center text-base text-slate-600">
+              New to Deelmap?{' '}
+              <button
+                type="button"
+                onClick={() => router.push('/apply')}
+                className="font-medium text-primary hover:text-secondary hover:underline transition-colors"
+              >
+                Create a seller account
+              </button>
+            </p>
           </div>
 
-          {/* Footer */}
-          <p className="text-center text-sm lg:text-base text-gray-500 mt-8">
+          <p className="text-center text-sm text-gray-400 mt-8">
             © {new Date().getFullYear()} Deelmap. All rights reserved.
           </p>
         </div>
