@@ -8,33 +8,37 @@ module.exports = {
     theme: {
       extend: {
         colors: {
+          // Deelmap brand (aligned with deelmap-buyer)
           primary: {
-            50: '#f8fafc',
-            100: '#f1f5f9',
-            200: '#e2e8f0',
-            300: '#cbd5e1',
-            400: '#94a3b8',
-            500: '#64748b',
-            600: '#475569',
-            700: '#334155',
-            800: '#1e293b',
-            900: '#0f172a',
+            DEFAULT: '#022b41',
+            50: '#f0f6f9',
+            100: '#d9e8ef',
+            200: '#b3d1df',
+            300: '#8cb9cf',
+            400: '#66a2bf',
+            500: '#022b41',
+            600: '#02263a',
+            700: '#012032',
+            800: '#011b2b',
+            900: '#011523',
           },
           secondary: {
-            50: '#faf5ff',
-            100: '#f3e8ff',
-            200: '#e9d5ff',
-            300: '#d8b4fe',
-            400: '#c084fc',
-            500: '#a855f7',
-            600: '#9333ea',
-            700: '#7e22ce',
-            800: '#6b21a8',
-            900: '#581c87',
+            DEFAULT: '#b29578',
+            50: '#f8f6f3',
+            100: '#ebe6df',
+            200: '#d7cdbf',
+            300: '#c3b49f',
+            400: '#b29578',
+            500: '#9a7e61',
+            600: '#826750',
+            700: '#6b5342',
+            800: '#533f33',
+            900: '#3b2b24',
           },
-          brand: {
-            red: '#FF4C51',
-            redLight: '#FFF5F5',
+          // Pin/logo accent (red) - used for MapPin icon beside "DeelMap"
+          brandRed: {
+            DEFAULT: '#DC2626',
+            hover: '#B91C1C',
           },
           status: {
             available: '#10B981',
@@ -50,7 +54,7 @@ module.exports = {
           }
         },
         fontFamily: {
-          sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+          sans: ['Open Sans', 'system-ui', '-apple-system', 'sans-serif'],
         },
         boxShadow: {
           'card': '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)',

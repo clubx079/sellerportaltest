@@ -6,12 +6,15 @@ import { useState, useEffect } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import Sidebar from '@/components/layout/Sidebar'
-import { Menu, Hotel } from 'lucide-react'
+import Image from 'next/image'
+import Link from 'next/link'
+import { Menu, MapPin } from 'lucide-react'
 
 export default function DashboardLayout({ children }) {
   const router = useRouter()
   const pathname = usePathname()
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(true)
   const [activeItem, setActiveItem] = useState('dashboard')
   const [loading, setLoading] = useState(true)
   const [user, setUser] = useState(null)
@@ -52,8 +55,13 @@ export default function DashboardLayout({ children }) {
     fetchHotelSettings(parsedUser.id)
   }, [router, pathname])
 
-  // Fetch hotel settings
+  // Fetch hotel settings (table: settings, columns: name, logo; filter: user_id)
   const fetchHotelSettings = async (userId) => {
+    if (!userId) {
+      console.warn('[DashboardLayout] fetchHotelSettings: no userId, skipping')
+      return
+    }
+    console.log('[DashboardLayout] fetchHotelSettings: requesting settings for user_id=', userId)
     try {
       const { data, error } = await supabase
         .from('settings')
@@ -62,10 +70,14 @@ export default function DashboardLayout({ children }) {
         .maybeSingle()
 
       if (error) {
-        const hasDetails = typeof error === 'object' && error !== null && Object.keys(error).length > 0
-        if (hasDetails) {
-          console.error('Error fetching hotel settings:', error)
-        }
+        // Log full error so we can see why Supabase returns 400
+        console.error('[DashboardLayout] fetchHotelSettings error:', {
+          message: error?.message,
+          code: error?.code,
+          details: error?.details,
+          hint: error?.hint,
+          full: String(error)
+        })
         return
       }
 
@@ -75,11 +87,13 @@ export default function DashboardLayout({ children }) {
           logo: data.logo
         }
         setHotelInfo(newHotelInfo)
-        // Cache the settings for instant load on refresh
         localStorage.setItem('hotel_settings', JSON.stringify(newHotelInfo))
+        console.log('[DashboardLayout] fetchHotelSettings: loaded', newHotelInfo.name ? 'name + logo' : 'defaults')
+      } else {
+        console.log('[DashboardLayout] fetchHotelSettings: no row found for user_id (using defaults)')
       }
     } catch (error) {
-      console.error('Error fetching hotel settings:', error)
+      console.error('[DashboardLayout] fetchHotelSettings exception:', error?.message || error, error)
     }
   }
 
@@ -95,6 +109,17 @@ export default function DashboardLayout({ children }) {
     setIsSidebarOpen(false)
   }, [pathname])
 
+  // Prevent body scroll when mobile menu is open
+  useEffect(() => {
+    if (typeof document === 'undefined') return
+    if (isSidebarOpen && typeof window !== 'undefined' && window.innerWidth < 1024) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = ''
+    }
+    return () => { document.body.style.overflow = '' }
+  }, [isSidebarOpen])
+
   // For public pages, render children without layout
   if (pathname === '/login' || pathname === '/register') {
     return <>{children}</>
@@ -103,8 +128,8 @@ export default function DashboardLayout({ children }) {
   // Loading state for authenticated pages
   if (!user && loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-neutral-50">
-        <div className="animate-spin rounded-full h-8 w-8 border-2 border-neutral-900 border-t-transparent"></div>
+      <div className="min-h-screen flex items-center justify-center bg-[#f9fafb]">
+        <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent"></div>
       </div>
     )
   }
@@ -112,42 +137,49 @@ export default function DashboardLayout({ children }) {
   if (!user) return null
 
   return (
-    <div className="min-h-screen bg-neutral-50">
-      {/* Mobile Header */}
-      <header className="lg:hidden fixed top-0 left-0 right-0 z-40 h-14 bg-white border-b border-neutral-200 flex items-center justify-between px-4">
-        <div className="flex items-center gap-2.5 min-w-0 flex-1">
-          <div className="w-8 h-8 bg-neutral-900 rounded-lg flex items-center justify-center overflow-hidden shrink-0">
-            {hotelInfo.logo ? (
-              <img
-                src={hotelInfo.logo}
-                alt={hotelInfo.name}
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <Hotel className="w-4 h-4 text-white" />
-            )}
+    <div className="h-screen overflow-hidden bg-[#f9fafb] flex flex-col">
+      {/* Mobile Header - same logo + Seller as desktop sidebar */}
+      <header className="lg:hidden fixed top-0 left-0 right-0 z-40 h-14 min-h-[3.5rem] bg-white border-b border-slate-200 flex items-center justify-between gap-3 px-4 pt-[env(safe-area-inset-top)]">
+        <Link href="/dashboard" className="flex items-center gap-3 min-w-0 flex-1">
+          <div className="relative h-9 w-[120px] flex-shrink-0 flex items-center justify-center">
+            <Image
+              src="/assets/logo copy.png"
+              alt="Deelmap"
+              width={120}
+              height={36}
+              className="h-9 w-auto object-contain"
+              priority
+            />
           </div>
-          <span className="text-sm font-semibold text-neutral-900 truncate">{hotelInfo.name}</span>
-        </div>
+          <span className="text-xs font-medium text-slate-600 uppercase tracking-wider whitespace-nowrap">Seller</span>
+        </Link>
         <button
+          type="button"
           onClick={() => setIsSidebarOpen(true)}
-          className="p-2 rounded-lg hover:bg-neutral-100 transition-colors shrink-0"
+          className="p-2.5 rounded-xl bg-slate-100 active:bg-slate-200 transition-colors shrink-0 touch-manipulation"
+          aria-label="Open menu"
         >
-          <Menu className="w-5 h-5 text-neutral-700" />
+          <Menu className="w-6 h-6 text-slate-700" />
         </button>
       </header>
 
-      {/* Sidebar */}
+      {/* Sidebar - collapsed by default on desktop, expands on hover */}
       <Sidebar
         isOpen={isSidebarOpen}
         setIsOpen={setIsSidebarOpen}
         activeItem={activeItem}
         setActiveItem={setActiveItem}
+        collapsed={sidebarCollapsed}
+        onCollapsedChange={setSidebarCollapsed}
       />
 
-      {/* Main Content Wrapper - adjusted for new sidebar width (w-64) */}
-      <div className="lg:pl-64 pt-14 lg:pt-0">
-        <main className="p-4 md:p-6">
+      {/* Main Content Wrapper - flex-1 min-h-0 so full-height pages (e.g. messages) don't scroll the page */}
+      <div
+        className={`flex-1 flex flex-col min-h-0 pt-[calc(3.5rem+env(safe-area-inset-top,0px))] lg:pt-0 transition-[padding-left] duration-300 ease-in-out ${
+          sidebarCollapsed ? 'lg:pl-[72px]' : 'lg:pl-60'
+        }`}
+      >
+        <main className="flex-1 flex flex-col min-h-0 min-w-0 p-4 md:p-6 overflow-auto">
           {children}
         </main>
       </div>

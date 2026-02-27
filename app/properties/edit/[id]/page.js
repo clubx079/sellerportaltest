@@ -15,16 +15,16 @@ const PROPERTY_STATUSES = [
   { value: 'under_contract', label: 'Under Contract - In negotiation' }
 ];
 
+// Main property types for real estate (buying/selling) – same as add property
 const PROPERTY_TYPES = [
-  'Hotel',
-  'Resort',
-  'Motel',
-  'Apartment Complex',
-  'Vacation Rental',
-  'Boutique Hotel',
-  'Hostel',
-  'Villa',
-  'Luxury Property'
+  'Single Family',
+  'Multi-Family',
+  'Condo',
+  'Townhouse',
+  'Apartment Building',
+  'Commercial',
+  'Land',
+  'Other'
 ];
 
 const slugToTitle = (slug) => (
@@ -43,6 +43,8 @@ export default function EditPropertyPage() {
   const [activeTab, setActiveTab] = useState('basic');
   const [showAllPreviewImages, setShowAllPreviewImages] = useState(false);
   const [userId, setUserId] = useState(null);
+  const [sourceType, setSourceType] = useState(null); // 'manual' | 'scraped'
+  const [tempSellerId, setTempSellerId] = useState(null); // for scraped fetch/save
 
   const descRef = useRef(null);
   const repairsRef = useRef(null);
@@ -67,8 +69,12 @@ export default function EditPropertyPage() {
     uploading: false
   });
 
+  // Use scraper bucket for both (sellerpropertyimages often not created); manual uploads use path prefix "manual/"
+  const storageBucket = 'scraperpropertyphotos';
+  const uploadPathPrefix = sourceType === 'manual' ? 'manual' : null;
+
   useEffect(() => {
-    const userStr = localStorage.getItem('hotel_user');
+    const userStr = localStorage.getItem('seller_user');
     if (userStr) {
       const user = JSON.parse(userStr);
       setUserId(user.id);
@@ -86,8 +92,10 @@ export default function EditPropertyPage() {
     try {
       setLoadingProperty(true);
       setError(null);
+      setSourceType(null);
 
-      const { data, error: fetchError } = await supabase
+      // 1) Try manual property first (properties table)
+      const { data: manualData, error: manualError } = await supabase
         .from('properties')
         .select(`
           *,
@@ -100,62 +108,142 @@ export default function EditPropertyPage() {
         `)
         .eq('id', id)
         .eq('seller_id', userId)
-        .single();
+        .maybeSingle();
 
-      if (fetchError || !data) {
-        throw fetchError || new Error('Property not found');
+      if (manualError) throw manualError;
+
+      if (manualData) {
+        setSourceType('manual');
+        const data = manualData;
+        const derivedTitle = slugToTitle(data.slug);
+        initialTitleRef.current = derivedTitle;
+        existingSlugRef.current = data.slug || '';
+
+        setFormData({
+          title: derivedTitle,
+          location: data.address || '',
+          price: data.price ?? '',
+          bedrooms: data.bedrooms ?? '',
+          bathrooms: data.bathrooms ?? '',
+          floor_area: data.floor_area ?? '',
+          property_type: data.property_type || 'Hotel',
+          property_status: data.property_status || 'available',
+          status: data.status || 'draft',
+          latitude: data.latitude ?? '',
+          longitude: data.longitude ?? '',
+          county: data.county ?? '',
+          city: data.city ?? '',
+          zipcode: data.zipcode ?? '',
+          state: data.state ?? '',
+          description: data.description || '',
+          repairs: data.repairs || '',
+          seo_title: data.seo_title || '',
+          seo_description: data.seo_description || '',
+          social_title: data.social_title || '',
+          social_description: data.social_description || '',
+          social_image_url: data.social_image_url || ''
+        });
+
+        const sortedImages = (data.property_images || [])
+          .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
+        const mappedImages = sortedImages.map((img, index) => ({
+          id: img.id || `existing-${index}`,
+          status: 'completed',
+          imageUrl: img.image_url,
+          imageKey: img.image_key,
+          preview: img.image_url,
+          isFeatured: index === 0
+        }));
+        setImageUploadStatus({ images: mappedImages, isUploading: false, uploadingCount: 0 });
+        setInspectionReport({
+          url: data.inspection_report_url || null,
+          key: data.inspection_report_key || null,
+          uploading: false
+        });
+        return;
       }
 
-      const derivedTitle = slugToTitle(data.slug);
+      // 2) Not manual: try scraped (wholesale_deals) via temp_seller_id
+      const { data: sellerRow } = await supabase
+        .from('seller_applications')
+        .select('temp_seller_id')
+        .eq('id', userId)
+        .maybeSingle();
+
+      const tsid = sellerRow?.temp_seller_id;
+      if (!tsid) {
+        setError('Property not found.');
+        return;
+      }
+
+      setTempSellerId(tsid);
+
+      const { data: scrapedData, error: scrapedError } = await supabase
+        .from('wholesale_deals')
+        .select(`
+          *,
+          property_photos (
+            id,
+            photo_url,
+            display_order,
+            is_featured
+          )
+        `)
+        .eq('id', id)
+        .eq('temp_seller_id', tsid)
+        .maybeSingle();
+
+      if (scrapedError || !scrapedData) {
+        setError('Property not found.');
+        return;
+      }
+
+      setSourceType('scraped');
+      const d = scrapedData;
+
+      const derivedTitle = d.slug ? slugToTitle(d.slug) : (d.full_address || d.display_address || d.address || '').trim();
+      const locationLine = d.full_address || d.display_address || d.address || '';
       initialTitleRef.current = derivedTitle;
-      existingSlugRef.current = data.slug || '';
+      existingSlugRef.current = d.slug || '';
 
       setFormData({
         title: derivedTitle,
-        location: data.address || '',
-        price: data.price ?? '',
-        bedrooms: data.bedrooms ?? '',
-        bathrooms: data.bathrooms ?? '',
-        floor_area: data.floor_area ?? '',
-        property_type: data.property_type || 'Hotel',
-        property_status: data.property_status || 'available',
-        status: data.status || 'draft',
-        latitude: data.latitude ?? '',
-        longitude: data.longitude ?? '',
-        county: data.county ?? '',
-        city: data.city ?? '',
-        zipcode: data.zipcode ?? '',
-        state: data.state ?? '',
-        description: data.description || '',
-        repairs: data.repairs || '',
-        seo_title: data.seo_title || '',
-        seo_description: data.seo_description || '',
-        social_title: data.social_title || '',
-        social_description: data.social_description || '',
-        social_image_url: data.social_image_url || ''
+        location: locationLine,
+        price: d.price ?? '',
+        bedrooms: d.bedrooms ?? d.rooms ?? '',
+        bathrooms: d.bathrooms ?? '',
+        floor_area: d.sqft ?? '',
+        property_type: d.property_type || 'Hotel',
+        property_status: 'available',
+        status: d.status || 'draft',
+        latitude: d.latitude ?? '',
+        longitude: d.longitude ?? '',
+        county: d.county ?? '',
+        city: d.city ?? '',
+        zipcode: d.zip_code ?? '',
+        state: d.state ?? '',
+        description: d.description || '',
+        repairs: Array.isArray(d.features) ? d.features.join('\n') : (d.repair_cost != null ? String(d.repair_cost) : ''),
+        seo_title: d.seo_title || '',
+        seo_description: d.seo_description || '',
+        social_title: d.social_title || '',
+        social_description: d.social_description || '',
+        social_image_url: d.social_image_url || ''
       });
 
-      const sortedImages = (data.property_images || [])
-        .sort((a, b) => a.sort_order - b.sort_order);
-
-      const mappedImages = sortedImages.map((img, index) => ({
-        id: img.id || `existing-${index}`,
+      const sortedPhotos = (d.property_photos || []).sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0));
+      const mappedImages = sortedPhotos.map((img, index) => ({
+        id: img.id != null ? `photo-${img.id}` : `existing-${index}`,
         status: 'completed',
-        imageUrl: img.image_url,
-        imageKey: img.image_key,
-        preview: img.image_url,
-        isFeatured: index === 0
-      }));
-
-      setImageUploadStatus({
-        images: mappedImages,
-        isUploading: false,
-        uploadingCount: 0
-      });
-
+        imageUrl: img.photo_url ? String(img.photo_url).trim() : '',
+        imageKey: null,
+        preview: img.photo_url || '',
+        isFeatured: !!img.is_featured || index === 0
+      })).filter((img) => img.imageUrl);
+      setImageUploadStatus({ images: mappedImages, isUploading: false, uploadingCount: 0 });
       setInspectionReport({
-        url: data.inspection_report_url || null,
-        key: data.inspection_report_key || null,
+        url: d.inspection_report_url || null,
+        key: d.inspection_report_key || null,
         uploading: false
       });
     } catch (err) {
@@ -269,6 +357,83 @@ export default function EditPropertyPage() {
     if (inspectionReport.key) saveData.inspection_report_key = inspectionReport.key;
 
     try {
+      if (sourceType === 'scraped') {
+        const locationLine = formData.location || '';
+        const scrapedPayload = {
+          updated_at: new Date().toISOString(),
+          slug: slugToSave,
+          address: locationLine,
+          full_address: locationLine,
+          display_address: locationLine,
+          city: formData.city || null,
+          state: formData.state || null,
+          zip_code: formData.zipcode || null,
+          county: formData.county || null,
+          latitude: formData.latitude ? parseFloat(formData.latitude) : null,
+          longitude: formData.longitude ? parseFloat(formData.longitude) : null,
+          price: formData.price ? parseFloat(formData.price) : null,
+          bedrooms: formData.bedrooms ? parseInt(formData.bedrooms) : null,
+          bathrooms: formData.bathrooms ? parseFloat(formData.bathrooms) : null,
+          sqft: formData.floor_area ? parseInt(formData.floor_area) : null,
+          property_type: formData.property_type || null,
+          status: publishStatus,
+          description: formData.description || null,
+          features: formData.repairs ? formData.repairs.split(/\n/).filter(Boolean) : null,
+          inspection_report_url: inspectionReport.url || null,
+          inspection_report_key: inspectionReport.key || null,
+          seo_title: formData.seo_title || null,
+          seo_description: formData.seo_description || null,
+          social_title: formData.social_title || null,
+          social_description: formData.social_description || null,
+          social_image_url: formData.social_image_url || null
+        };
+
+        const { error: updateError } = await supabase
+          .from('wholesale_deals')
+          .update(scrapedPayload)
+          .eq('id', id)
+          .eq('temp_seller_id', tempSellerId);
+
+        if (updateError) throw updateError;
+
+        const { error: deletePhotosError } = await supabase
+          .from('property_photos')
+          .delete()
+          .eq('deal_id', id);
+        if (deletePhotosError) {
+          console.error('Property photos delete error:', deletePhotosError);
+          throw new Error('Failed to clear existing photos. Please try again.');
+        }
+
+        const completedImages = imageUploadStatus.images.filter(
+          (img) => img.status === 'completed' && img.imageUrl && String(img.imageUrl).trim()
+        );
+        if (completedImages.length > 0) {
+          const photoRows = completedImages.map((img, index) => ({
+            deal_id: id,
+            photo_url: String(img.imageUrl).trim(),
+            display_order: index,
+            is_featured: !!img.isFeatured
+          }));
+          const { error: photosError } = await supabase
+            .from('property_photos')
+            .insert(photoRows);
+          if (photosError) {
+            console.error('Property photos insert error:', photosError);
+            throw new Error(photosError.message || 'Failed to save photos. Please try again.');
+          }
+        }
+
+        setSuccess(
+          publishStatus === 'active'
+            ? 'Property updated and published!'
+            : 'Property updated successfully!'
+        );
+        setTimeout(() => router.push('/properties'), 1500);
+        setSaving(false);
+        return;
+      }
+
       const { data, error: updateError } = await supabase
         .from('properties')
         .update(saveData)
@@ -279,7 +444,6 @@ export default function EditPropertyPage() {
 
       if (updateError) throw updateError;
 
-      // Replace images in database
       const { error: deleteImagesError } = await supabase
         .from('property_images')
         .delete()
@@ -324,6 +488,7 @@ export default function EditPropertyPage() {
     } catch (err) {
       console.error('Update failed:', err);
       setError(err?.message || 'Failed to update property. Please try again.');
+    } finally {
       setSaving(false);
     }
   };
@@ -354,7 +519,7 @@ export default function EditPropertyPage() {
       const fileName = `inspection-reports/${userId}/${Date.now()}-${file.name}`;
 
       const { error: uploadError } = await supabase.storage
-        .from('sellerpropertyimages')
+        .from(storageBucket)
         .upload(fileName, file, {
           cacheControl: '3600',
           upsert: false
@@ -363,7 +528,7 @@ export default function EditPropertyPage() {
       if (uploadError) throw uploadError;
 
       const { data: { publicUrl } } = supabase.storage
-        .from('sellerpropertyimages')
+        .from(storageBucket)
         .getPublicUrl(fileName);
 
       setInspectionReport({
@@ -383,7 +548,7 @@ export default function EditPropertyPage() {
     if (inspectionReport.key) {
       try {
         await supabase.storage
-          .from('sellerpropertyimages')
+          .from(storageBucket)
           .remove([inspectionReport.key]);
       } catch (err) {
         console.error('Failed to delete file:', err);
@@ -436,7 +601,7 @@ export default function EditPropertyPage() {
             type="button"
             onClick={() => handleSave('active')}
             disabled={saving || imageUploadStatus.isUploading}
-            className="flex items-center justify-center gap-2 bg-[#472F97] hover:bg-[#3a2578] text-white px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center justify-center gap-2 bg-primary hover:bg-primary-700 text-white px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Eye size={16} />
             <span>
@@ -503,7 +668,7 @@ export default function EditPropertyPage() {
               onClick={() => handleTabChange(tab.id)}
               className={`px-4 md:px-6 py-3 md:py-4 font-medium transition-colors whitespace-nowrap text-xs md:text-sm ${
                 activeTab === tab.id
-                  ? 'text-[#472F97] border-b-2 border-[#472F97] bg-[#F5F3FF]'
+                  ? 'text-primary border-b-2 border-primary bg-primary/5'
                   : 'text-neutral-600 hover:text-neutral-900'
               }`}
             >
@@ -523,7 +688,7 @@ export default function EditPropertyPage() {
                   type="text"
                   value={formData.title || ''}
                   onChange={(e) => handleInputChange('title', e.target.value)}
-                  className="w-full px-4 py-3 border-2 border-neutral-200 rounded-xl focus:ring-2 focus:ring-[#472F97] focus:border-[#472F97] outline-none transition-all text-sm"
+                  className="w-full px-4 py-3 border-2 border-neutral-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all text-sm"
                   placeholder="Luxury Beachfront Hotel in Miami"
                   required
                 />
@@ -547,18 +712,19 @@ export default function EditPropertyPage() {
                     type="number"
                     value={formData.price || ''}
                     onChange={(e) => handleInputChange('price', e.target.value)}
-                    className="w-full px-4 py-3 border-2 border-neutral-200 rounded-xl focus:ring-2 focus:ring-[#472F97] focus:border-[#472F97] outline-none transition-all text-sm"
+                    className="w-full px-4 py-3 border-2 border-neutral-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all text-sm"
                     placeholder="2500000"
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-neutral-700 mb-2">Property Type</label>
                   <select
-                    value={formData.property_type || 'Hotel'}
+                    value={formData.property_type ?? ''}
                     onChange={(e) => handleInputChange('property_type', e.target.value)}
-                    className="w-full px-4 py-3 border-2 border-neutral-200 rounded-xl focus:ring-2 focus:ring-[#472F97] focus:border-[#472F97] outline-none transition-all text-sm"
+                    className="w-full px-4 py-3 border-2 border-neutral-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all text-sm"
                   >
-                    {PROPERTY_TYPES.map(type => (
+                    <option value="">Select property type</option>
+                    {PROPERTY_TYPES.map((type) => (
                       <option key={type} value={type}>{type}</option>
                     ))}
                   </select>
@@ -572,7 +738,7 @@ export default function EditPropertyPage() {
                     type="number"
                     value={formData.bedrooms || ''}
                     onChange={(e) => handleInputChange('bedrooms', e.target.value)}
-                    className="w-full px-4 py-3 border-2 border-neutral-200 rounded-xl focus:ring-2 focus:ring-[#472F97] focus:border-[#472F97] outline-none transition-all text-sm"
+                    className="w-full px-4 py-3 border-2 border-neutral-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all text-sm"
                     placeholder="50"
                     min="0"
                   />
@@ -584,7 +750,7 @@ export default function EditPropertyPage() {
                     step="0.5"
                     value={formData.bathrooms || ''}
                     onChange={(e) => handleInputChange('bathrooms', e.target.value)}
-                    className="w-full px-4 py-3 border-2 border-neutral-200 rounded-xl focus:ring-2 focus:ring-[#472F97] focus:border-[#472F97] outline-none transition-all text-sm"
+                    className="w-full px-4 py-3 border-2 border-neutral-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all text-sm"
                     placeholder="50"
                     min="0"
                   />
@@ -595,25 +761,27 @@ export default function EditPropertyPage() {
                     type="number"
                     value={formData.floor_area || ''}
                     onChange={(e) => handleInputChange('floor_area', e.target.value)}
-                    className="w-full px-4 py-3 border-2 border-neutral-200 rounded-xl focus:ring-2 focus:ring-[#472F97] focus:border-[#472F97] outline-none transition-all text-sm"
+                    className="w-full px-4 py-3 border-2 border-neutral-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all text-sm"
                     placeholder="25000"
                     min="0"
                   />
                 </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-semibold text-neutral-700 mb-2">Property Status</label>
-                <select
-                  value={formData.property_status || 'available'}
-                  onChange={(e) => handleInputChange('property_status', e.target.value)}
-                  className="w-full px-4 py-3 border-2 border-neutral-200 rounded-xl focus:ring-2 focus:ring-[#472F97] focus:border-[#472F97] outline-none transition-all text-sm"
-                >
-                  {PROPERTY_STATUSES.map(status => (
-                    <option key={status.value} value={status.value}>{status.label}</option>
-                  ))}
-                </select>
-              </div>
+              {sourceType !== 'scraped' && (
+                <div>
+                  <label className="block text-sm font-semibold text-neutral-700 mb-2">Property Status</label>
+                  <select
+                    value={formData.property_status || 'available'}
+                    onChange={(e) => handleInputChange('property_status', e.target.value)}
+                    className="w-full px-4 py-3 border-2 border-neutral-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all text-sm"
+                  >
+                    {PROPERTY_STATUSES.map(status => (
+                      <option key={status.value} value={status.value}>{status.label}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               {/* Featured Image Preview */}
               {imageUploadStatus.images.length > 0 && (
@@ -652,7 +820,9 @@ export default function EditPropertyPage() {
             <ImageGalleryManager
               images={imageUploadStatus.images}
               onImagesChange={handleImagesChange}
-              sellerId={userId}
+              sellerId={userId || tempSellerId || id}
+              storageBucket={storageBucket}
+              uploadPathPrefix={uploadPathPrefix}
             />
           </div>
 
@@ -680,7 +850,7 @@ export default function EditPropertyPage() {
                   />
                   <label
                     htmlFor="inspection-upload"
-                    className={`inline-flex items-center gap-2 px-4 py-2 bg-[#472F97] hover:bg-[#3a2578] text-white rounded-lg text-sm font-medium transition-colors cursor-pointer ${
+                    className={`inline-flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary-700 text-white rounded-lg text-sm font-medium transition-colors cursor-pointer ${
                       inspectionReport.uploading ? 'opacity-50 cursor-not-allowed' : ''
                     }`}
                   >
@@ -691,8 +861,8 @@ export default function EditPropertyPage() {
                 <div className="bg-neutral-50 border border-neutral-200 rounded-xl p-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-[#F5F3FF] rounded-lg flex items-center justify-center">
-                        <Upload className="w-5 h-5 text-[#472F97]" />
+                      <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
+                        <Upload className="w-5 h-5 text-primary" />
                       </div>
                       <div>
                         <p className="text-sm font-medium text-neutral-900">Inspection Report</p>
@@ -700,7 +870,7 @@ export default function EditPropertyPage() {
                           href={inspectionReport.url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-xs text-[#472F97] hover:underline"
+                          className="text-xs text-primary hover:underline"
                         >
                           View Document
                         </a>
@@ -755,7 +925,7 @@ export default function EditPropertyPage() {
                       type="text"
                       value={formData.seo_title || ''}
                       onChange={(e) => handleInputChange('seo_title', e.target.value)}
-                      className="w-full px-4 py-3 border-2 border-neutral-200 rounded-xl focus:ring-2 focus:ring-[#472F97] focus:border-[#472F97] outline-none transition-all text-sm"
+                      className="w-full px-4 py-3 border-2 border-neutral-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all text-sm"
                       placeholder="Luxury Beachfront Hotel Investment Opportunity"
                       maxLength="60"
                     />
@@ -769,7 +939,7 @@ export default function EditPropertyPage() {
                     <textarea
                       value={formData.seo_description || ''}
                       onChange={(e) => handleInputChange('seo_description', e.target.value)}
-                      className="w-full px-4 py-3 border-2 border-neutral-200 rounded-xl focus:ring-2 focus:ring-[#472F97] focus:border-[#472F97] outline-none transition-all text-sm"
+                      className="w-full px-4 py-3 border-2 border-neutral-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all text-sm"
                       rows="3"
                       placeholder="Discover this stunning wholesale hotel property..."
                       maxLength="160"
@@ -790,7 +960,7 @@ export default function EditPropertyPage() {
                       type="text"
                       value={formData.social_title || ''}
                       onChange={(e) => handleInputChange('social_title', e.target.value)}
-                      className="w-full px-4 py-3 border-2 border-neutral-200 rounded-xl focus:ring-2 focus:ring-[#472F97] focus:border-[#472F97] outline-none transition-all text-sm"
+                      className="w-full px-4 py-3 border-2 border-neutral-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all text-sm"
                       placeholder="Same as SEO title"
                       maxLength="60"
                     />
@@ -801,7 +971,7 @@ export default function EditPropertyPage() {
                     <textarea
                       value={formData.social_description || ''}
                       onChange={(e) => handleInputChange('social_description', e.target.value)}
-                      className="w-full px-4 py-3 border-2 border-neutral-200 rounded-xl focus:ring-2 focus:ring-[#472F97] focus:border-[#472F97] outline-none transition-all text-sm"
+                      className="w-full px-4 py-3 border-2 border-neutral-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all text-sm"
                       rows="3"
                       placeholder="Same as SEO description"
                       maxLength="160"
@@ -814,7 +984,7 @@ export default function EditPropertyPage() {
                       type="url"
                       value={formData.social_image_url || ''}
                       onChange={(e) => handleInputChange('social_image_url', e.target.value)}
-                      className="w-full px-4 py-3 border-2 border-neutral-200 rounded-xl focus:ring-2 focus:ring-[#472F97] focus:border-[#472F97] outline-none transition-all text-sm"
+                      className="w-full px-4 py-3 border-2 border-neutral-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all text-sm"
                       placeholder="https://example.com/image.jpg"
                     />
                     <div className="text-xs text-neutral-500 mt-1">
@@ -886,7 +1056,7 @@ export default function EditPropertyPage() {
                         <button
                           type="button"
                           onClick={() => setShowAllPreviewImages(prev => !prev)}
-                          className="text-xs font-medium text-[#472F97] hover:text-[#3a2578] mb-3"
+                          className="text-xs font-medium text-primary hover:text-primary-700 mb-3"
                         >
                           {showAllPreviewImages ? 'Show first 8' : 'Show all'}
                         </button>

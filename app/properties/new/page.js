@@ -15,16 +15,16 @@ const PROPERTY_STATUSES = [
   { value: 'under_contract', label: 'Under Contract - In negotiation' }
 ];
 
+// Main property types for real estate (buying/selling)
 const PROPERTY_TYPES = [
-  'Hotel',
-  'Resort',
-  'Motel',
-  'Apartment Complex',
-  'Vacation Rental',
-  'Boutique Hotel',
-  'Hostel',
-  'Villa',
-  'Luxury Property'
+  'Single Family',
+  'Multi-Family',
+  'Condo',
+  'Townhouse',
+  'Apartment Building',
+  'Commercial',
+  'Land',
+  'Other'
 ];
 
 export default function NewPropertyPage() {
@@ -42,7 +42,7 @@ export default function NewPropertyPage() {
   const [formData, setFormData] = useState({
     status: 'draft',
     property_status: 'available',
-    property_type: 'Hotel'
+    property_type: ''
   });
 
   const [imageUploadStatus, setImageUploadStatus] = useState({
@@ -58,7 +58,7 @@ export default function NewPropertyPage() {
   });
 
   useEffect(() => {
-    const userStr = localStorage.getItem('hotel_user');
+    const userStr = localStorage.getItem('seller_user');
     if (userStr) {
       const user = JSON.parse(userStr);
       setUserId(user.id);
@@ -109,6 +109,22 @@ export default function NewPropertyPage() {
       return;
     }
 
+    // Resolve seller id at submit time (state may not be set yet); required to link property to seller
+    let sellerId = userId;
+    if (sellerId == null) {
+      try {
+        const userStr = localStorage.getItem('seller_user');
+        if (userStr) {
+          const user = JSON.parse(userStr);
+          sellerId = user?.id ?? null;
+        }
+      } catch (_) {}
+    }
+    if (sellerId == null) {
+      setError('You must be logged in to add a property. Please refresh and try again.');
+      return;
+    }
+
     // Save editor content before submitting
     if (descRef.current) {
       const cleanDescription = descRef.current.getCleanHTML?.() || descRef.current.getHTML?.() || '';
@@ -131,7 +147,7 @@ export default function NewPropertyPage() {
 
     // Create save data object matching the actual database schema
     const saveData = {
-      seller_id: userId,
+      seller_id: sellerId,
       status: publishStatus,
       slug: `${slug}-${Date.now()}`, // Make slug unique with timestamp
       address: formData.location || '', // 'location' in form maps to 'address' in DB
@@ -239,7 +255,7 @@ export default function NewPropertyPage() {
       const fileName = `inspection-reports/${userId}/${Date.now()}-${file.name}`;
 
       const { data, error: uploadError } = await supabase.storage
-        .from('sellerpropertyimages')
+        .from('scraperpropertyphotos')
         .upload(fileName, file, {
           cacheControl: '3600',
           upsert: false
@@ -248,7 +264,7 @@ export default function NewPropertyPage() {
       if (uploadError) throw uploadError;
 
       const { data: { publicUrl } } = supabase.storage
-        .from('sellerpropertyimages')
+        .from('scraperpropertyphotos')
         .getPublicUrl(fileName);
 
       setInspectionReport({
@@ -268,7 +284,7 @@ export default function NewPropertyPage() {
     if (inspectionReport.key) {
       try {
         await supabase.storage
-          .from('sellerpropertyimages')
+          .from('scraperpropertyphotos')
           .remove([inspectionReport.key]);
       } catch (err) {
         console.error('Failed to delete file:', err);
@@ -313,7 +329,7 @@ export default function NewPropertyPage() {
             type="button"
             onClick={() => handleSave('active')}
             disabled={saving || imageUploadStatus.isUploading}
-            className="flex items-center justify-center gap-2 bg-[#472F97] hover:bg-[#3a2578] text-white px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center justify-center gap-2 bg-primary hover:bg-primary-700 text-white px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Eye size={16} />
             <span>
@@ -380,7 +396,7 @@ export default function NewPropertyPage() {
               onClick={() => handleTabChange(tab.id)}
               className={`px-4 md:px-6 py-3 md:py-4 font-medium transition-colors whitespace-nowrap text-xs md:text-sm ${
                 activeTab === tab.id
-                  ? 'text-[#472F97] border-b-2 border-[#472F97] bg-[#F5F3FF]'
+                  ? 'text-primary border-b-2 border-primary bg-primary/5'
                   : 'text-neutral-600 hover:text-neutral-900'
               }`}
             >
@@ -400,7 +416,7 @@ export default function NewPropertyPage() {
                   type="text"
                   value={formData.title || ''}
                   onChange={(e) => handleInputChange('title', e.target.value)}
-                  className="w-full px-4 py-3 border-2 border-neutral-200 rounded-xl focus:ring-2 focus:ring-[#472F97] focus:border-[#472F97] outline-none transition-all text-sm"
+                  className="w-full px-4 py-3 border-2 border-neutral-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all text-sm"
                   placeholder="Luxury Beachfront Hotel in Miami"
                   required
                 />
@@ -424,18 +440,19 @@ export default function NewPropertyPage() {
                     type="number"
                     value={formData.price || ''}
                     onChange={(e) => handleInputChange('price', e.target.value)}
-                    className="w-full px-4 py-3 border-2 border-neutral-200 rounded-xl focus:ring-2 focus:ring-[#472F97] focus:border-[#472F97] outline-none transition-all text-sm"
+                    className="w-full px-4 py-3 border-2 border-neutral-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all text-sm"
                     placeholder="2500000"
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-neutral-700 mb-2">Property Type</label>
                   <select
-                    value={formData.property_type || 'Hotel'}
+                    value={formData.property_type ?? ''}
                     onChange={(e) => handleInputChange('property_type', e.target.value)}
-                    className="w-full px-4 py-3 border-2 border-neutral-200 rounded-xl focus:ring-2 focus:ring-[#472F97] focus:border-[#472F97] outline-none transition-all text-sm"
+                    className="w-full px-4 py-3 border-2 border-neutral-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all text-sm"
                   >
-                    {PROPERTY_TYPES.map(type => (
+                    <option value="">Select property type</option>
+                    {PROPERTY_TYPES.map((type) => (
                       <option key={type} value={type}>{type}</option>
                     ))}
                   </select>
@@ -449,7 +466,7 @@ export default function NewPropertyPage() {
                     type="number"
                     value={formData.bedrooms || ''}
                     onChange={(e) => handleInputChange('bedrooms', e.target.value)}
-                    className="w-full px-4 py-3 border-2 border-neutral-200 rounded-xl focus:ring-2 focus:ring-[#472F97] focus:border-[#472F97] outline-none transition-all text-sm"
+                    className="w-full px-4 py-3 border-2 border-neutral-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all text-sm"
                     placeholder="50"
                     min="0"
                   />
@@ -461,7 +478,7 @@ export default function NewPropertyPage() {
                     step="0.5"
                     value={formData.bathrooms || ''}
                     onChange={(e) => handleInputChange('bathrooms', e.target.value)}
-                    className="w-full px-4 py-3 border-2 border-neutral-200 rounded-xl focus:ring-2 focus:ring-[#472F97] focus:border-[#472F97] outline-none transition-all text-sm"
+                    className="w-full px-4 py-3 border-2 border-neutral-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all text-sm"
                     placeholder="50"
                     min="0"
                   />
@@ -472,7 +489,7 @@ export default function NewPropertyPage() {
                     type="number"
                     value={formData.floor_area || ''}
                     onChange={(e) => handleInputChange('floor_area', e.target.value)}
-                    className="w-full px-4 py-3 border-2 border-neutral-200 rounded-xl focus:ring-2 focus:ring-[#472F97] focus:border-[#472F97] outline-none transition-all text-sm"
+                    className="w-full px-4 py-3 border-2 border-neutral-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all text-sm"
                     placeholder="25000"
                     min="0"
                   />
@@ -484,7 +501,7 @@ export default function NewPropertyPage() {
                 <select
                   value={formData.property_status || 'available'}
                   onChange={(e) => handleInputChange('property_status', e.target.value)}
-                  className="w-full px-4 py-3 border-2 border-neutral-200 rounded-xl focus:ring-2 focus:ring-[#472F97] focus:border-[#472F97] outline-none transition-all text-sm"
+                  className="w-full px-4 py-3 border-2 border-neutral-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all text-sm"
                 >
                   {PROPERTY_STATUSES.map(status => (
                     <option key={status.value} value={status.value}>{status.label}</option>
@@ -530,6 +547,8 @@ export default function NewPropertyPage() {
               images={imageUploadStatus.images}
               onImagesChange={handleImagesChange}
               sellerId={userId}
+              storageBucket="scraperpropertyphotos"
+              uploadPathPrefix="manual"
             />
           </div>
 
@@ -557,7 +576,7 @@ export default function NewPropertyPage() {
                   />
                   <label
                     htmlFor="inspection-upload"
-                    className={`inline-flex items-center gap-2 px-4 py-2 bg-[#472F97] hover:bg-[#3a2578] text-white rounded-lg text-sm font-medium transition-colors cursor-pointer ${
+                    className={`inline-flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary-700 text-white rounded-lg text-sm font-medium transition-colors cursor-pointer ${
                       inspectionReport.uploading ? 'opacity-50 cursor-not-allowed' : ''
                     }`}
                   >
@@ -568,8 +587,8 @@ export default function NewPropertyPage() {
                 <div className="bg-neutral-50 border border-neutral-200 rounded-xl p-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-[#F5F3FF] rounded-lg flex items-center justify-center">
-                        <Upload className="w-5 h-5 text-[#472F97]" />
+                      <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
+                        <Upload className="w-5 h-5 text-primary" />
                       </div>
                       <div>
                         <p className="text-sm font-medium text-neutral-900">Inspection Report</p>
@@ -577,7 +596,7 @@ export default function NewPropertyPage() {
                           href={inspectionReport.url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-xs text-[#472F97] hover:underline"
+                          className="text-xs text-primary hover:underline"
                         >
                           View Document
                         </a>
@@ -632,7 +651,7 @@ export default function NewPropertyPage() {
                       type="text"
                       value={formData.seo_title || ''}
                       onChange={(e) => handleInputChange('seo_title', e.target.value)}
-                      className="w-full px-4 py-3 border-2 border-neutral-200 rounded-xl focus:ring-2 focus:ring-[#472F97] focus:border-[#472F97] outline-none transition-all text-sm"
+                      className="w-full px-4 py-3 border-2 border-neutral-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all text-sm"
                       placeholder="Luxury Beachfront Hotel Investment Opportunity"
                       maxLength="60"
                     />
@@ -646,7 +665,7 @@ export default function NewPropertyPage() {
                     <textarea
                       value={formData.seo_description || ''}
                       onChange={(e) => handleInputChange('seo_description', e.target.value)}
-                      className="w-full px-4 py-3 border-2 border-neutral-200 rounded-xl focus:ring-2 focus:ring-[#472F97] focus:border-[#472F97] outline-none transition-all text-sm"
+                      className="w-full px-4 py-3 border-2 border-neutral-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all text-sm"
                       rows="3"
                       placeholder="Discover this stunning wholesale hotel property..."
                       maxLength="160"
@@ -667,7 +686,7 @@ export default function NewPropertyPage() {
                       type="text"
                       value={formData.social_title || ''}
                       onChange={(e) => handleInputChange('social_title', e.target.value)}
-                      className="w-full px-4 py-3 border-2 border-neutral-200 rounded-xl focus:ring-2 focus:ring-[#472F97] focus:border-[#472F97] outline-none transition-all text-sm"
+                      className="w-full px-4 py-3 border-2 border-neutral-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all text-sm"
                       placeholder="Same as SEO title"
                       maxLength="60"
                     />
@@ -678,7 +697,7 @@ export default function NewPropertyPage() {
                     <textarea
                       value={formData.social_description || ''}
                       onChange={(e) => handleInputChange('social_description', e.target.value)}
-                      className="w-full px-4 py-3 border-2 border-neutral-200 rounded-xl focus:ring-2 focus:ring-[#472F97] focus:border-[#472F97] outline-none transition-all text-sm"
+                      className="w-full px-4 py-3 border-2 border-neutral-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all text-sm"
                       rows="3"
                       placeholder="Same as SEO description"
                       maxLength="160"
@@ -691,7 +710,7 @@ export default function NewPropertyPage() {
                       type="url"
                       value={formData.social_image_url || ''}
                       onChange={(e) => handleInputChange('social_image_url', e.target.value)}
-                      className="w-full px-4 py-3 border-2 border-neutral-200 rounded-xl focus:ring-2 focus:ring-[#472F97] focus:border-[#472F97] outline-none transition-all text-sm"
+                      className="w-full px-4 py-3 border-2 border-neutral-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all text-sm"
                       placeholder="https://example.com/image.jpg"
                     />
                     <div className="text-xs text-neutral-500 mt-1">
@@ -763,7 +782,7 @@ export default function NewPropertyPage() {
                         <button
                           type="button"
                           onClick={() => setShowAllPreviewImages(prev => !prev)}
-                          className="text-xs font-medium text-[#472F97] hover:text-[#3a2578] mb-3"
+                          className="text-xs font-medium text-primary hover:text-primary-700 mb-3"
                         >
                           {showAllPreviewImages ? 'Show first 8' : 'Show all'}
                         </button>
