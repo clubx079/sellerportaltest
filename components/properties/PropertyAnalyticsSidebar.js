@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
-import { Calendar, ArrowDownUp, Users, Eye, Image as ImageIcon, Smartphone, Monitor, Tablet } from 'lucide-react';
+import { Calendar, ArrowDownUp, Users, Eye, Smartphone, Monitor, Tablet } from 'lucide-react';
 
 function formatDuration(seconds) {
   if (seconds == null || seconds === 0) return '—';
@@ -211,38 +211,6 @@ export default function PropertyAnalyticsSidebar({ propertyId, propertyName, onC
                       <option key={o.value} value={o.value}>{o.label}</option>
                     ))}
                   </select>
-                </div>
-              </div>
-
-              {/* Total images viewed + device breakdown */}
-              <div className="rounded-lg border border-slate-200 bg-white px-4 py-3 shadow-sm">
-                <h3 className="text-xs font-semibold text-slate-800 mb-2.5 flex items-center gap-1.5">
-                  <span className="w-1 h-3.5 rounded-full bg-primary" />
-                  Engagement summary
-                </h3>
-                <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
-                  <div className="flex items-center gap-2">
-                    <ImageIcon className="w-4 h-4 text-slate-600" />
-                    <span className="text-xs text-slate-700">Images viewed</span>
-                    <span className="text-sm font-semibold text-slate-900 tabular-nums">{agg.totalImagesViewed ?? 0}</span>
-                  </div>
-                  <div className="flex items-center gap-3 text-slate-700">
-                    <span className="flex items-center gap-1.5 text-xs">
-                      <Smartphone className="w-3.5 h-3.5 text-slate-500" />
-                      <span className="font-medium tabular-nums">{agg.deviceBreakdown?.mobile ?? 0}</span>
-                      <span className="text-slate-600">mobile</span>
-                    </span>
-                    <span className="flex items-center gap-1.5 text-xs">
-                      <Monitor className="w-3.5 h-3.5 text-slate-500" />
-                      <span className="font-medium tabular-nums">{agg.deviceBreakdown?.desktop ?? 0}</span>
-                      <span className="text-slate-600">desktop</span>
-                    </span>
-                    <span className="flex items-center gap-1.5 text-xs">
-                      <Tablet className="w-3.5 h-3.5 text-slate-500" />
-                      <span className="font-medium tabular-nums">{agg.deviceBreakdown?.tablet ?? 0}</span>
-                      <span className="text-slate-600">tablet</span>
-                    </span>
-                  </div>
                 </div>
               </div>
 
