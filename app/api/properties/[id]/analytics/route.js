@@ -88,6 +88,7 @@ export async function GET(request, { params }) {
         clicked_share,
         zoomed_map,
         device_type,
+        utm_source,
         created_at,
         images_viewed
       `)
@@ -137,6 +138,17 @@ export async function GET(request, { params }) {
     const totalPageViews = list.reduce((sum, r) => sum + (Number(r.page_views) || 0), 0);
     const totalDurationSeconds = list.reduce((sum, r) => sum + (Number(r.duration_seconds) || 0), 0);
     const totalActiveTimeSeconds = list.reduce((sum, r) => sum + (Number(r.active_time_seconds) || 0), 0);
+    const totalImagesViewed = list.reduce((sum, r) => sum + (Number(r.images_viewed) || 0), 0);
+    const deviceBreakdown = list.reduce(
+      (acc, r) => {
+        const t = (r.device_type || '').toLowerCase().trim();
+        if (t === 'mobile') acc.mobile += 1;
+        else if (t === 'desktop') acc.desktop += 1;
+        else if (t === 'tablet') acc.tablet += 1;
+        return acc;
+      },
+      { mobile: 0, desktop: 0, tablet: 0 }
+    );
 
     // Build all session rows (property_analytics + page_visits-only)
     const allSessionRows = list.map((r) => ({
@@ -153,6 +165,7 @@ export async function GET(request, { params }) {
       active_time_seconds: r.active_time_seconds,
       page_views: r.page_views,
       device_type: r.device_type,
+      utm_source: r.utm_source || null,
       created_at: r.created_at,
       images_viewed: r.images_viewed,
       scrolled_to_bottom: r.scrolled_to_bottom,
@@ -176,6 +189,7 @@ export async function GET(request, { params }) {
         active_time_seconds: null,
         page_views: 1,
         device_type: null,
+        utm_source: null,
         created_at: v.visited_at,
         images_viewed: null,
         scrolled_to_bottom: null,
@@ -221,6 +235,7 @@ export async function GET(request, { params }) {
           view_end_time: row.view_end_time,
           created_at: row.created_at,
           device_type: row.device_type || null,
+          utm_source: row.utm_source || null,
           scrolled_to_bottom: scrolled,
           viewed_photos: photos,
           viewed_description: desc,
@@ -239,6 +254,7 @@ export async function GET(request, { params }) {
         existing.viewed_repairs = existing.viewed_repairs || repairs;
         if (row.user_phone && !existing.user_phone) existing.user_phone = row.user_phone;
         if (row.device_type && !existing.device_type) existing.device_type = row.device_type;
+        if (row.utm_source && !existing.utm_source) existing.utm_source = row.utm_source;
         if (start != null && (existing._minStart == null || start < existing._minStart)) {
           existing._minStart = start;
           existing.view_start_time = row.view_start_time;
@@ -289,6 +305,8 @@ export async function GET(request, { params }) {
         uniqueViewers,
         totalDurationSeconds,
         totalActiveTimeSeconds,
+        totalImagesViewed,
+        deviceBreakdown,
         activeNow
       },
       viewerSessions

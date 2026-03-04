@@ -49,6 +49,7 @@ export default function EditPropertyPage() {
   const descRef = useRef(null);
   const repairsRef = useRef(null);
   const initialTitleRef = useRef('');
+  const initialLocationRef = useRef('');
   const existingSlugRef = useRef('');
 
   const [formData, setFormData] = useState({
@@ -117,6 +118,7 @@ export default function EditPropertyPage() {
         const data = manualData;
         const derivedTitle = slugToTitle(data.slug);
         initialTitleRef.current = derivedTitle;
+        initialLocationRef.current = data.address || '';
         existingSlugRef.current = data.slug || '';
 
         setFormData({
@@ -204,6 +206,7 @@ export default function EditPropertyPage() {
       const derivedTitle = d.slug ? slugToTitle(d.slug) : (d.full_address || d.display_address || d.address || '').trim();
       const locationLine = d.full_address || d.display_address || d.address || '';
       initialTitleRef.current = derivedTitle;
+      initialLocationRef.current = locationLine || '';
       existingSlugRef.current = d.slug || '';
 
       setFormData({
@@ -312,18 +315,13 @@ export default function EditPropertyPage() {
     setError(null);
     setSuccess(null);
 
-    const trimmedTitle = formData.title.trim();
-    const slugBase = trimmedTitle
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/(^-|-$)/g, '');
-
-    const shouldUpdateSlug = trimmedTitle &&
-      trimmedTitle.toLowerCase() !== (initialTitleRef.current || '').toLowerCase();
-
-    const slugToSave = shouldUpdateSlug && slugBase
-      ? `${slugBase}-${Date.now()}`
-      : existingSlugRef.current;
+    // Short unique slug when address changes (e.g. k2m9x4np)
+    const locationForSlug = (formData.location || '').trim();
+    const shouldUpdateSlug = locationForSlug &&
+      locationForSlug.toLowerCase() !== (initialLocationRef.current || '').trim().toLowerCase();
+    const chars = 'abcdefghjkmnpqrstuvwxyz23456789';
+    const newShortSlug = () => Array.from({ length: 8 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+    const slugToSave = shouldUpdateSlug ? newShortSlug() : existingSlugRef.current;
 
     // Create save data object matching the actual database schema
     const saveData = {
