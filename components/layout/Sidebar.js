@@ -76,12 +76,51 @@ export default function Sidebar({ isOpen, setIsOpen, activeItem, setActiveItem, 
   ]
 
   const [sellerUser, setSellerUser] = useState(null)
+  const [messagesUnreadCount, setMessagesUnreadCount] = useState(0)
   useEffect(() => {
     try {
       const raw = localStorage.getItem('seller_user')
       if (raw) setSellerUser(JSON.parse(raw))
     } catch (_) {}
   }, [])
+
+  useEffect(() => {
+    const sellerId = sellerUser?.id || sellerUser?.userId
+    if (!sellerId) return
+
+    let mounted = true
+    let timer = null
+
+    const fetchUnread = async () => {
+      try {
+        const res = await fetch('/api/seller/chat?action=get_conversations', {
+          headers: {
+            Authorization: `Bearer ${sellerId}`
+          }
+        })
+        const data = await res.json()
+        if (!mounted) return
+        if (data?.success && Array.isArray(data.conversations)) {
+          const total = data.conversations.reduce((sum, c) => sum + Number(c.unread_count || 0), 0)
+          setMessagesUnreadCount(total)
+        }
+      } catch (_) {
+        // Keep sidebar resilient if unread call fails.
+      }
+    }
+
+    fetchUnread()
+    timer = setInterval(() => {
+      if (typeof document === 'undefined' || document.visibilityState === 'visible') {
+        fetchUnread()
+      }
+    }, 10000)
+
+    return () => {
+      mounted = false
+      if (timer) clearInterval(timer)
+    }
+  }, [sellerUser?.id, sellerUser?.userId])
 
   useEffect(() => {
     menuItems.forEach((item) => {
@@ -201,6 +240,8 @@ export default function Sidebar({ isOpen, setIsOpen, activeItem, setActiveItem, 
           {menuItems.map((item) => {
             const Icon = item.icon
             const isActive = activeItem === item.id
+            const isMessages = item.id === 'messages'
+            const showUnread = isMessages && messagesUnreadCount > 0
             return (
               <Link
                 key={item.id}
@@ -215,15 +256,25 @@ export default function Sidebar({ isOpen, setIsOpen, activeItem, setActiveItem, 
                     : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
                 }`}
               >
-                <Icon className={`w-5 h-5 flex-shrink-0 ${isActive ? 'text-primary' : 'text-slate-400 group-hover:text-slate-600'}`} />
+                <div className="relative shrink-0">
+                  <Icon className={`w-5 h-5 flex-shrink-0 ${isActive ? 'text-primary' : 'text-slate-400 group-hover:text-slate-600'}`} />
+                  {showUnread && !showExpanded && (
+                    <span className="absolute -top-1.5 -right-1.5 inline-flex items-center justify-center min-w-[16px] h-4 px-1 text-[10px] font-bold leading-none text-white bg-brandRed rounded-full">
+                      {messagesUnreadCount > 9 ? '9+' : messagesUnreadCount}
+                    </span>
+                  )}
+                </div>
                 {showExpanded && (
-                  <span
-                    className={`text-sm font-medium truncate transition-opacity duration-200 ease-out ${
-                      expandedContentVisible ? 'opacity-100' : 'opacity-0'
-                    }`}
-                  >
-                    {item.label}
-                  </span>
+                  <div className={`flex items-center justify-between gap-2 min-w-0 flex-1 transition-opacity duration-200 ease-out ${
+                    expandedContentVisible ? 'opacity-100' : 'opacity-0'
+                  }`}>
+                    <span className="text-sm font-medium truncate">{item.label}</span>
+                    {showUnread && (
+                      <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 text-[10px] font-bold leading-none text-white bg-brandRed rounded-full">
+                        {messagesUnreadCount > 99 ? '99+' : messagesUnreadCount}
+                      </span>
+                    )}
+                  </div>
                 )}
               </Link>
             )

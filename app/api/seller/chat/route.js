@@ -36,7 +36,7 @@ async function isRecipientActiveOnMessages(supabaseClient, recipientUserId, reci
 }
 
 /** Send email to buyer when seller sends a message (only if buyer not active on messages) */
-async function sendEmailToBuyer(buyerEmail, buyerName, sellerName, messageText, conversationId) {
+async function sendEmailToBuyer(buyerEmail, buyerName, sellerName, messageText, conversationId, propertyAddress = '') {
   if (!buyerEmail) return;
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
@@ -47,29 +47,53 @@ async function sendEmailToBuyer(buyerEmail, buyerName, sellerName, messageText, 
     const resend = new Resend(apiKey);
     const buyerBase = (process.env.NEXT_PUBLIC_DEELMAP_VIEW_BASE_URL || '').replace(/\/$/, '') || 'https://deelmap-production-16a1.up.railway.app';
     const messagesLink = `${buyerBase}/buyer/inbox`;
+    const logoBase = (process.env.NEXT_PUBLIC_SELLER_PORTAL_URL || '').replace(/\/$/, '') || 'https://sellerportaldeelmap-production.up.railway.app';
+    const logoUrl = `${logoBase}/deelmap.png`;
     const preview = (messageText || '').slice(0, 200);
+    const propertyText = String(propertyAddress || '').trim();
     const html = `
 <!DOCTYPE html>
 <html>
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f5f5f5;padding:24px">
-  <div style="max-width:560px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08)">
-    <div style="background:#002A3A;color:#fff;padding:24px;text-align:center">
-      <h1 style="margin:0;font-size:20px;font-weight:600">New message on Deelmap</h1>
-    </div>
-    <div style="padding:24px">
-      <p style="margin:0 0 8px;font-size:14px;color:#666">From <strong style="color:#002A3A">${(sellerName || 'Property seller').replace(/</g, '&lt;')}</strong></p>
-      <div style="background:#f8f9fa;border-left:4px solid #002A3A;padding:16px;border-radius:4px;margin:16px 0;font-size:15px;line-height:1.5;color:#333">${(preview || '').replace(/</g, '&lt;').replace(/\n/g, '<br>')}</div>
-      <a href="${messagesLink}" style="display:inline-block;background:#002A3A;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px">Open Messages</a>
-    </div>
-    <div style="padding:16px;text-align:center;font-size:12px;color:#888;border-top:1px solid #eee">You received this because you have an active conversation on Deelmap.</div>
-  </div>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>New message on Deelmap</title>
+</head>
+<body style="margin:0;padding:0;background:#f3f6f8;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;color:#0f172a">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f3f6f8;padding:20px 10px">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:620px;background:#ffffff;border:1px solid #e5e7eb;border-radius:14px;overflow:hidden">
+          <tr>
+            <td style="background:#022b41;padding:20px 24px;text-align:center">
+              <img src="${logoUrl}" alt="Deelmap" width="140" style="display:block;margin:0 auto 10px;height:auto;max-width:140px" />
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:24px">
+              <p style="margin:0 0 10px;font-size:14px;color:#64748b">From <strong style="color:#022b41">${(sellerName || 'Property seller').replace(/</g, '&lt;')}</strong></p>
+              ${propertyText ? `<p style="margin:0 0 10px;font-size:14px;color:#64748b">Property <strong style="color:#022b41">${propertyText.replace(/</g, '&lt;')}</strong></p>` : ''}
+              <div style="background:#f8fafc;border:1px solid #e2e8f0;border-left:4px solid #022b41;padding:14px 16px;border-radius:10px;margin:14px 0 20px;font-size:15px;line-height:1.55;color:#1f2937">${(preview || '').replace(/</g, '&lt;').replace(/\n/g, '<br>')}</div>
+              <table role="presentation" cellspacing="0" cellpadding="0" style="margin:0 auto 2px">
+                <tr>
+                  <td align="center" style="border-radius:10px;background:#022b41">
+                    <a href="${messagesLink}" style="display:inline-block;padding:12px 22px;font-size:14px;font-weight:600;color:#ffffff;text-decoration:none">Open Messages</a>
+                  </td>
+                </tr>
+              </table>
+              <p style="margin:16px 0 0;text-align:center;font-size:12px;color:#94a3b8">You received this because you have an active conversation on Deelmap.</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
 </body>
 </html>`;
     await resend.emails.send({
       from: process.env.RESEND_FROM_EMAIL || 'Deelmap <notifications@deelmap.com>',
       to: buyerEmail,
-      subject: `New message from ${(sellerName || 'Property seller').slice(0, 50)} - Deelmap`,
+      subject: `New message from ${(sellerName || 'Property seller').slice(0, 50)}${propertyText ? ` • ${propertyText.slice(0, 70)}` : ''} - Deelmap`,
       html
     });
     console.log('[Seller chat] Email sent to buyer:', buyerEmail);
@@ -109,6 +133,38 @@ async function upsertSellerConversationPref(conversationId, sellerId, patch = {}
   );
 }
 
+async function getConversationPropertyThumbnail(propertyId) {
+  if (!propertyId) return null;
+
+  const { data: featuredWholesale } = await supabase
+    .from('property_photos')
+    .select('photo_url')
+    .eq('deal_id', propertyId)
+    .eq('is_featured', true)
+    .order('display_order', { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  if (featuredWholesale?.photo_url) return featuredWholesale.photo_url;
+
+  const { data: firstWholesale } = await supabase
+    .from('property_photos')
+    .select('photo_url')
+    .eq('deal_id', propertyId)
+    .order('display_order', { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  if (firstWholesale?.photo_url) return firstWholesale.photo_url;
+
+  const { data: firstManual } = await supabase
+    .from('property_images')
+    .select('image_url')
+    .eq('property_id', propertyId)
+    .order('sort_order', { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  return firstManual?.image_url || null;
+}
+
 export async function GET(request) {
   try {
     if (!supabaseKey) {
@@ -126,6 +182,7 @@ export async function GET(request) {
     const action = searchParams.get('action');
     const conversationId = searchParams.get('conversation_id');
     const buyerId = searchParams.get('buyer_id');
+    const propertyId = searchParams.get('property_id');
 
     if (action === 'get_messages' && conversationId) {
       const { data: messages, error } = await supabase
@@ -189,12 +246,24 @@ export async function GET(request) {
     }
 
     if (action === 'get_conversations' || !action) {
-      const { data: conversations, error } = await supabase
+      let { data: conversations, error } = await supabase
         .from('conversations')
-        .select('id, user_id, last_message_at, last_message_preview, is_active, created_at, buyer_uuid')
+        .select('id, user_id, last_message_at, last_message_preview, is_active, created_at, buyer_uuid, property_id, property_address')
         .eq('seller_id', sellerId)
         .eq('is_active', true)
         .order('last_message_at', { ascending: false });
+
+      // Backward-safe fallback if conversation property columns are not migrated yet.
+      if (error && String(error.message || '').toLowerCase().includes('property_')) {
+        const fallbackRes = await supabase
+          .from('conversations')
+          .select('id, user_id, last_message_at, last_message_preview, is_active, created_at, buyer_uuid')
+          .eq('seller_id', sellerId)
+          .eq('is_active', true)
+          .order('last_message_at', { ascending: false });
+        conversations = fallbackRes.data;
+        error = fallbackRes.error;
+      }
 
       if (error) {
         console.error('conversations fetch error:', error);
@@ -204,6 +273,7 @@ export async function GET(request) {
       const list = conversations || [];
       const enriched = await Promise.all(
         list.map(async (c) => {
+          const property_thumbnail_url = await getConversationPropertyThumbnail(c.property_id);
           let buyer_name = 'Buyer';
           if (c.buyer_uuid) {
             const { data: u } = await supabase
@@ -236,6 +306,7 @@ export async function GET(request) {
           return {
             ...c,
             buyer_name,
+            property_thumbnail_url,
             unread_count,
             is_done: !!pref?.is_done,
             is_pinned: !!pref?.is_pinned,
@@ -248,7 +319,12 @@ export async function GET(request) {
       );
 
       if (buyerId) {
-        const withBuyer = enriched.find((c) => c.buyer_uuid === buyerId);
+        const withBuyer = enriched.find((c) => {
+          const buyerMatch = String(c.buyer_uuid || '') === String(buyerId);
+          if (!buyerMatch) return false;
+          if (!propertyId) return true;
+          return String(c.property_id || '') === String(propertyId);
+        });
         if (withBuyer) {
           return NextResponse.json({ success: true, conversations: enriched, openConversationId: withBuyer.id });
         }
@@ -278,7 +354,7 @@ export async function POST(request) {
     }
 
     const body = await request.json().catch(() => ({}));
-    const { action, conversationId, messageText, buyerId } = body;
+    const { action, conversationId, messageText, buyerId, propertyId, propertyAddress } = body;
 
     // Heartbeat: mark seller as active on messages tab
     if (action === 'heartbeat') {
@@ -326,7 +402,7 @@ export async function POST(request) {
 
       const { data: conv, error: convError } = await supabase
         .from('conversations')
-        .select('id, buyer_uuid')
+        .select('id, buyer_uuid, property_address')
         .eq('id', conversationId)
         .eq('seller_id', sellerId)
         .single();
@@ -432,7 +508,8 @@ export async function POST(request) {
                 [buyer.first_name, buyer.last_name].filter(Boolean).join(' ').trim() || 'Buyer',
                 sellerName,
                 messageText,
-                conversationId
+                conversationId,
+                conv?.property_address
               );
               emailNotification = { status: 'sent', to: buyer.email };
               console.log('[Seller chat] Email sent to buyer:', buyer.email);
@@ -448,12 +525,20 @@ export async function POST(request) {
     }
 
     if (action === 'create_conversation' && buyerId) {
-      const { data: existing } = await supabase
+      let existingQuery = supabase
         .from('conversations')
         .select('id')
         .eq('seller_id', sellerId)
         .eq('buyer_uuid', buyerId)
-        .maybeSingle();
+        .eq('is_active', true);
+
+      if (propertyId) {
+        existingQuery = existingQuery.eq('property_id', propertyId);
+      } else {
+        existingQuery = existingQuery.is('property_id', null);
+      }
+
+      const { data: existing } = await existingQuery.maybeSingle();
 
       if (existing) {
         return NextResponse.json({ success: true, conversationId: existing.id });
@@ -466,13 +551,33 @@ export async function POST(request) {
         last_message_at: new Date().toISOString(),
         last_message_preview: null,
         is_active: true,
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
+        property_id: propertyId || null,
+        property_address: propertyAddress || null
       };
-      const { data: created, error } = await supabase
+      let createRes = await supabase
         .from('conversations')
         .insert(insert)
         .select('id')
         .single();
+
+      if (createRes.error && String(createRes.error.message || '').toLowerCase().includes('property_')) {
+        createRes = await supabase
+          .from('conversations')
+          .insert({
+            seller_id: sellerId,
+            buyer_uuid: buyerId,
+            user_id: null,
+            last_message_at: new Date().toISOString(),
+            last_message_preview: null,
+            is_active: true,
+            updated_at: new Date().toISOString()
+          })
+          .select('id')
+          .single();
+      }
+
+      const { data: created, error } = createRes;
 
       if (error) {
         console.error('create_conversation error:', error);

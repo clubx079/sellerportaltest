@@ -1,8 +1,8 @@
 "use client";
 
-import { X, MapPin, DollarSign, Home, Maximize, Star } from 'lucide-react';
+import { X, MapPin, DollarSign, Home, Maximize, Star, Link2 } from 'lucide-react';
 
-export default function PropertyViewModal({ property, onClose }) {
+export default function PropertyViewModal({ property, onClose, onOpenUTMLinks }) {
   if (!property) return null;
 
   const getFeaturedImage = () => {
@@ -129,6 +129,24 @@ export default function PropertyViewModal({ property, onClose }) {
               </span>
             </div>
           </div>
+
+          {/* UTM Share Links */}
+          {onOpenUTMLinks && (
+            <div>
+              <label className="block text-sm font-semibold text-neutral-700 mb-2">Share links (UTM)</label>
+              <p className="text-xs text-neutral-500 mb-2">
+                Generate platform-specific links to track where your views come from.
+              </p>
+              <button
+                type="button"
+                onClick={() => onOpenUTMLinks(property)}
+                className="inline-flex items-center gap-2 px-3 py-2 bg-primary text-white text-sm font-medium rounded-lg hover:opacity-90 transition-opacity"
+              >
+                <Link2 className="w-4 h-4" />
+                Open UTM links
+              </button>
+            </div>
+          )}
 
           {/* Description */}
           {property.description && (

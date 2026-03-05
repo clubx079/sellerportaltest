@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Image from 'next/image'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { LogIn, Mail, Lock, AlertCircle, Eye, EyeOff, MapPin, Shield } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
@@ -302,6 +303,14 @@ export default function LoginPage() {
                   >
                     {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                   </button>
+                </div>
+                <div className="mt-2 text-right">
+                  <Link
+                    href="/forgot-password"
+                    className="text-sm font-medium text-primary hover:text-primary-700 hover:underline transition-colors"
+                  >
+                    Forgot password?
+                  </Link>
                 </div>
               </div>
 

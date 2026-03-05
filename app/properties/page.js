@@ -2,11 +2,12 @@
 
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { Plus, Edit2, Trash2, Eye, Search, X, Building2, Filter, ChevronLeft, ChevronRight, MapPin, DollarSign, RotateCcw, BarChart2 } from 'lucide-react';
+import { Plus, Edit2, Trash2, Eye, Search, X, Building2, Filter, ChevronLeft, ChevronRight, MapPin, DollarSign, RotateCcw, BarChart2, Link2 } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import DeleteConfirmModal from '@/components/properties/DeleteConfirmModal';
 import PropertyViewModal from '@/components/properties/PropertyViewModal';
 import PropertyAnalyticsSidebar from '@/components/properties/PropertyAnalyticsSidebar';
+import { UTMLinksModal } from '@/components/properties/UTMLinksModal';
 
 const DEELMAP_VIEW_BASE_URL = process.env.NEXT_PUBLIC_DEELMAP_VIEW_BASE_URL || 'https://deelmap-production-16a1.up.railway.app';
 
@@ -25,7 +26,11 @@ const PropertiesManagement = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [filterStatus, setFilterStatus] = useState('');
   const [filterPropertyStatus, setFilterPropertyStatus] = useState('');
+  const [statusUpdatingId, setStatusUpdatingId] = useState(null);
   const [userId, setUserId] = useState(null);
+  const [showUTMModal, setShowUTMModal] = useState(false);
+  const [propertyForUTM, setPropertyForUTM] = useState(null);
+  const [selectedPropertyRaw, setSelectedPropertyRaw] = useState(null); // raw property for UTM (slug/id)
   const searchParams = useSearchParams();
   const viewFromUrl = searchParams.get('view') === 'trash' ? 'trash' : 'active';
   const [viewMode, setViewMode] = useState(viewFromUrl); // 'active' or 'trash'
@@ -98,6 +103,7 @@ const PropertiesManagement = () => {
         // Normalize for shared display (properties uses address, slug; no full_address in some schemas)
         full_address: p.address || p.full_address,
         property_status: p.property_status || 'available',
+        slug: p.slug ?? p.id,
       }));
 
       // 2) Scraped listings: from wholesale_deals (email, URL import, SMS from call-and-sms)
@@ -125,6 +131,7 @@ const PropertiesManagement = () => {
           scraped = (wholesaleList || []).map(p => ({
             ...p,
             _source: 'scraped',
+            slug: p.slug ?? p.id,
           }));
         }
       }
@@ -185,7 +192,7 @@ const PropertiesManagement = () => {
     if (property._source === 'scraped') {
       return {
         ...property,
-        slug: property.full_address || property.address || property.id,
+        slug: property.slug || property.full_address || property.address || property.id,
         floor_area: property.floor_area ?? property.sqft ?? null,
         property_images: (property.property_photos || [])
           .sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0))
@@ -196,6 +203,7 @@ const PropertiesManagement = () => {
   };
 
   const handleViewClick = (property) => {
+    setSelectedPropertyRaw(property);
     setSelectedProperty(getPropertyForModal(property));
     setShowViewModal(true);
   };
@@ -326,6 +334,56 @@ const PropertiesManagement = () => {
     } catch (error) {
       console.error('Error deleting property:', error);
       alert('Failed to delete property: ' + error.message);
+    }
+  };
+
+  const handleToggleActive = async (property) => {
+    if (!property) return;
+    const current = (property.status || 'active').toLowerCase();
+    const nextStatus = current === 'inactive' ? 'active' : 'inactive';
+    const isManual = property._source === 'manual';
+    const nextPropertyStatus = nextStatus === 'inactive' ? 'unavailable' : 'available';
+
+    try {
+      setStatusUpdatingId(`${property._source}-${property.id}`);
+      if (isManual) {
+        const { error } = await supabase
+          .from('properties')
+          .update({ status: nextStatus, property_status: nextPropertyStatus })
+          .eq('id', property.id)
+          .eq('seller_id', userId);
+        if (error) throw error;
+      } else {
+        const { data: sellerRow } = await supabase
+          .from('seller_applications')
+          .select('temp_seller_id')
+          .eq('id', userId)
+          .maybeSingle();
+        const tempSellerId = sellerRow?.temp_seller_id;
+        if (!tempSellerId) {
+          alert('Unable to verify ownership. Please try again.');
+          return;
+        }
+        const { error } = await supabase
+          .from('wholesale_deals')
+          .update({ status: nextStatus })
+          .eq('id', property.id)
+          .eq('temp_seller_id', tempSellerId);
+        if (error) throw error;
+      }
+
+      setProperties((prev) =>
+        prev.map((p) =>
+          p.id === property.id && p._source === property._source
+            ? { ...p, status: nextStatus, ...(isManual ? { property_status: nextPropertyStatus } : {}) }
+            : p
+        )
+      );
+    } catch (error) {
+      console.error('Error updating property active status:', error);
+      alert('Failed to update property status: ' + (error?.message || 'Unknown error'));
+    } finally {
+      setStatusUpdatingId(null);
     }
   };
 
@@ -549,7 +607,7 @@ const PropertiesManagement = () => {
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">Type</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">Status</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">Property Status</th>
-                <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">Actions</th>
+                <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap min-w-[240px]">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 bg-white">
@@ -604,7 +662,7 @@ const PropertiesManagement = () => {
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
                       <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium border ${property._source === 'manual' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-amber-50 text-amber-700 border-amber-200'}`}>
-                        {property._source === 'manual' ? 'Manual' : 'Scraped'}
+                        {property._source === 'manual' ? 'Manual' : 'DeelScout'}
                       </span>
                     </td>
                     <td className="px-4 py-3">
@@ -622,16 +680,37 @@ const PropertiesManagement = () => {
                       <span className="text-xs text-gray-700">{property.property_type || 'N/A'}</span>
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium border ${getStatusColor(property.status)}`}>
-                        {(property.status || 'draft')?.charAt(0).toUpperCase() + (property.status || '').slice(1) || 'Draft'}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium border ${getStatusColor(property.status)}`}>
+                          {(property.status || 'draft')?.charAt(0).toUpperCase() + (property.status || '').slice(1) || 'Draft'}
+                        </span>
+                        {viewMode === 'active' && (property.status || '').toLowerCase() !== 'archived' && (
+                          <button
+                            type="button"
+                            disabled={statusUpdatingId === `${property._source}-${property.id}`}
+                            onClick={() => handleToggleActive(property)}
+                            className={`text-[10px] font-medium px-2 py-0.5 rounded border transition-colors ${
+                              (property.status || 'active').toLowerCase() === 'inactive'
+                                ? 'border-green-200 text-green-700 bg-green-50 hover:bg-green-100'
+                                : 'border-amber-200 text-amber-700 bg-amber-50 hover:bg-amber-100'
+                            } disabled:opacity-50 disabled:cursor-not-allowed`}
+                            title={(property.status || 'active').toLowerCase() === 'inactive' ? 'Activate listing' : 'Deactivate listing'}
+                          >
+                            {statusUpdatingId === `${property._source}-${property.id}`
+                              ? 'Saving...'
+                              : (property.status || 'active').toLowerCase() === 'inactive'
+                                ? 'Activate'
+                                : 'Deactivate'}
+                          </button>
+                        )}
+                      </div>
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
                       <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium border ${getPropertyStatusColor(property.property_status)}`}>
                         {(property.property_status || 'available')?.replace('_', ' ').split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') || 'Available'}
                       </span>
                     </td>
-                    <td className="px-4 py-3 whitespace-nowrap">
+                    <td className="px-4 py-3 whitespace-nowrap min-w-[240px]">
                       <div className="flex items-center justify-end gap-0.5">
                         {viewMode === 'trash' ? (
                           <>
@@ -653,7 +732,7 @@ const PropertiesManagement = () => {
                         ) : (
                           <>
                             <a
-                              href={`${DEELMAP_VIEW_BASE_URL.replace(/\/$/, '')}/${property.id}`}
+                              href={`${DEELMAP_VIEW_BASE_URL.replace(/\/$/, '')}/${property.slug || property.id}`}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="flex items-center justify-center w-8 h-8 rounded-lg text-gray-400 hover:text-primary hover:bg-gray-100 transition-colors"
@@ -661,6 +740,20 @@ const PropertiesManagement = () => {
                             >
                               <Eye className="w-4 h-4" strokeWidth={2} />
                             </a>
+                            <button
+                              onClick={() => {
+                                setPropertyForUTM({
+                                  ...property,
+                                  slug: property.slug || property.id,
+                                  id: property.id,
+                                });
+                                setShowUTMModal(true);
+                              }}
+                              className="flex items-center justify-center w-8 h-8 rounded-lg text-gray-400 hover:text-primary hover:bg-gray-100 transition-colors"
+                              title="Share links (UTM)"
+                            >
+                              <Link2 className="w-4 h-4" strokeWidth={2} />
+                            </button>
                             <button
                               onClick={() => router.push(`/properties/edit/${property.id}`)}
                               className="flex items-center justify-center w-8 h-8 rounded-lg text-gray-400 hover:text-primary hover:bg-gray-100 transition-colors"
@@ -784,6 +877,24 @@ const PropertiesManagement = () => {
             setShowViewModal(false);
             setSelectedProperty(null);
           }}
+          onOpenUTMLinks={() => {
+            const raw = selectedPropertyRaw || propertyForUTM;
+            if (raw) setPropertyForUTM({ ...raw, slug: raw.slug || raw.id });
+            setShowUTMModal(true);
+          }}
+        />
+      )}
+
+      {showUTMModal && propertyForUTM && (
+        <UTMLinksModal
+          isOpen={showUTMModal}
+          onClose={() => {
+            setShowUTMModal(false);
+            setPropertyForUTM(null);
+          }}
+          property={{ ...propertyForUTM, slug: propertyForUTM.slug || propertyForUTM.id }}
+          baseUrl={DEELMAP_VIEW_BASE_URL.replace(/\/$/, '')}
+          userId={userId}
         />
       )}
 

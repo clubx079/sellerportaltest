@@ -56,6 +56,11 @@ export default function NewPropertyPage() {
     key: null,
     uploading: false
   });
+  const [featuredImageModal, setFeaturedImageModal] = useState({
+    open: false,
+    publishStatus: 'draft',
+    imageCount: 0
+  });
 
   useEffect(() => {
     const userStr = localStorage.getItem('seller_user');
@@ -98,7 +103,8 @@ export default function NewPropertyPage() {
     setActiveTab(tabId);
   };
 
-  const handleSave = async (publishStatus = 'draft') => {
+  const handleSave = async (publishStatus = 'draft', options = {}) => {
+    const { skipFeaturedPrompt = false, forceAutoSelectFeatured = false } = options;
     if (!formData.title || !formData.location) {
       setError('Please fill in Title and Address before saving.');
       return;
@@ -107,6 +113,38 @@ export default function NewPropertyPage() {
     if (imageUploadStatus.isUploading) {
       setError(`Please wait for ${imageUploadStatus.uploadingCount} image${imageUploadStatus.uploadingCount > 1 ? 's' : ''} to finish uploading.`);
       return;
+    }
+
+    const completedImages = imageUploadStatus.images.filter(
+      (img) => img.status === 'completed' && img.imageUrl
+    );
+    let completedImagesForSave = completedImages;
+    const hasFeaturedImage = completedImages.some((img) => !!img.isFeatured);
+
+    if (completedImages.length > 0 && !hasFeaturedImage && !skipFeaturedPrompt) {
+      setFeaturedImageModal({
+        open: true,
+        publishStatus,
+        imageCount: completedImages.length
+      });
+      return;
+    }
+
+    if (completedImages.length > 0 && !hasFeaturedImage && forceAutoSelectFeatured) {
+      const firstCompletedId = completedImages[0].id;
+      completedImagesForSave = completedImages.map((img, index) => ({
+        ...img,
+        isFeatured: index === 0
+      }));
+
+      setImageUploadStatus((prev) => ({
+        ...prev,
+        images: prev.images.map((img) =>
+          img.status === 'completed'
+            ? { ...img, isFeatured: img.id === firstCompletedId }
+            : img
+        )
+      }));
     }
 
     // Resolve seller id at submit time (state may not be set yet); required to link property to seller
@@ -139,17 +177,15 @@ export default function NewPropertyPage() {
     setError(null);
     setSuccess(null);
 
-    // Generate slug from title
-    const slug = formData.title
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/(^-|-$)/g, '');
+    // Short unique slug (e.g. k2m9x4np) — keeps URLs compact
+    const chars = 'abcdefghjkmnpqrstuvwxyz23456789';
+    const shortSlug = Array.from({ length: 8 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
 
     // Create save data object matching the actual database schema
     const saveData = {
       seller_id: sellerId,
       status: publishStatus,
-      slug: `${slug}-${Date.now()}`, // Make slug unique with timestamp
+      slug: shortSlug,
       address: formData.location || '', // 'location' in form maps to 'address' in DB
       property_status: formData.property_status || 'available',
       description: formData.description || '',
@@ -189,13 +225,15 @@ export default function NewPropertyPage() {
       if (saveErr) throw saveErr;
 
       // Save images to database
-      if (imageUploadStatus.images.length > 0) {
-        const completedImages = imageUploadStatus.images.filter(
-          img => img.status === 'completed' && img.imageUrl
-        );
+      if (completedImagesForSave.length > 0) {
+        const orderedImages = [...completedImagesForSave].sort((a, b) => {
+          const aFeatured = a.isFeatured ? 1 : 0;
+          const bFeatured = b.isFeatured ? 1 : 0;
+          return bFeatured - aFeatured;
+        });
 
-        if (completedImages.length > 0) {
-          const imageRecords = completedImages.map((img, index) => ({
+        if (orderedImages.length > 0) {
+          const imageRecords = orderedImages.map((img, index) => ({
             property_id: data.id,
             image_url: img.imageUrl,
             image_key: img.imageKey,
@@ -227,6 +265,18 @@ export default function NewPropertyPage() {
       setError(err?.message || 'Failed to save property. Please try again.');
       setSaving(false);
     }
+  };
+
+  const handleFeaturedModalSelectManually = () => {
+    setFeaturedImageModal((prev) => ({ ...prev, open: false }));
+    setActiveTab('images');
+    setError('Please select a featured image in the Images tab before continuing.');
+  };
+
+  const handleFeaturedModalAutoSelect = () => {
+    const publishStatus = featuredImageModal.publishStatus || 'draft';
+    setFeaturedImageModal((prev) => ({ ...prev, open: false }));
+    handleSave(publishStatus, { skipFeaturedPrompt: true, forceAutoSelectFeatured: true });
   };
 
   const handleImagesChange = (data) => {
@@ -364,6 +414,40 @@ export default function NewPropertyPage() {
           <button onClick={() => setSuccess(null)} className="text-green-400 hover:text-green-600">
             <X className="w-4 h-4" />
           </button>
+        </div>
+      )}
+
+      {featuredImageModal.open && (
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-[1px] flex items-center justify-center p-4">
+          <div className="w-full max-w-md bg-white border border-neutral-200 rounded-2xl shadow-2xl overflow-hidden">
+            <div className="px-5 py-4 border-b border-neutral-200 bg-neutral-50">
+              <h3 className="text-base font-semibold text-neutral-900">Select featured image</h3>
+              <p className="text-xs text-neutral-600 mt-1">
+                Your listing has {featuredImageModal.imageCount} uploaded image{featuredImageModal.imageCount > 1 ? 's' : ''} but no featured one selected.
+              </p>
+            </div>
+            <div className="px-5 py-4">
+              <p className="text-sm text-neutral-700 leading-6">
+                Featured image is used as the main thumbnail on listings. You can choose one manually, or continue and automatically use the first uploaded image.
+              </p>
+            </div>
+            <div className="px-5 py-4 border-t border-neutral-200 bg-white flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={handleFeaturedModalSelectManually}
+                className="px-3.5 py-2 text-sm font-medium rounded-lg border border-neutral-300 text-neutral-700 hover:bg-neutral-50 transition-colors"
+              >
+                Select manually
+              </button>
+              <button
+                type="button"
+                onClick={handleFeaturedModalAutoSelect}
+                className="px-3.5 py-2 text-sm font-medium rounded-lg bg-primary text-white hover:bg-primary-700 transition-colors"
+              >
+                Use first image
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

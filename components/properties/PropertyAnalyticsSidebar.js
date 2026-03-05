@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
-import { Calendar, ArrowDownUp, Users, Eye } from 'lucide-react';
+import { Calendar, ArrowDownUp, Users, Eye, Image as ImageIcon, Smartphone, Monitor, Tablet } from 'lucide-react';
 
 function formatDuration(seconds) {
   if (seconds == null || seconds === 0) return '—';
@@ -46,6 +46,14 @@ function displayName(row) {
     return [row.user_first_name, row.user_last_name].filter(Boolean).join(' ').trim();
   }
   return row.user_email || 'Guest';
+}
+
+function getDeviceIcon(deviceType) {
+  if (!deviceType) return null;
+  const t = deviceType.toLowerCase();
+  if (t === 'mobile') return <Smartphone className="w-3.5 h-3.5 text-slate-500 shrink-0" />;
+  if (t === 'tablet') return <Tablet className="w-3.5 h-3.5 text-slate-500 shrink-0" />;
+  return <Monitor className="w-3.5 h-3.5 text-slate-500 shrink-0" />;
 }
 
 const PERIOD_OPTIONS = [
@@ -113,9 +121,9 @@ export default function PropertyAnalyticsSidebar({ propertyId, propertyName, onC
 
   return (
     <>
-      {/* Backdrop */}
+      {/* Backdrop - light overlay, no blur to avoid fuzzy edges */}
       <div
-        className={`fixed inset-0 z-40 bg-slate-900/40 backdrop-blur-md transition-all duration-300 ease-out ${
+        className={`fixed inset-0 z-40 bg-slate-900/25 transition-all duration-300 ease-out ${
           mounted ? 'opacity-100' : 'opacity-0'
         }`}
         onClick={onClose}
@@ -123,7 +131,7 @@ export default function PropertyAnalyticsSidebar({ propertyId, propertyName, onC
       />
       {/* Sidebar */}
       <aside
-        className={`fixed top-0 right-0 bottom-0 w-[50vw] min-w-[320px] max-w-2xl z-50 flex flex-col overflow-hidden bg-white transition-transform duration-300 ease-out ${
+        className={`fixed top-0 right-0 bottom-0 w-[50vw] min-w-[320px] max-w-2xl z-50 flex flex-col overflow-hidden bg-white border-l border-slate-200 transition-transform duration-300 ease-out ${
           mounted ? 'translate-x-0' : 'translate-x-full'
         }`}
         style={{
@@ -155,7 +163,7 @@ export default function PropertyAnalyticsSidebar({ propertyId, propertyName, onC
           {loading && (
             <div className="flex flex-col items-center justify-center py-24 gap-5">
               <div className="w-10 h-10 border-2 border-primary/15 border-t-primary rounded-full animate-spin" />
-              <p className="text-sm text-slate-500">Loading analytics…</p>
+              <p className="text-sm font-medium text-slate-700">Loading analytics…</p>
               <div className="h-20 w-full max-w-[200px] rounded-xl bg-slate-200/50 animate-pulse" />
               <div className="h-32 w-full max-w-[280px] rounded-xl bg-slate-200/40 animate-pulse" />
             </div>
@@ -171,38 +179,33 @@ export default function PropertyAnalyticsSidebar({ propertyId, propertyName, onC
           )}
 
           {!loading && !error && data && (
-            <div className="p-5 space-y-5">
-              {/* Summary card (Queries metric will be added later once property-linked messaging is available) */}
-              <div className="grid grid-cols-1 gap-3">
-                <div className="rounded-xl border border-slate-200/80 bg-white px-4 py-4 shadow-sm min-w-0">
-                  <div className="flex items-center gap-2 text-slate-500">
-                    <Users className="w-4 h-4 text-primary/80" />
-                    <span className="text-[10px] font-semibold uppercase tracking-wider">Unique viewers</span>
-                  </div>
-                  <p className="text-2xl font-bold text-slate-900 mt-2 tabular-nums">{agg.uniqueViewers ?? 0}</p>
+            <div className="p-4 space-y-4">
+              {/* Compact: Unique viewers + filters in one bar */}
+              <div className="flex flex-wrap items-center gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2.5 shadow-sm">
+                <div className="flex items-center gap-2 shrink-0">
+                  <Users className="w-4 h-4 text-primary" />
+                  <span className="text-xs font-semibold text-slate-800">Unique viewers</span>
+                  <span className="text-sm font-bold text-slate-900 tabular-nums">{agg.uniqueViewers ?? 0}</span>
                 </div>
-              </div>
-
-              {/* Filters bar */}
-              <div className="flex flex-wrap items-center gap-3 rounded-xl bg-white border border-slate-200/80 px-4 py-3 shadow-sm">
-                <div className="flex items-center gap-2">
-                  <Calendar className="w-4 h-4 text-slate-400" />
+                <div className="h-4 w-px bg-slate-200 shrink-0" aria-hidden="true" />
+                <div className="flex items-center gap-2 shrink-0">
+                  <Calendar className="w-3.5 h-3.5 text-slate-600" />
                   <select
                     value={period}
                     onChange={(e) => setPeriod(e.target.value)}
-                    className="text-xs font-medium border border-slate-200 rounded-lg px-3 py-2 bg-slate-50/50 text-slate-700 focus:ring-2 focus:ring-primary/15 focus:border-primary focus:bg-white outline-none transition-all"
+                    className="text-xs font-medium border border-slate-200 rounded-md px-2 py-1.5 bg-white text-slate-800 focus:ring-1 focus:ring-primary/20 focus:border-primary outline-none"
                   >
                     {PERIOD_OPTIONS.map((o) => (
                       <option key={o.value} value={o.value}>{o.label}</option>
                     ))}
                   </select>
                 </div>
-                <div className="flex items-center gap-2">
-                  <ArrowDownUp className="w-4 h-4 text-slate-400" />
+                <div className="flex items-center gap-2 shrink-0">
+                  <ArrowDownUp className="w-3.5 h-3.5 text-slate-600" />
                   <select
                     value={sortBy}
                     onChange={(e) => setSortBy(e.target.value)}
-                    className="text-xs font-medium border border-slate-200 rounded-lg px-3 py-2 bg-slate-50/50 text-slate-700 focus:ring-2 focus:ring-primary/15 focus:border-primary focus:bg-white outline-none transition-all"
+                    className="text-xs font-medium border border-slate-200 rounded-md px-2 py-1.5 bg-white text-slate-800 focus:ring-1 focus:ring-primary/20 focus:border-primary outline-none"
                   >
                     {SORT_OPTIONS.map((o) => (
                       <option key={o.value} value={o.value}>{o.label}</option>
@@ -211,22 +214,54 @@ export default function PropertyAnalyticsSidebar({ propertyId, propertyName, onC
                 </div>
               </div>
 
+              {/* Total images viewed + device breakdown */}
+              <div className="rounded-lg border border-slate-200 bg-white px-4 py-3 shadow-sm">
+                <h3 className="text-xs font-semibold text-slate-800 mb-2.5 flex items-center gap-1.5">
+                  <span className="w-1 h-3.5 rounded-full bg-primary" />
+                  Engagement summary
+                </h3>
+                <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+                  <div className="flex items-center gap-2">
+                    <ImageIcon className="w-4 h-4 text-slate-600" />
+                    <span className="text-xs text-slate-700">Images viewed</span>
+                    <span className="text-sm font-semibold text-slate-900 tabular-nums">{agg.totalImagesViewed ?? 0}</span>
+                  </div>
+                  <div className="flex items-center gap-3 text-slate-700">
+                    <span className="flex items-center gap-1.5 text-xs">
+                      <Smartphone className="w-3.5 h-3.5 text-slate-500" />
+                      <span className="font-medium tabular-nums">{agg.deviceBreakdown?.mobile ?? 0}</span>
+                      <span className="text-slate-600">mobile</span>
+                    </span>
+                    <span className="flex items-center gap-1.5 text-xs">
+                      <Monitor className="w-3.5 h-3.5 text-slate-500" />
+                      <span className="font-medium tabular-nums">{agg.deviceBreakdown?.desktop ?? 0}</span>
+                      <span className="text-slate-600">desktop</span>
+                    </span>
+                    <span className="flex items-center gap-1.5 text-xs">
+                      <Tablet className="w-3.5 h-3.5 text-slate-500" />
+                      <span className="font-medium tabular-nums">{agg.deviceBreakdown?.tablet ?? 0}</span>
+                      <span className="text-slate-600">tablet</span>
+                    </span>
+                  </div>
+                </div>
+              </div>
+
               {/* Viewing activity section */}
-              <div className="space-y-3">
+              <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-semibold text-slate-800 flex items-center gap-2">
+                  <h3 className="text-sm font-semibold text-slate-900 flex items-center gap-2">
                     <span className="w-1 h-4 rounded-full bg-primary" />
                     Viewing activity
                   </h3>
-                  <span className="text-xs text-slate-500 tabular-nums">{sessions.length} {sessions.length === 1 ? 'viewer' : 'viewers'}</span>
+                  <span className="text-xs font-medium text-slate-700 tabular-nums">{sessions.length} {sessions.length === 1 ? 'viewer' : 'viewers'}</span>
                 </div>
                 {sessions.length === 0 ? (
-                  <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50/50 py-14 text-center px-4">
-                    <div className="w-12 h-12 rounded-full bg-slate-200/60 flex items-center justify-center mx-auto mb-3">
-                      <Eye className="w-6 h-6 text-slate-400" />
+                  <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 py-10 text-center px-4">
+                    <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center mx-auto mb-2">
+                      <Eye className="w-5 h-5 text-slate-600" />
                     </div>
-                    <p className="text-sm font-medium text-slate-600">No activity yet</p>
-                    <p className="text-xs text-slate-500 mt-1 max-w-[220px] mx-auto">When buyers view this property, they’ll appear here with their engagement.</p>
+                    <p className="text-sm font-semibold text-slate-800">No activity yet</p>
+                    <p className="text-xs text-slate-700 mt-1 max-w-[220px] mx-auto">When buyers view this property, they’ll appear here.</p>
                   </div>
                 ) : (
                   <div className="space-y-2.5">
@@ -239,7 +274,7 @@ export default function PropertyAnalyticsSidebar({ propertyId, propertyName, onC
                       const images = row.images_viewed != null ? Number(row.images_viewed) : 0;
                       const firstSeen = row.view_start_time ? formatDateShort(row.view_start_time) : null;
                       const lastSeen = row.view_end_time ? formatDateShort(row.view_end_time) : (row.created_at ? formatDateShort(row.created_at) : null);
-                      const device = row.device_type ? (row.device_type.toLowerCase().includes('mobile') ? 'Mobile' : 'Desktop') : null;
+                      const device = row.device_type ? (row.device_type.toLowerCase() === 'tablet' ? 'Tablet' : row.device_type.toLowerCase() === 'mobile' ? 'Mobile' : 'Desktop') : null;
                       const tags = [];
                       if (row.scrolled_to_bottom) tags.push('Scrolled');
                       if (row.viewed_photos) tags.push('Photos');
@@ -261,8 +296,18 @@ export default function PropertyAnalyticsSidebar({ propertyId, propertyName, onC
                                   <p className="text-sm font-semibold text-slate-900 capitalize leading-tight">
                                     {name || 'Guest'}
                                   </p>
-                                  <div className="flex flex-wrap items-center gap-x-2.5 gap-y-0.5 text-xs text-slate-500 mt-0.5">
-                                    {device && <span className="text-slate-400">{device}</span>}
+                                  <div className="flex flex-wrap items-center gap-x-2.5 gap-y-0.5 text-xs text-slate-700 mt-0.5">
+                                    {row.utm_source && (
+                                      <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-slate-100 text-slate-800 font-medium capitalize">
+                                        {row.utm_source}
+                                      </span>
+                                    )}
+                                    {device && (
+                                      <span className="inline-flex items-center gap-1 text-slate-600">
+                                        {getDeviceIcon(row.device_type)}
+                                        {device}
+                                      </span>
+                                    )}
                                     <span>{views} view{views !== 1 ? 's' : ''}</span>
                                     {timing && <span>· {timing}</span>}
                                     {images > 0 && <span>· {images} image{images !== 1 ? 's' : ''}</span>}
@@ -280,7 +325,7 @@ export default function PropertyAnalyticsSidebar({ propertyId, propertyName, onC
                                       Message
                                     </Link>
                                     */}
-                                    <span className="flex-shrink-0 text-[11px] text-slate-400">
+                                    <span className="flex-shrink-0 text-[11px] text-slate-600">
                                       Buyer can initiate chat from marketplace
                                     </span>
                                   </>
@@ -291,14 +336,14 @@ export default function PropertyAnalyticsSidebar({ propertyId, propertyName, onC
                                   {tags.map((t) => (
                                     <span
                                       key={t}
-                                      className="inline-flex items-center px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 text-[11px] font-medium"
+                                      className="inline-flex items-center px-2 py-0.5 rounded-md bg-slate-100 text-slate-800 text-[11px] font-medium"
                                     >
                                       {t}
                                     </span>
                                   ))}
                                 </div>
                               )}
-                              <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-slate-400 pt-1 border-t border-slate-100">
+                              <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-slate-600 pt-1 border-t border-slate-200">
                                 {firstSeen && <span>First: {firstSeen}</span>}
                                 {lastSeen && lastSeen !== firstSeen && <span>Last: {lastSeen}</span>}
                               </div>

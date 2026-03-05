@@ -23,6 +23,12 @@ function getAvatarColor(seed = '') {
   return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
 }
 
+function capitalizeFirst(input = '') {
+  const str = String(input || '');
+  if (!str) return str;
+  return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
 function getAuthHeaders() {
   if (typeof window === 'undefined') return {};
   try {
@@ -126,7 +132,7 @@ export default function MessagesPage() {
     setLoading(true);
     setError(null);
     const url = buyerIdFromUrl
-      ? `${API}?action=get_conversations&buyer_id=${encodeURIComponent(buyerIdFromUrl)}`
+      ? `${API}?action=get_conversations&buyer_id=${encodeURIComponent(buyerIdFromUrl)}${propertyIdFromUrl ? `&property_id=${encodeURIComponent(propertyIdFromUrl)}` : ''}`
       : `${API}?action=get_conversations`;
     fetch(url, { headers })
       .then((res) => res.json())
@@ -144,7 +150,12 @@ export default function MessagesPage() {
           return;
         }
         if (buyerIdFromUrl) {
-          const existing = list.find((c) => c.buyer_uuid && String(c.buyer_uuid) === String(buyerIdFromUrl));
+          const existing = list.find((c) => {
+            const buyerMatch = c.buyer_uuid && String(c.buyer_uuid) === String(buyerIdFromUrl);
+            if (!buyerMatch) return false;
+            if (!propertyIdFromUrl) return true;
+            return String(c.property_id || '') === String(propertyIdFromUrl);
+          });
           if (existing) {
             setOpenConversationId(existing.id);
             if (addressFromUrl) {
@@ -171,12 +182,14 @@ export default function MessagesPage() {
       .catch((err) => { if (!cancelled) setError(err.message || 'Failed to load conversations'); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, [buyerIdFromUrl]);
+  }, [buyerIdFromUrl, propertyIdFromUrl, addressFromUrl]);
 
   function fetchConversations(headers) {
     const h = headers || getAuthHeaders();
     if (!h?.Authorization) return;
-    const url = buyerIdFromUrl ? `${API}?action=get_conversations&buyer_id=${encodeURIComponent(buyerIdFromUrl)}` : `${API}?action=get_conversations`;
+    const url = buyerIdFromUrl
+      ? `${API}?action=get_conversations&buyer_id=${encodeURIComponent(buyerIdFromUrl)}${propertyIdFromUrl ? `&property_id=${encodeURIComponent(propertyIdFromUrl)}` : ''}`
+      : `${API}?action=get_conversations`;
     fetch(url, { headers: h })
       .then((res) => res.json())
       .then((data) => {
@@ -197,13 +210,18 @@ export default function MessagesPage() {
     if (!headers.Authorization) return;
     const interval = setInterval(() => fetchConversations(headers), 10000);
     return () => clearInterval(interval);
-  }, [buyerIdFromUrl]);
+  }, [buyerIdFromUrl, propertyIdFromUrl]);
 
   async function createConversation(buyerId, headers) {
     const res = await fetch(API, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...headers },
-      body: JSON.stringify({ action: 'create_conversation', buyerId })
+      body: JSON.stringify({
+        action: 'create_conversation',
+        buyerId,
+        propertyId: propertyIdFromUrl || null,
+        propertyAddress: addressFromUrl || null
+      })
     });
     const data = await res.json().catch(() => ({}));
     return data.conversationId || null;
@@ -421,7 +439,11 @@ export default function MessagesPage() {
   };
 
   const selectedConversation = conversations.find((c) => c.id === openConversationId);
-  const buyerDisplayName = selectedConversation?.buyer_name || 'Buyer';
+  const buyerDisplayName = capitalizeFirst(selectedConversation?.buyer_name || 'Buyer');
+  const selectedPropertyAddress = selectedConversation?.property_address || null;
+  const headerTitle = selectedPropertyAddress
+    ? `${buyerDisplayName} - ${selectedPropertyAddress}`
+    : buyerDisplayName;
   const buyerInitial = (buyerDisplayName.charAt(0) || 'B').toUpperCase();
 
   return (
@@ -503,10 +525,18 @@ export default function MessagesPage() {
                       <div className="flex items-start gap-3">
                         <div className="relative shrink-0">
                           <div
-                            className="w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold text-sm"
+                            className="w-10 h-10 rounded-full overflow-hidden flex items-center justify-center text-white font-semibold text-sm"
                             style={{ backgroundColor: getAvatarColor(c.buyer_name || c.buyer_uuid || c.id) }}
                           >
-                            {(c.buyer_name || 'B').charAt(0).toUpperCase()}
+                            {c.property_thumbnail_url ? (
+                              <img
+                                src={c.property_thumbnail_url}
+                                alt="Property"
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              (c.buyer_name || 'B').charAt(0).toUpperCase()
+                            )}
                           </div>
                           {unread && (
                             <span className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-brandRed border-2 border-white rounded-full" aria-hidden />
@@ -516,7 +546,7 @@ export default function MessagesPage() {
                           <div className="flex items-baseline justify-between gap-2 mb-1">
                             <div className="flex items-center gap-2 flex-1 min-w-0">
                               <h3 className={`truncate text-sm ${unread ? 'font-bold text-slate-900' : 'font-medium text-slate-900'}`}>
-                                {c.buyer_name || 'Buyer'}
+                                {capitalizeFirst(c.buyer_name || 'Buyer')}
                               </h3>
                               {c.is_pinned && (
                                 <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-100 text-amber-700" title="Pinned">
@@ -570,14 +600,22 @@ export default function MessagesPage() {
                   </button>
                   <div className="flex items-center gap-3 flex-1 min-w-0">
                     <div
-                      className="w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold text-sm shrink-0"
+                      className="w-10 h-10 rounded-full overflow-hidden flex items-center justify-center text-white font-semibold text-sm shrink-0"
                       style={{ backgroundColor: getAvatarColor(selectedConversation?.buyer_name || selectedConversation?.buyer_uuid || selectedConversation?.id) }}
                     >
-                      {buyerInitial}
+                      {selectedConversation?.property_thumbnail_url ? (
+                        <img
+                          src={selectedConversation.property_thumbnail_url}
+                          alt="Property"
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        buyerInitial
+                      )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h2 className="font-semibold text-slate-900 text-sm truncate">{buyerDisplayName}</h2>
-                      {contextAddress && openConversationId === contextConversationId && (
+                      <h2 className="font-semibold text-slate-900 text-sm truncate">{headerTitle}</h2>
+                      {!selectedPropertyAddress && contextAddress && openConversationId === contextConversationId && (
                         <p className="text-[11px] text-slate-600 truncate mt-0.5">Re: {contextAddress}</p>
                       )}
                     </div>
