@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { Plus, Edit2, Trash2, Eye, Search, X, Building2, Filter, ChevronLeft, ChevronRight, MapPin, DollarSign, RotateCcw, BarChart2, Link2 } from 'lucide-react';
+import { Plus, Edit2, Trash2, Eye, Search, X, Building2, ChevronLeft, ChevronRight, MapPin, DollarSign, RotateCcw, BarChart2, Link2 } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import DeleteConfirmModal from '@/components/properties/DeleteConfirmModal';
 import PropertyViewModal from '@/components/properties/PropertyViewModal';
@@ -452,14 +452,19 @@ const PropertiesManagement = () => {
 
   return (
     <div className="space-y-3 md:space-y-4">
-      {/* Top row: Title | Active/Trash (centered) | Add Property */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <h1 className="text-lg md:text-xl font-semibold tracking-tight text-gray-900 shrink-0">Properties</h1>
-        <div className="flex justify-center flex-1 min-w-0">
-          <div className="flex items-center gap-1 p-1 rounded-xl bg-gray-100 border border-gray-200/80 w-full sm:w-auto sm:min-w-[200px] max-w-xs sm:max-w-none">
+      {/* Top row: Title | Active/Trash + Add Property (right) */}
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <h1 className="text-lg md:text-xl font-semibold tracking-tight text-gray-900">Properties</h1>
+          <p className="text-xs text-gray-500 mt-0.5">
+            {viewMode === 'active' ? 'Listings that are live or in draft' : 'Archived listings — restore or delete permanently'}
+          </p>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-0.5 p-1 rounded-xl bg-gray-100 border border-gray-200/80">
             <button
               onClick={() => setViewModeAndUrl('active')}
-              className={`flex-1 px-4 py-2.5 sm:py-3 text-sm font-semibold rounded-lg transition-all duration-200 ${
+              className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all duration-200 ${
                 viewMode === 'active'
                   ? 'bg-white text-primary shadow-sm border border-gray-200/80'
                   : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50/80'
@@ -469,7 +474,7 @@ const PropertiesManagement = () => {
             </button>
             <button
               onClick={() => setViewModeAndUrl('trash')}
-              className={`flex-1 px-4 py-2.5 sm:py-3 text-sm font-semibold rounded-lg transition-all duration-200 ${
+              className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all duration-200 ${
                 viewMode === 'trash'
                   ? 'bg-white text-brandRed shadow-sm border border-gray-200/80'
                   : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50/80'
@@ -478,38 +483,36 @@ const PropertiesManagement = () => {
               Trash
             </button>
           </div>
+          <button
+            onClick={() => router.push('/properties/new')}
+            className="flex items-center gap-1.5 bg-primary hover:bg-primary-700 text-white px-3 py-1.5 rounded-xl text-xs font-medium transition-all duration-200"
+          >
+            <Plus size={14} />
+            <span className="hidden sm:inline">Add Property</span>
+            <span className="sm:hidden">Add</span>
+          </button>
         </div>
-        <button
-          onClick={() => router.push('/properties/new')}
-          className="flex items-center justify-center gap-2 bg-primary hover:bg-primary-700 text-white px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 shrink-0"
-        >
-          <Plus size={16} />
-          <span>Add Property</span>
-        </button>
       </div>
-      <p className="text-xs text-gray-500 -mt-1 text-center sm:text-left">
-        {viewMode === 'active' ? 'Listings that are live or in draft' : 'Archived listings — restore or delete permanently'}
-      </p>
 
       {/* Stats: only on Active view; minimal and professional. Trash view shows a single summary line. */}
       {viewMode === 'active' ? (
-        <div className="grid grid-cols-3 gap-3">
-          <div className="bg-white rounded-lg border border-gray-200 px-4 py-3">
-            <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Total</p>
-            <p className="text-xl font-semibold text-gray-900 mt-0.5">{totalProperties}</p>
+        <div className="grid grid-cols-3 gap-2">
+          <div className="bg-white rounded-lg border border-gray-200 px-3 py-2 md:px-4 md:py-3">
+            <p className="text-[10px] md:text-xs font-medium text-gray-500 uppercase tracking-wider">Total</p>
+            <p className="text-base md:text-xl font-semibold text-gray-900 mt-0.5">{totalProperties}</p>
           </div>
-          <div className="bg-white rounded-lg border border-gray-200 px-4 py-3">
-            <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Active</p>
-            <p className="text-xl font-semibold text-gray-900 mt-0.5">{activeProperties}</p>
+          <div className="bg-white rounded-lg border border-gray-200 px-3 py-2 md:px-4 md:py-3">
+            <p className="text-[10px] md:text-xs font-medium text-gray-500 uppercase tracking-wider">Active</p>
+            <p className="text-base md:text-xl font-semibold text-gray-900 mt-0.5">{activeProperties}</p>
           </div>
           <button
             type="button"
             onClick={() => setFilterStatus('draft')}
-            className="bg-white rounded-lg border border-gray-200 px-4 py-3 text-left hover:border-gray-300 hover:bg-gray-50/50 transition-colors"
+            className="bg-white rounded-lg border border-gray-200 px-3 py-2 md:px-4 md:py-3 text-left hover:border-gray-300 hover:bg-gray-50/50 transition-colors"
           >
-            <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Draft</p>
-            <p className="text-xl font-semibold text-gray-900 mt-0.5">{draftProperties}</p>
-            <p className="text-xs text-gray-400 mt-1">Filter table by draft</p>
+            <p className="text-[10px] md:text-xs font-medium text-gray-500 uppercase tracking-wider">Draft</p>
+            <p className="text-base md:text-xl font-semibold text-gray-900 mt-0.5">{draftProperties}</p>
+            <p className="hidden md:block text-xs text-gray-400 mt-1">Filter table by draft</p>
           </button>
         </div>
       ) : (
@@ -520,27 +523,11 @@ const PropertiesManagement = () => {
 
       {/* Table Card */}
       <div className="bg-white rounded-lg border border-gray-200 overflow-hidden shadow-card">
-        {/* Controls - Responsive */}
-        <div className="px-4 py-3 border-b border-gray-200">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
-            <div className="flex items-center gap-2">
-              <Filter className="w-3.5 h-3.5 text-gray-400 hidden sm:block" />
-              <select
-                value={entriesPerPage}
-                onChange={(e) => {
-                  setEntriesPerPage(Number(e.target.value));
-                  setCurrentPage(1);
-                }}
-                className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-gray-400 bg-white text-gray-700"
-              >
-                <option value={10}>10 rows</option>
-                <option value={25}>25 rows</option>
-                <option value={50}>50 rows</option>
-                <option value={100}>100 rows</option>
-              </select>
-            </div>
-
-            <div className="relative flex-1 sm:max-w-sm">
+        {/* Controls */}
+        <div className="px-4 py-3 border-b border-gray-200 space-y-2">
+          {/* Row 1: Search + Rows per page */}
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
               <input
                 type="text"
@@ -558,10 +545,23 @@ const PropertiesManagement = () => {
                 </button>
               )}
             </div>
+            <select
+              value={entriesPerPage}
+              onChange={(e) => {
+                setEntriesPerPage(Number(e.target.value));
+                setCurrentPage(1);
+              }}
+              className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-gray-400 bg-white text-gray-700 shrink-0"
+            >
+              <option value={10}>10 rows</option>
+              <option value={25}>25 rows</option>
+              <option value={50}>50 rows</option>
+              <option value={100}>100 rows</option>
+            </select>
           </div>
 
-          {/* Filters Row - Responsive */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+          {/* Row 2: Status + Property Status + Clear */}
+          <div className="grid grid-cols-3 gap-2">
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
@@ -579,7 +579,7 @@ const PropertiesManagement = () => {
               onChange={(e) => setFilterPropertyStatus(e.target.value)}
               className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-gray-400 bg-white text-gray-700"
             >
-              <option value="">Property Status</option>
+              <option value="">Prop. Status</option>
               <option value="available">Available</option>
               <option value="pending">Pending</option>
               <option value="sold">Sold</option>
@@ -589,7 +589,7 @@ const PropertiesManagement = () => {
               onClick={clearFilters}
               className="text-xs bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg px-2 py-1.5 transition-colors"
             >
-              Clear Filters
+              Clear
             </button>
           </div>
         </div>

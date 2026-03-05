@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { MessageCircle, Send, Search, ArrowLeft, Loader2, Check, CheckCheck, Pin } from 'lucide-react';
+import { MessageCircle, Send, Search, ArrowLeft, Loader2, Check, CheckCheck, Pin, MoreVertical, ExternalLink, Trash2 } from 'lucide-react';
 import { createClient } from '@supabase/supabase-js';
 
 const API = '/api/seller/chat';
@@ -59,11 +59,30 @@ function formatTime(dateString) {
   return new Date(dateString).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
 }
 
+const MESSAGE_GROUP_WINDOW_MS = 5 * 60 * 1000;
+function groupMessagesByTime(msgs) {
+  if (!msgs?.length) return [];
+  const groups = [];
+  let current = [msgs[0]];
+  for (let i = 1; i < msgs.length; i++) {
+    const prev = new Date(msgs[i - 1].created_at).getTime();
+    const curr = new Date(msgs[i].created_at).getTime();
+    if (curr - prev <= MESSAGE_GROUP_WINDOW_MS) current.push(msgs[i]);
+    else {
+      groups.push(current);
+      current = [msgs[i]];
+    }
+  }
+  groups.push(current);
+  return groups;
+}
+
 export default function MessagesPage() {
   const searchParams = useSearchParams();
   const buyerIdFromUrl = searchParams.get('buyer_id');
   const addressFromUrl = searchParams.get('address') || '';
   const propertyIdFromUrl = searchParams.get('property_id') || '';
+  const conversationIdFromUrl = searchParams.get('conversation');
 
   const [conversations, setConversations] = useState([]);
   const [filteredConversations, setFilteredConversations] = useState([]);
@@ -78,6 +97,7 @@ export default function MessagesPage() {
   const [contextConversationId, setContextConversationId] = useState(null);
   const [chatTab, setChatTab] = useState('all'); // all | unread | unresponded
   const [contextMenu, setContextMenu] = useState(null); // { x, y, conv }
+  const [headerMenuOpen, setHeaderMenuOpen] = useState(false);
   const messagesEndRef = useRef(null);
 
   const scrollToBottom = () => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -149,6 +169,13 @@ export default function MessagesPage() {
           }
           return;
         }
+        if (conversationIdFromUrl && list.length > 0) {
+          const match = list.find((c) => String(c.id) === String(conversationIdFromUrl));
+          if (match) {
+            setOpenConversationId(match.id);
+            return;
+          }
+        }
         if (buyerIdFromUrl) {
           const existing = list.find((c) => {
             const buyerMatch = c.buyer_uuid && String(c.buyer_uuid) === String(buyerIdFromUrl);
@@ -182,7 +209,7 @@ export default function MessagesPage() {
       .catch((err) => { if (!cancelled) setError(err.message || 'Failed to load conversations'); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, [buyerIdFromUrl, propertyIdFromUrl, addressFromUrl]);
+  }, [buyerIdFromUrl, propertyIdFromUrl, addressFromUrl, conversationIdFromUrl]);
 
   function fetchConversations(headers) {
     const h = headers || getAuthHeaders();
@@ -329,6 +356,13 @@ export default function MessagesPage() {
     };
   }, [openConversationId]);
 
+  // Open conversation from URL param ?conversation=id when list is ready
+  useEffect(() => {
+    if (!conversationIdFromUrl || conversations.length === 0) return;
+    const match = conversations.find((c) => String(c.id) === String(conversationIdFromUrl));
+    if (match) setOpenConversationId(match.id);
+  }, [conversationIdFromUrl, conversations]);
+
   useEffect(() => {
     if (!searchQuery.trim()) {
       setFilteredConversations(conversations);
@@ -369,6 +403,20 @@ export default function MessagesPage() {
       body: JSON.stringify({ action: 'update_conversation_pref', conversationId, ...patch })
     }).catch(() => {});
     fetchConversations(headers);
+  };
+
+  const deleteConversation = async (conversationId) => {
+    const headers = getAuthHeaders();
+    if (!headers.Authorization) return;
+    const res = await fetch(API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...headers },
+      body: JSON.stringify({ action: 'delete_conversation', conversationId })
+    });
+    if (res.ok) {
+      if (openConversationId === conversationId) setOpenConversationId(null);
+      fetchConversations(headers);
+    }
   };
 
   const sendMessage = () => {
@@ -546,7 +594,9 @@ export default function MessagesPage() {
                           <div className="flex items-baseline justify-between gap-2 mb-1">
                             <div className="flex items-center gap-2 flex-1 min-w-0">
                               <h3 className={`truncate text-sm ${unread ? 'font-bold text-slate-900' : 'font-medium text-slate-900'}`}>
-                                {capitalizeFirst(c.buyer_name || 'Buyer')}
+                                {c.property_address
+                                  ? `${capitalizeFirst((c.buyer_name || 'Buyer').trim().split(/\s+/)[0] || 'Buyer')} - ${c.property_address}`
+                                  : capitalizeFirst(c.buyer_name || 'Buyer')}
                               </h3>
                               {c.is_pinned && (
                                 <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-100 text-amber-700" title="Pinned">
@@ -588,7 +638,7 @@ export default function MessagesPage() {
             </div>
           ) : (
             <>
-              {/* Header - sticky, stays visible when scrolling chat */}
+              {/* Header - full name, property address, options (View listing) */}
               <div className="flex-shrink-0 px-5 py-4 border-b border-slate-200 bg-white">
                 <div className="flex items-center gap-3">
                   <button
@@ -620,6 +670,35 @@ export default function MessagesPage() {
                       )}
                     </div>
                   </div>
+                  {(selectedConversation?.property_slug || selectedConversation?.property_id) && (
+                    <div className="relative shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => setHeaderMenuOpen((v) => !v)}
+                        className="p-2 rounded-xl hover:bg-slate-100 transition-colors"
+                        aria-label="Options"
+                      >
+                        <MoreVertical className="w-5 h-5 text-slate-600" />
+                      </button>
+                      {headerMenuOpen && (
+                        <>
+                          <div className="fixed inset-0 z-40" onClick={() => setHeaderMenuOpen(false)} aria-hidden />
+                          <div className="absolute right-0 top-full mt-1 z-50 w-48 rounded-xl border border-slate-200 bg-white shadow-lg py-1">
+                            <a
+                              href={`${process.env.NEXT_PUBLIC_DEELMAP_VIEW_BASE_URL || 'https://ableman.co'}/${selectedConversation.property_slug || selectedConversation.property_id}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              onClick={() => setHeaderMenuOpen(false)}
+                              className="flex items-center gap-2 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
+                            >
+                              <ExternalLink className="w-4 h-4" />
+                              View listing
+                            </a>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -637,36 +716,43 @@ export default function MessagesPage() {
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {messages.map((m) => {
-                      const isSeller = m.sender_type === 'seller';
-                      return (
-                        <div key={m.id} className={`flex ${isSeller ? 'justify-end' : 'justify-start'}`}>
-                          <div className="flex flex-col max-w-[70%]">
-                            <div
-                              className={`rounded-2xl px-4 py-3 ${
-                                isSeller
-                                  ? 'bg-[#002A3A] text-white rounded-br-sm'
-                                  : 'bg-white text-slate-900 rounded-bl-sm shadow-sm border border-slate-200'
-                              }`}
-                            >
-                              {m.message_text && (
-                                <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">{m.message_text}</p>
-                              )}
+                    {groupMessagesByTime(messages).map((group) => (
+                      <div key={group[0].id} className="space-y-2">
+                        {group.map((m) => {
+                          const isSeller = m.sender_type === 'seller';
+                          const isLastInGroup = m.id === group[group.length - 1].id;
+                          return (
+                            <div key={m.id} className={`flex ${isSeller ? 'justify-end' : 'justify-start'}`}>
+                              <div className="flex flex-col max-w-[70%]">
+                                <div
+                                  className={`rounded-2xl px-4 py-3 ${
+                                    isSeller
+                                      ? 'bg-[#002A3A] text-white rounded-br-sm'
+                                      : 'bg-white text-slate-900 rounded-bl-sm shadow-sm border border-slate-200'
+                                  }`}
+                                >
+                                  {m.message_text && (
+                                    <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">{m.message_text}</p>
+                                  )}
+                                </div>
+                                {isLastInGroup && (
+                                  <div className={`flex items-center gap-1 mt-1.5 px-1 ${isSeller ? 'justify-end' : 'justify-start'}`}>
+                                    <span className="text-[11px] text-slate-400">{formatTime(m.created_at)}</span>
+                                    {isSeller && (
+                                      m.is_read ? (
+                                        <CheckCheck className="w-3.5 h-3.5 text-blue-500 shrink-0" aria-hidden />
+                                      ) : (
+                                        <Check className="w-3.5 h-3.5 text-slate-400 shrink-0" aria-hidden />
+                                      )
+                                    )}
+                                  </div>
+                                )}
+                              </div>
                             </div>
-                            <div className={`flex items-center gap-1 mt-1.5 px-1 ${isSeller ? 'justify-end' : 'justify-start'}`}>
-                              <span className="text-[11px] text-slate-400">{formatTime(m.created_at)}</span>
-                              {isSeller && (
-                                m.is_read ? (
-                                  <CheckCheck className="w-3.5 h-3.5 text-blue-500 shrink-0" aria-hidden />
-                                ) : (
-                                  <Check className="w-3.5 h-3.5 text-slate-400 shrink-0" aria-hidden />
-                                )
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
+                          );
+                        })}
+                      </div>
+                    ))}
                     <div ref={messagesEndRef} className="h-1" />
                   </div>
                 )}
@@ -714,6 +800,10 @@ export default function MessagesPage() {
             Mark as unread
           </button>
           <div className="my-1 border-t border-slate-200" />
+          <button className="w-full text-left text-sm px-3 py-2 rounded-xl text-red-600 hover:bg-red-50 transition-colors flex items-center gap-2" onClick={() => { deleteConversation(contextMenu.conv.id); setContextMenu(null); }}>
+            <Trash2 className="w-4 h-4" />
+            Delete chat
+          </button>
           <button className="w-full text-left text-sm px-3 py-2 rounded-xl text-red-600 hover:bg-red-50 transition-colors" onClick={() => { updateConversationPref(contextMenu.conv.id, { is_blocked: true }); setContextMenu(null); }}>
             Block user
           </button>

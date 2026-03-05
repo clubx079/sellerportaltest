@@ -180,8 +180,8 @@ export default function PropertyAnalyticsSidebar({ propertyId, propertyName, onC
 
           {!loading && !error && data && (
             <div className="p-4 space-y-4">
-              {/* Compact: Unique viewers + filters in one bar */}
-              <div className="flex flex-wrap items-center gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2.5 shadow-sm">
+              {/* Viewers count + filters in one row (no blocks) */}
+              <div className="flex flex-wrap items-center gap-3">
                 <div className="flex items-center gap-2 shrink-0">
                   <Users className="w-4 h-4 text-primary" />
                   <span className="text-xs font-semibold text-slate-800">Unique viewers</span>
@@ -245,73 +245,54 @@ export default function PropertyAnalyticsSidebar({ propertyId, propertyName, onC
                       const device = row.device_type ? (row.device_type.toLowerCase() === 'tablet' ? 'Tablet' : row.device_type.toLowerCase() === 'mobile' ? 'Mobile' : 'Desktop') : null;
                       const tags = [];
                       if (row.scrolled_to_bottom) tags.push('Scrolled');
-                      if (row.viewed_photos) tags.push('Photos');
                       if (row.viewed_description) tags.push('Description');
                       if (row.viewed_repairs) tags.push('Repairs');
                       const canMessage = !!row.user_id;
                       return (
                         <div
                           key={(row.user_email || 'guest') + (row.view_start_time || '') + idx}
-                          className="group rounded-xl border border-slate-200/90 bg-white p-4 shadow-sm hover:shadow-md hover:border-primary/15 transition-all duration-200 border-l-2 border-l-transparent hover:border-l-primary"
+                          className="group rounded-lg border border-slate-200 bg-white p-3 hover:border-primary/20 transition-colors"
                         >
-                          <div className="flex gap-3">
-                            <div className="flex-shrink-0 w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center ring-2 ring-primary/5">
+                          <div className="flex gap-2.5">
+                            <div className="flex-shrink-0 w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center">
                               <span className="text-sm font-semibold text-primary">{initial}</span>
                             </div>
-                            <div className="min-w-0 flex-1 space-y-2">
-                              <div className="flex items-start justify-between gap-2">
-                                <div>
-                                  <p className="text-sm font-semibold text-slate-900 capitalize leading-tight">
-                                    {name || 'Guest'}
-                                  </p>
-                                  <div className="flex flex-wrap items-center gap-x-2.5 gap-y-0.5 text-xs text-slate-700 mt-0.5">
-                                    {row.utm_source && (
-                                      <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-slate-100 text-slate-800 font-medium capitalize">
-                                        {row.utm_source}
-                                      </span>
-                                    )}
-                                    {device && (
-                                      <span className="inline-flex items-center gap-1 text-slate-600">
-                                        {getDeviceIcon(row.device_type)}
-                                        {device}
-                                      </span>
-                                    )}
-                                    <span>{views} view{views !== 1 ? 's' : ''}</span>
-                                    {timing && <span>· {timing}</span>}
-                                    {images > 0 && <span>· {images} image{images !== 1 ? 's' : ''}</span>}
-                                  </div>
-                                </div>
-                                {canMessage && (
-                                  <>
-                                    {/* Premium feature (future): seller-initiated messaging from analytics.
-                                        Kept commented for later enablement with plan/permission checks.
-                                    <Link
-                                      href={`/messages?buyer_id=${encodeURIComponent(row.user_id)}&address=${encodeURIComponent(propertyName || '')}&property_id=${encodeURIComponent(propertyId || '')}`}
-                                      className="flex-shrink-0 inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-primary text-white text-xs font-medium hover:bg-primary-700 transition-colors"
-                                    >
-                                      <MessageCircle className="w-3.5 h-3.5" />
-                                      Message
-                                    </Link>
-                                    */}
-                                    <span className="flex-shrink-0 text-[11px] text-slate-600">
-                                      Buyer can initiate chat from marketplace
-                                    </span>
-                                  </>
+                            <div className="min-w-0 flex-1 space-y-1">
+                              <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                                <p className="text-sm font-semibold text-slate-900 capitalize leading-tight">
+                                  {name || 'Guest'}
+                                </p>
+                                {row.utm_source && (
+                                  <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-slate-100 text-slate-800 text-[11px] font-medium capitalize">
+                                    {row.utm_source}
+                                  </span>
+                                )}
+                                {device && (
+                                  <span className="inline-flex items-center gap-1 text-xs text-slate-600">
+                                    {getDeviceIcon(row.device_type)}
+                                    {device}
+                                  </span>
                                 )}
                               </div>
+                              {/* Page views, photos viewed, time spent — inline, no boxes */}
+                              <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-slate-600">
+                                <span>{views} view{views !== 1 ? 's' : ''}</span>
+                                {images > 0 && <span>{images} photo{images !== 1 ? 's' : ''}</span>}
+                                {timing && <span>{timing}</span>}
+                              </div>
                               {tags.length > 0 && (
-                                <div className="flex flex-wrap gap-1.5">
+                                <div className="flex flex-wrap gap-1">
                                   {tags.map((t) => (
                                     <span
                                       key={t}
-                                      className="inline-flex items-center px-2 py-0.5 rounded-md bg-slate-100 text-slate-800 text-[11px] font-medium"
+                                      className="inline-flex items-center px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 text-[11px] font-medium"
                                     >
                                       {t}
                                     </span>
                                   ))}
                                 </div>
                               )}
-                              <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-slate-600 pt-1 border-t border-slate-200">
+                              <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-slate-500 pt-0.5">
                                 {firstSeen && <span>First: {firstSeen}</span>}
                                 {lastSeen && lastSeen !== firstSeen && <span>Last: {lastSeen}</span>}
                               </div>

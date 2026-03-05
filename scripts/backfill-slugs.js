@@ -39,8 +39,23 @@ if (!supabaseUrl || !serviceKey) {
 
 const supabase = createClient(supabaseUrl, serviceKey);
 
+// Same format as new/edit and call-and-sms/gmail: 7 letters + 2 numbers only
+const ALPHA = 'abcdefghjkmnpqrstuvwxyz';
+const NUMS = '23456789';
+
+/** Deterministic slug from id: 7 letters + 2 numbers (e.g. kxmnpqr29). */
 function shortSlugFromId(id) {
-  return crypto.createHash('md5').update(String(id)).digest('hex').slice(0, 8);
+  const hash = crypto.createHash('md5').update(String(id)).digest('hex');
+  let out = '';
+  for (let i = 0; i < 7; i++) {
+    const pair = hash.slice(i * 2, i * 2 + 2);
+    out += ALPHA[parseInt(pair, 16) % ALPHA.length];
+  }
+  for (let i = 7; i < 9; i++) {
+    const pair = hash.slice(i * 2, i * 2 + 2);
+    out += NUMS[parseInt(pair, 16) % NUMS.length];
+  }
+  return out;
 }
 
 async function backfillProperties() {
@@ -73,8 +88,7 @@ async function backfillProperties() {
 async function backfillWholesaleDeals() {
   const { data: rows, error: fetchError } = await supabase
     .from('wholesale_deals')
-    .select('id')
-    .is('slug', null);
+    .select('id');
 
   if (fetchError) {
     throw new Error('wholesale_deals: ' + fetchError.message);
@@ -99,7 +113,7 @@ async function backfillWholesaleDeals() {
 }
 
 async function main() {
-  console.log('Backfilling short slugs (8-char hex from id)...\n');
+  console.log('Backfilling short slugs (7 letters + 2 numbers from id)...\n');
 
   console.log('1. properties (seller dashboard manual listings)');
   const pCount = await backfillProperties();

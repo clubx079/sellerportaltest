@@ -248,7 +248,7 @@ export async function GET(request) {
     if (action === 'get_conversations' || !action) {
       let { data: conversations, error } = await supabase
         .from('conversations')
-        .select('id, user_id, last_message_at, last_message_preview, is_active, created_at, buyer_uuid, property_id, property_address')
+        .select('id, user_id, last_message_at, last_message_preview, is_active, created_at, buyer_uuid, property_id, property_address, property_slug')
         .eq('seller_id', sellerId)
         .eq('is_active', true)
         .order('last_message_at', { ascending: false });
@@ -391,6 +391,22 @@ export async function POST(request) {
       }
       const { error } = await upsertSellerConversationPref(conversationId, sellerId, patch);
       if (error) return NextResponse.json({ success: false, error: error.message || 'Failed to update preference' }, { status: 500 });
+      return NextResponse.json({ success: true });
+    }
+
+    if (action === 'delete_conversation' && conversationId) {
+      const { data: conv } = await supabase
+        .from('conversations')
+        .select('id, seller_id')
+        .eq('id', conversationId)
+        .eq('seller_id', sellerId)
+        .single();
+      if (!conv) return NextResponse.json({ success: false, error: 'Conversation not found' }, { status: 404 });
+      const { error } = await supabase
+        .from('conversations')
+        .update({ is_active: false, updated_at: new Date().toISOString() })
+        .eq('id', conversationId);
+      if (error) return NextResponse.json({ success: false, error: error.message || 'Failed to delete' }, { status: 500 });
       return NextResponse.json({ success: true });
     }
 

@@ -7,7 +7,15 @@ import Link from 'next/link';
 import { getCurrentCurrencySymbol } from '@/lib/currency';
 import {
   Calendar,
-  Building2
+  Building2,
+  TrendingUp,
+  Home,
+  CircleDollarSign,
+  PlusCircle,
+  List,
+  Archive,
+  FileEdit,
+  Sparkles
 } from 'lucide-react';
 
 export default function DashboardPage() {
@@ -242,19 +250,81 @@ export default function DashboardPage() {
     return first || 'Seller';
   })();
 
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Good morning';
+    if (hour < 17) return 'Good afternoon';
+    return 'Good evening';
+  };
+
   return (
-    <div className="space-y-5">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-xl font-semibold text-gray-900">
-              Welcome back, {firstName}
-            </h1>
-            <p className="text-sm text-gray-500 mt-0.5">
-              Here's an overview of your property portfolio
-            </p>
+    <div className="space-y-6">
+        {/* Welcome hero – gradient card */}
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.35 }}
+          className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary via-primary/95 to-[#033d5c] text-white shadow-lg"
+        >
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_rgba(255,255,255,0.12)_0%,transparent_50%)]" aria-hidden />
+          <div className="relative px-5 py-6 sm:px-8 sm:py-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
+            <div>
+              <p className="text-sm font-medium text-white/80 uppercase tracking-wider">{getGreeting()}</p>
+              <h1 className="text-2xl sm:text-3xl font-bold mt-1 tracking-tight">
+                Welcome back, {firstName}
+              </h1>
+              <p className="text-sm text-white/90 mt-2 max-w-md">
+                Here&apos;s an overview of your property portfolio. Add listings, track performance, and manage deals in one place.
+              </p>
+              <Link
+                href="/properties/new"
+                className="inline-flex items-center gap-2 mt-4 px-4 py-2.5 bg-white text-primary font-semibold rounded-lg hover:bg-white/95 transition-all shadow-md hover:shadow-lg"
+              >
+                <PlusCircle className="w-5 h-5" />
+                Add property
+              </Link>
+            </div>
+            {!loading && stats.totalProperties > 0 && (
+              <div className="flex items-center gap-4 sm:gap-6 text-white/95">
+                <div className="text-center">
+                  <p className="text-2xl sm:text-3xl font-bold tabular-nums">{stats.activeProperties}</p>
+                  <p className="text-xs font-medium uppercase tracking-wider text-white/70">Active</p>
+                </div>
+                <div className="w-px h-12 bg-white/30" />
+                <div className="text-center">
+                  <p className="text-2xl sm:text-3xl font-bold tabular-nums">{currency}{(stats.totalValue || 0).toLocaleString()}</p>
+                  <p className="text-xs font-medium uppercase tracking-wider text-white/70">Portfolio value</p>
+                </div>
+              </div>
+            )}
           </div>
-          <div className="hidden md:block relative">
+        </motion.div>
+
+        {/* Date filter bar */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <p className="text-sm text-gray-500">
+            {loading ? 'Loading…' : `Showing ${dateRange.from && dateRange.to ? 'filtered' : 'all'} data${stats.recentlyAdded > 0 ? ` · ${stats.recentlyAdded} added in last 7 days` : ''}`}
+          </p>
+          <div className="flex items-center gap-2">
+            {[
+              { label: 'All', from: null, to: null },
+              { label: 'Last 7 days', from: (() => { const d = new Date(); d.setDate(d.getDate() - 7); return d.toISOString().slice(0, 10); })(), to: new Date().toISOString().slice(0, 10) },
+              { label: 'Last 30 days', from: (() => { const d = new Date(); d.setDate(d.getDate() - 30); return d.toISOString().slice(0, 10); })(), to: new Date().toISOString().slice(0, 10) }
+            ].map((preset) => {
+              const active = !dateRange.from && !dateRange.to && !preset.from
+                || (dateRange.from === preset.from && dateRange.to === preset.to);
+              return (
+                <button
+                  key={preset.label}
+                  type="button"
+                  onClick={() => { setDateRange({ from: preset.from, to: preset.to }); setShowDatePicker(false); }}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${active ? 'bg-primary text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                >
+                  {preset.label}
+                </button>
+              );
+            })}
+            <div className="relative">
             <button
               type="button"
               onClick={() => setShowDatePicker(!showDatePicker)}
@@ -311,15 +381,51 @@ export default function DashboardPage() {
                 </div>
               </>
             )}
+            </div>
           </div>
+        </div>
+
+        {/* KPI cards row */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          {[
+            { label: 'Total portfolio value', value: `${currency}${(stats.totalValue || 0).toLocaleString()}`, icon: CircleDollarSign, color: 'bg-emerald-500/10 text-emerald-700 border-emerald-200', iconBg: 'bg-emerald-500/20' },
+            { label: 'Active listings', value: stats.activeProperties, icon: Home, color: 'bg-primary/10 text-[#022b41] border-primary/20', iconBg: 'bg-primary/20' },
+            { label: 'Sold', value: stats.soldProperties, icon: TrendingUp, color: 'bg-rose-500/10 text-rose-700 border-rose-200', iconBg: 'bg-rose-500/20' },
+            { label: 'Total revenue', value: `${currency}${(stats.totalRevenue || 0).toLocaleString()}`, icon: Sparkles, color: 'bg-amber-500/10 text-amber-800 border-amber-200', iconBg: 'bg-amber-500/20' }
+          ].map((item, i) => (
+            <motion.div
+              key={item.label}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: 0.05 * i }}
+              whileHover={{ y: -2 }}
+              className={`rounded-xl border p-4 sm:p-5 ${item.color} hover:shadow-lg transition-shadow duration-200 cursor-default`}
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="text-xs font-medium opacity-90 uppercase tracking-wider truncate">{item.label}</p>
+                  {loading ? (
+                    <div className="h-8 w-20 bg-white/50 rounded mt-2 animate-pulse" />
+                  ) : (
+                    <p className="text-lg sm:text-xl font-bold mt-1 tabular-nums truncate" title={typeof item.value === 'string' ? item.value : String(item.value)}>
+                      {item.value}
+                    </p>
+                  )}
+                </div>
+                <div className={`shrink-0 w-10 h-10 rounded-lg flex items-center justify-center ${item.iconBg}`}>
+                  <item.icon className="w-5 h-5" />
+                </div>
+              </div>
+            </motion.div>
+          ))}
         </div>
 
         {/* Merged hero stats — Portfolio + Value in one enhanced card */}
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3 }}
-          className="bg-white rounded-2xl border border-gray-200/80 shadow-sm overflow-hidden border-l-4 border-l-primary"
+          transition={{ duration: 0.3, delay: 0.1 }}
+          className="bg-white rounded-2xl border border-gray-200/80 shadow-sm overflow-hidden border-l-4 border-l-primary hover:shadow-md transition-shadow duration-200"
         >
           <div className="grid grid-cols-1 lg:grid-cols-[1.4fr_1fr]">
             {/* Left: Headline + strong value */}
@@ -387,16 +493,16 @@ export default function DashboardPage() {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 }}
-            className="lg:col-span-2 bg-white rounded-xl border border-gray-200/80 overflow-hidden shadow-sm hover:shadow-md transition-shadow"
+            transition={{ delay: 0.2 }}
+            className="lg:col-span-2 bg-white rounded-xl border border-gray-200/80 overflow-hidden shadow-sm hover:shadow-md hover:border-gray-300/80 transition-all duration-200"
           >
-            <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between bg-gray-50/50">
+            <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between bg-gradient-to-r from-gray-50/80 to-white">
               <h2 className="text-sm font-semibold text-gray-900">Recent Properties</h2>
               <Link
                 href="/properties"
-                className="text-sm text-primary hover:text-primary-700 transition-colors font-medium"
+                className="text-sm text-primary hover:text-primary/80 font-medium inline-flex items-center gap-1 transition-colors"
               >
-                View All →
+                View All <span aria-hidden>→</span>
               </Link>
             </div>
 
@@ -424,8 +530,17 @@ export default function DashboardPage() {
                     ))
                   ) : recentProperties.length === 0 ? (
                     <tr>
-                      <td colSpan="5" className="px-6 py-8 text-center">
-                        <p className="text-sm text-gray-500">No properties yet</p>
+                      <td colSpan="5" className="px-6 py-10 text-center">
+                        <div className="flex flex-col items-center gap-3">
+                          <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center">
+                            <Building2 className="w-6 h-6 text-gray-400" />
+                          </div>
+                          <p className="text-sm font-medium text-gray-700">No properties yet</p>
+                          <p className="text-xs text-gray-500 max-w-xs">Add your first listing to see it here and start reaching buyers.</p>
+                          <Link href="/properties/new" className="inline-flex items-center gap-1.5 mt-1 px-4 py-2 bg-primary text-white text-sm font-medium rounded-lg hover:bg-primary/90 transition-colors">
+                            <PlusCircle className="w-4 h-4" /> Add property
+                          </Link>
+                        </div>
                       </td>
                     </tr>
                   ) : (
@@ -438,7 +553,7 @@ export default function DashboardPage() {
                       const statusLabel = property._normalizedStatus === 'active' ? 'Active' : property._normalizedStatus === 'archived' ? 'Archived' : 'Draft';
 
                       return (
-                        <tr key={property.id} className="hover:bg-gray-50/80 transition-colors">
+                        <tr key={property.id} className="hover:bg-gray-50/80 transition-colors group">
                           <td className="px-4 py-3">
                             <div className="flex items-center gap-2">
                               {firstImage ? (
@@ -451,10 +566,12 @@ export default function DashboardPage() {
                                 </div>
                               )}
                               <div className="min-w-0">
-                                <p className="text-xs font-medium text-gray-900 truncate max-w-[180px]">{displayAddress}</p>
-                                <p className="text-xs text-gray-500 truncate max-w-[180px]">
-                                  {property.city && property.state ? `${property.city}, ${property.state}` : (property.address || displayAddress)?.split(',')[0] || '—'}
-                                </p>
+                                <Link href={`/properties/edit/${property.id}`} className="block group-hover:text-primary transition-colors">
+                                  <p className="text-xs font-medium text-gray-900 truncate max-w-[180px] group-hover:text-primary transition-colors">{displayAddress}</p>
+                                  <p className="text-xs text-gray-500 truncate max-w-[180px]">
+                                    {property.city && property.state ? `${property.city}, ${property.state}` : (property.address || displayAddress)?.split(',')[0] || '—'}
+                                  </p>
+                                </Link>
                               </div>
                             </div>
                           </td>
@@ -518,8 +635,12 @@ export default function DashboardPage() {
                   </div>
                 ))
               ) : recentActivities.length === 0 ? (
-                <div className="text-center py-8">
-                  <p className="text-sm text-gray-500">No recent activities</p>
+                <div className="text-center py-8 px-4">
+                  <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-2">
+                    <FileEdit className="w-5 h-5 text-gray-400" />
+                  </div>
+                  <p className="text-sm font-medium text-gray-600">No recent activities</p>
+                  <p className="text-xs text-gray-500 mt-1">When you add or edit properties, they’ll show up here.</p>
                 </div>
               ) : (
                 recentActivities.map((activity) => (
@@ -732,31 +853,35 @@ export default function DashboardPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.6 }}
-            className="bg-white rounded-lg border border-gray-200 overflow-hidden shadow-card"
+            className="bg-white rounded-xl border border-gray-200/80 overflow-hidden shadow-sm hover:shadow-md transition-shadow"
           >
-            <div className="px-4 py-3 border-b border-gray-200">
+            <div className="px-4 py-3 border-b border-gray-100 bg-gradient-to-r from-gray-50/80 to-white">
               <h2 className="text-sm font-semibold text-gray-900">Quick Actions</h2>
+              <p className="text-xs text-gray-500 mt-0.5">Shortcuts to manage your portfolio</p>
             </div>
 
             <div className="p-4 space-y-2.5">
               <Link
                 href="/properties/new"
-                className="block p-3 bg-primary text-white hover:bg-primary-700 rounded-lg transition-all text-center text-sm font-medium"
+                className="flex items-center justify-center gap-2 p-3.5 bg-primary text-white hover:bg-primary/90 rounded-xl transition-all text-sm font-semibold shadow-sm hover:shadow"
               >
+                <PlusCircle className="w-5 h-5" />
                 Add New Property
               </Link>
 
               <Link
                 href="/properties"
-                className="block p-3 border border-gray-200 hover:border-gray-300 hover:bg-gray-50 rounded-lg transition-all text-center text-sm font-medium text-gray-700"
+                className="flex items-center justify-center gap-2 p-3 border border-gray-200 hover:border-primary/30 hover:bg-primary/5 rounded-xl transition-all text-sm font-medium text-gray-700"
               >
+                <List className="w-5 h-5 text-gray-500" />
                 Manage Properties
               </Link>
 
               <Link
                 href="/properties?view=trash"
-                className="block p-3 border border-gray-200 hover:border-gray-300 hover:bg-gray-50 rounded-lg transition-all text-center text-sm font-medium text-gray-700"
+                className="flex items-center justify-center gap-2 p-3 border border-gray-200 hover:border-gray-300 hover:bg-gray-50 rounded-xl transition-all text-sm font-medium text-gray-700"
               >
+                <Archive className="w-5 h-5 text-gray-500" />
                 View Archived
               </Link>
             </div>

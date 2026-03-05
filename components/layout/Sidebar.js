@@ -169,7 +169,7 @@ export default function Sidebar({ isOpen, setIsOpen, activeItem, setActiveItem, 
       <aside
         className={`fixed top-0 left-0 z-50 h-full bg-white border-r border-slate-200 flex flex-col shadow-sm
           transition-[transform,width,min-width] duration-300 ease-in-out
-          ${isOpen ? 'translate-x-0 w-60' : '-translate-x-full w-0'}
+          ${isOpen ? 'translate-x-0 w-72' : '-translate-x-full w-0'}
           lg:translate-x-0
           ${showExpanded ? 'lg:w-60 lg:min-w-60' : 'lg:w-[72px] lg:min-w-[72px]'}
           overflow-hidden
