@@ -99,6 +99,7 @@ export default function MessagesPage() {
   const [contextMenu, setContextMenu] = useState(null); // { x, y, conv }
   const [headerMenuOpen, setHeaderMenuOpen] = useState(false);
   const messagesEndRef = useRef(null);
+  const messageInputRef = useRef(null);
 
   const scrollToBottom = () => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
 
@@ -493,6 +494,8 @@ export default function MessagesPage() {
             }
             return updated;
           });
+          // Refocus message input so user can type again without clicking
+          setTimeout(() => messageInputRef.current?.focus(), 0);
         }
       })
       .catch(() => {})
@@ -781,6 +784,7 @@ export default function MessagesPage() {
                   className="flex items-end gap-2"
                 >
                   <textarea
+                    ref={messageInputRef}
                     value={messageText}
                     onChange={(e) => setMessageText(e.target.value)}
                     onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }}
