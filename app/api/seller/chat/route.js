@@ -35,7 +35,7 @@ async function isRecipientActiveOnMessages(supabaseClient, recipientUserId, reci
   }
 }
 
-/** Send email to buyer when seller sends a message (only if buyer not active on messages) */
+/** Send email to buyer when seller sends a message (only if buyer not active on messages). Uses same template as buyer portal when they send message to sellers. */
 async function sendEmailToBuyer(buyerEmail, buyerName, sellerName, messageText, conversationId, propertyAddress = '') {
   if (!buyerEmail) return;
   const apiKey = process.env.RESEND_API_KEY;
@@ -45,77 +45,31 @@ async function sendEmailToBuyer(buyerEmail, buyerName, sellerName, messageText, 
   }
   try {
     const resend = new Resend(apiKey);
-    const baseUrl = (process.env.NEXT_PUBLIC_DEELMAP_VIEW_BASE_URL || '').replace(/\/$/, '') || 'https://deelmap-production-16a1.up.railway.app';
-    const messagesLink = `${baseUrl}/buyer/inbox`;
+    const buyerBase = (process.env.NEXT_PUBLIC_DEELMAP_VIEW_BASE_URL || '').replace(/\/$/, '') || 'https://deelmap-production-16a1.up.railway.app';
+    const messagesUrl = `${buyerBase}/buyer/inbox?conversation=${conversationId}`;
     const logoBase = (process.env.NEXT_PUBLIC_SELLER_PORTAL_URL || 'https://sellerportaldeelmap-production.up.railway.app').replace(/\/$/, '');
     const logoUrl = `${logoBase}/deelmap.png`;
-    const preview = (messageText || '').slice(0, 200);
+    const preview = (messageText || '[Attachment]').slice(0, 200);
     const propertyText = String(propertyAddress || '').trim();
+    // Same template structure as buyer portal sendEmailToSeller (buyer → seller)
     const html = `
 <!DOCTYPE html>
 <html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>New message on Deelmap</title>
-</head>
-<body style="margin:0;padding:0;background:#f3f6f8;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;color:#0f172a">
-  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f3f6f8;padding:20px 10px">
-    <tr>
-      <td align="center">
-        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:620px;background:#ffffff;border:1px solid #e5e7eb;border-radius:14px;overflow:hidden">
-          <tr>
-            <td style="background:#022b41;padding:24px 40px;">
-              <table width="100%" cellpadding="0" cellspacing="0">
-                <tr>
-                  <td align="center" style="vertical-align:middle;">
-                    <img src="${logoUrl}" alt="Deelmap" width="160" height="48" style="display:block;max-width:160px;height:auto;border:0;margin:0 auto;" />
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-          <tr>
-            <td style="padding:24px;text-align:center">
-              <h1 style="margin:0 0 16px;font-size:20px;line-height:1.25;font-weight:700;color:#0f172a;text-align:center">New message</h1>
-              <p style="margin:0 0 10px;font-size:14px;color:#64748b;text-align:center">From <strong style="color:#022b41">${(sellerName || 'Property seller').replace(/</g, '&lt;')}</strong></p>
-              ${propertyText ? `<p style="margin:0 0 10px;font-size:14px;color:#64748b;text-align:center">Property <strong style="color:#022b41">${propertyText.replace(/</g, '&lt;')}</strong></p>` : ''}
-              <div style="background:#f8fafc;border:1px solid #e2e8f0;border-left:4px solid #022b41;padding:14px 16px;border-radius:10px;margin:14px 0 20px;font-size:15px;line-height:1.55;color:#1f2937;text-align:left">${(preview || '').replace(/</g, '&lt;').replace(/\n/g, '<br>')}</div>
-              <table role="presentation" cellspacing="0" cellpadding="0" style="margin:0 auto 2px">
-                <tr>
-                  <td align="center" style="border-radius:10px;background:#022b41">
-                    <a href="${messagesLink}" style="display:inline-block;padding:12px 22px;font-size:14px;font-weight:600;color:#ffffff;text-decoration:none">Open Messages</a>
-                  </td>
-                </tr>
-              </table>
-              <p style="margin:16px 0 0;text-align:center;font-size:12px;color:#94a3b8">You received this because you have an active conversation on Deelmap.</p>
-            </td>
-          </tr>
-          <tr>
-            <td style="padding:30px 40px;background-color:#ffffff;border-top:1px solid #e5e7eb;text-align:center">
-              <table width="100%" cellpadding="0" cellspacing="0">
-                <tr>
-                  <td style="padding-bottom:10px;">
-                    <p style="margin:0 0 10px 0;font-size:14px;color:#374151;font-weight:500;text-align:center">Thanks,<br>DeelMap Team</p>
-                  </td>
-                </tr>
-                <tr>
-                  <td style="padding-bottom:5px;">
-                    <p style="margin:0;font-size:12px;color:#9ca3af;text-align:center">2464 Royal Ln. Mesa, New Jersey 45463</p>
-                  </td>
-                </tr>
-                <tr>
-                  <td>
-                    <p style="margin:0;font-size:12px;color:#9ca3af;text-align:center">© 2026 DeelMap</p>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-  </table>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f5f5f5;padding:24px">
+  <div style="max-width:560px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08)">
+    <div style="background:#002A3A;color:#fff;padding:24px;text-align:center">
+      <img src="${logoUrl}" alt="Deelmap" width="160" height="48" style="display:block;max-width:160px;height:auto;border:0;margin:0 auto" />
+    </div>
+    <div style="padding:24px">
+      <p style="margin:0 0 12px;font-size:18px;font-weight:600;color:#002A3A">New message on Deelmap</p>
+      <p style="margin:0 0 8px;font-size:14px;color:#666">From <strong style="color:#002A3A">${(sellerName || 'Property seller').replace(/</g, '&lt;')}</strong></p>
+      <p style="margin:0 0 8px;font-size:14px;color:#666">Property: <strong style="color:#002A3A">${propertyText ? propertyText.replace(/</g, '&lt;') : '—'}</strong></p>
+      <div style="background:#f8f9fa;border-left:4px solid #002A3A;padding:16px;border-radius:4px;margin:16px 0;font-size:15px;line-height:1.5;color:#333">${(preview || '').replace(/</g, '&lt;').replace(/\n/g, '<br>')}</div>
+      <a href="${messagesUrl}" style="display:inline-block;background:#002A3A;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px">Respond</a>
+    </div>
+    <div style="padding:16px;text-align:center;font-size:12px;color:#888;border-top:1px solid #eee">You received this because you have an active conversation on Deelmap.</div>
+  </div>
 </body>
 </html>`;
     await resend.emails.send({
@@ -191,6 +145,47 @@ async function getConversationPropertyThumbnail(propertyId) {
     .limit(1)
     .maybeSingle();
   return firstManual?.image_url || null;
+}
+
+/** Resolve display address from property_id – same logic as buyer getDealAddressAndSlug. Checks properties (manual) and wholesale_deals. */
+async function getConversationPropertyAddress(propertyId) {
+  if (!propertyId) return null;
+  const idStr = String(propertyId).trim();
+  if (!idStr) return null;
+
+  // 1) properties table (manual listings; DB may use zip_code or zipcode)
+  let prop = null;
+  const propRes = await supabase
+    .from('properties')
+    .select('address, city, state, zip_code, zipcode, postal_code')
+    .eq('id', idStr)
+    .maybeSingle();
+  if (propRes.error && /column|does not exist/i.test(String(propRes.error.message))) {
+    const alt = await supabase.from('properties').select('address, city, state, zipcode').eq('id', idStr).maybeSingle();
+    prop = alt.data;
+  } else {
+    prop = propRes.data;
+  }
+  if (prop) {
+    const zip = prop.zip_code ?? prop.zipcode ?? prop.postal_code;
+    const addr = (prop.address != null && String(prop.address).trim() !== '')
+      ? String(prop.address).trim()
+      : [prop.address, prop.city, prop.state, zip].filter(Boolean).join(', ') || null;
+    if (addr) return addr;
+  }
+
+  // 2) wholesale_deals (scraped)
+  const { data: wholesale } = await supabase
+    .from('wholesale_deals')
+    .select('full_address, display_address, address, city, state, zip_code')
+    .eq('id', idStr)
+    .maybeSingle();
+  if (wholesale) {
+    const addr = (wholesale.full_address || wholesale.display_address || '').trim() ||
+      [wholesale.address, wholesale.city, wholesale.state, wholesale.zip_code].filter(Boolean).join(', ') || null;
+    if (addr) return addr;
+  }
+  return null;
 }
 
 export async function GET(request) {
@@ -274,23 +269,36 @@ export async function GET(request) {
     }
 
     if (action === 'get_conversations' || !action) {
+      // Select all columns so we always get property_id and property_address when the buyer stored them
       let { data: conversations, error } = await supabase
         .from('conversations')
-        .select('id, user_id, last_message_at, last_message_preview, is_active, created_at, buyer_uuid, property_id, property_address, property_slug')
+        .select('*')
         .eq('seller_id', sellerId)
         .eq('is_active', true)
         .order('last_message_at', { ascending: false });
 
-      // Backward-safe fallback if conversation property columns are not migrated yet.
-      if (error && String(error.message || '').toLowerCase().includes('property_')) {
+      // Backward-safe fallback if select('*') fails (e.g. missing columns)
+      if (error) {
         const fallbackRes = await supabase
+          .from('conversations')
+          .select('id, user_id, last_message_at, last_message_preview, is_active, created_at, buyer_uuid, property_id, property_address, property_slug')
+          .eq('seller_id', sellerId)
+          .eq('is_active', true)
+          .order('last_message_at', { ascending: false });
+        if (!fallbackRes.error) {
+          conversations = fallbackRes.data;
+          error = null;
+        }
+      }
+      if (error && !conversations) {
+        const minimalRes = await supabase
           .from('conversations')
           .select('id, user_id, last_message_at, last_message_preview, is_active, created_at, buyer_uuid')
           .eq('seller_id', sellerId)
           .eq('is_active', true)
           .order('last_message_at', { ascending: false });
-        conversations = fallbackRes.data;
-        error = fallbackRes.error;
+        conversations = minimalRes.data || [];
+        error = null;
       }
 
       if (error) {
@@ -302,7 +310,12 @@ export async function GET(request) {
       const enriched = await Promise.all(
         list.map(async (c) => {
           const property_thumbnail_url = await getConversationPropertyThumbnail(c.property_id);
+          // Use conversation's property_address first (buyer sets it when initiating); else resolve from property_id (properties or wholesale_deals)
+          const existingAddress = (c.property_address != null && String(c.property_address).trim() !== '') ? String(c.property_address).trim() : null;
+          const resolvedAddress = existingAddress || (await getConversationPropertyAddress(c.property_id)) || null;
+
           let buyer_name = 'Buyer';
+          let buyer_first_name = 'Buyer';
           if (c.buyer_uuid) {
             const { data: u } = await supabase
               .from('users')
@@ -312,6 +325,26 @@ export async function GET(request) {
             if (u) {
               const full = [u.first_name, u.last_name].filter(Boolean).join(' ').trim();
               if (full) buyer_name = full;
+              if (u.first_name && String(u.first_name).trim()) buyer_first_name = String(u.first_name).trim();
+              else if (full) buyer_first_name = full.trim().split(/\s+/)[0] || 'Buyer';
+            }
+            if (buyer_name === 'Buyer') {
+              try {
+                const { data: authData } = await supabase.auth.admin.getUserById(c.buyer_uuid);
+                if (authData?.user) {
+                  const meta = authData.user.user_metadata || {};
+                  const name = (meta.full_name || [meta.first_name, meta.last_name].filter(Boolean).join(' ')).trim();
+                  if (name) {
+                    buyer_name = name;
+                    buyer_first_name = (meta.first_name && String(meta.first_name).trim()) || name.trim().split(/\s+/)[0] || 'Buyer';
+                  } else if (authData.user.email) {
+                    buyer_name = authData.user.email.split('@')[0] || 'Buyer';
+                    buyer_first_name = buyer_name;
+                  }
+                }
+              } catch (_) {}
+            } else if (buyer_first_name === 'Buyer' && buyer_name !== 'Buyer') {
+              buyer_first_name = buyer_name.trim().split(/\s+/)[0] || 'Buyer';
             }
           }
           const { count } = await supabase
@@ -333,7 +366,9 @@ export async function GET(request) {
           const is_blocked = !!pref?.is_blocked;
           return {
             ...c,
+            property_address: resolvedAddress || null,
             buyer_name,
+            buyer_first_name,
             property_thumbnail_url,
             unread_count,
             is_done: !!pref?.is_done,

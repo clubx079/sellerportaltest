@@ -6,9 +6,24 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 );
 
+function getPeriodDates() {
+  const now = new Date();
+  const nowIso = now.toISOString();
+  const thirtyDaysAgo = new Date(now);
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+  const sixtyDaysAgo = new Date(now);
+  sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
+  return {
+    currentStart: thirtyDaysAgo.toISOString(),
+    currentEnd: nowIso,
+    previousStart: sixtyDaysAgo.toISOString(),
+    previousEnd: thirtyDaysAgo.toISOString(),
+  };
+}
+
 /**
  * GET /api/seller/dashboard-stats?userId=xxx
- * Returns total page views across all of the seller's properties.
+ * Returns total page views and period-over-period views for trend (last 30d vs previous 30d).
  */
 export async function GET(request) {
   try {
@@ -42,23 +57,42 @@ export async function GET(request) {
 
     const propertyIds = [...new Set([...manualIds, ...scrapedIds])];
     if (propertyIds.length === 0) {
-      return NextResponse.json({ totalViews: 0 });
+      return NextResponse.json({ totalViews: 0, viewsLast30Days: 0, viewsPrevious30Days: 0 });
     }
 
     const { data: rows, error } = await supabase
       .from('property_analytics')
-      .select('page_views')
+      .select('page_views, view_start_time, created_at')
       .in('property_id', propertyIds);
 
     if (error) {
       console.error('[dashboard-stats] property_analytics error:', error);
-      return NextResponse.json({ totalViews: 0 });
+      return NextResponse.json({ totalViews: 0, viewsLast30Days: 0, viewsPrevious30Days: 0 });
     }
 
     const totalViews = (rows || []).reduce((sum, r) => sum + (Number(r.page_views) || 0), 0);
-    return NextResponse.json({ totalViews });
+
+    const { currentStart, currentEnd, previousStart, previousEnd } = getPeriodDates();
+    let viewsLast30Days = 0;
+    let viewsPrevious30Days = 0;
+    (rows || []).forEach((r) => {
+      const t = r.view_start_time || r.created_at;
+      const views = Number(r.page_views) || 0;
+      if (t) {
+        if (t >= currentStart && t <= currentEnd) viewsLast30Days += views;
+        else if (t >= previousStart && t < previousEnd) viewsPrevious30Days += views;
+      } else {
+        viewsLast30Days += views;
+      }
+    });
+
+    return NextResponse.json({
+      totalViews,
+      viewsLast30Days,
+      viewsPrevious30Days,
+    });
   } catch (err) {
     console.error('[dashboard-stats] error:', err);
-    return NextResponse.json({ totalViews: 0 });
+    return NextResponse.json({ totalViews: 0, viewsLast30Days: 0, viewsPrevious30Days: 0 });
   }
 }

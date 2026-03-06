@@ -16,6 +16,8 @@ import {
   Eye,
   Home,
   CircleDollarSign,
+  TrendingUp,
+  TrendingDown,
 } from "lucide-react";
 
 const container = {
@@ -56,6 +58,12 @@ export default function DashboardPage() {
   const [recentQueries, setRecentQueries] = useState([]);
   const [statusBreakdown, setStatusBreakdown] = useState([]);
   const [currency, setCurrency] = useState("$");
+  const [trends, setTrends] = useState({
+    activeListings: null,
+    views: null,
+    inquiries: null,
+    portfolioValue: null,
+  });
 
   useEffect(() => {
     const userStr = localStorage.getItem("seller_user");
@@ -180,16 +188,22 @@ export default function DashboardPage() {
       const activeCount = activeList.length;
       const recentCount = allProperties.filter((p) => new Date(p.created_at) >= sevenDaysAgo).length;
 
-      // Total views across all seller properties
+      // Total views and period-over-period for trend
       let totalViews = 0;
+      let viewsLast30Days = 0;
+      let viewsPrevious30Days = 0;
       try {
         const res = await fetch(`/api/seller/dashboard-stats?userId=${encodeURIComponent(currentUserId)}`);
         const data = await res.json();
         totalViews = Number(data.totalViews) || 0;
+        viewsLast30Days = Number(data.viewsLast30Days) || 0;
+        viewsPrevious30Days = Number(data.viewsPrevious30Days) || 0;
       } catch (_) {}
 
-      // Conversations = inquiries (people who asked); keep full list for count, slice for widget
+      // Conversations = inquiries; keep full list for count and period trend
       let totalInquiries = 0;
+      let inquiriesLast30Days = 0;
+      let inquiriesPrevious30Days = 0;
       try {
         const res = await fetch("/api/seller/chat?action=get_conversations", {
           headers: { Authorization: `Bearer ${currentUserId}` },
@@ -198,9 +212,64 @@ export default function DashboardPage() {
         const conversations = data.conversations || [];
         totalInquiries = conversations.length;
         setRecentQueries(conversations.slice(0, 6));
+        const now = Date.now();
+        const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
+        const sixtyDaysMs = 60 * 24 * 60 * 60 * 1000;
+        conversations.forEach((c) => {
+          const t = c.created_at ? new Date(c.created_at).getTime() : 0;
+          if (t >= now - thirtyDaysMs) inquiriesLast30Days += 1;
+          else if (t >= now - sixtyDaysMs && t < now - thirtyDaysMs) inquiriesPrevious30Days += 1;
+        });
       } catch (_) {
         setRecentQueries([]);
       }
+
+      // Previous stats from last visit (for active listings & portfolio value trend)
+      const storageKey = "seller_dashboard_prev_stats";
+      let prevActive = 0;
+      let prevValue = 0;
+      try {
+        const raw = localStorage.getItem(storageKey);
+        if (raw) {
+          const prev = JSON.parse(raw);
+          prevActive = Number(prev.activeProperties) || 0;
+          prevValue = Number(prev.totalValue) || 0;
+        }
+      } catch (_) {}
+      try {
+        localStorage.setItem(
+          storageKey,
+          JSON.stringify({
+            activeProperties: activeCount,
+            totalValue,
+            totalViews,
+            totalInquiries,
+          })
+        );
+      } catch (_) {}
+
+      // Compute trend percentages
+      const viewPct =
+        viewsPrevious30Days > 0
+          ? Math.round(((viewsLast30Days - viewsPrevious30Days) / viewsPrevious30Days) * 100)
+          : viewsLast30Days > 0
+          ? 100
+          : null;
+      const inquiryPct =
+        inquiriesPrevious30Days > 0
+          ? Math.round(((inquiriesLast30Days - inquiriesPrevious30Days) / inquiriesPrevious30Days) * 100)
+          : inquiriesLast30Days > 0
+          ? 100
+          : null;
+      const activePct = prevActive > 0 ? Math.round(((activeCount - prevActive) / prevActive) * 100) : null;
+      const valuePct = prevValue > 0 ? Math.round(((totalValue - prevValue) / prevValue) * 100) : null;
+
+      setTrends({
+        activeListings: activePct != null ? { pct: Math.abs(activePct), isUp: activePct >= 0 } : null,
+        views: viewPct != null ? { pct: Math.abs(viewPct), isUp: viewPct >= 0 } : null,
+        inquiries: inquiryPct != null ? { pct: Math.abs(inquiryPct), isUp: inquiryPct >= 0 } : null,
+        portfolioValue: valuePct != null ? { pct: Math.abs(valuePct), isUp: valuePct >= 0 } : null,
+      });
 
       setStats({
         totalProperties: combined.length,
@@ -297,10 +366,10 @@ export default function DashboardPage() {
   ];
 
   const kpiCards = [
-    { label: "Active listings", value: stats.activeProperties, sub: "live now", icon: Home, color: "bg-white border-slate-200 text-slate-900" },
-    { label: "Property views", value: stats.totalViews, sub: "total viewers", icon: Eye, color: "bg-white border-slate-200 text-slate-900" },
-    { label: "Inquiries", value: stats.totalInquiries, sub: "people asked", icon: MessageCircle, color: "bg-white border-slate-200 text-slate-900" },
-    { label: "Portfolio value", value: `${currency}${(stats.totalValue || 0).toLocaleString()}`, sub: "active listings", icon: CircleDollarSign, color: "bg-white border-slate-200 text-slate-900" },
+    { label: "Active listings", value: stats.activeProperties, sub: "live now", icon: Home, color: "bg-white border-slate-200 text-slate-900", trendKey: "activeListings" },
+    { label: "Property views", value: stats.totalViews, sub: "total viewers", icon: Eye, color: "bg-white border-slate-200 text-slate-900", trendKey: "views" },
+    { label: "Inquiries", value: stats.totalInquiries, sub: "people asked", icon: MessageCircle, color: "bg-white border-slate-200 text-slate-900", trendKey: "inquiries" },
+    { label: "Portfolio value", value: `${currency}${(stats.totalValue || 0).toLocaleString()}`, sub: "active listings", icon: CircleDollarSign, color: "bg-white border-slate-200 text-slate-900", trendKey: "portfolioValue" },
   ];
 
   return (
@@ -452,12 +521,25 @@ export default function DashboardPage() {
                   <div className="h-9 w-24 bg-slate-100 rounded-lg mt-2 animate-pulse" />
                 ) : (
                   <>
-                    <p
-                      className="text-xl sm:text-2xl font-bold mt-2 tabular-nums truncate"
-                      title={typeof card.value === "string" ? card.value : String(card.value)}
-                    >
-                      {card.value}
-                    </p>
+                    <div className="flex items-baseline gap-2 mt-2 flex-wrap">
+                      <p
+                        className="text-xl sm:text-2xl font-bold tabular-nums truncate"
+                        title={typeof card.value === "string" ? card.value : String(card.value)}
+                      >
+                        {card.value}
+                      </p>
+                      {card.trendKey && trends[card.trendKey] && (
+                        <span
+                          className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md text-[10px] font-semibold tabular-nums ${
+                            trends[card.trendKey].isUp ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"
+                          }`}
+                          title={trends[card.trendKey].isUp ? "Up from previous period" : "Down from previous period"}
+                        >
+                          {trends[card.trendKey].isUp ? <TrendingUp className="w-3 h-3 shrink-0" /> : <TrendingDown className="w-3 h-3 shrink-0" />}
+                          {trends[card.trendKey].pct}%
+                        </span>
+                      )}
+                    </div>
                     {card.sub && (
                       <p className="text-[11px] text-slate-400 mt-0.5">{card.sub}</p>
                     )}
@@ -551,12 +633,31 @@ export default function DashboardPage() {
                       );
                       const firstImage = sortedImages?.[0]?.photo_url;
                       const displayAddress = property.full_address || property.address || "Property";
+                      const ps = (property.property_status || "").toLowerCase();
                       const statusLabel =
-                        property._normalizedStatus === "active"
-                          ? "Active"
-                          : property._normalizedStatus === "archived"
+                        property._normalizedStatus === "archived"
                           ? "Archived"
-                          : "Draft";
+                          : property._normalizedStatus === "draft"
+                          ? "Draft"
+                          : ps === "sold"
+                          ? "Sold"
+                          : ps === "under_contract"
+                          ? "Under Contract"
+                          : ps === "pending"
+                          ? "Pending"
+                          : "Available";
+                      const statusClass =
+                        property._normalizedStatus === "archived"
+                          ? "bg-slate-200 text-slate-600"
+                          : property._normalizedStatus === "draft"
+                          ? "bg-amber-100 text-amber-800"
+                          : ps === "sold"
+                          ? "bg-red-100 text-red-700"
+                          : ps === "under_contract"
+                          ? "bg-teal-100 text-teal-700"
+                          : ps === "pending"
+                          ? "bg-orange-100 text-orange-700"
+                          : "bg-emerald-100 text-emerald-700";
                       return (
                         <tr key={property.id} className="hover:bg-slate-50/80 transition-colors group">
                           <td className="px-4 sm:px-6 py-4">
@@ -591,13 +692,7 @@ export default function DashboardPage() {
                           </td>
                           <td className="px-4 py-4">
                             <span
-                              className={`inline-flex px-2.5 py-1 rounded-lg text-xs font-medium ${
-                                property._normalizedStatus === "active"
-                                  ? "bg-primary/10 text-primary"
-                                  : property._normalizedStatus === "archived"
-                                  ? "bg-slate-200 text-slate-600"
-                                  : "bg-slate-100 text-slate-700"
-                              }`}
+                              className={`inline-flex px-2.5 py-1 rounded-lg text-xs font-medium ${statusClass}`}
                             >
                               {statusLabel}
                             </span>
@@ -637,18 +732,31 @@ export default function DashboardPage() {
                   )
                 : recentProperties.map((property) => {
                     const displayAddress = property.full_address || property.address || "Property";
+                    const ps = (property.property_status || "").toLowerCase();
                     const statusLabel =
-                      property._normalizedStatus === "active"
-                        ? "Active"
-                        : property._normalizedStatus === "archived"
+                      property._normalizedStatus === "archived"
                         ? "Archived"
-                        : "Draft";
+                        : property._normalizedStatus === "draft"
+                        ? "Draft"
+                        : ps === "sold"
+                        ? "Sold"
+                        : ps === "under_contract"
+                        ? "Under Contract"
+                        : ps === "pending"
+                        ? "Pending"
+                        : "Available";
                     const statusClass =
-                      property._normalizedStatus === "active"
-                        ? "bg-primary/10 text-primary"
-                        : property._normalizedStatus === "archived"
+                      property._normalizedStatus === "archived"
                         ? "bg-slate-200 text-slate-600"
-                        : "bg-slate-100 text-slate-700";
+                        : property._normalizedStatus === "draft"
+                        ? "bg-amber-100 text-amber-800"
+                        : ps === "sold"
+                        ? "bg-red-100 text-red-700"
+                        : ps === "under_contract"
+                        ? "bg-teal-100 text-teal-700"
+                        : ps === "pending"
+                        ? "bg-orange-100 text-orange-700"
+                        : "bg-emerald-100 text-emerald-700";
                     return (
                       <Link
                         key={property.id}
@@ -689,9 +797,10 @@ export default function DashboardPage() {
                   <div key={i} className="flex items-start gap-3 p-3 animate-pulse">
                     <div className="w-10 h-10 bg-slate-100 rounded-full shrink-0" />
                     <div className="flex-1 min-w-0">
-                      <div className="h-4 w-28 bg-slate-100 rounded mb-2" />
-                      <div className="h-3 w-full max-w-[200px] bg-slate-50 rounded mb-1" />
-                      <div className="h-3 w-14 bg-slate-50 rounded" />
+                      <div className="h-4 w-24 bg-slate-100 rounded mb-1.5" />
+                      <div className="h-3 w-32 bg-slate-50 rounded mb-1" />
+                      <div className="h-3 w-full max-w-[180px] bg-slate-50 rounded mb-1" />
+                      <div className="h-3 w-12 bg-slate-50 rounded" />
                     </div>
                   </div>
                 ))
@@ -710,9 +819,19 @@ export default function DashboardPage() {
                     className="flex items-start gap-3 p-3 rounded-xl hover:bg-slate-50/80 transition-colors group"
                   >
                     <div className="relative shrink-0">
-                      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
-                        <MessageCircle className="w-5 h-5" />
-                      </div>
+                      {q.property_thumbnail_url ? (
+                        <div className="w-10 h-10 rounded-full overflow-hidden bg-slate-100 ring-2 ring-white shadow-sm">
+                          <img
+                            src={q.property_thumbnail_url}
+                            alt=""
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      ) : (
+                        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                          <MessageCircle className="w-5 h-5" />
+                        </div>
+                      )}
                       {q.has_unread && (
                         <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-primary ring-2 ring-white" />
                       )}
@@ -720,14 +839,17 @@ export default function DashboardPage() {
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-slate-900 truncate">
                         {q.buyer_name || "Buyer"}
-                        {q.property_address && (
-                          <span className="text-slate-500 font-normal"> · {q.property_address}</span>
-                        )}
                       </p>
-                      <p className="text-xs text-slate-600 mt-0.5 line-clamp-2">
+                      {q.property_address && (
+                        <p className="text-[11px] text-slate-600 mt-0.5 flex items-center gap-1 truncate">
+                          <Home className="w-3 h-3 shrink-0 text-primary/70" aria-hidden />
+                          <span className="truncate">{q.property_address}</span>
+                        </p>
+                      )}
+                      <p className="text-xs text-slate-600 mt-1 line-clamp-2">
                         {q.last_message_preview || "No message yet"}
                       </p>
-                      <p className="text-xs text-slate-400 mt-1">{formatTimeAgo(q.last_message_at)}</p>
+                      <p className="text-xs text-slate-400 mt-0.5">{formatTimeAgo(q.last_message_at)}</p>
                     </div>
                     <ChevronRight className="w-4 h-4 text-slate-400 shrink-0 group-hover:text-primary transition-colors" />
                   </Link>
@@ -746,7 +868,7 @@ export default function DashboardPage() {
 
       {/* Status breakdown + Quick actions */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 sm:gap-6">
-        {/* Property status donut */}
+        {/* Listing status — modern donut chart */}
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
@@ -766,32 +888,55 @@ export default function DashboardPage() {
               <p className="text-sm text-slate-500 text-center py-8">No data yet</p>
             ) : (
               <div className="flex flex-col sm:flex-row items-center gap-6">
-                <div className="relative w-36 h-36 sm:w-40 sm:h-40 shrink-0">
-                  <svg viewBox="0 0 100 100" className="w-full h-full">
+                <motion.div
+                  initial={{ scale: 0.92, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+                  className="relative w-36 h-36 sm:w-40 sm:h-40 shrink-0"
+                >
+                  <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-sm" aria-hidden>
                     <defs>
-                      <filter id="donut-shadow" x="-20%" y="-20%" width="140%" height="140%">
-                        <feDropShadow dx="0" dy="1" stdDeviation="1" floodOpacity="0.08" />
+                      <filter id="listing-donut-shadow" x="-20%" y="-20%" width="140%" height="140%">
+                        <feDropShadow dx="0" dy="2" stdDeviation="2" floodOpacity="0.08" />
                       </filter>
+                      <linearGradient id="listing-donut-center" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stopColor="#ffffff" />
+                        <stop offset="100%" stopColor="#f1f5f9" />
+                      </linearGradient>
                     </defs>
-                    <g transform="rotate(-90 50 50)" filter="url(#donut-shadow)">
+                    <g transform="rotate(-90 50 50)" filter="url(#listing-donut-shadow)">
                       {(() => {
                         const colors = {
                           Available: "#10B981",
                           "Sold Out": "#EF4444",
-                          Pending: "#3B82F6",
-                          "Under Contract": "#8B5CF6",
+                          Pending: "#ea580c",
+                          "Under Contract": "#0d9488",
                         };
                         const R = 40;
-                        const r = 26;
+                        const r = 24;
                         const cx = 50;
                         const cy = 50;
                         const segments = statusBreakdown.filter((item) => (item.percentage || 0) > 0);
+                        if (segments.length === 0) {
+                          const o1 = cx + R;
+                          const o2 = cx - R;
+                          const i1 = cx + r;
+                          const i2 = cx - r;
+                          return (
+                            <path
+                              d={`M ${o1} ${cy} A ${R} ${R} 0 0 1 ${o2} ${cy} A ${R} ${R} 0 0 1 ${o1} ${cy} L ${i1} ${cy} A ${r} ${r} 0 0 1 ${i2} ${cy} A ${r} ${r} 0 0 1 ${i1} ${cy} Z`}
+                              fill="#e2e8f0"
+                              stroke="white"
+                              strokeWidth="2"
+                            />
+                          );
+                        }
                         let currentAngle = 0;
                         return segments.map((seg) => {
-                          const pct = seg.percentage || 0;
+                          const pct = Math.min(100, Math.max(0, seg.percentage || 0));
                           let angle = (pct / 100) * 360;
-                          if (angle >= 360) angle = 360;
-                          if (angle <= 0) return null;
+                          if (angle < 0.5) return null;
+                          if (angle >= 359.5) angle = 359.5;
                           const startAngle = currentAngle;
                           currentAngle += angle;
                           const startRad = (startAngle * Math.PI) / 180;
@@ -816,61 +961,67 @@ export default function DashboardPage() {
                             <path
                               key={seg.name}
                               d={d}
-                              fill={colors[seg.name] || "#E5E7EB"}
+                              fill={colors[seg.name] || "#94a3b8"}
                               stroke="white"
-                              strokeWidth="1.5"
+                              strokeWidth="2"
                             />
                           );
                         });
                       })()}
                     </g>
-                    <circle cx="50" cy="50" r="22" fill="white" />
+                    <circle cx="50" cy="50" r="20" fill="url(#listing-donut-center)" stroke="#e2e8f0" strokeWidth="1" />
                     <text
                       x="50"
-                      y="48"
+                      y="46"
                       textAnchor="middle"
-                      fontSize="16"
+                      fontSize="18"
                       fontWeight="700"
                       fill="#0f172a"
-                      fontFamily="system-ui, sans-serif"
+                      fontFamily="system-ui, -apple-system, sans-serif"
                     >
                       {stats.activeProperties}
                     </text>
                     <text
                       x="50"
-                      y="60"
+                      y="58"
                       textAnchor="middle"
-                      fontSize="8"
+                      fontSize="9"
                       fontWeight="500"
                       fill="#64748b"
-                      fontFamily="system-ui, sans-serif"
+                      fontFamily="system-ui, -apple-system, sans-serif"
                     >
-                      total
+                      active
                     </text>
                   </svg>
-                </div>
-                <div className="space-y-2.5 flex-1 min-w-0">
-                  {statusBreakdown.map((seg) => {
+                </motion.div>
+                <div className="space-y-1 flex-1 min-w-0">
+                  {statusBreakdown.map((seg, i) => {
                     const dotColors = {
-                      Available: "bg-status-available",
-                      "Sold Out": "bg-status-sold",
-                      Pending: "bg-status-pending",
-                      "Under Contract": "bg-status-contract",
+                      Available: "bg-emerald-500",
+                      "Sold Out": "bg-red-500",
+                      Pending: "bg-orange-500",
+                      "Under Contract": "bg-teal-500",
                     };
                     return (
-                      <div
+                      <motion.div
                         key={seg.name}
-                        className="flex items-center justify-between gap-3 py-2 border-b border-slate-50 last:border-0"
+                        initial={{ opacity: 0, x: -8 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: 0.25 + i * 0.05, duration: 0.3 }}
+                        className="flex items-center justify-between gap-3 py-2.5 px-2.5 rounded-lg hover:bg-slate-50/80 transition-colors"
                       >
-                        <div className="flex items-center gap-2.5">
+                        <div className="flex items-center gap-2.5 min-w-0">
                           <span
                             className={`flex h-3.5 w-3.5 rounded-full shrink-0 ${dotColors[seg.name] || "bg-slate-400"} ring-2 ring-white shadow-sm`}
                             aria-hidden
                           />
-                          <span className="text-sm font-medium text-slate-700">{seg.name}</span>
+                          <span className="text-sm font-medium text-slate-700 truncate">{seg.name}</span>
                         </div>
-                        <span className="text-base font-bold text-slate-900 tabular-nums">{seg.count}</span>
-                      </div>
+                        <div className="flex items-baseline gap-2 shrink-0">
+                          <span className="text-base font-bold text-slate-900 tabular-nums">{seg.count}</span>
+                          <span className="text-xs text-slate-500 tabular-nums">({seg.percentage || 0}%)</span>
+                        </div>
+                      </motion.div>
                     );
                   })}
                 </div>

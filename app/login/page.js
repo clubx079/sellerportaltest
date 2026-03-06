@@ -113,68 +113,70 @@ function LoginForm() {
   }
 
   return (
-    <div className="min-h-screen bg-white flex flex-col relative overflow-hidden">
-      {/* Logo – animated entrance */}
+    <div className="min-h-screen bg-white flex flex-col relative overflow-x-hidden">
+      {/* Logo – top-left, responsive for mobile */}
       <Link
         href="/"
-        className="login-logo-enter absolute top-6 left-6 sm:left-8 z-20 flex items-center gap-1 transition-opacity hover:opacity-80"
+        className="login-logo-enter absolute top-4 left-4 right-4 sm:right-auto sm:left-8 z-20 flex items-center justify-between sm:justify-start gap-2 transition-opacity hover:opacity-80"
       >
-        <div className="h-9 w-[120px] flex items-center justify-center shrink-0">
-          {!logoError ? (
-            <Image
-              src="/assets/logo copy.png"
-              alt="DeelMap"
-              width={120}
-              height={36}
-              className="h-9 w-auto object-contain"
-              priority
-              onError={() => setLogoError(true)}
-            />
-          ) : (
-            <div className="w-10 h-10 rounded-xl bg-slate-900 flex items-center justify-center">
-              <MapPin className="w-5 h-5 text-white" />
-            </div>
-          )}
+        <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+          <div className="h-8 w-[100px] sm:h-9 sm:w-[120px] flex items-center justify-center shrink-0">
+            {!logoError ? (
+              <Image
+                src="/assets/logo copy.png"
+                alt="DeelMap"
+                width={120}
+                height={36}
+                className="h-8 w-auto sm:h-9 object-contain"
+                priority
+                onError={() => setLogoError(true)}
+              />
+            ) : (
+              <div className="w-9 h-9 rounded-xl bg-slate-900 flex items-center justify-center">
+                <MapPin className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+              </div>
+            )}
+          </div>
+          <span className="text-lg sm:text-xl font-bold text-slate-900 tracking-wide -translate-y-0.5 sm:-translate-y-1 truncate">Seller</span>
         </div>
-        <span className="text-xl font-bold text-slate-900 tracking-wide -translate-y-1">Seller</span>
       </Link>
 
-      <main className="flex-1 flex flex-col lg:flex-row items-center justify-center gap-10 lg:gap-16 py-12 px-4 sm:px-6 lg:px-12 xl:px-16 relative z-10 pb-20">
-        {/* Left (desktop) / Top (mobile): tagline and supporting text – white background, animated */}
-        <div className="w-full lg:max-w-md xl:max-w-lg flex-shrink-0 text-center lg:text-left">
-          <h2 className="text-2xl sm:text-3xl xl:text-4xl font-normal text-slate-900 leading-tight">
-            <span className="login-hero-line1 block ">List deals. Reach buyers.</span>
+      <main className="flex-1 flex flex-col lg:flex-row items-center justify-center gap-6 sm:gap-8 lg:gap-16 pt-20 sm:pt-24 lg:pt-12 pb-8 sm:pb-12 lg:pb-20 px-4 sm:px-6 lg:px-12 xl:px-16 relative z-10 max-w-7xl mx-auto w-full">
+        {/* Left (desktop) / Top (mobile): tagline and supporting text */}
+        <div className="w-full lg:max-w-md xl:max-w-lg flex-shrink-0 text-center lg:text-left order-2 lg:order-1">
+          <h2 className="text-xl sm:text-2xl xl:text-4xl font-normal text-slate-900 leading-tight">
+            <span className="login-hero-line1 block">List deals. Reach buyers.</span>
             <span className="login-hero-line2 mt-1 block">
               <span className="font-bold text-red-600">Grow your business.</span>
             </span>
           </h2>
-          <p className="login-hero-p mt-4 text-slate-600 text-base leading-relaxed max-w-md mx-auto lg:mx-0">
+          <p className="login-hero-p mt-3 sm:mt-4 text-slate-600 text-sm sm:text-base leading-relaxed max-w-md mx-auto lg:mx-0">
             Sign in to manage your wholesale listings, track performance, and connect with verified buyers on the platform.
           </p>
-          <div className="login-hero-footer mt-6 lg:mt-8 flex items-center justify-center lg:justify-start gap-2 text-slate-500 text-sm">
-            <Shield className="w-4 h-4 flex-shrink-0" />
+          <div className="login-hero-footer mt-4 sm:mt-6 lg:mt-8 flex items-center justify-center lg:justify-start gap-2 text-slate-500 text-xs sm:text-sm">
+            <Shield className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
             <span>Secure seller sign-in</span>
           </div>
         </div>
 
-        {/* Right: form – animated column */}
-        <div className="login-form-enter w-full max-w-md">
+        {/* Right (desktop) / First on mobile: form */}
+        <div className="login-form-enter w-full max-w-md flex-shrink-0 order-1 lg:order-2">
           {/* Header */}
-          <div className="login-form-header-enter text-center mb-8">
-            <h1 className="text-3xl font-bold text-slate-900 mb-2">
+          <div className="login-form-header-enter text-center mb-5 sm:mb-8">
+            <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 mb-1 sm:mb-2">
               Welcome Back
             </h1>
-            <p className="text-slate-600">
+            <p className="text-slate-600 text-sm sm:text-base">
               Sign in to your seller account to continue
             </p>
           </div>
 
-          {/* Form Card – scale-in + hover lift */}
-          <div className="login-card-enter bg-white border-2 border-slate-200 rounded-xl p-8 shadow-lg relative z-10 transition-all duration-300 ease-out hover:shadow-xl hover:-translate-y-0.5">
-            <form onSubmit={handleSubmit} className="space-y-5">
+          {/* Form Card – responsive padding */}
+          <div className="login-card-enter bg-white border-2 border-slate-200 rounded-xl p-5 sm:p-6 lg:p-8 shadow-lg relative z-10 transition-all duration-300 ease-out hover:shadow-xl hover:-translate-y-0.5">
+            <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
               {/* Email */}
               <div>
-                <label htmlFor="email" className="block text-sm font-medium text-slate-700 mb-2">
+                <label htmlFor="email" className="block text-sm font-medium text-slate-700 mb-1.5 sm:mb-2">
                   Email Address
                 </label>
                 <input
@@ -186,13 +188,13 @@ function LoginForm() {
                   onChange={handleChange}
                   autoComplete="email"
                   required
-                  className="block w-full h-12 px-4 rounded-lg border border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 text-base focus:outline-none focus:ring-2 focus:ring-slate-900/20 focus:border-slate-900 transition-all duration-200"
+                  className="block w-full min-h-[44px] sm:h-12 px-4 rounded-lg border border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 text-base focus:outline-none focus:ring-2 focus:ring-slate-900/20 focus:border-slate-900 transition-all duration-200"
                 />
               </div>
 
               {/* Password */}
               <div>
-                <label htmlFor="password" className="block text-sm font-medium text-slate-700 mb-2">
+                <label htmlFor="password" className="block text-sm font-medium text-slate-700 mb-1.5 sm:mb-2">
                   Password
                 </label>
                 <div className="relative">
@@ -205,7 +207,7 @@ function LoginForm() {
                     onChange={handleChange}
                     autoComplete="current-password"
                     required
-                    className="block w-full h-12 px-4 pr-12 rounded-lg border border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 text-base focus:outline-none focus:ring-2 focus:ring-slate-900/20 focus:border-slate-900 transition-colors"
+                    className="block w-full min-h-[44px] sm:h-12 px-4 pr-12 rounded-lg border border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 text-base focus:outline-none focus:ring-2 focus:ring-slate-900/20 focus:border-slate-900 transition-colors"
                   />
                   <button
                     type="button"
@@ -229,14 +231,14 @@ function LoginForm() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full h-12 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-sm font-semibold disabled:opacity-50 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:ring-offset-2 active:scale-[0.99]"
+                className="w-full min-h-[44px] sm:h-12 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-sm font-semibold disabled:opacity-50 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:ring-offset-2 active:scale-[0.99]"
               >
                 {loading ? 'Signing In...' : 'Sign In'}
               </button>
             </form>
 
             {/* Forgot password only */}
-            <div className="mt-6 text-center">
+            <div className="mt-4 sm:mt-6 text-center">
               <Link
                 href="/forgot-password"
                 className="text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors inline-block"

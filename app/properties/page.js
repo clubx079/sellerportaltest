@@ -586,7 +586,7 @@ const PropertiesManagement = () => {
             </select>
             <button
               onClick={clearFilters}
-              className="text-xs bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg px-2 py-1.5 transition-colors"
+              className="text-xs bg-red-50 hover:bg-red-100 text-red-600 rounded-lg px-2 py-1.5 transition-colors"
             >
               Clear
             </button>

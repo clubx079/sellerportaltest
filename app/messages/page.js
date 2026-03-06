@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { MessageCircle, Send, Search, ArrowLeft, Loader2, Check, CheckCheck, Pin, MoreVertical, ExternalLink, Trash2 } from 'lucide-react';
+import { MessageCircle, Send, Search, ArrowLeft, Loader2, Check, CheckCheck, Pin, MoreVertical, ExternalLink } from 'lucide-react';
 import { createClient } from '@supabase/supabase-js';
 
 const API = '/api/seller/chat';
@@ -139,6 +139,15 @@ export default function MessagesPage() {
       document.removeEventListener('visibilitychange', onVisibilityChange);
       if (intervalId) clearInterval(intervalId);
     };
+  }, []);
+
+  useEffect(() => {
+    const close = (e) => {
+      if (e && e.button !== undefined && e.button !== 0) return;
+      setContextMenu(null);
+    };
+    window.addEventListener('click', close);
+    return () => window.removeEventListener('click', close);
   }, []);
 
   useEffect(() => {
@@ -408,14 +417,18 @@ export default function MessagesPage() {
   const deleteConversation = async (conversationId) => {
     const headers = getAuthHeaders();
     if (!headers.Authorization) return;
+    setError(null);
     const res = await fetch(API, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...headers },
       body: JSON.stringify({ action: 'delete_conversation', conversationId })
     });
+    const data = await res.json().catch(() => ({}));
     if (res.ok) {
       if (openConversationId === conversationId) setOpenConversationId(null);
       fetchConversations(headers);
+    } else {
+      setError(data?.error || 'Failed to delete conversation. Please try again.');
     }
   };
 
@@ -487,11 +500,8 @@ export default function MessagesPage() {
   };
 
   const selectedConversation = conversations.find((c) => c.id === openConversationId);
-  const buyerDisplayName = capitalizeFirst(selectedConversation?.buyer_name || 'Buyer');
+  const buyerDisplayName = (selectedConversation?.buyer_name && String(selectedConversation.buyer_name).trim()) ? String(selectedConversation.buyer_name).trim() : 'Buyer';
   const selectedPropertyAddress = selectedConversation?.property_address || null;
-  const headerTitle = selectedPropertyAddress
-    ? `${buyerDisplayName} - ${selectedPropertyAddress}`
-    : buyerDisplayName;
   const buyerInitial = (buyerDisplayName.charAt(0) || 'B').toUpperCase();
 
   return (
@@ -567,51 +577,54 @@ export default function MessagesPage() {
                         setContextMenu({ x: e.clientX, y: e.clientY, conv: c });
                       }}
                       className={`p-3 cursor-pointer transition-all duration-200 rounded-xl ${
-                        openConversationId === c.id ? 'bg-[#002A3A]/10 border border-[#002A3A]/20' : 'bg-white border border-transparent hover:bg-slate-50'
+                        openConversationId === c.id ? 'bg-[#002A3A]/10 border border-[#002A3A]/20' : 'bg-white border border-transparent hover:bg-[#F3F4F6]'
                       }`}
                     >
                       <div className="flex items-start gap-3">
+                        {/* Avatar: property thumbnail or buyer initial (same as buyer portal) */}
                         <div className="relative shrink-0">
-                          <div
-                            className="w-10 h-10 rounded-full overflow-hidden flex items-center justify-center text-white font-semibold text-sm"
-                            style={{ backgroundColor: getAvatarColor(c.buyer_name || c.buyer_uuid || c.id) }}
-                          >
-                            {c.property_thumbnail_url ? (
+                          {c.property_thumbnail_url ? (
+                            <div className="w-10 h-10 rounded-full overflow-hidden bg-slate-100 flex items-center justify-center">
                               <img
                                 src={c.property_thumbnail_url}
-                                alt="Property"
+                                alt=""
                                 className="w-full h-full object-cover"
                               />
-                            ) : (
-                              (c.buyer_name || 'B').charAt(0).toUpperCase()
-                            )}
-                          </div>
+                            </div>
+                          ) : (
+                            <div
+                              className="w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold text-sm"
+                              style={{ backgroundColor: getAvatarColor(c.buyer_name || c.buyer_uuid || c.id) }}
+                            >
+                              {(c.buyer_name || 'B').charAt(0).toUpperCase()}
+                            </div>
+                          )}
                           {unread && (
-                            <span className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-brandRed border-2 border-white rounded-full" aria-hidden />
+                            <span className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-[#b29578] border-2 border-white rounded-full" aria-hidden />
                           )}
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-baseline justify-between gap-2 mb-1">
                             <div className="flex items-center gap-2 flex-1 min-w-0">
-                              <h3 className={`truncate text-sm ${unread ? 'font-bold text-slate-900' : 'font-medium text-slate-900'}`}>
+                              <h3 className={`truncate text-sm ${unread ? 'font-bold text-slate-900' : 'font-medium text-slate-900'}`} title={c.property_address ? `${c.buyer_first_name || (c.buyer_name || 'Buyer').trim().split(/\s+/)[0] || 'Buyer'} - ${c.property_address}` : (c.buyer_name || 'Buyer')}>
                                 {c.property_address
-                                  ? `${capitalizeFirst((c.buyer_name || 'Buyer').trim().split(/\s+/)[0] || 'Buyer')} - ${c.property_address}`
-                                  : capitalizeFirst(c.buyer_name || 'Buyer')}
+                                  ? `${capitalizeFirst(c.buyer_first_name || (c.buyer_name || 'Buyer').trim().split(/\s+/)[0] || 'Buyer')} - ${c.property_address}`
+                                  : capitalizeFirst(c.buyer_first_name || (c.buyer_name || 'Buyer').trim().split(/\s+/)[0] || 'Buyer')}
                               </h3>
                               {c.is_pinned && (
-                                <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-100 text-amber-700" title="Pinned">
+                                <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-100 text-amber-700 shrink-0" title="Pinned">
                                   <Pin className="w-3 h-3" />
                                 </span>
                               )}
-                              {unread && (
-                                <span className="flex-shrink-0 inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 text-[10px] font-bold text-white bg-[#002A3A] rounded-full">
+                              {(c.unread_count ?? 0) > 0 && (
+                                <span className="flex-shrink-0 inline-flex items-center justify-center w-5 h-5 text-[10px] font-bold text-white bg-[#002A3A] rounded-full">
                                   {(c.unread_count ?? 0) > 9 ? '9+' : (c.unread_count ?? 0)}
                                 </span>
                               )}
                             </div>
-                            <span className="text-[11px] text-slate-600 shrink-0">{formatDate(c.last_message_at)}</span>
+                            <span className="text-[11px] text-slate-600 flex-shrink-0">{formatDate(c.last_message_at)}</span>
                           </div>
-                          <p className={`text-xs truncate ${unread ? 'text-slate-800 font-medium' : 'text-slate-600'}`}>
+                          <p className={`text-xs truncate mb-0 ${unread ? 'text-slate-800 font-medium' : 'text-slate-600'}`}>
                             {c.last_message_preview || 'No messages yet'}
                           </p>
                         </div>
@@ -649,56 +662,59 @@ export default function MessagesPage() {
                     <ArrowLeft className="w-5 h-5 text-slate-600" />
                   </button>
                   <div className="flex items-center gap-3 flex-1 min-w-0">
-                    <div
-                      className="w-10 h-10 rounded-full overflow-hidden flex items-center justify-center text-white font-semibold text-sm shrink-0"
-                      style={{ backgroundColor: getAvatarColor(selectedConversation?.buyer_name || selectedConversation?.buyer_uuid || selectedConversation?.id) }}
-                    >
-                      {selectedConversation?.property_thumbnail_url ? (
+                    {/* Header avatar: property thumbnail or buyer initial (same as buyer portal) */}
+                    {selectedConversation?.property_thumbnail_url ? (
+                      <div className="w-10 h-10 rounded-full overflow-hidden bg-slate-100 flex items-center justify-center shrink-0">
                         <img
                           src={selectedConversation.property_thumbnail_url}
-                          alt="Property"
+                          alt=""
                           className="w-full h-full object-cover"
                         />
-                      ) : (
-                        buyerInitial
-                      )}
-                    </div>
+                      </div>
+                    ) : (
+                      <div
+                        className="w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold text-sm shrink-0"
+                        style={{ backgroundColor: getAvatarColor(selectedConversation?.buyer_name || selectedConversation?.buyer_uuid || selectedConversation?.id) }}
+                      >
+                        {buyerInitial}
+                      </div>
+                    )}
                     <div className="flex-1 min-w-0">
-                      <h2 className="font-semibold text-slate-900 text-sm truncate">{headerTitle}</h2>
-                      {!selectedPropertyAddress && contextAddress && openConversationId === contextConversationId && (
-                        <p className="text-[11px] text-slate-600 truncate mt-0.5">Re: {contextAddress}</p>
+                      <h2 className="font-semibold text-slate-900 text-sm truncate">{buyerDisplayName}</h2>
+                      {(selectedPropertyAddress || (contextAddress && openConversationId === contextConversationId)) && (
+                        <p className="text-[11px] text-slate-600 truncate mt-0.5">{selectedPropertyAddress || contextAddress}</p>
                       )}
                     </div>
                   </div>
-                  {(selectedConversation?.property_slug || selectedConversation?.property_id) && (
-                    <div className="relative shrink-0">
-                      <button
-                        type="button"
-                        onClick={() => setHeaderMenuOpen((v) => !v)}
-                        className="p-2 rounded-xl hover:bg-slate-100 transition-colors"
-                        aria-label="Options"
-                      >
-                        <MoreVertical className="w-5 h-5 text-slate-600" />
-                      </button>
-                      {headerMenuOpen && (
-                        <>
-                          <div className="fixed inset-0 z-40" onClick={() => setHeaderMenuOpen(false)} aria-hidden />
-                          <div className="absolute right-0 top-full mt-1 z-50 w-48 rounded-xl border border-slate-200 bg-white shadow-lg py-1">
+                  <div className="relative shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => setHeaderMenuOpen((v) => !v)}
+                      className="p-2 rounded-xl hover:bg-slate-100 transition-colors"
+                      aria-label="More options"
+                    >
+                      <MoreVertical className="w-5 h-5 text-slate-600" />
+                    </button>
+                    {headerMenuOpen && (
+                      <>
+                        <div className="fixed inset-0 z-40" onClick={() => setHeaderMenuOpen(false)} aria-hidden />
+                        <div className="absolute right-0 top-full mt-1 z-50 w-52 rounded-xl border border-slate-200 bg-white shadow-lg py-1">
+                          {(selectedConversation?.property_slug || selectedConversation?.property_id) && (
                             <a
                               href={`${process.env.NEXT_PUBLIC_DEELMAP_VIEW_BASE_URL || 'https://ableman.co'}/${selectedConversation.property_slug || selectedConversation.property_id}`}
                               target="_blank"
                               rel="noopener noreferrer"
                               onClick={() => setHeaderMenuOpen(false)}
-                              className="flex items-center gap-2 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
+                              className="flex items-center gap-2 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 w-full"
                             >
-                              <ExternalLink className="w-4 h-4" />
+                              <ExternalLink className="w-4 h-4 shrink-0" />
                               View listing
                             </a>
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  )}
+                          )}
+                        </div>
+                      </>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -800,8 +816,7 @@ export default function MessagesPage() {
             Mark as unread
           </button>
           <div className="my-1 border-t border-slate-200" />
-          <button className="w-full text-left text-sm px-3 py-2 rounded-xl text-red-600 hover:bg-red-50 transition-colors flex items-center gap-2" onClick={() => { deleteConversation(contextMenu.conv.id); setContextMenu(null); }}>
-            <Trash2 className="w-4 h-4" />
+          <button className="w-full text-left text-sm px-3 py-2 rounded-xl text-red-600 hover:bg-red-50 transition-colors" onClick={() => { deleteConversation(contextMenu.conv.id); setContextMenu(null); }}>
             Delete chat
           </button>
           <button className="w-full text-left text-sm px-3 py-2 rounded-xl text-red-600 hover:bg-red-50 transition-colors" onClick={() => { updateConversationPref(contextMenu.conv.id, { is_blocked: true }); setContextMenu(null); }}>

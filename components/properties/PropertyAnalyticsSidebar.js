@@ -180,15 +180,16 @@ export default function PropertyAnalyticsSidebar({ propertyId, propertyName, onC
 
           {!loading && !error && data && (
             <div className="p-4 space-y-4">
-              {/* Viewers count + date range + sort in one row */}
-              <div className="flex items-center gap-2 flex-nowrap min-w-0">
-                <div className="flex items-center gap-2 shrink-0">
-                  <Users className="w-4 h-4 text-primary" />
-                  <span className="text-xs font-semibold text-slate-900">Unique viewers</span>
-                  <span className="text-sm font-bold text-slate-900 tabular-nums">{agg.uniqueViewers ?? 0}</span>
-                </div>
-                <div className="h-4 w-px bg-slate-200 shrink-0" aria-hidden="true" />
-                <div className="flex items-center gap-1.5 shrink-0">
+              {/* Row 1: Unique viewers */}
+              <div className="flex items-center gap-2">
+                <Users className="w-4 h-4 text-primary" />
+                <span className="text-xs font-semibold text-slate-900">Unique viewers</span>
+                <span className="text-sm font-bold text-slate-900 tabular-nums">{agg.uniqueViewers ?? 0}</span>
+              </div>
+
+              {/* Row 2: Date range + sort filters */}
+              <div className="flex items-center gap-3 flex-wrap">
+                <div className="flex items-center gap-1.5">
                   <Calendar className="w-3.5 h-3.5 text-slate-700" />
                   <select
                     value={period}
@@ -200,7 +201,7 @@ export default function PropertyAnalyticsSidebar({ propertyId, propertyName, onC
                     ))}
                   </select>
                 </div>
-                <div className="flex items-center gap-1.5 shrink-0">
+                <div className="flex items-center gap-1.5">
                   <ArrowDownUp className="w-3.5 h-3.5 text-slate-700" />
                   <select
                     value={sortBy}
