@@ -1,13 +1,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { X, Copy, Check, ExternalLink, Link2, Users } from 'lucide-react';
+import { X, Copy, Check, ExternalLink, Link2, Users, Info } from 'lucide-react';
 
 const PLATFORMS = [
-  { name: 'Facebook', code: 'facebook', color: '#1877F2', bgClass: 'bg-[#1877F2]/10' },
-  { name: 'Mailchimp', code: 'mailchimp', color: '#FFE01B', bgClass: 'bg-amber-100' },
-  { name: 'Twitter', code: 'twitter', color: '#1DA1F2', bgClass: 'bg-sky-100' },
-  { name: 'Instagram', code: 'instagram', color: '#E4405F', bgClass: 'bg-rose-100' },
+  { name: 'Facebook', code: 'facebook', utm: 'fb', icon: 'https://cdn.simpleicons.org/facebook/1877F2', bgClass: 'bg-[#1877F2]/8' },
+  { name: 'Mailchimp', code: 'mailchimp', utm: 'mc', icon: 'https://cdn.simpleicons.org/mailchimp/FFE01B', bgClass: 'bg-amber-100/80' },
+  { name: 'Twitter', code: 'twitter', utm: 'x', icon: 'https://cdn.simpleicons.org/x/000000', bgClass: 'bg-sky-100/80' },
+  { name: 'Instagram', code: 'instagram', utm: 'ig', icon: 'https://cdn.simpleicons.org/instagram/E4405F', bgClass: 'bg-rose-100/80' },
 ];
 
 const DEELMAP_VIEW_BASE_URL = typeof window !== 'undefined'
@@ -40,7 +40,7 @@ export function UTMLinksModal({ isOpen, onClose, property, baseUrl, userId }) {
   const slug = (property?.slug ?? property?.id ?? '').toString().trim();
   const hasValidSlug = slug.length > 0;
 
-  const generateUTMLink = (platform) => `${viewBase}/${slug}?utm_source=${platform.code}`;
+  const generateUTMLink = (platform) => `${viewBase}/${slug}?utm=${platform.utm || platform.code}`;
 
   const openLink = (platform) => {
     const url = generateUTMLink(platform);
@@ -61,28 +61,28 @@ export function UTMLinksModal({ isOpen, onClose, property, baseUrl, userId }) {
 
   return (
     <div
-      className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-neutral-900/40"
+      className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/50"
       onClick={onClose}
       role="dialog"
       aria-modal="true"
       aria-labelledby="utm-modal-title"
     >
       <div
-        className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col"
+        className="bg-white rounded-xl shadow-2xl w-full max-w-xl max-h-[90vh] overflow-hidden flex flex-col border border-slate-200"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-start justify-between gap-4 p-6 pb-4 border-b border-neutral-100">
+        <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-slate-200 bg-slate-50/50">
           <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2 text-neutral-500 mb-0.5">
-              <Link2 className="w-4 h-4 shrink-0" />
-              <span className="text-xs font-medium uppercase tracking-wider">Share links</span>
+            <div className="flex items-center gap-1.5 text-slate-600 mb-0.5">
+              <Link2 className="w-3.5 h-3.5 shrink-0" />
+              <span className="text-[11px] font-medium uppercase tracking-wider">Share links</span>
             </div>
-            <h2 id="utm-modal-title" className="text-lg font-semibold text-neutral-900 mt-0.5">
+            <h2 id="utm-modal-title" className="text-base font-semibold text-slate-900">
               UTM tracking links
             </h2>
             {displayAddress && (
-              <p className="text-sm text-neutral-500 mt-1 truncate" title={displayAddress}>
+              <p className="text-xs text-slate-500 mt-0.5 truncate" title={displayAddress}>
                 {displayAddress}
               </p>
             )}
@@ -90,23 +90,23 @@ export function UTMLinksModal({ isOpen, onClose, property, baseUrl, userId }) {
           <button
             type="button"
             onClick={onClose}
-            className="p-2 rounded-lg text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 transition-colors"
+            className="p-1.5 rounded-lg text-slate-500 hover:text-slate-700 hover:bg-slate-200 transition-colors shrink-0"
             aria-label="Close"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Content - single column, 4 rows */}
-        <div className="flex-1 overflow-y-auto p-6 pt-5 min-h-0">
+        <div className="flex-1 overflow-y-auto p-4 pt-4 min-h-0">
           {!hasValidSlug ? (
-            <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 mb-4">
-              <p className="text-sm text-amber-800">
+            <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 mb-3">
+              <p className="text-xs text-amber-800">
                 No shareable link yet. Save or publish this property first so a link can be generated.
               </p>
             </div>
           ) : null}
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-3">
             {PLATFORMS.map((platform) => {
               const link = generateUTMLink(platform);
               const isCopied = copiedLink === platform.code;
@@ -115,35 +115,48 @@ export function UTMLinksModal({ isOpen, onClose, property, baseUrl, userId }) {
               return (
                 <div
                   key={platform.code}
-                  className="rounded-xl border border-neutral-200 bg-neutral-50/50 hover:border-neutral-300 transition-colors overflow-hidden"
+                  className="rounded-lg border border-slate-200 bg-slate-50/60 hover:border-slate-300 transition-colors overflow-hidden"
                 >
-                  <div className="p-4">
-                    <div className="flex items-center justify-between gap-3 mb-3">
-                      <span
-                        className="text-sm font-semibold text-neutral-900"
-                        style={{ color: platform.color }}
-                      >
-                        {platform.name}
+                  <div className="p-3">
+                    <div className="flex items-center justify-between gap-2 mb-2">
+                      <span className="inline-flex items-center gap-2">
+                        <img
+                          src={platform.icon}
+                          alt=""
+                          className="w-4 h-4 shrink-0"
+                        />
+                        <span className="text-xs font-semibold text-black">
+                          {platform.name}
+                        </span>
                       </span>
                       {countsLoading ? (
-                        <span className="h-6 w-10 bg-neutral-200 rounded animate-pulse" />
+                        <span className="h-5 w-8 bg-slate-200 rounded animate-pulse" />
                       ) : count !== null ? (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-white border border-neutral-200 px-2.5 py-0.5 text-xs font-medium text-neutral-600">
-                          <Users className="w-3.5 h-3.5 text-neutral-400" />
+                        <span className="inline-flex items-center gap-1 rounded-full bg-white border border-slate-200 px-2 py-0.5 text-[11px] font-medium text-slate-600">
+                          <Users className="w-3 h-3 text-slate-400" />
                           {count} {count === 1 ? 'viewer' : 'viewers'}
                         </span>
                       ) : null}
                     </div>
-                    <div className="rounded-lg bg-white border border-neutral-200 p-2.5 mb-3">
-                      <code className="text-xs text-neutral-600 break-all block leading-relaxed">
+                    <div className="rounded-md bg-white border border-slate-200 p-2 mb-2">
+                      <code className="text-[11px] text-slate-600 break-all block leading-relaxed">
                         {link}
                       </code>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex justify-end gap-2">
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); openLink(platform); }}
+                        disabled={!hasValidSlug}
+                        className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold border-2 border-primary text-primary bg-white hover:bg-primary/5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5" />
+                        Open
+                      </button>
                       <button
                         type="button"
                         onClick={() => copyToClipboard(link, platform.code)}
-                        className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium bg-neutral-900 text-white hover:bg-neutral-800 transition-colors"
+                        className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold bg-emerald-600 text-white hover:bg-emerald-700 transition-colors w-fit shrink-0 shadow-sm"
                       >
                         {isCopied ? (
                           <>
@@ -153,18 +166,9 @@ export function UTMLinksModal({ isOpen, onClose, property, baseUrl, userId }) {
                         ) : (
                           <>
                             <Copy className="w-3.5 h-3.5" />
-                            Copy link
+                            Copy
                           </>
                         )}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={(e) => { e.stopPropagation(); openLink(platform); }}
-                        disabled={!hasValidSlug}
-                        className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium border border-neutral-200 text-neutral-700 bg-white hover:bg-neutral-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        <ExternalLink className="w-3.5 h-3.5" />
-                        Open
                       </button>
                     </div>
                   </div>
@@ -173,9 +177,10 @@ export function UTMLinksModal({ isOpen, onClose, property, baseUrl, userId }) {
             })}
           </div>
 
-          <div className="mt-5 rounded-xl bg-neutral-100 border border-neutral-200 p-4">
-            <p className="text-xs text-neutral-600 leading-relaxed">
-              Share each link on the matching platform. Visitors who click through will be counted by source so you can see which channel drives the most interest.
+          <div className="mt-4 flex items-start gap-2 rounded-lg bg-slate-100/80 border border-slate-200 p-2.5">
+            <Info className="w-3.5 h-3.5 text-slate-500 shrink-0 mt-0.5" />
+            <p className="text-[11px] text-slate-600 leading-relaxed">
+              Share each link on the matching platform. Visitors who click through will be counted by source.
             </p>
           </div>
         </div>

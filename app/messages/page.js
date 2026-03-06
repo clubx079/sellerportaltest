@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { MessageCircle, Send, Search, ArrowLeft, Loader2, Check, CheckCheck, Pin } from 'lucide-react';
+import { MessageCircle, Send, Search, ArrowLeft, Loader2, Check, CheckCheck, Pin, MoreVertical, ExternalLink } from 'lucide-react';
 import { createClient } from '@supabase/supabase-js';
 
 const API = '/api/seller/chat';
@@ -59,11 +59,30 @@ function formatTime(dateString) {
   return new Date(dateString).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
 }
 
+const MESSAGE_GROUP_WINDOW_MS = 5 * 60 * 1000;
+function groupMessagesByTime(msgs) {
+  if (!msgs?.length) return [];
+  const groups = [];
+  let current = [msgs[0]];
+  for (let i = 1; i < msgs.length; i++) {
+    const prev = new Date(msgs[i - 1].created_at).getTime();
+    const curr = new Date(msgs[i].created_at).getTime();
+    if (curr - prev <= MESSAGE_GROUP_WINDOW_MS) current.push(msgs[i]);
+    else {
+      groups.push(current);
+      current = [msgs[i]];
+    }
+  }
+  groups.push(current);
+  return groups;
+}
+
 export default function MessagesPage() {
   const searchParams = useSearchParams();
   const buyerIdFromUrl = searchParams.get('buyer_id');
   const addressFromUrl = searchParams.get('address') || '';
   const propertyIdFromUrl = searchParams.get('property_id') || '';
+  const conversationIdFromUrl = searchParams.get('conversation');
 
   const [conversations, setConversations] = useState([]);
   const [filteredConversations, setFilteredConversations] = useState([]);
@@ -78,7 +97,9 @@ export default function MessagesPage() {
   const [contextConversationId, setContextConversationId] = useState(null);
   const [chatTab, setChatTab] = useState('all'); // all | unread | unresponded
   const [contextMenu, setContextMenu] = useState(null); // { x, y, conv }
+  const [headerMenuOpen, setHeaderMenuOpen] = useState(false);
   const messagesEndRef = useRef(null);
+  const messageInputRef = useRef(null);
 
   const scrollToBottom = () => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
 
@@ -122,6 +143,15 @@ export default function MessagesPage() {
   }, []);
 
   useEffect(() => {
+    const close = (e) => {
+      if (e && e.button !== undefined && e.button !== 0) return;
+      setContextMenu(null);
+    };
+    window.addEventListener('click', close);
+    return () => window.removeEventListener('click', close);
+  }, []);
+
+  useEffect(() => {
     let cancelled = false;
     const headers = getAuthHeaders();
     if (!headers.Authorization) {
@@ -148,6 +178,13 @@ export default function MessagesPage() {
             setContextConversationId(data.openConversationId);
           }
           return;
+        }
+        if (conversationIdFromUrl && list.length > 0) {
+          const match = list.find((c) => String(c.id) === String(conversationIdFromUrl));
+          if (match) {
+            setOpenConversationId(match.id);
+            return;
+          }
         }
         if (buyerIdFromUrl) {
           const existing = list.find((c) => {
@@ -182,7 +219,7 @@ export default function MessagesPage() {
       .catch((err) => { if (!cancelled) setError(err.message || 'Failed to load conversations'); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, [buyerIdFromUrl, propertyIdFromUrl, addressFromUrl]);
+  }, [buyerIdFromUrl, propertyIdFromUrl, addressFromUrl, conversationIdFromUrl]);
 
   function fetchConversations(headers) {
     const h = headers || getAuthHeaders();
@@ -329,6 +366,13 @@ export default function MessagesPage() {
     };
   }, [openConversationId]);
 
+  // Open conversation from URL param ?conversation=id when list is ready
+  useEffect(() => {
+    if (!conversationIdFromUrl || conversations.length === 0) return;
+    const match = conversations.find((c) => String(c.id) === String(conversationIdFromUrl));
+    if (match) setOpenConversationId(match.id);
+  }, [conversationIdFromUrl, conversations]);
+
   useEffect(() => {
     if (!searchQuery.trim()) {
       setFilteredConversations(conversations);
@@ -369,6 +413,24 @@ export default function MessagesPage() {
       body: JSON.stringify({ action: 'update_conversation_pref', conversationId, ...patch })
     }).catch(() => {});
     fetchConversations(headers);
+  };
+
+  const deleteConversation = async (conversationId) => {
+    const headers = getAuthHeaders();
+    if (!headers.Authorization) return;
+    setError(null);
+    const res = await fetch(API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...headers },
+      body: JSON.stringify({ action: 'delete_conversation', conversationId })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (res.ok) {
+      if (openConversationId === conversationId) setOpenConversationId(null);
+      fetchConversations(headers);
+    } else {
+      setError(data?.error || 'Failed to delete conversation. Please try again.');
+    }
   };
 
   const sendMessage = () => {
@@ -432,6 +494,8 @@ export default function MessagesPage() {
             }
             return updated;
           });
+          // Refocus message input so user can type again without clicking
+          setTimeout(() => messageInputRef.current?.focus(), 0);
         }
       })
       .catch(() => {})
@@ -439,11 +503,8 @@ export default function MessagesPage() {
   };
 
   const selectedConversation = conversations.find((c) => c.id === openConversationId);
-  const buyerDisplayName = capitalizeFirst(selectedConversation?.buyer_name || 'Buyer');
+  const buyerDisplayName = (selectedConversation?.buyer_name && String(selectedConversation.buyer_name).trim()) ? String(selectedConversation.buyer_name).trim() : 'Buyer';
   const selectedPropertyAddress = selectedConversation?.property_address || null;
-  const headerTitle = selectedPropertyAddress
-    ? `${buyerDisplayName} - ${selectedPropertyAddress}`
-    : buyerDisplayName;
   const buyerInitial = (buyerDisplayName.charAt(0) || 'B').toUpperCase();
 
   return (
@@ -519,49 +580,54 @@ export default function MessagesPage() {
                         setContextMenu({ x: e.clientX, y: e.clientY, conv: c });
                       }}
                       className={`p-3 cursor-pointer transition-all duration-200 rounded-xl ${
-                        openConversationId === c.id ? 'bg-[#002A3A]/10 border border-[#002A3A]/20' : 'bg-white border border-transparent hover:bg-slate-50'
+                        openConversationId === c.id ? 'bg-[#002A3A]/10 border border-[#002A3A]/20' : 'bg-white border border-transparent hover:bg-[#F3F4F6]'
                       }`}
                     >
                       <div className="flex items-start gap-3">
+                        {/* Avatar: property thumbnail or buyer initial (same as buyer portal) */}
                         <div className="relative shrink-0">
-                          <div
-                            className="w-10 h-10 rounded-full overflow-hidden flex items-center justify-center text-white font-semibold text-sm"
-                            style={{ backgroundColor: getAvatarColor(c.buyer_name || c.buyer_uuid || c.id) }}
-                          >
-                            {c.property_thumbnail_url ? (
+                          {c.property_thumbnail_url ? (
+                            <div className="w-10 h-10 rounded-full overflow-hidden bg-slate-100 flex items-center justify-center">
                               <img
                                 src={c.property_thumbnail_url}
-                                alt="Property"
+                                alt=""
                                 className="w-full h-full object-cover"
                               />
-                            ) : (
-                              (c.buyer_name || 'B').charAt(0).toUpperCase()
-                            )}
-                          </div>
+                            </div>
+                          ) : (
+                            <div
+                              className="w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold text-sm"
+                              style={{ backgroundColor: getAvatarColor(c.buyer_name || c.buyer_uuid || c.id) }}
+                            >
+                              {(c.buyer_name || 'B').charAt(0).toUpperCase()}
+                            </div>
+                          )}
                           {unread && (
-                            <span className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-brandRed border-2 border-white rounded-full" aria-hidden />
+                            <span className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-[#b29578] border-2 border-white rounded-full" aria-hidden />
                           )}
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-baseline justify-between gap-2 mb-1">
                             <div className="flex items-center gap-2 flex-1 min-w-0">
-                              <h3 className={`truncate text-sm ${unread ? 'font-bold text-slate-900' : 'font-medium text-slate-900'}`}>
-                                {capitalizeFirst(c.buyer_name || 'Buyer')}
+                              <h3 className={`truncate text-sm ${unread ? 'font-bold text-slate-900' : 'font-medium text-slate-900'}`} title={c.property_address ? `${c.buyer_first_name || (c.buyer_name || 'Buyer').trim().split(/\s+/)[0] || 'Buyer'} - ${c.property_address}` : (c.buyer_name || 'Buyer')}>
+                                {c.property_address
+                                  ? `${capitalizeFirst(c.buyer_first_name || (c.buyer_name || 'Buyer').trim().split(/\s+/)[0] || 'Buyer')} - ${c.property_address}`
+                                  : capitalizeFirst(c.buyer_first_name || (c.buyer_name || 'Buyer').trim().split(/\s+/)[0] || 'Buyer')}
                               </h3>
                               {c.is_pinned && (
-                                <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-100 text-amber-700" title="Pinned">
+                                <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-100 text-amber-700 shrink-0" title="Pinned">
                                   <Pin className="w-3 h-3" />
                                 </span>
                               )}
-                              {unread && (
-                                <span className="flex-shrink-0 inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 text-[10px] font-bold text-white bg-[#002A3A] rounded-full">
+                              {(c.unread_count ?? 0) > 0 && (
+                                <span className="flex-shrink-0 inline-flex items-center justify-center w-5 h-5 text-[10px] font-bold text-white bg-[#002A3A] rounded-full">
                                   {(c.unread_count ?? 0) > 9 ? '9+' : (c.unread_count ?? 0)}
                                 </span>
                               )}
                             </div>
-                            <span className="text-[11px] text-slate-600 shrink-0">{formatDate(c.last_message_at)}</span>
+                            <span className="text-[11px] text-slate-600 flex-shrink-0">{formatDate(c.last_message_at)}</span>
                           </div>
-                          <p className={`text-xs truncate ${unread ? 'text-slate-800 font-medium' : 'text-slate-600'}`}>
+                          <p className={`text-xs truncate mb-0 ${unread ? 'text-slate-800 font-medium' : 'text-slate-600'}`}>
                             {c.last_message_preview || 'No messages yet'}
                           </p>
                         </div>
@@ -588,7 +654,7 @@ export default function MessagesPage() {
             </div>
           ) : (
             <>
-              {/* Header - sticky, stays visible when scrolling chat */}
+              {/* Header - full name, property address, options (View listing) */}
               <div className="flex-shrink-0 px-5 py-4 border-b border-slate-200 bg-white">
                 <div className="flex items-center gap-3">
                   <button
@@ -599,26 +665,58 @@ export default function MessagesPage() {
                     <ArrowLeft className="w-5 h-5 text-slate-600" />
                   </button>
                   <div className="flex items-center gap-3 flex-1 min-w-0">
-                    <div
-                      className="w-10 h-10 rounded-full overflow-hidden flex items-center justify-center text-white font-semibold text-sm shrink-0"
-                      style={{ backgroundColor: getAvatarColor(selectedConversation?.buyer_name || selectedConversation?.buyer_uuid || selectedConversation?.id) }}
-                    >
-                      {selectedConversation?.property_thumbnail_url ? (
+                    {/* Header avatar: property thumbnail or buyer initial (same as buyer portal) */}
+                    {selectedConversation?.property_thumbnail_url ? (
+                      <div className="w-10 h-10 rounded-full overflow-hidden bg-slate-100 flex items-center justify-center shrink-0">
                         <img
                           src={selectedConversation.property_thumbnail_url}
-                          alt="Property"
+                          alt=""
                           className="w-full h-full object-cover"
                         />
-                      ) : (
-                        buyerInitial
-                      )}
-                    </div>
+                      </div>
+                    ) : (
+                      <div
+                        className="w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold text-sm shrink-0"
+                        style={{ backgroundColor: getAvatarColor(selectedConversation?.buyer_name || selectedConversation?.buyer_uuid || selectedConversation?.id) }}
+                      >
+                        {buyerInitial}
+                      </div>
+                    )}
                     <div className="flex-1 min-w-0">
-                      <h2 className="font-semibold text-slate-900 text-sm truncate">{headerTitle}</h2>
-                      {!selectedPropertyAddress && contextAddress && openConversationId === contextConversationId && (
-                        <p className="text-[11px] text-slate-600 truncate mt-0.5">Re: {contextAddress}</p>
+                      <h2 className="font-semibold text-slate-900 text-sm truncate">{buyerDisplayName}</h2>
+                      {(selectedPropertyAddress || (contextAddress && openConversationId === contextConversationId)) && (
+                        <p className="text-[11px] text-slate-600 truncate mt-0.5">{selectedPropertyAddress || contextAddress}</p>
                       )}
                     </div>
+                  </div>
+                  <div className="relative shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => setHeaderMenuOpen((v) => !v)}
+                      className="p-2 rounded-xl hover:bg-slate-100 transition-colors"
+                      aria-label="More options"
+                    >
+                      <MoreVertical className="w-5 h-5 text-slate-600" />
+                    </button>
+                    {headerMenuOpen && (
+                      <>
+                        <div className="fixed inset-0 z-40" onClick={() => setHeaderMenuOpen(false)} aria-hidden />
+                        <div className="absolute right-0 top-full mt-1 z-50 w-52 rounded-xl border border-slate-200 bg-white shadow-lg py-1">
+                          {(selectedConversation?.property_slug || selectedConversation?.property_id) && (
+                            <a
+                              href={`${process.env.NEXT_PUBLIC_DEELMAP_VIEW_BASE_URL || 'https://ableman.co'}/${selectedConversation.property_slug || selectedConversation.property_id}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              onClick={() => setHeaderMenuOpen(false)}
+                              className="flex items-center gap-2 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 w-full"
+                            >
+                              <ExternalLink className="w-4 h-4 shrink-0" />
+                              View listing
+                            </a>
+                          )}
+                        </div>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>
@@ -637,36 +735,43 @@ export default function MessagesPage() {
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {messages.map((m) => {
-                      const isSeller = m.sender_type === 'seller';
-                      return (
-                        <div key={m.id} className={`flex ${isSeller ? 'justify-end' : 'justify-start'}`}>
-                          <div className="flex flex-col max-w-[70%]">
-                            <div
-                              className={`rounded-2xl px-4 py-3 ${
-                                isSeller
-                                  ? 'bg-[#002A3A] text-white rounded-br-sm'
-                                  : 'bg-white text-slate-900 rounded-bl-sm shadow-sm border border-slate-200'
-                              }`}
-                            >
-                              {m.message_text && (
-                                <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">{m.message_text}</p>
-                              )}
+                    {groupMessagesByTime(messages).map((group) => (
+                      <div key={group[0].id} className="space-y-2">
+                        {group.map((m) => {
+                          const isSeller = m.sender_type === 'seller';
+                          const isLastInGroup = m.id === group[group.length - 1].id;
+                          return (
+                            <div key={m.id} className={`flex ${isSeller ? 'justify-end' : 'justify-start'}`}>
+                              <div className="flex flex-col max-w-[70%]">
+                                <div
+                                  className={`rounded-2xl px-4 py-3 ${
+                                    isSeller
+                                      ? 'bg-[#002A3A] text-white rounded-br-sm'
+                                      : 'bg-white text-slate-900 rounded-bl-sm shadow-sm border border-slate-200'
+                                  }`}
+                                >
+                                  {m.message_text && (
+                                    <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">{m.message_text}</p>
+                                  )}
+                                </div>
+                                {isLastInGroup && (
+                                  <div className={`flex items-center gap-1 mt-1.5 px-1 ${isSeller ? 'justify-end' : 'justify-start'}`}>
+                                    <span className="text-[11px] text-slate-400">{formatTime(m.created_at)}</span>
+                                    {isSeller && (
+                                      m.is_read ? (
+                                        <CheckCheck className="w-3.5 h-3.5 text-blue-500 shrink-0" aria-hidden />
+                                      ) : (
+                                        <Check className="w-3.5 h-3.5 text-slate-400 shrink-0" aria-hidden />
+                                      )
+                                    )}
+                                  </div>
+                                )}
+                              </div>
                             </div>
-                            <div className={`flex items-center gap-1 mt-1.5 px-1 ${isSeller ? 'justify-end' : 'justify-start'}`}>
-                              <span className="text-[11px] text-slate-400">{formatTime(m.created_at)}</span>
-                              {isSeller && (
-                                m.is_read ? (
-                                  <CheckCheck className="w-3.5 h-3.5 text-blue-500 shrink-0" aria-hidden />
-                                ) : (
-                                  <Check className="w-3.5 h-3.5 text-slate-400 shrink-0" aria-hidden />
-                                )
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
+                          );
+                        })}
+                      </div>
+                    ))}
                     <div ref={messagesEndRef} className="h-1" />
                   </div>
                 )}
@@ -679,6 +784,7 @@ export default function MessagesPage() {
                   className="flex items-end gap-2"
                 >
                   <textarea
+                    ref={messageInputRef}
                     value={messageText}
                     onChange={(e) => setMessageText(e.target.value)}
                     onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }}
@@ -714,6 +820,9 @@ export default function MessagesPage() {
             Mark as unread
           </button>
           <div className="my-1 border-t border-slate-200" />
+          <button className="w-full text-left text-sm px-3 py-2 rounded-xl text-red-600 hover:bg-red-50 transition-colors" onClick={() => { deleteConversation(contextMenu.conv.id); setContextMenu(null); }}>
+            Delete chat
+          </button>
           <button className="w-full text-left text-sm px-3 py-2 rounded-xl text-red-600 hover:bg-red-50 transition-colors" onClick={() => { updateConversationPref(contextMenu.conv.id, { is_blocked: true }); setContextMenu(null); }}>
             Block user
           </button>

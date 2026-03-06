@@ -1,31 +1,26 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { LogIn, Mail, Lock, AlertCircle, Eye, EyeOff, MapPin, Shield } from 'lucide-react'
+import { Eye, EyeOff, MapPin, Shield } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 
 const InitialLoader = () => (
-  <div className="min-h-screen flex items-center justify-center bg-[#f9fafb]">
-    <div
-      className="w-10 h-10 rounded-full border-2 border-gray-200 border-t-primary animate-spin"
-      aria-hidden
-    />
+  <div className="min-h-screen bg-white flex items-center justify-center">
+    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-slate-900" aria-hidden />
   </div>
 )
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter()
   const [formData, setFormData] = useState({ email: '', password: '' })
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [isCheckingAuth, setIsCheckingAuth] = useState(true)
-  const [errorShake, setErrorShake] = useState(false)
   const [logoError, setLogoError] = useState(false)
-  const [logoErrorLeft, setLogoErrorLeft] = useState(false) // left panel (dark bg) uses white logo
 
   useEffect(() => {
     const userStr = localStorage.getItem('seller_user')
@@ -38,7 +33,7 @@ export default function LoginPage() {
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value })
-    setError('')
+    if (error) setError('')
   }
 
   const handleSubmit = async (e) => {
@@ -56,56 +51,42 @@ export default function LoginPage() {
 
       if (appError || !application) {
         setError('Invalid email or password')
-        setErrorShake(true)
-        setTimeout(() => setErrorShake(false), 500)
         setLoading(false)
         return
       }
 
       if (application.status === 'pending') {
         setError('Your application is pending review. Please wait for approval.')
-        setErrorShake(true)
-        setTimeout(() => setErrorShake(false), 500)
         setLoading(false)
         return
       }
 
       if (application.status === 'under_review') {
         setError('Your application is under review. We will notify you once approved.')
-        setErrorShake(true)
-        setTimeout(() => setErrorShake(false), 500)
         setLoading(false)
         return
       }
 
       if (application.status === 'on_hold') {
         setError('Your application is on hold. Please contact support for more information.')
-        setErrorShake(true)
-        setTimeout(() => setErrorShake(false), 500)
         setLoading(false)
         return
       }
 
       if (application.status === 'requires_info') {
         setError('Your application requires additional information. Please check your email.')
-        setErrorShake(true)
-        setTimeout(() => setErrorShake(false), 500)
         setLoading(false)
         return
       }
 
       if (application.status === 'rejected') {
         setError('Your application has been rejected. Please contact support for more information.')
-        setErrorShake(true)
-        setTimeout(() => setErrorShake(false), 500)
         setLoading(false)
         return
       }
 
       if (application.status !== 'approved') {
         setError('Your application status does not allow login. Please contact support.')
-        setErrorShake(true)
-        setTimeout(() => setErrorShake(false), 500)
         setLoading(false)
         return
       }
@@ -123,8 +104,6 @@ export default function LoginPage() {
       router.push('/dashboard')
     } catch {
       setError('An error occurred. Please try again.')
-      setErrorShake(true)
-      setTimeout(() => setErrorShake(false), 500)
       setLoading(false)
     }
   }
@@ -134,225 +113,156 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col lg:flex-row">
-      {/* Left: Brand panel (desktop) - Deelmap buyer colors */}
-      <div
-        className="hidden lg:flex lg:w-[48%] xl:w-[52%] flex-col justify-between p-10 xl:p-14 relative overflow-hidden"
-        style={{ background: 'linear-gradient(165deg, #022b41 0%, #034060 50%, #022b41 100%)' }}
+    <div className="min-h-screen bg-white flex flex-col relative overflow-x-hidden">
+      {/* Logo – top-left, responsive for mobile */}
+      <Link
+        href="/"
+        className="login-logo-enter absolute top-4 left-4 right-4 sm:right-auto sm:left-8 z-20 flex items-center justify-between sm:justify-start gap-2 transition-opacity hover:opacity-80"
       >
-        <div
-          className="absolute inset-0 opacity-[0.04]"
-          style={{
-            backgroundImage: `
-              linear-gradient(to right, #fff 1px, transparent 1px),
-              linear-gradient(to bottom, #fff 1px, transparent 1px)
-            `,
-            backgroundSize: '24px 24px',
-          }}
-        />
-        <div
-          className="absolute top-1/4 -left-20 w-72 h-72 rounded-full opacity-20"
-          style={{ background: 'radial-gradient(circle, #b29578 0%, transparent 70%)' }}
-        />
-        <div
-          className="absolute bottom-1/4 -right-20 w-96 h-96 rounded-full opacity-10"
-          style={{ background: 'radial-gradient(circle, #b29578 0%, transparent 70%)' }}
-        />
-
-        <div className="relative z-10 flex items-center gap-2">
-          <div className="flex items-center justify-start h-10 w-[130px] shrink-0">
-            {!logoErrorLeft ? (
-              <Image
-                src="/assets/logo.webp"
-                alt="DeelMap"
-                width={130}
-                height={40}
-                className="h-10 w-auto object-contain object-left"
-                priority
-                onError={() => setLogoErrorLeft(true)}
-              />
-            ) : (
-              <div className="w-11 h-11 bg-brandRed rounded-xl flex items-center justify-center shadow-lg shadow-brandRed/25">
-                <MapPin className="w-6 h-6 text-white" />
-              </div>
-            )}
-          </div>
-          <span className="text-lg font-semibold text-white tracking-wide uppercase">Seller</span>
-        </div>
-
-        <div className="relative z-10 max-w-md">
-          <h2 className="text-3xl xl:text-4xl font-normal text-white leading-tight">
-            List deals. Reach buyers.
-            <br />
-            <span className="text-secondary font-medium">Grow your business.</span>
-          </h2>
-          <p className="mt-4 text-slate-400 text-base leading-relaxed font-normal">
-            Sign in to manage your wholesale listings, track performance, and connect with verified buyers on the platform.
-          </p>
-        </div>
-
-        <div className="relative z-10 flex items-center gap-2 text-slate-500 text-sm">
-          <Shield className="w-4 h-4 text-slate-500" />
-          <span>Secure seller sign-in</span>
-        </div>
-      </div>
-
-      {/* Right: Form */}
-      <div className="flex-1 flex flex-col items-center justify-center min-h-screen relative px-4 sm:px-6 py-10 lg:py-12">
-        <div
-          className="absolute inset-0 pointer-events-none"
-          style={{
-            background: `
-              radial-gradient(ellipse 80% 60% at 50% 0%, rgba(2, 43, 65, 0.04) 0%, transparent 50%),
-              radial-gradient(ellipse 60% 40% at 80% 80%, rgba(0, 0, 0, 0.02) 0%, transparent 50%),
-              #f9fafb
-            `,
-          }}
-        />
-        <div
-          className="absolute inset-0 pointer-events-none opacity-[0.4]"
-          style={{
-            backgroundImage: 'radial-gradient(circle at 1px 1px, rgb(0 0 0 / 0.03) 1px, transparent 0)',
-            backgroundSize: '24px 24px',
-          }}
-        />
-
-        <div className="lg:hidden flex items-center justify-center gap-2 mb-8 relative z-10">
-          <div className="h-9 w-[120px] flex items-center justify-center shrink-0">
+        <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+          <div className="h-8 w-[100px] sm:h-9 sm:w-[120px] flex items-center justify-center shrink-0">
             {!logoError ? (
               <Image
                 src="/assets/logo copy.png"
                 alt="DeelMap"
                 width={120}
                 height={36}
-                className="h-9 w-auto object-contain"
+                className="h-8 w-auto sm:h-9 object-contain"
                 priority
                 onError={() => setLogoError(true)}
               />
             ) : (
-              <div className="w-10 h-10 bg-brandRed rounded-xl flex items-center justify-center">
-                <MapPin className="w-5 h-5 text-white" />
+              <div className="w-9 h-9 rounded-xl bg-slate-900 flex items-center justify-center">
+                <MapPin className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
               </div>
             )}
           </div>
-          <span className="text-sm font-semibold text-slate-600 uppercase tracking-wide">Seller</span>
+          <span className="text-lg sm:text-xl font-bold text-slate-900 tracking-wide -translate-y-0.5 sm:-translate-y-1 truncate">Seller</span>
+        </div>
+      </Link>
+
+      <main className="flex-1 flex flex-col lg:flex-row items-center justify-center gap-6 sm:gap-8 lg:gap-16 pt-20 sm:pt-24 lg:pt-12 pb-8 sm:pb-12 lg:pb-20 px-4 sm:px-6 lg:px-12 xl:px-16 relative z-10 max-w-7xl mx-auto w-full">
+        {/* Left (desktop) / Top (mobile): tagline and supporting text */}
+        <div className="w-full lg:max-w-md xl:max-w-lg flex-shrink-0 text-center lg:text-left order-2 lg:order-1">
+          <h2 className="text-xl sm:text-2xl xl:text-4xl font-normal text-slate-900 leading-tight">
+            <span className="login-hero-line1 block">List deals. Reach buyers.</span>
+            <span className="login-hero-line2 mt-1 block">
+              <span className="font-bold text-red-600">Grow your business.</span>
+            </span>
+          </h2>
+          <p className="login-hero-p mt-3 sm:mt-4 text-slate-600 text-sm sm:text-base leading-relaxed max-w-md mx-auto lg:mx-0">
+            Sign in to manage your wholesale listings, track performance, and connect with verified buyers on the platform.
+          </p>
+          <div className="login-hero-footer mt-4 sm:mt-6 lg:mt-8 flex items-center justify-center lg:justify-start gap-2 text-slate-500 text-xs sm:text-sm">
+            <Shield className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
+            <span>Secure seller sign-in</span>
+          </div>
         </div>
 
-        <div className="w-full max-w-[480px] animate-fade-in-up relative z-10">
-          <div className="text-center mb-10">
-            <h1 className="text-3xl sm:text-4xl font-normal text-slate-900">Welcome back</h1>
-            <p className="text-slate-600 mt-2 text-base sm:text-lg font-normal">Sign in to your seller account</p>
+        {/* Right (desktop) / First on mobile: form */}
+        <div className="login-form-enter w-full max-w-md flex-shrink-0 order-1 lg:order-2">
+          {/* Header */}
+          <div className="login-form-header-enter text-center mb-5 sm:mb-8">
+            <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 mb-1 sm:mb-2">
+              Welcome Back
+            </h1>
+            <p className="text-slate-600 text-sm sm:text-base">
+              Sign in to your seller account to continue
+            </p>
           </div>
 
-          <div
-            className={`login-card bg-white rounded-2xl border border-slate-200 p-8 sm:p-10 transition-shadow ${errorShake ? 'animate-shake' : ''}`}
-          >
-            <form onSubmit={handleSubmit} className="space-y-6">
-              {error && (
-                <div
-                  role="alert"
-                  className="flex items-center gap-3 p-4 rounded-xl bg-red-50 border border-red-100 text-red-700 text-base"
-                >
-                  <AlertCircle className="w-5 h-5 shrink-0 text-red-500" />
-                  <span className="font-medium">{error}</span>
-                </div>
-              )}
-
+          {/* Form Card – responsive padding */}
+          <div className="login-card-enter bg-white border-2 border-slate-200 rounded-xl p-5 sm:p-6 lg:p-8 shadow-lg relative z-10 transition-all duration-300 ease-out hover:shadow-xl hover:-translate-y-0.5">
+            <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
+              {/* Email */}
               <div>
-                <label htmlFor="email" className="block text-base font-medium text-slate-700 mb-2.5">
-                  Email address
+                <label htmlFor="email" className="block text-sm font-medium text-slate-700 mb-1.5 sm:mb-2">
+                  Email Address
                 </label>
-                <div className="relative group">
-                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 group-focus-within:text-primary transition-colors pointer-events-none" />
-                  <input
-                    type="email"
-                    id="email"
-                    name="email"
-                    value={formData.email}
-                    onChange={handleChange}
-                    autoComplete="email"
-                    className="w-full pl-12 pr-4 py-3.5 sm:py-4 rounded-xl border border-slate-200 bg-slate-50/80 text-slate-900 placeholder:text-slate-400 text-base focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary focus:bg-white transition-all duration-200"
-                    placeholder="you@company.com"
-                    required
-                  />
-                </div>
+                <input
+                  type="email"
+                  id="email"
+                  name="email"
+                  placeholder="Enter your email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  autoComplete="email"
+                  required
+                  className="block w-full min-h-[44px] sm:h-12 px-4 rounded-lg border border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 text-base focus:outline-none focus:ring-2 focus:ring-slate-900/20 focus:border-slate-900 transition-all duration-200"
+                />
               </div>
 
+              {/* Password */}
               <div>
-                <label htmlFor="password" className="block text-base font-medium text-slate-700 mb-2.5">
+                <label htmlFor="password" className="block text-sm font-medium text-slate-700 mb-1.5 sm:mb-2">
                   Password
                 </label>
-                <div className="relative group">
-                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 group-focus-within:text-primary transition-colors pointer-events-none" />
+                <div className="relative">
                   <input
                     type={showPassword ? 'text' : 'password'}
                     id="password"
                     name="password"
+                    placeholder="Enter your password"
                     value={formData.password}
                     onChange={handleChange}
                     autoComplete="current-password"
-                    className="w-full pl-12 pr-12 py-3.5 sm:py-4 rounded-xl border border-slate-200 bg-slate-50/80 text-slate-900 placeholder:text-slate-400 text-base focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary focus:bg-white transition-all duration-200"
-                    placeholder="Enter your password"
                     required
+                    className="block w-full min-h-[44px] sm:h-12 px-4 pr-12 rounded-lg border border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 text-base focus:outline-none focus:ring-2 focus:ring-slate-900/20 focus:border-slate-900 transition-colors"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 p-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors p-1"
                     aria-label={showPassword ? 'Hide password' : 'Show password'}
                   >
                     {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                   </button>
                 </div>
-                <div className="mt-2 text-right">
-                  <Link
-                    href="/forgot-password"
-                    className="text-sm font-medium text-primary hover:text-primary-700 hover:underline transition-colors"
-                  >
-                    Forgot password?
-                  </Link>
-                </div>
               </div>
 
+              {/* Error Message */}
+              {error && (
+                <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm">
+                  {error}
+                </div>
+              )}
+
+              {/* Submit Button */}
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-4 rounded-xl bg-primary text-white text-base font-medium flex items-center justify-center gap-3 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-60 disabled:cursor-not-allowed transition-all duration-200 shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/25 active:scale-[0.99]"
+                className="w-full min-h-[44px] sm:h-12 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-sm font-semibold disabled:opacity-50 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:ring-offset-2 active:scale-[0.99]"
               >
-                {loading ? (
-                  <>
-                    <span
-                      className="w-5 h-5 rounded-full border-2 border-white border-t-transparent animate-spin"
-                      aria-hidden
-                    />
-                    Signing in...
-                  </>
-                ) : (
-                  <>
-                    <LogIn className="w-5 h-5" />
-                    Sign in
-                  </>
-                )}
+                {loading ? 'Signing In...' : 'Sign In'}
               </button>
             </form>
 
-            <p className="mt-8 pt-6 border-t border-slate-100 text-center text-base text-slate-600">
-              New to Deelmap?{' '}
-              <button
-                type="button"
-                onClick={() => router.push('/apply')}
-                className="font-medium text-primary hover:text-secondary hover:underline transition-colors"
+            {/* Forgot password only */}
+            <div className="mt-4 sm:mt-6 text-center">
+              <Link
+                href="/forgot-password"
+                className="text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors inline-block"
               >
-                Create a seller account
-              </button>
-            </p>
+                Forgot Password?
+              </Link>
+            </div>
           </div>
-
-          <p className="text-center text-sm text-gray-400 mt-8">
-            © {new Date().getFullYear()} Deelmap. All rights reserved.
-          </p>
         </div>
-      </div>
+      </main>
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-white flex items-center justify-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-slate-900" />
+        </div>
+      }
+    >
+      <LoginForm />
+    </Suspense>
   )
 }

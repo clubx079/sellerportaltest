@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { Plus, Edit2, Trash2, Eye, Search, X, Building2, Filter, ChevronLeft, ChevronRight, MapPin, DollarSign, RotateCcw, BarChart2, Link2 } from 'lucide-react';
+import { Plus, Edit2, Trash2, Eye, Search, X, Building2, ChevronLeft, ChevronRight, MapPin, DollarSign, RotateCcw, BarChart2, Link2 } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import DeleteConfirmModal from '@/components/properties/DeleteConfirmModal';
 import PropertyViewModal from '@/components/properties/PropertyViewModal';
@@ -452,14 +452,16 @@ const PropertiesManagement = () => {
 
   return (
     <div className="space-y-3 md:space-y-4">
-      {/* Top row: Title | Active/Trash (centered) | Add Property */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <h1 className="text-lg md:text-xl font-semibold tracking-tight text-gray-900 shrink-0">Properties</h1>
-        <div className="flex justify-center flex-1 min-w-0">
-          <div className="flex items-center gap-1 p-1 rounded-xl bg-gray-100 border border-gray-200/80 w-full sm:w-auto sm:min-w-[200px] max-w-xs sm:max-w-none">
+      {/* Top row: Title (left) | Active/Trash (center) | Add Property (right) — same on mobile and desktop */}
+      <div className="grid grid-cols-3 items-center gap-3 md:gap-4">
+        <div className="min-w-0">
+          <h1 className="text-lg md:text-xl font-semibold tracking-tight text-gray-900 truncate">Properties</h1>
+        </div>
+        <div className="flex justify-center">
+          <div className="flex items-center gap-0.5 p-1 rounded-xl bg-gray-100 border border-gray-200/80">
             <button
               onClick={() => setViewModeAndUrl('active')}
-              className={`flex-1 px-4 py-2.5 sm:py-3 text-sm font-semibold rounded-lg transition-all duration-200 ${
+              className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all duration-200 ${
                 viewMode === 'active'
                   ? 'bg-white text-primary shadow-sm border border-gray-200/80'
                   : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50/80'
@@ -469,7 +471,7 @@ const PropertiesManagement = () => {
             </button>
             <button
               onClick={() => setViewModeAndUrl('trash')}
-              className={`flex-1 px-4 py-2.5 sm:py-3 text-sm font-semibold rounded-lg transition-all duration-200 ${
+              className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all duration-200 ${
                 viewMode === 'trash'
                   ? 'bg-white text-brandRed shadow-sm border border-gray-200/80'
                   : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50/80'
@@ -479,37 +481,37 @@ const PropertiesManagement = () => {
             </button>
           </div>
         </div>
-        <button
-          onClick={() => router.push('/properties/new')}
-          className="flex items-center justify-center gap-2 bg-primary hover:bg-primary-700 text-white px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 shrink-0"
-        >
-          <Plus size={16} />
-          <span>Add Property</span>
-        </button>
+        <div className="flex justify-end">
+          <button
+            onClick={() => router.push('/properties/new')}
+            className="flex items-center gap-1.5 bg-primary hover:bg-primary-700 text-white px-3 py-1.5 rounded-xl text-xs font-medium transition-all duration-200 shrink-0"
+          >
+            <Plus size={14} />
+            <span className="hidden sm:inline">Add Property</span>
+            <span className="sm:hidden">Add</span>
+          </button>
+        </div>
       </div>
-      <p className="text-xs text-gray-500 -mt-1 text-center sm:text-left">
-        {viewMode === 'active' ? 'Listings that are live or in draft' : 'Archived listings — restore or delete permanently'}
-      </p>
 
       {/* Stats: only on Active view; minimal and professional. Trash view shows a single summary line. */}
       {viewMode === 'active' ? (
-        <div className="grid grid-cols-3 gap-3">
-          <div className="bg-white rounded-lg border border-gray-200 px-4 py-3">
-            <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Total</p>
-            <p className="text-xl font-semibold text-gray-900 mt-0.5">{totalProperties}</p>
+        <div className="grid grid-cols-3 gap-2">
+          <div className="bg-white rounded-lg border border-gray-200 px-3 py-2 md:px-4 md:py-3">
+            <p className="text-[10px] md:text-xs font-medium text-gray-500 uppercase tracking-wider">Total</p>
+            <p className="text-base md:text-xl font-semibold text-gray-900 mt-0.5">{totalProperties}</p>
           </div>
-          <div className="bg-white rounded-lg border border-gray-200 px-4 py-3">
-            <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Active</p>
-            <p className="text-xl font-semibold text-gray-900 mt-0.5">{activeProperties}</p>
+          <div className="bg-white rounded-lg border border-gray-200 px-3 py-2 md:px-4 md:py-3">
+            <p className="text-[10px] md:text-xs font-medium text-gray-500 uppercase tracking-wider">Active</p>
+            <p className="text-base md:text-xl font-semibold text-gray-900 mt-0.5">{activeProperties}</p>
           </div>
           <button
             type="button"
             onClick={() => setFilterStatus('draft')}
-            className="bg-white rounded-lg border border-gray-200 px-4 py-3 text-left hover:border-gray-300 hover:bg-gray-50/50 transition-colors"
+            className="bg-white rounded-lg border border-gray-200 px-3 py-2 md:px-4 md:py-3 text-left hover:border-gray-300 hover:bg-gray-50/50 transition-colors"
           >
-            <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Draft</p>
-            <p className="text-xl font-semibold text-gray-900 mt-0.5">{draftProperties}</p>
-            <p className="text-xs text-gray-400 mt-1">Filter table by draft</p>
+            <p className="text-[10px] md:text-xs font-medium text-gray-500 uppercase tracking-wider">Draft</p>
+            <p className="text-base md:text-xl font-semibold text-gray-900 mt-0.5">{draftProperties}</p>
+            <p className="hidden md:block text-xs text-gray-400 mt-1">Filter table by draft</p>
           </button>
         </div>
       ) : (
@@ -520,27 +522,11 @@ const PropertiesManagement = () => {
 
       {/* Table Card */}
       <div className="bg-white rounded-lg border border-gray-200 overflow-hidden shadow-card">
-        {/* Controls - Responsive */}
-        <div className="px-4 py-3 border-b border-gray-200">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
-            <div className="flex items-center gap-2">
-              <Filter className="w-3.5 h-3.5 text-gray-400 hidden sm:block" />
-              <select
-                value={entriesPerPage}
-                onChange={(e) => {
-                  setEntriesPerPage(Number(e.target.value));
-                  setCurrentPage(1);
-                }}
-                className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-gray-400 bg-white text-gray-700"
-              >
-                <option value={10}>10 rows</option>
-                <option value={25}>25 rows</option>
-                <option value={50}>50 rows</option>
-                <option value={100}>100 rows</option>
-              </select>
-            </div>
-
-            <div className="relative flex-1 sm:max-w-sm">
+        {/* Controls */}
+        <div className="px-4 py-3 border-b border-gray-200 space-y-2">
+          {/* Row 1: Search + Rows per page */}
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
               <input
                 type="text"
@@ -558,10 +544,23 @@ const PropertiesManagement = () => {
                 </button>
               )}
             </div>
+            <select
+              value={entriesPerPage}
+              onChange={(e) => {
+                setEntriesPerPage(Number(e.target.value));
+                setCurrentPage(1);
+              }}
+              className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-gray-400 bg-white text-gray-700 shrink-0"
+            >
+              <option value={10}>10 rows</option>
+              <option value={25}>25 rows</option>
+              <option value={50}>50 rows</option>
+              <option value={100}>100 rows</option>
+            </select>
           </div>
 
-          {/* Filters Row - Responsive */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+          {/* Row 2: Status + Property Status + Clear */}
+          <div className="grid grid-cols-3 gap-2">
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
@@ -579,7 +578,7 @@ const PropertiesManagement = () => {
               onChange={(e) => setFilterPropertyStatus(e.target.value)}
               className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-gray-400 bg-white text-gray-700"
             >
-              <option value="">Property Status</option>
+              <option value="">Prop. Status</option>
               <option value="available">Available</option>
               <option value="pending">Pending</option>
               <option value="sold">Sold</option>
@@ -587,15 +586,15 @@ const PropertiesManagement = () => {
             </select>
             <button
               onClick={clearFilters}
-              className="text-xs bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg px-2 py-1.5 transition-colors"
+              className="text-xs bg-red-50 hover:bg-red-100 text-red-600 rounded-lg px-2 py-1.5 transition-colors"
             >
-              Clear Filters
+              Clear
             </button>
           </div>
         </div>
 
-        {/* Table */}
-        <div className="overflow-x-auto scrollbar-thin">
+        {/* Desktop: Table */}
+        <div className="hidden md:block overflow-x-auto scrollbar-thin">
           <table className="w-full min-w-[900px]">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
@@ -787,6 +786,144 @@ const PropertiesManagement = () => {
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Mobile: Property cards */}
+        <div className="md:hidden divide-y divide-gray-100">
+          {loading ? (
+            [...Array(3)].map((_, i) => (
+              <div key={i} className="p-4 animate-pulse">
+                <div className="flex gap-3">
+                  <div className="w-20 h-20 rounded-xl bg-gray-100 shrink-0" />
+                  <div className="flex-1 space-y-2">
+                    <div className="h-4 w-3/4 bg-gray-100 rounded" />
+                    <div className="h-3 w-1/2 bg-gray-100 rounded" />
+                    <div className="h-4 w-16 bg-gray-100 rounded" />
+                  </div>
+                </div>
+              </div>
+            ))
+          ) : currentEntries.length === 0 ? (
+            <div className="px-4 py-10 text-center">
+              <Building2 className="w-10 h-10 text-gray-300 mx-auto mb-2" />
+              <p className="text-gray-500 text-sm font-medium">
+                {viewMode === 'active' ? 'No properties found' : 'No properties in trash'}
+              </p>
+              <p className="text-xs text-gray-400 mt-1">
+                {viewMode === 'active' ? 'Try adjusting your search or add a new property' : 'Deleted properties will appear here'}
+              </p>
+            </div>
+          ) : (
+            currentEntries.map((property, index) => (
+              <div
+                key={`${property._source}-${property.id}`}
+                className="p-4 hover:bg-gray-50/50 transition-colors"
+              >
+                <div className="flex gap-3">
+                  {getFeaturedImage(property) ? (
+                    <div className="w-20 h-20 rounded-xl bg-gray-100 overflow-hidden shrink-0">
+                      <img
+                        src={getFeaturedImage(property)}
+                        alt={property.full_address || property.address}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  ) : (
+                    <div className="w-20 h-20 rounded-xl bg-gray-100 shrink-0 flex items-center justify-center">
+                      <Building2 className="w-8 h-8 text-gray-400" />
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-900 line-clamp-2">
+                      {property.full_address || property.address || property.slug?.replace(/-/g, ' ') || 'N/A'}
+                    </p>
+                    <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                      <span className={`inline-flex px-2 py-0.5 rounded text-[10px] font-medium border ${property._source === 'manual' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-amber-50 text-amber-700 border-amber-200'}`}>
+                        {property._source === 'manual' ? 'Manual' : 'DeelScout'}
+                      </span>
+                      <span className={`inline-flex px-2 py-0.5 rounded text-[10px] font-medium border ${getStatusColor(property.status)}`}>
+                        {(property.status || 'draft')?.charAt(0).toUpperCase() + (property.status || '').slice(1) || 'Draft'}
+                      </span>
+                      <span className={`inline-flex px-2 py-0.5 rounded text-[10px] font-medium border ${getPropertyStatusColor(property.property_status)}`}>
+                        {(property.property_status || 'available')?.replace('_', ' ').split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') || 'Available'}
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-600 mt-1 flex items-center gap-1">
+                      <MapPin className="w-3 h-3 text-gray-400 shrink-0" />
+                      <span className="truncate">{property.city && property.state ? `${property.city}, ${property.state}` : property.address || 'N/A'}</span>
+                    </p>
+                    <p className="text-sm font-semibold text-gray-900 mt-0.5">
+                      ${parseFloat(property.price || 0).toLocaleString()}
+                      {property.property_type && <span className="text-gray-500 font-normal text-xs ml-1">· {property.property_type}</span>}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center justify-end gap-1 mt-3 pt-3 border-t border-gray-100">
+                  {viewMode === 'trash' ? (
+                    <>
+                      <button
+                        onClick={() => handleRestore(property)}
+                        className="flex items-center justify-center w-9 h-9 rounded-lg text-gray-500 hover:text-primary hover:bg-gray-100 transition-colors"
+                        title="Restore"
+                      >
+                        <RotateCcw className="w-4 h-4" strokeWidth={2} />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteClick(property)}
+                        className="flex items-center justify-center w-9 h-9 rounded-lg text-gray-500 hover:text-red-600 hover:bg-red-50 transition-colors"
+                        title="Delete Permanently"
+                      >
+                        <Trash2 className="w-4 h-4" strokeWidth={2} />
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <a
+                        href={`${DEELMAP_VIEW_BASE_URL.replace(/\/$/, '')}/${property.slug || property.id}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center justify-center w-9 h-9 rounded-lg text-gray-500 hover:text-primary hover:bg-gray-100 transition-colors"
+                        title="View on site"
+                      >
+                        <Eye className="w-4 h-4" strokeWidth={2} />
+                      </a>
+                      <button
+                        onClick={() => {
+                          setPropertyForUTM({ ...property, slug: property.slug || property.id, id: property.id });
+                          setShowUTMModal(true);
+                        }}
+                        className="flex items-center justify-center w-9 h-9 rounded-lg text-gray-500 hover:text-primary hover:bg-gray-100 transition-colors"
+                        title="Share links"
+                      >
+                        <Link2 className="w-4 h-4" strokeWidth={2} />
+                      </button>
+                      <button
+                        onClick={() => router.push(`/properties/edit/${property.id}`)}
+                        className="flex items-center justify-center w-9 h-9 rounded-lg text-gray-500 hover:text-primary hover:bg-gray-100 transition-colors"
+                        title="Edit"
+                      >
+                        <Edit2 className="w-4 h-4" strokeWidth={2} />
+                      </button>
+                      <button
+                        onClick={() => { setPropertyForAnalytics(property); setShowAnalyticsSidebar(true); }}
+                        className="flex items-center justify-center w-9 h-9 rounded-lg text-gray-500 hover:text-primary hover:bg-gray-100 transition-colors"
+                        title="Analytics"
+                      >
+                        <BarChart2 className="w-4 h-4" strokeWidth={2} />
+                      </button>
+                      <button
+                        onClick={() => handleArchiveClick(property)}
+                        className="flex items-center justify-center w-9 h-9 rounded-lg text-gray-500 hover:text-red-600 hover:bg-red-50 transition-colors"
+                        title="Move to Trash"
+                      >
+                        <Trash2 className="w-4 h-4" strokeWidth={2} />
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+            ))
+          )}
         </div>
 
         {/* Footer - Pagination */}

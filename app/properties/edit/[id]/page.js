@@ -315,12 +315,17 @@ export default function EditPropertyPage() {
     setError(null);
     setSuccess(null);
 
-    // Short unique slug when address changes (e.g. k2m9x4np)
+    // Short unique slug when address changes: 7 alphabets + 2 numerics (e.g. kxmnpqr29)
     const locationForSlug = (formData.location || '').trim();
     const shouldUpdateSlug = locationForSlug &&
       locationForSlug.toLowerCase() !== (initialLocationRef.current || '').trim().toLowerCase();
-    const chars = 'abcdefghjkmnpqrstuvwxyz23456789';
-    const newShortSlug = () => Array.from({ length: 8 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+    const alpha = 'abcdefghjkmnpqrstuvwxyz';
+    const nums = '23456789';
+    const newShortSlug = () => {
+      const p1 = Array.from({ length: 7 }, () => alpha[Math.floor(Math.random() * alpha.length)]).join('');
+      const p2 = Array.from({ length: 2 }, () => nums[Math.floor(Math.random() * nums.length)]).join('');
+      return p1 + p2;
+    };
     const slugToSave = shouldUpdateSlug ? newShortSlug() : existingSlugRef.current;
 
     // Create save data object matching the actual database schema

@@ -177,9 +177,12 @@ export default function NewPropertyPage() {
     setError(null);
     setSuccess(null);
 
-    // Short unique slug (e.g. k2m9x4np) — keeps URLs compact
-    const chars = 'abcdefghjkmnpqrstuvwxyz23456789';
-    const shortSlug = Array.from({ length: 8 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+    // Short unique slug: 7 alphabets + 2 numerics (e.g. kxmnpqr29) — more readable, less numeric
+    const alpha = 'abcdefghjkmnpqrstuvwxyz';
+    const nums = '23456789';
+    const part1 = Array.from({ length: 7 }, () => alpha[Math.floor(Math.random() * alpha.length)]).join('');
+    const part2 = Array.from({ length: 2 }, () => nums[Math.floor(Math.random() * nums.length)]).join('');
+    const shortSlug = part1 + part2;
 
     // Create save data object matching the actual database schema
     const saveData = {
