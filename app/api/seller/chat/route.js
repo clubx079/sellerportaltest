@@ -45,9 +45,9 @@ async function sendEmailToBuyer(buyerEmail, buyerName, sellerName, messageText, 
   }
   try {
     const resend = new Resend(apiKey);
-    const buyerBase = (process.env.NEXT_PUBLIC_DEELMAP_VIEW_BASE_URL || '').replace(/\/$/, '') || 'https://deelmap-production-16a1.up.railway.app';
-    const messagesLink = `${buyerBase}/buyer/inbox`;
-    const logoBase = (process.env.NEXT_PUBLIC_SELLER_PORTAL_URL || '').replace(/\/$/, '') || 'https://sellerportaldeelmap-production.up.railway.app';
+    const baseUrl = (process.env.NEXT_PUBLIC_DEELMAP_VIEW_BASE_URL || '').replace(/\/$/, '') || 'https://deelmap-production-16a1.up.railway.app';
+    const messagesLink = `${baseUrl}/buyer/inbox`;
+    const logoBase = (process.env.NEXT_PUBLIC_SELLER_PORTAL_URL || 'https://sellerportaldeelmap-production.up.railway.app').replace(/\/$/, '');
     const logoUrl = `${logoBase}/deelmap.png`;
     const preview = (messageText || '').slice(0, 200);
     const propertyText = String(propertyAddress || '').trim();
@@ -65,15 +65,22 @@ async function sendEmailToBuyer(buyerEmail, buyerName, sellerName, messageText, 
       <td align="center">
         <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:620px;background:#ffffff;border:1px solid #e5e7eb;border-radius:14px;overflow:hidden">
           <tr>
-            <td style="background:#022b41;padding:20px 24px;text-align:center">
-              <img src="${logoUrl}" alt="Deelmap" width="140" style="display:block;margin:0 auto 10px;height:auto;max-width:140px" />
+            <td style="background:#022b41;padding:24px 40px;">
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td align="center" style="vertical-align:middle;">
+                    <img src="${logoUrl}" alt="Deelmap" width="160" height="48" style="display:block;max-width:160px;height:auto;border:0;margin:0 auto;" />
+                  </td>
+                </tr>
+              </table>
             </td>
           </tr>
           <tr>
-            <td style="padding:24px">
-              <p style="margin:0 0 10px;font-size:14px;color:#64748b">From <strong style="color:#022b41">${(sellerName || 'Property seller').replace(/</g, '&lt;')}</strong></p>
-              ${propertyText ? `<p style="margin:0 0 10px;font-size:14px;color:#64748b">Property <strong style="color:#022b41">${propertyText.replace(/</g, '&lt;')}</strong></p>` : ''}
-              <div style="background:#f8fafc;border:1px solid #e2e8f0;border-left:4px solid #022b41;padding:14px 16px;border-radius:10px;margin:14px 0 20px;font-size:15px;line-height:1.55;color:#1f2937">${(preview || '').replace(/</g, '&lt;').replace(/\n/g, '<br>')}</div>
+            <td style="padding:24px;text-align:center">
+              <h1 style="margin:0 0 16px;font-size:20px;line-height:1.25;font-weight:700;color:#0f172a;text-align:center">New message</h1>
+              <p style="margin:0 0 10px;font-size:14px;color:#64748b;text-align:center">From <strong style="color:#022b41">${(sellerName || 'Property seller').replace(/</g, '&lt;')}</strong></p>
+              ${propertyText ? `<p style="margin:0 0 10px;font-size:14px;color:#64748b;text-align:center">Property <strong style="color:#022b41">${propertyText.replace(/</g, '&lt;')}</strong></p>` : ''}
+              <div style="background:#f8fafc;border:1px solid #e2e8f0;border-left:4px solid #022b41;padding:14px 16px;border-radius:10px;margin:14px 0 20px;font-size:15px;line-height:1.55;color:#1f2937;text-align:left">${(preview || '').replace(/</g, '&lt;').replace(/\n/g, '<br>')}</div>
               <table role="presentation" cellspacing="0" cellpadding="0" style="margin:0 auto 2px">
                 <tr>
                   <td align="center" style="border-radius:10px;background:#022b41">
@@ -82,6 +89,27 @@ async function sendEmailToBuyer(buyerEmail, buyerName, sellerName, messageText, 
                 </tr>
               </table>
               <p style="margin:16px 0 0;text-align:center;font-size:12px;color:#94a3b8">You received this because you have an active conversation on Deelmap.</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:30px 40px;background-color:#ffffff;border-top:1px solid #e5e7eb;text-align:center">
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td style="padding-bottom:10px;">
+                    <p style="margin:0 0 10px 0;font-size:14px;color:#374151;font-weight:500;text-align:center">Thanks,<br>DeelMap Team</p>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding-bottom:5px;">
+                    <p style="margin:0;font-size:12px;color:#9ca3af;text-align:center">2464 Royal Ln. Mesa, New Jersey 45463</p>
+                  </td>
+                </tr>
+                <tr>
+                  <td>
+                    <p style="margin:0;font-size:12px;color:#9ca3af;text-align:center">© 2026 DeelMap</p>
+                  </td>
+                </tr>
+              </table>
             </td>
           </tr>
         </table>

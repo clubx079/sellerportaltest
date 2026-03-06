@@ -452,15 +452,12 @@ const PropertiesManagement = () => {
 
   return (
     <div className="space-y-3 md:space-y-4">
-      {/* Top row: Title | Active/Trash + Add Property (right) */}
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <h1 className="text-lg md:text-xl font-semibold tracking-tight text-gray-900">Properties</h1>
-          <p className="text-xs text-gray-500 mt-0.5">
-            {viewMode === 'active' ? 'Listings that are live or in draft' : 'Archived listings — restore or delete permanently'}
-          </p>
+      {/* Top row: Title (left) | Active/Trash (center) | Add Property (right) — same on mobile and desktop */}
+      <div className="grid grid-cols-3 items-center gap-3 md:gap-4">
+        <div className="min-w-0">
+          <h1 className="text-lg md:text-xl font-semibold tracking-tight text-gray-900 truncate">Properties</h1>
         </div>
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex justify-center">
           <div className="flex items-center gap-0.5 p-1 rounded-xl bg-gray-100 border border-gray-200/80">
             <button
               onClick={() => setViewModeAndUrl('active')}
@@ -483,9 +480,11 @@ const PropertiesManagement = () => {
               Trash
             </button>
           </div>
+        </div>
+        <div className="flex justify-end">
           <button
             onClick={() => router.push('/properties/new')}
-            className="flex items-center gap-1.5 bg-primary hover:bg-primary-700 text-white px-3 py-1.5 rounded-xl text-xs font-medium transition-all duration-200"
+            className="flex items-center gap-1.5 bg-primary hover:bg-primary-700 text-white px-3 py-1.5 rounded-xl text-xs font-medium transition-all duration-200 shrink-0"
           >
             <Plus size={14} />
             <span className="hidden sm:inline">Add Property</span>
@@ -594,8 +593,8 @@ const PropertiesManagement = () => {
           </div>
         </div>
 
-        {/* Table */}
-        <div className="overflow-x-auto scrollbar-thin">
+        {/* Desktop: Table */}
+        <div className="hidden md:block overflow-x-auto scrollbar-thin">
           <table className="w-full min-w-[900px]">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
@@ -787,6 +786,144 @@ const PropertiesManagement = () => {
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Mobile: Property cards */}
+        <div className="md:hidden divide-y divide-gray-100">
+          {loading ? (
+            [...Array(3)].map((_, i) => (
+              <div key={i} className="p-4 animate-pulse">
+                <div className="flex gap-3">
+                  <div className="w-20 h-20 rounded-xl bg-gray-100 shrink-0" />
+                  <div className="flex-1 space-y-2">
+                    <div className="h-4 w-3/4 bg-gray-100 rounded" />
+                    <div className="h-3 w-1/2 bg-gray-100 rounded" />
+                    <div className="h-4 w-16 bg-gray-100 rounded" />
+                  </div>
+                </div>
+              </div>
+            ))
+          ) : currentEntries.length === 0 ? (
+            <div className="px-4 py-10 text-center">
+              <Building2 className="w-10 h-10 text-gray-300 mx-auto mb-2" />
+              <p className="text-gray-500 text-sm font-medium">
+                {viewMode === 'active' ? 'No properties found' : 'No properties in trash'}
+              </p>
+              <p className="text-xs text-gray-400 mt-1">
+                {viewMode === 'active' ? 'Try adjusting your search or add a new property' : 'Deleted properties will appear here'}
+              </p>
+            </div>
+          ) : (
+            currentEntries.map((property, index) => (
+              <div
+                key={`${property._source}-${property.id}`}
+                className="p-4 hover:bg-gray-50/50 transition-colors"
+              >
+                <div className="flex gap-3">
+                  {getFeaturedImage(property) ? (
+                    <div className="w-20 h-20 rounded-xl bg-gray-100 overflow-hidden shrink-0">
+                      <img
+                        src={getFeaturedImage(property)}
+                        alt={property.full_address || property.address}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  ) : (
+                    <div className="w-20 h-20 rounded-xl bg-gray-100 shrink-0 flex items-center justify-center">
+                      <Building2 className="w-8 h-8 text-gray-400" />
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-900 line-clamp-2">
+                      {property.full_address || property.address || property.slug?.replace(/-/g, ' ') || 'N/A'}
+                    </p>
+                    <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                      <span className={`inline-flex px-2 py-0.5 rounded text-[10px] font-medium border ${property._source === 'manual' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-amber-50 text-amber-700 border-amber-200'}`}>
+                        {property._source === 'manual' ? 'Manual' : 'DeelScout'}
+                      </span>
+                      <span className={`inline-flex px-2 py-0.5 rounded text-[10px] font-medium border ${getStatusColor(property.status)}`}>
+                        {(property.status || 'draft')?.charAt(0).toUpperCase() + (property.status || '').slice(1) || 'Draft'}
+                      </span>
+                      <span className={`inline-flex px-2 py-0.5 rounded text-[10px] font-medium border ${getPropertyStatusColor(property.property_status)}`}>
+                        {(property.property_status || 'available')?.replace('_', ' ').split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') || 'Available'}
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-600 mt-1 flex items-center gap-1">
+                      <MapPin className="w-3 h-3 text-gray-400 shrink-0" />
+                      <span className="truncate">{property.city && property.state ? `${property.city}, ${property.state}` : property.address || 'N/A'}</span>
+                    </p>
+                    <p className="text-sm font-semibold text-gray-900 mt-0.5">
+                      ${parseFloat(property.price || 0).toLocaleString()}
+                      {property.property_type && <span className="text-gray-500 font-normal text-xs ml-1">· {property.property_type}</span>}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center justify-end gap-1 mt-3 pt-3 border-t border-gray-100">
+                  {viewMode === 'trash' ? (
+                    <>
+                      <button
+                        onClick={() => handleRestore(property)}
+                        className="flex items-center justify-center w-9 h-9 rounded-lg text-gray-500 hover:text-primary hover:bg-gray-100 transition-colors"
+                        title="Restore"
+                      >
+                        <RotateCcw className="w-4 h-4" strokeWidth={2} />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteClick(property)}
+                        className="flex items-center justify-center w-9 h-9 rounded-lg text-gray-500 hover:text-red-600 hover:bg-red-50 transition-colors"
+                        title="Delete Permanently"
+                      >
+                        <Trash2 className="w-4 h-4" strokeWidth={2} />
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <a
+                        href={`${DEELMAP_VIEW_BASE_URL.replace(/\/$/, '')}/${property.slug || property.id}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center justify-center w-9 h-9 rounded-lg text-gray-500 hover:text-primary hover:bg-gray-100 transition-colors"
+                        title="View on site"
+                      >
+                        <Eye className="w-4 h-4" strokeWidth={2} />
+                      </a>
+                      <button
+                        onClick={() => {
+                          setPropertyForUTM({ ...property, slug: property.slug || property.id, id: property.id });
+                          setShowUTMModal(true);
+                        }}
+                        className="flex items-center justify-center w-9 h-9 rounded-lg text-gray-500 hover:text-primary hover:bg-gray-100 transition-colors"
+                        title="Share links"
+                      >
+                        <Link2 className="w-4 h-4" strokeWidth={2} />
+                      </button>
+                      <button
+                        onClick={() => router.push(`/properties/edit/${property.id}`)}
+                        className="flex items-center justify-center w-9 h-9 rounded-lg text-gray-500 hover:text-primary hover:bg-gray-100 transition-colors"
+                        title="Edit"
+                      >
+                        <Edit2 className="w-4 h-4" strokeWidth={2} />
+                      </button>
+                      <button
+                        onClick={() => { setPropertyForAnalytics(property); setShowAnalyticsSidebar(true); }}
+                        className="flex items-center justify-center w-9 h-9 rounded-lg text-gray-500 hover:text-primary hover:bg-gray-100 transition-colors"
+                        title="Analytics"
+                      >
+                        <BarChart2 className="w-4 h-4" strokeWidth={2} />
+                      </button>
+                      <button
+                        onClick={() => handleArchiveClick(property)}
+                        className="flex items-center justify-center w-9 h-9 rounded-lg text-gray-500 hover:text-red-600 hover:bg-red-50 transition-colors"
+                        title="Move to Trash"
+                      >
+                        <Trash2 className="w-4 h-4" strokeWidth={2} />
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+            ))
+          )}
         </div>
 
         {/* Footer - Pagination */}

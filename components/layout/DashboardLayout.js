@@ -37,8 +37,9 @@ export default function DashboardLayout({ children }) {
 
   // Check authentication only once on mount (skip for public pages)
   useEffect(() => {
-    // Skip auth check for public pages (login, register)
-    if (pathname === '/login' || pathname === '/register') {
+    // Skip auth check for public pages (login, register, forgot-password, apply, root)
+    const isPublicPage = ['/login', '/register', '/forgot-password', '/apply', '/'].includes(pathname)
+    if (isPublicPage) {
       setLoading(false)
       return
     }
@@ -120,8 +121,9 @@ export default function DashboardLayout({ children }) {
     return () => { document.body.style.overflow = '' }
   }, [isSidebarOpen])
 
-  // For public pages, render children without layout
-  if (pathname === '/login' || pathname === '/register') {
+  // For public pages, render children without layout (no sidebar)
+  const isPublicPage = ['/login', '/register', '/forgot-password', '/apply', '/'].includes(pathname)
+  if (isPublicPage) {
     return <>{children}</>
   }
 

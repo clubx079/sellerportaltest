@@ -51,9 +51,9 @@ function displayName(row) {
 function getDeviceIcon(deviceType) {
   if (!deviceType) return null;
   const t = deviceType.toLowerCase();
-  if (t === 'mobile') return <Smartphone className="w-3.5 h-3.5 text-slate-500 shrink-0" />;
-  if (t === 'tablet') return <Tablet className="w-3.5 h-3.5 text-slate-500 shrink-0" />;
-  return <Monitor className="w-3.5 h-3.5 text-slate-500 shrink-0" />;
+  if (t === 'mobile') return <Smartphone className="w-3.5 h-3.5 text-gray-700 shrink-0" />;
+  if (t === 'tablet') return <Tablet className="w-3.5 h-3.5 text-gray-700 shrink-0" />;
+  return <Monitor className="w-3.5 h-3.5 text-gray-700 shrink-0" />;
 }
 
 const PERIOD_OPTIONS = [
@@ -180,32 +180,32 @@ export default function PropertyAnalyticsSidebar({ propertyId, propertyName, onC
 
           {!loading && !error && data && (
             <div className="p-4 space-y-4">
-              {/* Viewers count + filters in one row (no blocks) */}
-              <div className="flex flex-wrap items-center gap-3">
+              {/* Viewers count + date range + sort in one row */}
+              <div className="flex items-center gap-2 flex-nowrap min-w-0">
                 <div className="flex items-center gap-2 shrink-0">
                   <Users className="w-4 h-4 text-primary" />
-                  <span className="text-xs font-semibold text-slate-800">Unique viewers</span>
+                  <span className="text-xs font-semibold text-slate-900">Unique viewers</span>
                   <span className="text-sm font-bold text-slate-900 tabular-nums">{agg.uniqueViewers ?? 0}</span>
                 </div>
                 <div className="h-4 w-px bg-slate-200 shrink-0" aria-hidden="true" />
-                <div className="flex items-center gap-2 shrink-0">
-                  <Calendar className="w-3.5 h-3.5 text-slate-600" />
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <Calendar className="w-3.5 h-3.5 text-slate-700" />
                   <select
                     value={period}
                     onChange={(e) => setPeriod(e.target.value)}
-                    className="text-xs font-medium border border-slate-200 rounded-md px-2 py-1.5 bg-white text-slate-800 focus:ring-1 focus:ring-primary/20 focus:border-primary outline-none"
+                    className="text-xs font-medium border border-slate-200 rounded-md px-2 py-1.5 bg-white text-slate-900 focus:ring-1 focus:ring-primary/20 focus:border-primary outline-none min-w-0"
                   >
                     {PERIOD_OPTIONS.map((o) => (
                       <option key={o.value} value={o.value}>{o.label}</option>
                     ))}
                   </select>
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <ArrowDownUp className="w-3.5 h-3.5 text-slate-600" />
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <ArrowDownUp className="w-3.5 h-3.5 text-slate-700" />
                   <select
                     value={sortBy}
                     onChange={(e) => setSortBy(e.target.value)}
-                    className="text-xs font-medium border border-slate-200 rounded-md px-2 py-1.5 bg-white text-slate-800 focus:ring-1 focus:ring-primary/20 focus:border-primary outline-none"
+                    className="text-xs font-medium border border-slate-200 rounded-md px-2 py-1.5 bg-white text-slate-900 focus:ring-1 focus:ring-primary/20 focus:border-primary outline-none min-w-0"
                   >
                     {SORT_OPTIONS.map((o) => (
                       <option key={o.value} value={o.value}>{o.label}</option>
@@ -221,15 +221,15 @@ export default function PropertyAnalyticsSidebar({ propertyId, propertyName, onC
                     <span className="w-1 h-4 rounded-full bg-primary" />
                     Viewing activity
                   </h3>
-                  <span className="text-xs font-medium text-slate-700 tabular-nums">{sessions.length} {sessions.length === 1 ? 'viewer' : 'viewers'}</span>
+                  <span className="text-xs font-medium text-gray-900 tabular-nums">{sessions.length} {sessions.length === 1 ? 'viewer' : 'viewers'}</span>
                 </div>
                 {sessions.length === 0 ? (
                   <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 py-10 text-center px-4">
                     <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center mx-auto mb-2">
                       <Eye className="w-5 h-5 text-slate-600" />
                     </div>
-                    <p className="text-sm font-semibold text-slate-800">No activity yet</p>
-                    <p className="text-xs text-slate-700 mt-1 max-w-[220px] mx-auto">When buyers view this property, they’ll appear here.</p>
+                    <p className="text-sm font-semibold text-gray-900">No activity yet</p>
+                    <p className="text-xs text-gray-900 mt-1 max-w-[220px] mx-auto">When buyers view this property, they’ll appear here.</p>
                   </div>
                 ) : (
                   <div className="space-y-2.5">
@@ -263,19 +263,19 @@ export default function PropertyAnalyticsSidebar({ propertyId, propertyName, onC
                                   {name || 'Guest'}
                                 </p>
                                 {row.utm_source && (
-                                  <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-slate-100 text-slate-800 text-[11px] font-medium capitalize">
+                                  <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-slate-100 text-gray-900 text-[11px] font-medium capitalize">
                                     {row.utm_source}
                                   </span>
                                 )}
                                 {device && (
-                                  <span className="inline-flex items-center gap-1 text-xs text-slate-600">
+                                  <span className="inline-flex items-center gap-1 text-xs text-gray-900">
                                     {getDeviceIcon(row.device_type)}
                                     {device}
                                   </span>
                                 )}
                               </div>
-                              {/* Page views, photos viewed, time spent — inline, no boxes */}
-                              <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-slate-600">
+                              {/* Page views, photos viewed, time spent — inline, black text */}
+                              <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-gray-900">
                                 <span>{views} view{views !== 1 ? 's' : ''}</span>
                                 {images > 0 && <span>{images} photo{images !== 1 ? 's' : ''}</span>}
                                 {timing && <span>{timing}</span>}
@@ -285,14 +285,14 @@ export default function PropertyAnalyticsSidebar({ propertyId, propertyName, onC
                                   {tags.map((t) => (
                                     <span
                                       key={t}
-                                      className="inline-flex items-center px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 text-[11px] font-medium"
+                                      className="inline-flex items-center px-1.5 py-0.5 rounded bg-slate-100 text-gray-900 text-[11px] font-medium"
                                     >
                                       {t}
                                     </span>
                                   ))}
                                 </div>
                               )}
-                              <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-slate-500 pt-0.5">
+                              <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-gray-900 pt-0.5">
                                 {firstSeen && <span>First: {firstSeen}</span>}
                                 {lastSeen && lastSeen !== firstSeen && <span>Last: {lastSeen}</span>}
                               </div>

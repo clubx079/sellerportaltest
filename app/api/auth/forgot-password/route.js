@@ -35,8 +35,9 @@ export async function POST(request) {
       return NextResponse.json({ message: 'Reset code generated. Email service is not configured.' });
     }
     const resend = new Resend(resendKey);
-    const baseUrl = (process.env.NEXT_PUBLIC_DEELMAP_VIEW_BASE_URL || '').replace(/\/$/, '') || 'https://deelmap-production-16a1.up.railway.app';
-    const logoUrl = `${baseUrl}/assets/logo.webp`;
+    // Same logo URL and markup as buyer website emails (seller portal /deelmap.png)
+    const logoBase = (process.env.NEXT_PUBLIC_SELLER_PORTAL_URL || 'https://sellerportaldeelmap-production.up.railway.app').replace(/\/$/, '');
+    const logoUrl = `${logoBase}/deelmap.png`;
 
     const html = `
 <!DOCTYPE html>
@@ -52,19 +53,46 @@ export async function POST(request) {
       <td align="center">
         <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:620px;background:#ffffff;border:1px solid #e5e7eb;border-radius:14px;overflow:hidden">
           <tr>
-            <td style="background:#022b41;padding:20px 24px;text-align:center">
-              <img src="${logoUrl}" alt="Deelmap" width="140" style="display:block;margin:0 auto 10px;height:auto;max-width:140px" />
-              <h1 style="margin:0;font-size:22px;line-height:1.25;font-weight:700;color:#ffffff">Reset your seller password</h1>
+            <td style="background:#022b41;padding:24px 40px;">
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td align="center" style="vertical-align:middle;">
+                    <img src="${logoUrl}" alt="Deelmap" width="160" height="48" style="display:block;max-width:160px;height:auto;border:0;margin:0 auto;" />
+                  </td>
+                </tr>
+              </table>
             </td>
           </tr>
           <tr>
-            <td style="padding:24px">
-              <p style="margin:0 0 12px;font-size:15px;color:#334155">Hi ${(seller.contact_person_name || 'Seller').replace(/</g, '&lt;')},</p>
-              <p style="margin:0 0 14px;font-size:14px;line-height:1.6;color:#64748b">Use this verification code to reset your seller dashboard password. This code expires in 15 minutes.</p>
+            <td style="padding:24px;text-align:center">
+              <h1 style="margin:0 0 20px;font-size:22px;line-height:1.25;font-weight:700;color:#0f172a;text-align:center">Reset your seller password</h1>
+              <p style="margin:0 0 12px;font-size:15px;color:#334155;text-align:center">Hi ${(seller.contact_person_name || 'Seller').replace(/</g, '&lt;')},</p>
+              <p style="margin:0 0 14px;font-size:14px;line-height:1.6;color:#64748b;text-align:center">Use this verification code to reset your seller dashboard password. This code expires in 15 minutes.</p>
               <div style="margin:16px 0 20px;text-align:center">
                 <span style="display:inline-block;background:#f8fafc;border:1px solid #cbd5e1;border-radius:10px;padding:12px 18px;font-size:30px;letter-spacing:5px;font-weight:700;color:#022b41;font-family:'Courier New',monospace">${otp}</span>
               </div>
-              <p style="margin:0;font-size:12px;line-height:1.6;color:#94a3b8">If you did not request this, you can safely ignore this email.</p>
+              <p style="margin:0;font-size:12px;line-height:1.6;color:#94a3b8;text-align:center">If you did not request this, you can safely ignore this email.</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:30px 40px;background-color:#ffffff;border-top:1px solid #e5e7eb;text-align:center">
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td style="padding-bottom:10px;">
+                    <p style="margin:0 0 10px 0;font-size:14px;color:#374151;font-weight:500;text-align:center">Thanks,<br>DeelMap Team</p>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding-bottom:5px;">
+                    <p style="margin:0;font-size:12px;color:#9ca3af;text-align:center">2464 Royal Ln. Mesa, New Jersey 45463</p>
+                  </td>
+                </tr>
+                <tr>
+                  <td>
+                    <p style="margin:0;font-size:12px;color:#9ca3af;text-align:center">© 2026 DeelMap</p>
+                  </td>
+                </tr>
+              </table>
             </td>
           </tr>
         </table>
