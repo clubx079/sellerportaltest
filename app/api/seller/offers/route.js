@@ -67,7 +67,9 @@ function buildEmailHtml(logoUrl, title, titleColor, bodyHtml, ctaUrl, ctaLabel) 
 </body></html>`;
 }
 
-// GET — fetch offer for a conversation (seller auth)
+// GET — fetch offers for seller
+// ?conversation_id=X  → offers for that conversation
+// (no param)          → all offers for this seller, enriched with property + buyer info
 export async function GET(request) {
   try {
     const sellerId = getSellerId(request);
@@ -75,9 +77,62 @@ export async function GET(request) {
 
     const { searchParams } = new URL(request.url);
     const conversationId = searchParams.get('conversation_id');
-    if (!conversationId) return NextResponse.json({ error: 'conversation_id required' }, { status: 400 });
 
-    // Validate seller owns this conversation
+    // ── All offers for seller ──────────────────────────────────────────────
+    if (!conversationId) {
+      const { data: offers, error } = await supabase
+        .from('offers')
+        .select('*')
+        .eq('seller_id', sellerId)
+        .order('created_at', { ascending: false });
+
+      if (error) return NextResponse.json({ error: 'Failed to fetch offers' }, { status: 500 });
+
+      const enriched = await Promise.all((offers || []).map(async (o) => {
+        // Buyer name
+        let buyer_name = 'Buyer';
+        if (o.buyer_id) {
+          const numericId = buyerUuidToNumericId(o.buyer_id);
+          const { data: u } = await supabase.from('users').select('first_name, last_name, email').eq('id', numericId).maybeSingle();
+          if (u) buyer_name = `${u.first_name || ''} ${u.last_name || ''}`.trim() || u.email || 'Buyer';
+        }
+
+        // Property details
+        let property_address = null, property_thumbnail_url = null;
+        if (o.property_id) {
+          const pid = String(o.property_id);
+          const [wdRes, pRes] = await Promise.all([
+            supabase.from('wholesale_deals').select('full_address, display_address, address, city, state').eq('id', pid).maybeSingle(),
+            supabase.from('properties').select('address, city, state').eq('id', pid).maybeSingle(),
+          ]);
+          const wd = wdRes.data;
+          const p = pRes.data;
+          if (wd) property_address = (wd.full_address || wd.display_address || '').trim() || [wd.address, wd.city, wd.state].filter(Boolean).join(', ');
+          if (!property_address && p) property_address = [p.address, p.city, p.state].filter(Boolean).join(', ');
+
+          // Thumbnail
+          const [feat, any, img] = await Promise.all([
+            supabase.from('property_photos').select('photo_url').eq('deal_id', pid).eq('is_featured', true).limit(1).maybeSingle(),
+            supabase.from('property_photos').select('photo_url').eq('deal_id', pid).order('display_order', { ascending: true }).limit(1).maybeSingle(),
+            supabase.from('property_images').select('image_url').eq('property_id', pid).order('sort_order', { ascending: true }).limit(1).maybeSingle(),
+          ]);
+          property_thumbnail_url = feat.data?.photo_url || any.data?.photo_url || img.data?.image_url || null;
+        }
+
+        // Numeric conversation id for inbox link
+        const conv_numeric = (() => {
+          const match = String(o.conversation_id || '').match(/00000000-0000-0000-0000-([0-9a-f]{12})$/i);
+          return match ? parseInt(match[1], 16) : null;
+        })();
+
+        return { ...o, buyer_name, property_address, property_thumbnail_url, conv_numeric };
+      }));
+
+      const pendingCount = enriched.filter(o => o.status === 'pending').length;
+      return NextResponse.json({ offers: enriched, pendingCount });
+    }
+
+    // ── Single conversation offers ─────────────────────────────────────────
     const { data: conv } = await supabase
       .from('conversations')
       .select('id, seller_id, buyer_uuid')

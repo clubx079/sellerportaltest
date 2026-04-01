@@ -51,6 +51,12 @@ export default function Sidebar({ isOpen, setIsOpen, activeItem, setActiveItem }
         if (nData?.unreadCount != null) setNotifUnread(nData.unreadCount)
         if (Array.isArray(nData?.notifications)) setNotifications(nData.notifications)
       } catch {}
+      try {
+        const oRes = await fetch('/api/seller/offers', { headers: { Authorization: `Bearer ${sellerId}` } })
+        const oData = await oRes.json()
+        if (!mounted) return
+        if (oData?.pendingCount != null) setOffersCount(oData.pendingCount)
+      } catch {}
     }
 
     fetchCounts()

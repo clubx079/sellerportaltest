@@ -115,14 +115,24 @@ export default function DashboardPage() {
         setRecentQueries(conversations.slice(0, 5));
       } catch { setRecentQueries([]); }
 
+      // Offers
+      let offersReceived = 0, offersThisWeek = 0;
+      try {
+        const oRes = await fetch('/api/seller/offers', { headers: { Authorization: `Bearer ${currentUserId}` } });
+        const oData = await oRes.json();
+        const allOffers = oData.offers || [];
+        offersReceived = allOffers.length;
+        offersThisWeek = allOffers.filter(o => new Date(o.created_at) >= sevenDaysAgo).length;
+      } catch {}
+
       setStats({
         activeProperties: activeList.length,
         totalViews,
-        offersReceived: 0,
+        offersReceived,
         dealsClosed: soldList.length,
         recentlyAdded: recentCount,
         viewsThisWeek,
-        offersThisWeek: 0,
+        offersThisWeek,
         closedThisMonth: 0,
         trashProperties: combined.filter(p => p._normalizedStatus === "archived").length,
       });
