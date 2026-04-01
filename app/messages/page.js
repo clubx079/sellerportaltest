@@ -261,6 +261,18 @@ export default function MessagesPage() {
         const headers = getAuthHeaders();
         if (headers.Authorization) {
           fetch(API, { method: 'POST', headers: { 'Content-Type': 'application/json', ...headers }, body: JSON.stringify({ action: 'mark_as_read', conversationId: openConversationId }) }).catch(() => {});
+          // If the buyer sent a message, re-fetch offer in case they just submitted one
+          if (newMsg.sender_type === 'user') {
+            fetch(`/api/seller/offers?conversation_id=${openConversationId}`, { headers })
+              .then(r => r.json())
+              .then(data => {
+                const offers = data.offers || [];
+                const latest = offers.find(o => o.status !== 'expired') || offers[0] || null;
+                setOffer(latest || null);
+                if (latest?.offer_price) setCounterAmount(String(Math.round(latest.offer_price)));
+              })
+              .catch(() => {});
+          }
         }
         setConversations(prev => prev.map(c => c.id === openConversationId ? { ...c, unread_count: 0, last_message_preview: (newMsg.message_text || '').slice(0, 200), last_message_at: newMsg.created_at || c.last_message_at } : c));
         setFilteredConversations(prev => prev.map(c => c.id === openConversationId ? { ...c, unread_count: 0, last_message_preview: (newMsg.message_text || '').slice(0, 200), last_message_at: newMsg.created_at || c.last_message_at } : c));
