@@ -531,19 +531,32 @@ export default function MessagesPage() {
                         <div className="space-y-4">
                           {msgs.map(m => {
                             const isSeller = m.sender_type === 'seller';
+                            const isOffer = !isSeller && (m.message_text || '').startsWith('Offer submitted:');
+                            // Parse offer card: line 0 = "Offer submitted: $X", line 1 = terms
+                            const offerLines = isOffer ? (m.message_text || '').split('\n') : [];
+                            const offerAmount = isOffer ? (offerLines[0] || '').replace('Offer submitted: ', '').trim() : '';
+                            const offerTerms = isOffer ? (offerLines[1] || '').trim() : '';
                             return (
                               <div key={m.id}>
                                 {isSeller && <p className="text-[12px] font-medium text-[#444441] mb-1 text-right">You</p>}
                                 {!isSeller && <p className="text-[12px] font-medium text-[#444441] mb-1">{buyerDisplayName}</p>}
                                 <div className={`flex ${isSeller ? 'justify-end' : 'justify-start'}`}>
                                   <div className="max-w-[70%]">
-                                    <div className={`rounded-lg px-4 py-3 ${
-                                      isSeller
-                                        ? 'bg-[#FEF0EF] text-[#1A1816] border border-[#F5C4C0]'
-                                        : 'bg-[#FAFAF8] text-[#1A1816] border border-[#E8E8E4]'
-                                    }`}>
-                                      {m.message_text && <p className="text-[14px] leading-relaxed whitespace-pre-wrap break-words">{m.message_text}</p>}
-                                    </div>
+                                    {isOffer ? (
+                                      <div className="bg-white border border-[#E8E8E4] rounded-lg px-4 py-3 shadow-sm min-w-[180px]">
+                                        <span className="inline-block text-[11px] font-semibold px-2 py-0.5 rounded-full bg-[#FEF3E2] text-[#B5620A] mb-2">Offer submitted</span>
+                                        <p className="text-[22px] font-bold text-[#1A1816] leading-none mb-1">{offerAmount}</p>
+                                        {offerTerms && <p className="text-[12px] text-[#737370]">{offerTerms}</p>}
+                                      </div>
+                                    ) : (
+                                      <div className={`rounded-lg px-4 py-3 ${
+                                        isSeller
+                                          ? 'bg-[#FEF0EF] text-[#1A1816] border border-[#F5C4C0]'
+                                          : 'bg-[#FAFAF8] text-[#1A1816] border border-[#E8E8E4]'
+                                      }`}>
+                                        {m.message_text && <p className="text-[14px] leading-relaxed whitespace-pre-wrap break-words">{m.message_text}</p>}
+                                      </div>
+                                    )}
                                     <div className={`flex items-center gap-1 mt-1 ${isSeller ? 'justify-end' : 'justify-start'}`}>
                                       <span className="text-[11px] text-[#A8A8A4]">{formatTime(m.created_at)}</span>
                                       {isSeller && (
