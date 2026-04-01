@@ -123,7 +123,7 @@ function LoginForm() {
           <div className="h-8 w-[100px] sm:h-9 sm:w-[120px] flex items-center justify-center shrink-0">
             {!logoError ? (
               <Image
-                src="/assets/logo copy.png"
+                src="/assets/logo.svg"
                 alt="DeelMap"
                 width={120}
                 height={36}
