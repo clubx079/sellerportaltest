@@ -544,7 +544,7 @@ const PropertiesManagement = () => {
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-8 pr-8 py-1.5 text-xs border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-gray-400 bg-white"
+              className="w-full pl-8 pr-8 py-1.5 text-xs border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-gray-400 bg-white"
               placeholder="Search by title or location..."
             />
             {searchTerm && (
@@ -559,7 +559,7 @@ const PropertiesManagement = () => {
           <select
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value)}
-            className="text-xs border border-[#E8E8E4] rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-[#D03839]/20 focus:border-[#D03839] bg-white text-[#1A1816] shrink-0"
+            className="text-xs border border-[#E8E8E4] rounded px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-[#D03839]/20 focus:border-[#D03839] bg-white text-[#1A1816] shrink-0"
           >
             <option value="">Status</option>
             <option value="draft">Draft</option>
@@ -571,7 +571,7 @@ const PropertiesManagement = () => {
           <select
             value={filterPropertyStatus}
             onChange={(e) => setFilterPropertyStatus(e.target.value)}
-            className="text-xs border border-[#E8E8E4] rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-[#D03839]/20 focus:border-[#D03839] bg-white text-[#1A1816] shrink-0"
+            className="text-xs border border-[#E8E8E4] rounded px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-[#D03839]/20 focus:border-[#D03839] bg-white text-[#1A1816] shrink-0"
           >
             <option value="">Property Status</option>
             <option value="available">Available</option>
@@ -585,7 +585,7 @@ const PropertiesManagement = () => {
               setEntriesPerPage(Number(e.target.value));
               setCurrentPage(1);
             }}
-            className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-gray-400 bg-white text-gray-700 shrink-0"
+            className="text-xs border border-gray-200 rounded px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-gray-400 bg-white text-gray-700 shrink-0"
           >
             <option value={10}>10 rows</option>
             <option value={25}>25 rows</option>
@@ -594,7 +594,7 @@ const PropertiesManagement = () => {
           </select>
           <button
             onClick={clearFilters}
-            className="text-xs bg-[#FEF0EF] hover:bg-[#FEE4E3] text-[#D03839] rounded-lg px-3 py-1.5 transition-colors font-medium shrink-0"
+            className="text-xs bg-[#FEF0EF] hover:bg-[#FEE4E3] text-[#D03839] rounded px-3 py-1.5 transition-colors font-medium shrink-0"
           >
             Clear
           </button>

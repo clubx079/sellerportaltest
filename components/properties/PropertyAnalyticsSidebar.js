@@ -142,14 +142,14 @@ export default function PropertyAnalyticsSidebar({ propertyId, propertyName, onC
         aria-label="Property analytics"
       >
         {/* ── Header ── */}
-        <div className="flex-shrink-0 bg-[#1A1816] px-5 py-4">
+        <div className="flex-shrink-0 bg-[#D03839] px-5 py-4">
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-center gap-3 min-w-0">
-              <div className="w-9 h-9 rounded bg-white/10 flex items-center justify-center flex-shrink-0">
+              <div className="w-9 h-9 rounded bg-white/20 flex items-center justify-center flex-shrink-0">
                 <BarChart2 className="w-4.5 h-4.5 text-white" />
               </div>
               <div className="min-w-0">
-                <p className="text-[11px] font-semibold text-white/50 uppercase tracking-[1.1px] mb-0.5">Property Analytics</p>
+                <p className="text-[11px] font-semibold text-white/70 uppercase tracking-[1.1px] mb-0.5">Property Analytics</p>
                 {propertyName && (
                   <h2 className="text-[15px] font-bold text-white leading-snug truncate" title={propertyName}>
                     {propertyName}
@@ -160,7 +160,7 @@ export default function PropertyAnalyticsSidebar({ propertyId, propertyName, onC
             <button
               type="button"
               onClick={onClose}
-              className="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded bg-white/10 hover:bg-white/20 text-white/70 hover:text-white transition-colors duration-200 mt-0.5"
+              className="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded bg-white/20 hover:bg-white/30 text-white transition-colors duration-200 mt-0.5"
               aria-label="Close"
             >
               <X className="w-4 h-4" />
