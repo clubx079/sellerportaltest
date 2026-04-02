@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import {
   MessageCircle, Send, Search, ArrowLeft, Loader2, Check, CheckCheck,
-  Pin, Paperclip, Smile, MapPin, Mail, Phone, Shield, AlertCircle, X
+  Pin, Paperclip, Smile, MapPin, Mail, Phone, Shield, AlertCircle, X, MoreVertical
 } from 'lucide-react';
 import { createClient } from '@supabase/supabase-js';
 
@@ -122,6 +122,7 @@ export default function MessagesPage() {
   const [counterFinancing, setCounterFinancing] = useState('Cash');
   const [counterNotes, setCounterNotes] = useState('');
   const [offerActionLoading, setOfferActionLoading] = useState(false);
+  const [showMobilePropPanel, setShowMobilePropPanel] = useState(false);
 
   const scrollToBottom = () => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
 
@@ -521,10 +522,19 @@ export default function MessagesPage() {
                   <button type="button" onClick={() => setOpenConversationId(null)} className="lg:hidden p-2 -ml-2 rounded hover:bg-[#FAFAF8] transition-colors duration-200">
                     <ArrowLeft className="w-5 h-5 text-[#444441]" />
                   </button>
-                  <div>
+                  <div className="flex-1 min-w-0">
                     <h2 className="text-[16px] font-bold text-[#1A1816]">{buyerDisplayName}</h2>
                     <p className="text-[13px] text-[#737370]">Interested Buyer</p>
                   </div>
+                  {selectedPropertyAddress && (
+                    <button
+                      type="button"
+                      onClick={() => setShowMobilePropPanel(true)}
+                      className="xl:hidden p-2 rounded hover:bg-[#FAFAF8] transition-colors duration-200 flex-shrink-0"
+                    >
+                      <MoreVertical className="w-5 h-5 text-[#444441]" />
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -871,6 +881,69 @@ export default function MessagesPage() {
                 )}
               </>
             )}
+          </div>
+        )}
+
+        {/* Mobile Property Panel */}
+        {showMobilePropPanel && selectedConversation && (
+          <div className="xl:hidden fixed inset-0 z-[90] flex justify-end" onClick={() => setShowMobilePropPanel(false)}>
+            <div className="w-full max-w-sm bg-white h-full overflow-y-auto shadow-2xl flex flex-col" onClick={e => e.stopPropagation()}>
+              <div className="px-5 py-4 border-b border-[#E8E8E4] flex items-center justify-between flex-shrink-0">
+                <div>
+                  <h3 className="text-[16px] font-bold text-[#1A1816]">Property Details</h3>
+                  <p className="text-[13px] text-[#737370] truncate max-w-[200px]">{selectedPropertyAddress || 'Conversation'}</p>
+                </div>
+                <button onClick={() => setShowMobilePropPanel(false)} className="p-2 rounded hover:bg-[#FAFAF8] transition-colors">
+                  <X className="w-5 h-5 text-[#444441]" />
+                </button>
+              </div>
+              <div className="px-5 py-4 border-b border-[#E8E8E4]">
+                <p className="text-[11px] font-semibold text-[#A8A8A4] uppercase tracking-[1.1px] mb-3">Buyer Info</p>
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0" style={{ backgroundColor: getAvatarPair(buyerDisplayName).bg }}>
+                    <span className="text-[13px] font-semibold" style={{ color: getAvatarPair(buyerDisplayName).text }}>{getInitials(buyerDisplayName)}</span>
+                  </div>
+                  <div>
+                    <p className="text-[14px] font-semibold text-[#1A1816]">{buyerDisplayName}</p>
+                    <div className="flex items-center gap-1">
+                      <Shield className="w-3 h-3 text-[#0F6E56]" />
+                      <span className="text-[11px] text-[#0F6E56] font-medium">Verified buyer</span>
+                    </div>
+                  </div>
+                </div>
+                {selectedConversation.buyer_email && (
+                  <div className="flex items-center gap-2 text-[13px] text-[#444441] mb-1.5">
+                    <Mail className="w-4 h-4 text-[#737370]" />
+                    <span className="truncate">{selectedConversation.buyer_email}</span>
+                  </div>
+                )}
+                {selectedConversation.buyer_phone && (
+                  <div className="flex items-center gap-2 text-[13px] text-[#444441]">
+                    <Phone className="w-4 h-4 text-[#737370]" />
+                    <span>{selectedConversation.buyer_phone}</span>
+                  </div>
+                )}
+              </div>
+              {offer && (
+                <div className="px-5 py-4 border-b border-[#E8E8E4]">
+                  <p className="text-[11px] font-semibold text-[#A8A8A4] uppercase tracking-[1.1px] mb-3">Offer Details</p>
+                  <p className="text-[28px] font-bold text-[#1A1816] mb-1">{formatCurrency(offer.offer_price)}</p>
+                  {offer.status === 'pending' && <span className="inline-block px-2 py-0.5 bg-[#FEF3E2] text-[#B5620A] text-[11px] font-semibold rounded">Negotiating</span>}
+                  {offer.status === 'accepted' && <span className="inline-block px-2 py-0.5 bg-[#E4F5EC] text-[#0F6E56] text-[11px] font-semibold rounded">Accepted</span>}
+                  {offer.status === 'rejected' && <span className="inline-block px-2 py-0.5 bg-[#FEF0EF] text-[#D03839] text-[11px] font-semibold rounded">Rejected</span>}
+                  {offer.status === 'countered' && <span className="inline-block px-2 py-0.5 bg-[#EBF3FC] text-[#4A90E2] text-[11px] font-semibold rounded">Counter Sent</span>}
+                </div>
+              )}
+              {selectedPropertyAddress && (
+                <div className="px-5 py-4">
+                  <p className="text-[11px] font-semibold text-[#A8A8A4] uppercase tracking-[1.1px] mb-2">Property</p>
+                  <div className="flex items-start gap-2 text-[13px] text-[#444441]">
+                    <MapPin className="w-4 h-4 text-[#737370] flex-shrink-0 mt-0.5" />
+                    <span>{selectedPropertyAddress}</span>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         )}
 

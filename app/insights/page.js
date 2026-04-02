@@ -172,14 +172,14 @@ export default function SellerMarketInsightsPage() {
               <span className="text-right">Avg yield</span>
             </div>
             {topStates.map((s, i) => (
-              <div key={s.state} className="grid grid-cols-2 sm:grid-cols-4 gap-2 px-4 py-3 hover:bg-[#FAFAF8] transition-colors">
+              <div key={s.state} className="flex items-center justify-between sm:grid sm:grid-cols-4 gap-2 px-4 py-3 hover:bg-[#FAFAF8] transition-colors">
                 <div className="flex items-center gap-2">
                   <span className="text-[11px] font-bold text-[#A8A8A4] w-5">{i + 1}</span>
                   <p className="text-[13px] font-semibold text-[#1A1816]">{s.state}</p>
                 </div>
                 <p className="text-[13px] text-[#737370] sm:text-center">{s.count} deals</p>
-                <p className="text-[13px] font-medium text-[#1A1816] sm:text-center">{formatCurrency(s.avgPrice)}</p>
-                <p className={`text-[13px] font-semibold text-right ${s.avgYield > 0 ? 'text-[#0F6E56]' : 'text-[#737370]'}`}>
+                <p className="hidden sm:block text-[13px] font-medium text-[#1A1816] sm:text-center">{formatCurrency(s.avgPrice)}</p>
+                <p className={`hidden sm:block text-[13px] font-semibold text-right ${s.avgYield > 0 ? 'text-[#0F6E56]' : 'text-[#737370]'}`}>
                   {s.avgYield > 0 ? `${s.avgYield}%` : '—'}
                 </p>
               </div>

@@ -113,51 +113,53 @@ export function UTMLinksModal({ isOpen, onClose, property, baseUrl, userId }) {
                   className="rounded-lg border border-[#E8E8E4] bg-white overflow-hidden"
                 >
                   <div className="p-3">
-                    {/* Row: viewers + platform name on left, buttons on right */}
+                    {/* Row 1: platform name left, viewer count right */}
                     <div className="flex items-center justify-between gap-2 mb-2">
                       <span className="inline-flex items-center gap-2">
                         <img src={platform.icon} alt="" className="w-4 h-4 shrink-0" />
                         <span className="text-[13px] font-semibold text-[#1A1816]">{platform.name}</span>
-                        {countsLoading ? (
-                          <span className="h-5 w-16 bg-[#F0F0EE] rounded animate-pulse" />
-                        ) : count !== null ? (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-[#FAFAF8] border border-[#E8E8E4] px-2 py-0.5 text-[11px] font-medium text-[#737370]">
-                            <Users className="w-3 h-3 text-[#A8A8A4]" />
-                            {count} {count === 1 ? 'viewer' : 'viewers'}
-                          </span>
-                        ) : null}
                       </span>
-                      <div className="flex items-center gap-2 shrink-0">
-                        <button
-                          type="button"
-                          onClick={(e) => { e.stopPropagation(); openLink(platform); }}
-                          disabled={!hasValidSlug}
-                          className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded text-[12px] font-semibold border border-[#E8E8E4] text-[#1A1816] bg-white hover:bg-[#FAFAF8] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          <ExternalLink className="w-3.5 h-3.5" />
-                          Open
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => copyToClipboard(link, platform.code)}
-                          className={`inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded text-[12px] font-semibold transition-colors ${
-                            isCopied
-                              ? 'bg-[#E4F5EC] text-[#0F6E56] border border-[#A8DFBA]'
-                              : 'bg-[#FEF0EF] text-[#D03839] hover:bg-[#FEE4E3] border border-[#F5C4C0]'
-                          }`}
-                        >
-                          {isCopied ? (
-                            <><Check className="w-3.5 h-3.5" />Copied</>
-                          ) : (
-                            <><Copy className="w-3.5 h-3.5" />Copy</>
-                          )}
-                        </button>
-                      </div>
+                      {countsLoading ? (
+                        <span className="h-5 w-16 bg-[#F0F0EE] rounded animate-pulse" />
+                      ) : count !== null ? (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-[#FAFAF8] border border-[#E8E8E4] px-2 py-0.5 text-[11px] font-medium text-[#737370]">
+                          <Users className="w-3 h-3 text-[#A8A8A4]" />
+                          {count} {count === 1 ? 'viewer' : 'viewers'}
+                        </span>
+                      ) : null}
                     </div>
-                    <div className="rounded bg-[#FAFAF8] border border-[#E8E8E4] p-2">
+                    {/* Row 2: link block */}
+                    <div className="rounded bg-[#FAFAF8] border border-[#E8E8E4] p-2 mb-2">
                       <code className="text-[11px] text-[#1A1816] break-all block leading-relaxed">
                         {link}
                       </code>
+                    </div>
+                    {/* Row 3: Open + Copy buttons right-aligned */}
+                    <div className="flex items-center justify-end gap-2">
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); openLink(platform); }}
+                        disabled={!hasValidSlug}
+                        className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded text-[12px] font-semibold border border-[#E8E8E4] text-[#1A1816] bg-white hover:bg-[#FAFAF8] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5" />
+                        Open
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => copyToClipboard(link, platform.code)}
+                        className={`inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded text-[12px] font-semibold transition-colors ${
+                          isCopied
+                            ? 'bg-[#E4F5EC] text-[#0F6E56] border border-[#A8DFBA]'
+                            : 'bg-[#FEF0EF] text-[#D03839] hover:bg-[#FEE4E3] border border-[#F5C4C0]'
+                        }`}
+                      >
+                        {isCopied ? (
+                          <><Check className="w-3.5 h-3.5" />Copied</>
+                        ) : (
+                          <><Copy className="w-3.5 h-3.5" />Copy</>
+                        )}
+                      </button>
                     </div>
                   </div>
                 </div>

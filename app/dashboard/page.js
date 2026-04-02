@@ -384,7 +384,7 @@ export default function DashboardPage() {
                 </Link>
               </div>
             ) : (
-              <div className="grid grid-cols-2 gap-4 p-4">
+              <div className="flex gap-4 p-4 overflow-x-auto">
                 {recentProperties.map(property => {
                   const image = getFeatureImage(property);
                   const title = property.title || property.full_address || property.address || 'Property';
@@ -400,7 +400,7 @@ export default function DashboardPage() {
                     : 'bg-[#F3F3F0] text-[#737370]';
 
                   return (
-                    <div key={property.id} className="bg-white rounded border border-[#E8E8E4] overflow-hidden">
+                    <div key={property.id} className="bg-white rounded border border-[#E8E8E4] overflow-hidden flex-shrink-0 w-[85vw] sm:w-[calc(50%-8px)]">
                       {/* Image */}
                       <div className="relative h-[220px] bg-[#FAFAF8]">
                         {image ? (
