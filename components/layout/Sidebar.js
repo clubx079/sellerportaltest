@@ -11,6 +11,14 @@ import {
 
 const DESKTOP_BREAKPOINT = 1024
 
+// related_conversation_id is stored as UUID (toUuid of numeric id) — convert back to numeric
+function uuidToNumericConvId(uuid) {
+  if (!uuid) return null;
+  const match = String(uuid).match(/00000000-0000-0000-0000-([0-9a-f]{12})$/i);
+  if (match) return parseInt(match[1], 16);
+  return null;
+}
+
 export default function Sidebar({ isOpen, setIsOpen, activeItem, setActiveItem }) {
   const pathname = usePathname()
   const [logoError, setLogoError] = useState(false)
@@ -168,7 +176,7 @@ export default function Sidebar({ isOpen, setIsOpen, activeItem, setActiveItem }
                     notifications.map(n => (
                       <Link
                         key={n.id}
-                        href={n.related_conversation_id ? `/messages?conversation=${n.related_conversation_id}` : '/messages'}
+                        href={n.related_conversation_id ? `/messages?conversation=${uuidToNumericConvId(n.related_conversation_id) ?? n.related_conversation_id}` : '/messages'}
                         onClick={async () => {
                           setNotifOpen(false)
                           if (!n.is_read) {

@@ -104,14 +104,10 @@ export async function GET(request) {
           const pid = String(o.property_id);
           const [wdRes, pRes] = await Promise.all([
             supabase.from('wholesale_deals').select('full_address, display_address, address, city, state, price, bedrooms, bathrooms, sqft').eq('id', pid).maybeSingle(),
-            supabase.from('properties').select('address, city, state, price, bedrooms, bathrooms, floor_area').eq('id', pid).maybeSingle(),
+            supabase.from('properties').select('address, state, price, bedrooms, bathrooms, floor_area').eq('id', pid).maybeSingle(),
           ]);
           const wd = wdRes.data;
-          let p = pRes.data;
-          if (pRes.error) {
-            const { data: pMin } = await supabase.from('properties').select('address, city, state').eq('id', pid).maybeSingle();
-            p = pMin;
-          }
+          const p = pRes.data;
           if (wd) {
             property_address = (wd.full_address || wd.display_address || '').trim() || [wd.address, wd.city, wd.state].filter(Boolean).join(', ');
             property_price = wd.price ?? null;
@@ -120,7 +116,7 @@ export async function GET(request) {
             property_sqft = wd.sqft ?? null;
           }
           if (p) {
-            if (!property_address) property_address = [p.address, p.city, p.state].filter(Boolean).join(', ');
+            if (!property_address) property_address = [p.address, p.state].filter(Boolean).join(', ');
             if (property_price == null) property_price = p.price ?? null;
             if (property_bedrooms == null) property_bedrooms = p.bedrooms ?? null;
             if (property_bathrooms == null) property_bathrooms = p.bathrooms ?? null;
@@ -227,7 +223,6 @@ export async function PATCH(request) {
           body: `${sellerName} accepted your offer of ${formatCurrency(offer.offer_price)}`,
           is_read: false,
           related_conversation_id: offer.conversation_id,
-          related_offer_id: offer_id,
         }),
         buyerEmail && sendEmailToBuyer(
           buyerEmail,
@@ -262,7 +257,6 @@ export async function PATCH(request) {
           body: `${sellerName} declined your offer of ${formatCurrency(offer.offer_price)}`,
           is_read: false,
           related_conversation_id: offer.conversation_id,
-          related_offer_id: offer_id,
         }),
         buyerEmail && sendEmailToBuyer(
           buyerEmail,
@@ -323,7 +317,6 @@ export async function PATCH(request) {
           body: `${sellerName} countered with ${counterAmountStr}`,
           is_read: false,
           related_conversation_id: offer.conversation_id,
-          related_offer_id: counterOffer.id,
         }),
         buyerEmail && sendEmailToBuyer(
           buyerEmail,
