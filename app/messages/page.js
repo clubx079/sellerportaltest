@@ -780,20 +780,29 @@ export default function MessagesPage() {
                   </div>
                 )}
 
-                {/* RESPOND TO OFFER — only shown when offer is pending */}
-                {offer && offer.status === 'pending' && (
+                {/* RESPOND TO OFFER — always visible, disabled when no pending offer */}
+                {!(offer && (offer.status === 'accepted' || offer.status === 'rejected' || offer.status === 'countered')) && (
                   <div className="px-5 py-4">
                     <p className="text-[11px] font-semibold text-[#A8A8A4] uppercase tracking-[1.1px] mb-3">Respond to Offer</p>
-                    <button onClick={() => setShowAcceptModal(true)}
-                      className="w-full py-3 bg-[#D03839] text-white text-[14px] font-semibold rounded hover:bg-[#E0493B] transition-colors duration-200 mb-2">
+                    {!offer || offer.status !== 'pending' ? (
+                      <p className="text-[12px] text-[#A8A8A4] mb-3">No offer received yet</p>
+                    ) : null}
+                    <button
+                      onClick={() => offer && offer.status === 'pending' ? setShowAcceptModal(true) : undefined}
+                      disabled={!offer || offer.status !== 'pending'}
+                      className="w-full py-3 bg-[#D03839] text-white text-[14px] font-semibold rounded transition-colors duration-200 mb-2 disabled:opacity-40 disabled:cursor-not-allowed hover:enabled:bg-[#E0493B]">
                       Accept Offer
                     </button>
-                    <button onClick={() => { setShowCounterForm(true); setCounterAmount(String(Math.round(offer.offer_price || 0))); }}
-                      className="w-full py-3 border border-[#E8E8E4] text-[#1A1816] text-[14px] font-semibold rounded hover:bg-[#FAFAF8] transition-colors duration-200 mb-2">
+                    <button
+                      onClick={() => offer && offer.status === 'pending' ? (setShowCounterForm(true), setCounterAmount(String(Math.round(offer.offer_price || 0)))) : undefined}
+                      disabled={!offer || offer.status !== 'pending'}
+                      className="w-full py-3 border border-[#E8E8E4] text-[#1A1816] text-[14px] font-semibold rounded transition-colors duration-200 mb-2 disabled:opacity-40 disabled:cursor-not-allowed hover:enabled:bg-[#FAFAF8]">
                       Counter Offer
                     </button>
-                    <button onClick={() => setShowRejectModal(true)}
-                      className="w-full py-2.5 text-[#737370] text-[13px] font-medium hover:text-[#D03839] transition-colors duration-200 text-center">
+                    <button
+                      onClick={() => offer && offer.status === 'pending' ? setShowRejectModal(true) : undefined}
+                      disabled={!offer || offer.status !== 'pending'}
+                      className="w-full py-2.5 text-[#737370] text-[13px] font-medium transition-colors duration-200 text-center disabled:opacity-40 disabled:cursor-not-allowed hover:enabled:text-[#D03839]">
                       Reject Offer
                     </button>
                   </div>
