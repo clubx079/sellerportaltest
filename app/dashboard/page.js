@@ -251,7 +251,7 @@ export default function DashboardPage() {
             <h1 className="text-[24px] font-normal text-[#1A1816] tracking-[-0.56px]">Welcome Back, {firstName}</h1>
             <p className="text-[14px] text-[#737370] mt-0.5">{getCurrentDate()}</p>
           </div>
-          <div className="hidden lg:flex items-center gap-3">
+          <div className="flex items-center gap-3">
             {/* Notification Bell */}
             <div className="relative" ref={notifRef}>
               <button
@@ -266,7 +266,7 @@ export default function DashboardPage() {
                 )}
               </button>
               {notifOpen && (
-                <div className="absolute right-0 top-full mt-2 w-[380px] max-w-[calc(100vw-24px)] bg-white border border-[#E8E8E4] rounded-lg shadow-xl z-[200] overflow-hidden">
+                <div className="fixed top-[70px] left-3 right-3 lg:absolute lg:top-full lg:left-auto lg:right-0 lg:mt-2 lg:w-[380px] bg-white border border-[#E8E8E4] rounded-lg shadow-xl z-[200] overflow-hidden">
                   <div className="flex items-center justify-between px-4 py-3 border-b border-[#E8E8E4]">
                     <span className="text-[13px] font-semibold text-[#1A1816]">Notifications</span>
                     {notifUnread > 0 && (
