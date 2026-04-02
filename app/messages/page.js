@@ -112,6 +112,7 @@ export default function MessagesPage() {
 
   // Offer state
   const [offer, setOffer] = useState(null);
+  const [allOffers, setAllOffers] = useState([]);
   const [offerLoading, setOfferLoading] = useState(false);
   const [showAcceptModal, setShowAcceptModal] = useState(false);
   const [showRejectModal, setShowRejectModal] = useState(false);
@@ -261,22 +262,22 @@ export default function MessagesPage() {
         const headers = getAuthHeaders();
         if (headers.Authorization) {
           fetch(API, { method: 'POST', headers: { 'Content-Type': 'application/json', ...headers }, body: JSON.stringify({ action: 'mark_as_read', conversationId: openConversationId }) }).catch(() => {});
-          // If the buyer sent a message, re-fetch offer in case they just submitted one
-          if (newMsg.sender_type === 'user') {
-            fetch(`/api/seller/offers?conversation_id=${openConversationId}`, { headers })
-              .then(r => r.json())
-              .then(data => {
-                const offers = data.offers || [];
-                const latest = offers.find(o => o.status !== 'expired') || offers[0] || null;
-                setOffer(latest || null);
-                if (latest?.offer_price) setCounterAmount(String(Math.round(latest.offer_price)));
-              })
-              .catch(() => {});
-          }
         }
         setConversations(prev => prev.map(c => c.id === openConversationId ? { ...c, unread_count: 0, last_message_preview: (newMsg.message_text || '').slice(0, 200), last_message_at: newMsg.created_at || c.last_message_at } : c));
         setFilteredConversations(prev => prev.map(c => c.id === openConversationId ? { ...c, unread_count: 0, last_message_preview: (newMsg.message_text || '').slice(0, 200), last_message_at: newMsg.created_at || c.last_message_at } : c));
         scrollToBottom();
+      })
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'offers', filter: `conversation_id=eq.${openConversationId}` }, (payload) => {
+        const newOffer = payload.new;
+        if (!newOffer?.id) return;
+        setOffer(newOffer);
+        if (newOffer.offer_price) setCounterAmount(String(Math.round(newOffer.offer_price)));
+        scrollToBottom();
+      })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'offers', filter: `conversation_id=eq.${openConversationId}` }, (payload) => {
+        const updated = payload.new;
+        if (!updated?.id) return;
+        setOffer(prev => prev && String(prev.id) === String(updated.id) ? { ...prev, ...updated } : prev);
       })
       .subscribe();
     return () => supabase.removeChannel(channel);
@@ -346,7 +347,7 @@ export default function MessagesPage() {
 
   // Fetch offer when conversation changes
   useEffect(() => {
-    if (!openConversationId) { setOffer(null); return; }
+    if (!openConversationId) { setOffer(null); setAllOffers([]); return; }
     const headers = getAuthHeaders();
     if (!headers.Authorization) return;
     setOfferLoading(true);
@@ -354,12 +355,13 @@ export default function MessagesPage() {
       .then(r => r.json())
       .then(data => {
         const offers = data.offers || [];
-        // Show latest non-expired offer
+        setAllOffers(offers);
+        // Latest pending offer drives the respond panel
         const latest = offers.find(o => o.status !== 'expired') || offers[0] || null;
         setOffer(latest || null);
         if (latest?.offer_price) setCounterAmount(String(Math.round(latest.offer_price)));
       })
-      .catch(() => setOffer(null))
+      .catch(() => { setOffer(null); setAllOffers([]); })
       .finally(() => setOfferLoading(false));
     // Reset offer UI state on conversation change
     setShowAcceptModal(false);
@@ -380,12 +382,18 @@ export default function MessagesPage() {
       });
       const data = await res.json();
       if (!res.ok || data.error) throw new Error(data.error || 'Action failed');
-      // Refresh offer
-      const refreshRes = await fetch(`/api/seller/offers?conversation_id=${openConversationId}`, { headers });
+      // Refresh offer + messages in parallel
+      const [refreshRes, msgsRes] = await Promise.all([
+        fetch(`/api/seller/offers?conversation_id=${openConversationId}`, { headers }),
+        fetch(`${API}?action=get_messages&conversation_id=${openConversationId}`, { headers }),
+      ]);
       const refreshData = await refreshRes.json();
       const offers = refreshData.offers || [];
+      setAllOffers(offers);
       const latest = offers.find(o => o.status !== 'expired') || offers[0] || null;
       setOffer(latest || null);
+      const msgsData = await msgsRes.json();
+      if (msgsData.messages) setMessages(msgsData.messages);
       setShowAcceptModal(false);
       setShowRejectModal(false);
       setShowCounterForm(false);
@@ -400,11 +408,19 @@ export default function MessagesPage() {
   const buyerDisplayName = selectedConversation?.buyer_name?.trim() || 'Buyer';
   const selectedPropertyAddress = selectedConversation?.property_address || null;
 
-  // Group messages by date
-  const messagesByDate = messages.reduce((acc, msg) => {
-    const key = new Date(msg.created_at).toDateString();
+  // Merge offers as synthetic items, filter out text-based offer messages
+  const offerItems = allOffers.map(o => ({ ...o, _isOffer: true }));
+  const filteredMessages = messages.filter(m =>
+    !(m.message_text || '').startsWith('Offer submitted:') &&
+    !(m.message_text || '').startsWith('Counter offer:')
+  );
+  const allItems = [...filteredMessages, ...offerItems].sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+
+  // Group combined items by date
+  const messagesByDate = allItems.reduce((acc, item) => {
+    const key = new Date(item.created_at).toDateString();
     if (!acc[key]) acc[key] = [];
-    acc[key].push(msg);
+    acc[key].push(item);
     return acc;
   }, {});
 
@@ -532,40 +548,60 @@ export default function MessagesPage() {
                           </span>
                         </div>
                         <div className="space-y-4">
-                          {msgs.map(m => {
+                          {msgs.map((item, idx) => {
+                            const statusColors = { pending: 'bg-[#EBF3FC] text-[#4A90E2]', accepted: 'bg-[#E4F5EC] text-[#0F6E56]', rejected: 'bg-[#FEF0EF] text-[#D03839]', countered: 'bg-[#FFF7ED] text-[#C27A12]', withdrawn: 'bg-[#F3F3F1] text-[#737370]' };
+                            const statusLabel = { pending: 'Pending', accepted: 'Accepted', rejected: 'Rejected', countered: 'Countered', withdrawn: 'Withdrawn' };
+
+                            // Offer card from offers table (has its own status)
+                            if (item._isOffer) {
+                              const isCounter = !!item.parent_offer_id;
+                              const isSeller = isCounter; // counter offers are sent by seller
+                              return (
+                                <div key={`offer-${item.id}`}>
+                                  {isSeller
+                                    ? <p className="text-[12px] font-medium text-[#444441] mb-1 text-right">You</p>
+                                    : <p className="text-[12px] font-medium text-[#444441] mb-1">{buyerDisplayName}</p>
+                                  }
+                                  <div className={`flex ${isSeller ? 'justify-end' : 'justify-start'}`}>
+                                    <div className="bg-white border border-[#E8E8E4] rounded-lg px-4 py-3 shadow-sm min-w-[200px] max-w-[70%]">
+                                      <div className="flex items-center justify-between mb-2">
+                                        <span className="inline-block text-[11px] font-semibold px-2 py-0.5 rounded-full bg-[#EBF3FC] text-[#4A90E2]">
+                                          {isCounter ? 'Counter offer' : 'Offer submitted'}
+                                        </span>
+                                        <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${statusColors[item.status] || statusColors.pending}`}>
+                                          {statusLabel[item.status] || item.status}
+                                        </span>
+                                      </div>
+                                      <p className="text-[22px] font-bold text-[#1A1816] leading-none mb-1">{formatCurrency(item.offer_price)}</p>
+                                      {(item.financing_type || item.closing_timeline) && (
+                                        <p className="text-[12px] text-[#737370]">
+                                          {[item.financing_type, item.closing_timeline ? `Close in ${item.closing_timeline}` : null].filter(Boolean).join(' · ')}
+                                        </p>
+                                      )}
+                                      <span className="text-[11px] text-[#A8A8A4] mt-1 block">{formatTime(item.created_at)}</span>
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            }
+
+                            // Regular message
+                            const m = item;
                             const isSeller = m.sender_type === 'seller';
-                            const isOffer = !isSeller && (m.message_text || '').startsWith('Offer submitted:');
-                            // Parse offer card: line 0 = "Offer submitted: $X", line 1 = terms
-                            const offerLines = isOffer ? (m.message_text || '').split('\n') : [];
-                            const offerAmount = isOffer ? (offerLines[0] || '').replace('Offer submitted: ', '').trim() : '';
-                            const offerTerms = isOffer ? (offerLines[1] || '').trim() : '';
                             return (
                               <div key={m.id}>
                                 {isSeller && <p className="text-[12px] font-medium text-[#444441] mb-1 text-right">You</p>}
                                 {!isSeller && <p className="text-[12px] font-medium text-[#444441] mb-1">{buyerDisplayName}</p>}
                                 <div className={`flex ${isSeller ? 'justify-end' : 'justify-start'}`}>
                                   <div className="max-w-[70%]">
-                                    {isOffer ? (
-                                      <div className="bg-white border border-[#E8E8E4] rounded-lg px-4 py-3 shadow-sm min-w-[180px]">
-                                        <span className="inline-block text-[11px] font-semibold px-2 py-0.5 rounded-full bg-[#FEF3E2] text-[#B5620A] mb-2">Offer submitted</span>
-                                        <p className="text-[22px] font-bold text-[#1A1816] leading-none mb-1">{offerAmount}</p>
-                                        {offerTerms && <p className="text-[12px] text-[#737370]">{offerTerms}</p>}
-                                      </div>
-                                    ) : (
-                                      <div className={`rounded-lg px-4 py-3 ${
-                                        isSeller
-                                          ? 'bg-[#FEF0EF] text-[#1A1816] border border-[#F5C4C0]'
-                                          : 'bg-[#FAFAF8] text-[#1A1816] border border-[#E8E8E4]'
-                                      }`}>
-                                        {m.message_text && <p className="text-[14px] leading-relaxed whitespace-pre-wrap break-words">{m.message_text}</p>}
-                                      </div>
-                                    )}
+                                    <div className={`rounded-lg px-4 py-3 ${isSeller ? 'bg-[#FEF0EF] text-[#1A1816] border border-[#F5C4C0]' : 'bg-[#FAFAF8] text-[#1A1816] border border-[#E8E8E4]'}`}>
+                                      {m.message_text && <p className="text-[14px] leading-relaxed whitespace-pre-wrap break-words">{m.message_text}</p>}
+                                    </div>
                                     <div className={`flex items-center gap-1 mt-1 ${isSeller ? 'justify-end' : 'justify-start'}`}>
                                       <span className="text-[11px] text-[#A8A8A4]">{formatTime(m.created_at)}</span>
-                                      {isSeller && (
-                                        m.is_read
-                                          ? <CheckCheck className="w-3.5 h-3.5 text-[#4A90E2]" />
-                                          : <Check className="w-3.5 h-3.5 text-[#A8A8A4]" />
+                                      {isSeller && (m.is_read
+                                        ? <CheckCheck className="w-3.5 h-3.5 text-[#4A90E2]" />
+                                        : <Check className="w-3.5 h-3.5 text-[#A8A8A4]" />
                                       )}
                                     </div>
                                   </div>
@@ -812,8 +848,8 @@ export default function MessagesPage() {
                 {offer && offer.status === 'accepted' && (
                   <div className="px-5 py-4">
                     <div className="bg-[#E4F5EC] border border-[#A8DFBA] rounded-lg px-4 py-3">
-                      <p className="text-[13px] font-semibold text-[#0F6E56]">Offer accepted</p>
-                      <p className="text-[12px] text-[#0F6E56] mt-1">Coordinate with the buyer on contract signing next steps.</p>
+                      <p className="text-[13px] font-semibold text-[#0F6E56] mb-1">Next Steps</p>
+                      <p className="text-[12px] text-[#0F6E56]">Coordinate with the buyer to proceed to contract signing.</p>
                     </div>
                   </div>
                 )}

@@ -28,6 +28,14 @@ function toUuid(id) {
   return `00000000-0000-0000-0000-${hex}`;
 }
 
+// Convert UUID back to numeric conversation id
+function uuidToNumeric(uuid) {
+  if (!uuid) return null;
+  const match = String(uuid).match(/00000000-0000-0000-0000-([0-9a-f]{12})$/i);
+  if (match) return parseInt(match[1], 16);
+  return null;
+}
+
 function formatCurrency(amount) {
   if (!amount) return '$0';
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(amount);
@@ -49,7 +57,23 @@ async function sendEmailToBuyer(buyerEmail, subject, html) {
   }
 }
 
-function buildEmailHtml(logoUrl, title, titleColor, bodyHtml, ctaUrl, ctaLabel) {
+function buildPropertyBlock({ address, price, bedrooms, bathrooms, sqft, thumbnail } = {}) {
+  if (!address && !thumbnail) return '';
+  const details = [
+    bedrooms ? `${bedrooms} bd` : null,
+    bathrooms ? `${bathrooms} ba` : null,
+    sqft ? `${Number(sqft).toLocaleString()} sqft` : null,
+  ].filter(Boolean).join(' · ');
+  return `
+    ${thumbnail ? `<img src="${thumbnail}" alt="Property" style="width:100%;max-height:200px;object-fit:cover;display:block;border-radius:8px;margin-bottom:12px" />` : ''}
+    <div style="background:#F9F9F7;border-radius:8px;padding:14px 16px;margin:0 0 16px">
+      ${address ? `<p style="margin:0 0 4px;font-size:14px;font-weight:600;color:#1A1816">${String(address).replace(/</g, '&lt;')}</p>` : ''}
+      ${details ? `<p style="margin:0;font-size:13px;color:#737370">${details}</p>` : ''}
+      ${price ? `<p style="margin:4px 0 0;font-size:13px;color:#737370">Asking: <strong style="color:#1A1816">${formatCurrency(price)}</strong></p>` : ''}
+    </div>`;
+}
+
+function buildEmailHtml(logoUrl, title, titleColor, propertyBlock, bodyHtml, ctaUrl, ctaLabel) {
   return `
 <!DOCTYPE html><html><head><meta charset="utf-8"></head>
 <body style="margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f5f5f5;padding:24px">
@@ -58,7 +82,8 @@ function buildEmailHtml(logoUrl, title, titleColor, bodyHtml, ctaUrl, ctaLabel) 
       <img src="${logoUrl}" alt="Deelmap" width="160" height="48" style="display:block;max-width:160px;height:auto;border:0;margin:0 auto" />
     </div>
     <div style="padding:24px">
-      <p style="margin:0 0 12px;font-size:18px;font-weight:600;color:${titleColor || '#1A1816'}">${title}</p>
+      <p style="margin:0 0 16px;font-size:18px;font-weight:600;color:${titleColor || '#1A1816'}">${title}</p>
+      ${propertyBlock}
       ${bodyHtml}
       <a href="${ctaUrl}" style="display:inline-block;background:#D03839;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px;margin-top:16px">${ctaLabel}</a>
     </div>
@@ -197,14 +222,43 @@ export async function PATCH(request) {
     const logoUrl = `${sellerBase}/deelmap.png`;
     const buyerInboxUrl = `${buyerBase}/buyer/inbox?conversation=${offer.conversation_id}`;
 
-    // Lookup buyer email and seller name
-    const [buyerRes, sellerRes] = await Promise.all([
+    // Lookup buyer email, seller name, and property details
+    const [buyerRes, sellerRes, propDetails] = await Promise.all([
       supabase.from('users').select('email, first_name, last_name').eq('id', buyerUuidToNumericId(offer.buyer_id)).maybeSingle(),
       supabase.from('seller_applications').select('contact_person_name, business_name').eq('id', sellerId).maybeSingle(),
+      (async () => {
+        if (!offer.property_id) return {};
+        const pid = String(offer.property_id);
+        const [wdRes, pRes] = await Promise.all([
+          supabase.from('wholesale_deals').select('full_address, display_address, address, city, state, price, bedrooms, bathrooms, sqft').eq('id', pid).maybeSingle(),
+          supabase.from('properties').select('address, state, price, bedrooms, bathrooms, floor_area').eq('id', pid).maybeSingle(),
+        ]);
+        const wd = wdRes.data; const p = pRes.data;
+        let address = null, price = null, bedrooms = null, bathrooms = null, sqft = null;
+        if (wd) {
+          address = (wd.full_address || wd.display_address || '').trim() || [wd.address, wd.city, wd.state].filter(Boolean).join(', ') || null;
+          price = wd.price ?? null; bedrooms = wd.bedrooms ?? null; bathrooms = wd.bathrooms ?? null; sqft = wd.sqft ?? null;
+        }
+        if (p) {
+          if (!address) address = [p.address, p.state].filter(Boolean).join(', ') || null;
+          if (price == null) price = p.price ?? null;
+          if (bedrooms == null) bedrooms = p.bedrooms ?? null;
+          if (bathrooms == null) bathrooms = p.bathrooms ?? null;
+          if (sqft == null) sqft = p.floor_area ?? null;
+        }
+        const [feat, any, img] = await Promise.all([
+          supabase.from('property_photos').select('photo_url').eq('deal_id', pid).eq('is_featured', true).limit(1).maybeSingle(),
+          supabase.from('property_photos').select('photo_url').eq('deal_id', pid).order('display_order', { ascending: true }).limit(1).maybeSingle(),
+          supabase.from('property_images').select('image_url').eq('property_id', pid).order('sort_order', { ascending: true }).limit(1).maybeSingle(),
+        ]);
+        const thumbnail = feat.data?.photo_url || any.data?.photo_url || img.data?.image_url || null;
+        return { address, price, bedrooms, bathrooms, sqft, thumbnail };
+      })(),
     ]);
     const buyerEmail = buyerRes.data?.email;
     const buyerName = buyerRes.data ? `${buyerRes.data.first_name || ''} ${buyerRes.data.last_name || ''}`.trim() || buyerEmail : 'Buyer';
     const sellerName = sellerRes.data?.contact_person_name || sellerRes.data?.business_name || 'Seller';
+    const propertyBlock = buildPropertyBlock(propDetails);
 
     if (action === 'accept') {
       const { error } = await supabase
@@ -212,6 +266,14 @@ export async function PATCH(request) {
         .update({ status: 'accepted', updated_at: new Date().toISOString() })
         .eq('id', offer_id);
       if (error) return NextResponse.json({ error: 'Failed to accept offer' }, { status: 500 });
+
+      // Withdraw all other pending offers in the same conversation (deal is closed)
+      await supabase
+        .from('offers')
+        .update({ status: 'withdrawn', updated_at: new Date().toISOString() })
+        .eq('conversation_id', offer.conversation_id)
+        .eq('status', 'pending')
+        .neq('id', offer_id);
 
       // Notification + email to buyer (non-blocking)
       Promise.all([
@@ -231,6 +293,7 @@ export async function PATCH(request) {
             logoUrl,
             'Your offer was accepted!',
             '#0F6E56',
+            propertyBlock,
             `<p style="font-size:14px;color:#444">${sellerName.replace(/</g, '&lt;')} accepted your offer of <strong>${formatCurrency(offer.offer_price)}</strong>. Next steps will begin shortly.</p>`,
             buyerInboxUrl,
             'View Conversation'
@@ -265,6 +328,7 @@ export async function PATCH(request) {
             logoUrl,
             'Your offer was declined',
             '#D03839',
+            propertyBlock,
             `<p style="font-size:14px;color:#444">${sellerName.replace(/</g, '&lt;')} declined your offer of <strong>${formatCurrency(offer.offer_price)}</strong>. You can still continue the conversation.</p>`,
             buyerInboxUrl,
             'View Conversation'
@@ -308,6 +372,28 @@ export async function PATCH(request) {
 
       const counterAmountStr = formatCurrency(counter_data.amount);
 
+      // Insert counter offer as a message so it appears in both seller and buyer chat (awaited so client re-fetch sees it)
+      const convNumeric = uuidToNumeric(offer.conversation_id);
+      if (convNumeric) {
+        const counterTerms = [
+          counter_data.closing_timeline || offer.closing_timeline,
+          counter_data.financing_type || offer.financing_type,
+        ].filter(Boolean).join(' · ');
+        await supabase.from('messages').insert({
+          conversation_id: convNumeric,
+          sender_type: 'seller',
+          sender_id: sellerId,
+          message_text: `Counter offer: ${counterAmountStr}${counterTerms ? `\n${counterTerms}` : ''}`,
+          has_attachment: false,
+          is_read: false,
+        });
+        supabase.from('conversations').update({
+          last_message_preview: `Counter offer: ${counterAmountStr}`,
+          last_message_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        }).eq('id', convNumeric).then(() => {}).catch(() => {});
+      }
+
       Promise.all([
         supabase.from('notifications').insert({
           recipient_id: offer.buyer_id,
@@ -325,6 +411,7 @@ export async function PATCH(request) {
             logoUrl,
             `Counter offer received: ${counterAmountStr}`,
             '#1A1816',
+            propertyBlock,
             `<p style="font-size:14px;color:#444">${sellerName.replace(/</g, '&lt;')} sent a counter offer of <strong>${counterAmountStr}</strong>. Review and respond in your inbox.</p>`,
             buyerInboxUrl,
             'View Counter Offer'

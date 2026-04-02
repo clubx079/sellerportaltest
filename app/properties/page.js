@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { Plus, Edit2, Trash2, Eye, Search, X, Building2, ChevronLeft, ChevronRight, MapPin, DollarSign, RotateCcw, BarChart2, Link2 } from 'lucide-react';
+import { Plus, Edit2, Trash2, Eye, Search, X, Building2, ChevronLeft, ChevronRight, MapPin, DollarSign, RotateCcw, BarChart2, Link2, Home, FileEdit } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import DeleteConfirmModal from '@/components/properties/DeleteConfirmModal';
 import PropertyViewModal from '@/components/properties/PropertyViewModal';
@@ -484,7 +484,7 @@ const PropertiesManagement = () => {
         <div className="flex justify-end">
           <button
             onClick={() => router.push('/properties/new')}
-            className="flex items-center gap-1.5 bg-primary hover:bg-primary-700 text-white px-3 py-1.5 rounded-xl text-xs font-medium transition-all duration-200 shrink-0"
+            className="flex items-center gap-1.5 bg-[#D03839] hover:bg-[#E0493B] text-white px-3 py-2 rounded text-[13px] font-semibold transition-colors shrink-0"
           >
             <Plus size={14} />
             <span className="hidden sm:inline">Add Property</span>
@@ -496,21 +496,35 @@ const PropertiesManagement = () => {
       {/* Stats: only on Active view; minimal and professional. Trash view shows a single summary line. */}
       {viewMode === 'active' ? (
         <div className="grid grid-cols-3 gap-3">
-          <div className="bg-white rounded border border-[#E8E8E4] px-4 py-5 flex flex-col" style={{ fontFamily: 'var(--font-dm-sans), sans-serif' }}>
-            <p className="text-[13px] font-medium text-[#737370] mb-5">Total listings</p>
+          <div className="bg-white rounded border border-[#E8E8E4] px-4 py-5 flex flex-col">
+            <div className="flex items-start justify-between mb-5">
+              <p className="text-[13px] font-medium text-[#737370]">Total listings</p>
+              <div className="w-8 h-8 rounded-full bg-[#EBF3FC] flex items-center justify-center flex-shrink-0">
+                <Home className="w-4 h-4 text-[#4A90E2]" />
+              </div>
+            </div>
             <p className="text-[36px] font-bold text-[#1A1816] leading-none tracking-tight">{totalProperties}</p>
           </div>
-          <div className="bg-white rounded border border-[#E8E8E4] px-4 py-5 flex flex-col" style={{ fontFamily: 'var(--font-dm-sans), sans-serif' }}>
-            <p className="text-[13px] font-medium text-[#737370] mb-5">Active</p>
+          <div className="bg-white rounded border border-[#E8E8E4] px-4 py-5 flex flex-col">
+            <div className="flex items-start justify-between mb-5">
+              <p className="text-[13px] font-medium text-[#737370]">Active</p>
+              <div className="w-8 h-8 rounded-full bg-[#E4F5EC] flex items-center justify-center flex-shrink-0">
+                <BarChart2 className="w-4 h-4 text-[#0F6E56]" />
+              </div>
+            </div>
             <p className="text-[36px] font-bold text-[#1A1816] leading-none tracking-tight">{activeProperties}</p>
           </div>
           <button
             type="button"
             onClick={() => setFilterStatus('draft')}
             className="bg-white rounded border border-[#E8E8E4] px-4 py-5 flex flex-col text-left hover:bg-[#FAFAF8] transition-colors"
-            style={{ fontFamily: 'var(--font-dm-sans), sans-serif' }}
           >
-            <p className="text-[13px] font-medium text-[#737370] mb-5">Draft</p>
+            <div className="flex items-start justify-between mb-5">
+              <p className="text-[13px] font-medium text-[#737370]">Draft</p>
+              <div className="w-8 h-8 rounded-full bg-[#FEF3E2] flex items-center justify-center flex-shrink-0">
+                <FileEdit className="w-4 h-4 text-[#B5620A]" />
+              </div>
+            </div>
             <p className="text-[36px] font-bold text-[#1A1816] leading-none tracking-tight">{draftProperties}</p>
           </button>
         </div>
@@ -522,75 +536,68 @@ const PropertiesManagement = () => {
 
       {/* Table Card */}
       <div className="bg-white rounded-lg border border-gray-200 overflow-hidden shadow-card">
-        {/* Controls */}
-        <div className="px-4 py-3 border-b border-gray-200 space-y-2">
-          {/* Row 1: Search + Rows per page */}
-          <div className="flex items-center gap-2">
-            <div className="relative flex-1">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
-              <input
-                type="text"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-8 pr-8 py-1.5 text-xs border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-gray-400 bg-white"
-                placeholder="Search by title or location..."
-              />
-              {searchTerm && (
-                <button
-                  onClick={() => setSearchTerm('')}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                >
-                  <X className="w-3.5 h-3.5" />
-                </button>
-              )}
-            </div>
-            <select
-              value={entriesPerPage}
-              onChange={(e) => {
-                setEntriesPerPage(Number(e.target.value));
-                setCurrentPage(1);
-              }}
-              className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-gray-400 bg-white text-gray-700 shrink-0"
-            >
-              <option value={10}>10 rows</option>
-              <option value={25}>25 rows</option>
-              <option value={50}>50 rows</option>
-              <option value={100}>100 rows</option>
-            </select>
+        {/* Controls — single row */}
+        <div className="px-4 py-3 border-b border-gray-200 flex items-center gap-2 flex-wrap">
+          <div className="relative flex-1 min-w-[160px]">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-8 pr-8 py-1.5 text-xs border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-gray-400 bg-white"
+              placeholder="Search by title or location..."
+            />
+            {searchTerm && (
+              <button
+                onClick={() => setSearchTerm('')}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
           </div>
-
-          {/* Row 2: Status + Property Status + Clear */}
-          <div className="grid grid-cols-3 gap-2">
-            <select
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
-              className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-gray-400 bg-white text-gray-700"
-            >
-              <option value="">Status</option>
-              <option value="draft">Draft</option>
-              <option value="active">Active</option>
-              <option value="published">Published</option>
-              <option value="incomplete">Incomplete</option>
-              <option value="inactive">Inactive</option>
-            </select>
-            <select
-              value={filterPropertyStatus}
-              onChange={(e) => setFilterPropertyStatus(e.target.value)}
-              className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-gray-400 bg-white text-gray-700"
-            >
-              <option value="">Prop. Status</option>
-              <option value="available">Available</option>
-              <option value="pending">Pending</option>
-              <option value="sold">Sold</option>
-              <option value="under_contract">Under Contract</option>
-            </select>
-            <button
-              onClick={clearFilters}
-              className="text-xs bg-red-50 hover:bg-red-100 text-red-600 rounded-lg px-2 py-1.5 transition-colors"
-            >
-              Clear
-            </button>
-          </div>
+          <select
+            value={filterStatus}
+            onChange={(e) => setFilterStatus(e.target.value)}
+            className="text-xs border border-[#E8E8E4] rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-[#D03839]/20 focus:border-[#D03839] bg-white text-[#1A1816] shrink-0"
+          >
+            <option value="">Status</option>
+            <option value="draft">Draft</option>
+            <option value="active">Active</option>
+            <option value="published">Published</option>
+            <option value="incomplete">Incomplete</option>
+            <option value="inactive">Inactive</option>
+          </select>
+          <select
+            value={filterPropertyStatus}
+            onChange={(e) => setFilterPropertyStatus(e.target.value)}
+            className="text-xs border border-[#E8E8E4] rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-[#D03839]/20 focus:border-[#D03839] bg-white text-[#1A1816] shrink-0"
+          >
+            <option value="">Property Status</option>
+            <option value="available">Available</option>
+            <option value="pending">Pending</option>
+            <option value="sold">Sold</option>
+            <option value="under_contract">Under Contract</option>
+          </select>
+          <select
+            value={entriesPerPage}
+            onChange={(e) => {
+              setEntriesPerPage(Number(e.target.value));
+              setCurrentPage(1);
+            }}
+            className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-gray-400 bg-white text-gray-700 shrink-0"
+          >
+            <option value={10}>10 rows</option>
+            <option value={25}>25 rows</option>
+            <option value={50}>50 rows</option>
+            <option value={100}>100 rows</option>
+          </select>
+          <button
+            onClick={clearFilters}
+            className="text-xs bg-[#FEF0EF] hover:bg-[#FEE4E3] text-[#D03839] rounded-lg px-3 py-1.5 transition-colors font-medium shrink-0"
+          >
+            Clear
+          </button>
         </div>
 
         {/* Desktop: Table */}

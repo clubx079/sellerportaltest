@@ -34,6 +34,13 @@ function getInitials(name) {
   return parts[0].substring(0, 2).toUpperCase();
 }
 
+function uuidToNumericConvId(uuid) {
+  if (!uuid) return null;
+  const match = String(uuid).match(/00000000-0000-0000-0000-([0-9a-f]{12})$/i);
+  if (match) return parseInt(match[1], 16);
+  return null;
+}
+
 export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState(null);
@@ -46,12 +53,45 @@ export default function DashboardPage() {
   const [recentQueries, setRecentQueries] = useState([]);
   const [currency, setCurrency] = useState("$");
   const scrollRef = useRef(null);
+  const [notifications, setNotifications] = useState([]);
+  const [notifUnread, setNotifUnread] = useState(0);
+  const [notifOpen, setNotifOpen] = useState(false);
+  const notifRef = useRef(null);
 
   useEffect(() => {
     const userStr = localStorage.getItem("seller_user");
     if (userStr) setUser(JSON.parse(userStr));
     setCurrency(getCurrentCurrencySymbol());
     fetchDashboardData();
+  }, []);
+
+  // Close notification dropdown when clicking outside
+  useEffect(() => {
+    function handleClick(e) {
+      if (notifRef.current && !notifRef.current.contains(e.target)) setNotifOpen(false);
+    }
+    if (notifOpen) document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [notifOpen]);
+
+  // Fetch notifications on mount and every 30s
+  useEffect(() => {
+    const userStr = localStorage.getItem("seller_user");
+    const sellerId = userStr ? JSON.parse(userStr)?.id : null;
+    if (!sellerId) return;
+    let mounted = true, timer = null;
+    const fetchNotifs = async () => {
+      try {
+        const res = await fetch('/api/seller/notifications', { headers: { Authorization: `Bearer ${sellerId}` } });
+        const data = await res.json();
+        if (!mounted) return;
+        if (Array.isArray(data?.notifications)) setNotifications(data.notifications);
+        if (data?.unreadCount != null) setNotifUnread(data.unreadCount);
+      } catch {}
+    };
+    fetchNotifs();
+    timer = setInterval(() => { if (document.visibilityState === 'visible') fetchNotifs(); }, 30000);
+    return () => { mounted = false; clearInterval(timer); };
   }, []);
 
   const fetchDashboardData = async () => {
@@ -212,10 +252,76 @@ export default function DashboardPage() {
             <p className="text-[14px] text-[#737370] mt-0.5">{getCurrentDate()}</p>
           </div>
           <div className="hidden lg:flex items-center gap-3">
-            <button className="relative p-2.5 rounded border border-[#E8E8E4] hover:bg-[#FAFAF8] transition-colors duration-200">
-              <Bell className="w-4 h-4 text-[#444441]" />
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-[#D03839] rounded-full"></span>
-            </button>
+            {/* Notification Bell */}
+            <div className="relative" ref={notifRef}>
+              <button
+                onClick={() => setNotifOpen(prev => !prev)}
+                className="relative p-2.5 rounded border border-[#E8E8E4] hover:bg-[#FAFAF8] transition-colors duration-200"
+              >
+                <Bell className="w-4 h-4 text-[#444441]" />
+                {notifUnread > 0 && (
+                  <span className="absolute top-1 right-1 min-w-[16px] h-[16px] flex items-center justify-center px-1 text-[10px] font-bold text-white bg-[#D03839] rounded-full leading-none">
+                    {notifUnread > 99 ? '99+' : notifUnread}
+                  </span>
+                )}
+              </button>
+              {notifOpen && (
+                <div className="absolute right-0 top-full mt-2 w-[380px] bg-white border border-[#E8E8E4] rounded-lg shadow-xl z-[200] overflow-hidden">
+                  <div className="flex items-center justify-between px-4 py-3 border-b border-[#E8E8E4]">
+                    <span className="text-[13px] font-semibold text-[#1A1816]">Notifications</span>
+                    {notifUnread > 0 && (
+                      <button
+                        onClick={async () => {
+                          const sellerId = user?.id;
+                          if (!sellerId) return;
+                          await fetch('/api/seller/notifications', { method: 'POST', headers: { Authorization: `Bearer ${sellerId}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'mark_all_read' }) });
+                          setNotifUnread(0);
+                          setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
+                        }}
+                        className="text-[11px] text-[#D03839] font-medium hover:underline"
+                      >
+                        Mark all read
+                      </button>
+                    )}
+                  </div>
+                  <div className="max-h-[320px] overflow-y-auto">
+                    {notifications.length === 0 ? (
+                      <div className="flex items-center justify-center h-16 text-[13px] text-[#737370]">No notifications yet</div>
+                    ) : (
+                      notifications.map(n => {
+                        const convNumeric = uuidToNumericConvId(n.related_conversation_id);
+                        const href = convNumeric ? `/messages?conversation=${convNumeric}` : '/messages';
+                        return (
+                          <Link
+                            key={n.id}
+                            href={href}
+                            onClick={async () => {
+                              setNotifOpen(false);
+                              if (!n.is_read) {
+                                const sellerId = user?.id;
+                                if (sellerId) {
+                                  await fetch('/api/seller/notifications', { method: 'POST', headers: { Authorization: `Bearer ${sellerId}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'mark_read', notification_id: n.id }) });
+                                  setNotifications(prev => prev.map(x => x.id === n.id ? { ...x, is_read: true } : x));
+                                  setNotifUnread(prev => Math.max(0, prev - 1));
+                                }
+                              }
+                            }}
+                            className={`flex items-start gap-3 px-4 py-3 border-l-2 transition-colors hover:bg-[#FAFAF8] ${n.is_read ? 'border-l-transparent bg-white' : 'border-l-[#D03839] bg-[#FAFAF8]'}`}
+                          >
+                            <Bell className="w-4 h-4 text-[#737370] flex-shrink-0 mt-0.5" />
+                            <div className="flex-1 min-w-0">
+                              <p className={`text-[13px] truncate ${n.is_read ? 'text-[#444441]' : 'font-semibold text-[#1A1816]'}`}>{n.title}</p>
+                              <p className="text-[11px] text-[#737370] truncate mt-0.5">{n.body}</p>
+                              <p className="text-[10px] text-[#A8A8A4] mt-1">{n.created_at ? new Date(n.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : ''}</p>
+                            </div>
+                          </Link>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
             <Link href="/properties/new" className="flex items-center gap-2 px-4 py-2.5 bg-[#1A1816] text-white text-[14px] font-semibold rounded hover:bg-[#2a2826] transition-colors duration-200">
               <PlusCircle className="w-4 h-4" />
               Post a deal
