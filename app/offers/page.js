@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { FileText, Loader2, MapPin, Calendar, Home, ExternalLink, MessageCircle } from 'lucide-react';
+import { FileText, Loader2, MapPin, Calendar, Home, MessageCircle, ChevronRight, DollarSign } from 'lucide-react';
 
 const FONT = 'var(--font-dm-sans), sans-serif';
 
@@ -112,10 +112,12 @@ export default function OffersReceivedPage() {
             {filtered.map((offer) => {
               const status = STATUS_STYLES[offer.status] || STATUS_STYLES.pending;
               const convLink = offer.conv_numeric ? `/messages?conversation=${offer.conv_numeric}` : '/messages';
+              const priceDiff = offer.property_price && offer.offer_price
+                ? offer.offer_price - offer.property_price : null;
               return (
                 <div key={offer.id} className="bg-white border border-[#E8E8E4] rounded overflow-hidden flex flex-col sm:flex-row">
                   {/* Property image */}
-                  <div className="sm:w-[140px] h-[100px] sm:h-auto bg-[#F3F3F1] flex-shrink-0 relative">
+                  <div className="sm:w-[140px] h-[110px] sm:h-auto bg-[#F3F3F1] flex-shrink-0 relative">
                     {offer.property_thumbnail_url ? (
                       <img src={offer.property_thumbnail_url} alt="" className="block w-full h-full object-cover" />
                     ) : (
@@ -129,16 +131,33 @@ export default function OffersReceivedPage() {
                   </div>
 
                   {/* Details */}
-                  <div className="flex-1 p-4 flex flex-col sm:flex-row gap-3">
+                  <div className="flex-1 p-4 flex flex-col sm:flex-row gap-3 min-w-0">
                     {/* Left: property + buyer info */}
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-start gap-1 mb-1">
-                        <MapPin className="w-3.5 h-3.5 text-[#737370] flex-shrink-0 mt-0.5" />
-                        <p className="text-[13px] font-semibold text-[#1A1816] leading-snug">
-                          {offer.property_address || 'Property address unavailable'}
-                        </p>
-                      </div>
-                      <p className="text-[12px] text-[#737370] mb-2">From <span className="font-medium text-[#444441]">{offer.buyer_name}</span></p>
+                      {offer.property_address ? (
+                        <div className="flex items-start gap-1 mb-1">
+                          <MapPin className="w-3.5 h-3.5 text-[#737370] flex-shrink-0 mt-0.5" />
+                          <p className="text-[13px] font-semibold text-[#1A1816] leading-snug truncate">{offer.property_address}</p>
+                        </div>
+                      ) : (
+                        <p className="text-[13px] font-semibold text-[#1A1816] mb-1">Property address unavailable</p>
+                      )}
+
+                      {/* Beds / Baths / Sqft */}
+                      {(offer.property_bedrooms || offer.property_bathrooms || offer.property_sqft) && (
+                        <div className="flex items-center gap-2 text-[12px] text-[#737370] mb-1.5">
+                          {offer.property_bedrooms && <span>{offer.property_bedrooms} bed</span>}
+                          {offer.property_bedrooms && offer.property_bathrooms && <span className="text-[#D4D4CF]">·</span>}
+                          {offer.property_bathrooms && <span>{offer.property_bathrooms} bath</span>}
+                          {offer.property_sqft && (offer.property_bedrooms || offer.property_bathrooms) && <span className="text-[#D4D4CF]">·</span>}
+                          {offer.property_sqft && <span>{Number(offer.property_sqft).toLocaleString()} sqft</span>}
+                        </div>
+                      )}
+
+                      <p className="text-[12px] text-[#737370] mb-1.5">
+                        From <span className="font-medium text-[#444441]">{offer.buyer_name}</span>
+                      </p>
+
                       <div className="flex flex-wrap gap-x-3 gap-y-1 text-[12px] text-[#737370]">
                         {offer.financing_type && <span>{offer.financing_type}</span>}
                         {offer.closing_timeline && <><span className="text-[#D4D4CF]">·</span><span>Close in {offer.closing_timeline}</span></>}
@@ -154,10 +173,18 @@ export default function OffersReceivedPage() {
                       <div className="text-right">
                         <p className="text-[11px] text-[#737370]">Offer amount</p>
                         <p className="text-[20px] font-bold text-[#1A1816]">{formatCurrency(offer.offer_price)}</p>
+                        {offer.property_price ? (
+                          <p className="text-[11px] text-[#737370]">Asking {formatCurrency(offer.property_price)}</p>
+                        ) : null}
+                        {priceDiff != null && (
+                          <p className={`text-[11px] font-medium ${priceDiff >= 0 ? 'text-[#0F6E56]' : 'text-[#D03839]'}`}>
+                            {priceDiff >= 0 ? `+${formatCurrency(priceDiff)}` : formatCurrency(priceDiff)} vs asking
+                          </p>
+                        )}
                       </div>
                       <Link
                         href={convLink}
-                        className="flex items-center gap-1.5 px-3 py-2 bg-[#D03839] hover:bg-[#E0493B] text-white text-[12px] font-semibold rounded transition-colors"
+                        className="flex items-center gap-1.5 px-3 py-2 bg-[#D03839] hover:bg-[#E0493B] text-white text-[12px] font-semibold rounded transition-colors whitespace-nowrap"
                       >
                         <MessageCircle className="w-3.5 h-3.5" />
                         Respond

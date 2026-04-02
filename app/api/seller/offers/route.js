@@ -99,16 +99,33 @@ export async function GET(request) {
 
         // Property details
         let property_address = null, property_thumbnail_url = null;
+        let property_price = null, property_bedrooms = null, property_bathrooms = null, property_sqft = null;
         if (o.property_id) {
           const pid = String(o.property_id);
           const [wdRes, pRes] = await Promise.all([
-            supabase.from('wholesale_deals').select('full_address, display_address, address, city, state').eq('id', pid).maybeSingle(),
-            supabase.from('properties').select('address, city, state').eq('id', pid).maybeSingle(),
+            supabase.from('wholesale_deals').select('full_address, display_address, address, city, state, price, bedrooms, bathrooms, sqft').eq('id', pid).maybeSingle(),
+            supabase.from('properties').select('address, city, state, price, bedrooms, bathrooms, floor_area').eq('id', pid).maybeSingle(),
           ]);
           const wd = wdRes.data;
-          const p = pRes.data;
-          if (wd) property_address = (wd.full_address || wd.display_address || '').trim() || [wd.address, wd.city, wd.state].filter(Boolean).join(', ');
-          if (!property_address && p) property_address = [p.address, p.city, p.state].filter(Boolean).join(', ');
+          let p = pRes.data;
+          if (pRes.error) {
+            const { data: pMin } = await supabase.from('properties').select('address, city, state').eq('id', pid).maybeSingle();
+            p = pMin;
+          }
+          if (wd) {
+            property_address = (wd.full_address || wd.display_address || '').trim() || [wd.address, wd.city, wd.state].filter(Boolean).join(', ');
+            property_price = wd.price ?? null;
+            property_bedrooms = wd.bedrooms ?? null;
+            property_bathrooms = wd.bathrooms ?? null;
+            property_sqft = wd.sqft ?? null;
+          }
+          if (p) {
+            if (!property_address) property_address = [p.address, p.city, p.state].filter(Boolean).join(', ');
+            if (property_price == null) property_price = p.price ?? null;
+            if (property_bedrooms == null) property_bedrooms = p.bedrooms ?? null;
+            if (property_bathrooms == null) property_bathrooms = p.bathrooms ?? null;
+            if (property_sqft == null) property_sqft = p.floor_area ?? null;
+          }
 
           // Thumbnail
           const [feat, any, img] = await Promise.all([
@@ -125,7 +142,7 @@ export async function GET(request) {
           return match ? parseInt(match[1], 16) : null;
         })();
 
-        return { ...o, buyer_name, property_address, property_thumbnail_url, conv_numeric };
+        return { ...o, buyer_name, property_address, property_price, property_bedrooms, property_bathrooms, property_sqft, property_thumbnail_url, conv_numeric };
       }));
 
       const pendingCount = enriched.filter(o => o.status === 'pending').length;
