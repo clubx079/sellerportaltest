@@ -316,10 +316,11 @@ export async function GET(request) {
 
           let buyer_name = 'Buyer';
           let buyer_first_name = 'Buyer';
+          let buyer_email = null;
           if (c.buyer_uuid) {
             const { data: u } = await supabase
               .from('users')
-              .select('first_name, last_name')
+              .select('first_name, last_name, email')
               .eq('id', c.buyer_uuid)
               .maybeSingle();
             if (u) {
@@ -327,23 +328,28 @@ export async function GET(request) {
               if (full) buyer_name = full;
               if (u.first_name && String(u.first_name).trim()) buyer_first_name = String(u.first_name).trim();
               else if (full) buyer_first_name = full.trim().split(/\s+/)[0] || 'Buyer';
+              if (u.email) buyer_email = u.email;
             }
-            if (buyer_name === 'Buyer') {
+            if (buyer_name === 'Buyer' || !buyer_email) {
               try {
                 const { data: authData } = await supabase.auth.admin.getUserById(c.buyer_uuid);
                 if (authData?.user) {
                   const meta = authData.user.user_metadata || {};
                   const name = (meta.full_name || [meta.first_name, meta.last_name].filter(Boolean).join(' ')).trim();
-                  if (name) {
-                    buyer_name = name;
-                    buyer_first_name = (meta.first_name && String(meta.first_name).trim()) || name.trim().split(/\s+/)[0] || 'Buyer';
-                  } else if (authData.user.email) {
-                    buyer_name = authData.user.email.split('@')[0] || 'Buyer';
-                    buyer_first_name = buyer_name;
+                  if (buyer_name === 'Buyer') {
+                    if (name) {
+                      buyer_name = name;
+                      buyer_first_name = (meta.first_name && String(meta.first_name).trim()) || name.trim().split(/\s+/)[0] || 'Buyer';
+                    } else if (authData.user.email) {
+                      buyer_name = authData.user.email.split('@')[0] || 'Buyer';
+                      buyer_first_name = buyer_name;
+                    }
                   }
+                  if (!buyer_email && authData.user.email) buyer_email = authData.user.email;
                 }
               } catch (_) {}
-            } else if (buyer_first_name === 'Buyer' && buyer_name !== 'Buyer') {
+            }
+            if (buyer_first_name === 'Buyer' && buyer_name !== 'Buyer') {
               buyer_first_name = buyer_name.trim().split(/\s+/)[0] || 'Buyer';
             }
           }
@@ -369,6 +375,7 @@ export async function GET(request) {
             property_address: resolvedAddress || null,
             buyer_name,
             buyer_first_name,
+            buyer_email,
             property_thumbnail_url,
             unread_count,
             is_done: !!pref?.is_done,
