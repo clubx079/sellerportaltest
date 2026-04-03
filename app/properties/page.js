@@ -950,14 +950,16 @@ const PropertiesManagement = () => {
       )}
 
       {showAnalyticsSidebar && propertyForAnalytics && (
-        <PropertyAnalyticsSidebar
-          propertyId={propertyForAnalytics.id}
-          propertyName={propertyForAnalytics.full_address || propertyForAnalytics.address || propertyForAnalytics.slug}
-          onClose={() => {
-            setShowAnalyticsSidebar(false);
-            setPropertyForAnalytics(null);
-          }}
-        />
+        <div className="!mt-0">
+          <PropertyAnalyticsSidebar
+            propertyId={propertyForAnalytics.id}
+            propertyName={propertyForAnalytics.full_address || propertyForAnalytics.address || propertyForAnalytics.slug}
+            onClose={() => {
+              setShowAnalyticsSidebar(false);
+              setPropertyForAnalytics(null);
+            }}
+          />
+        </div>
       )}
     </div>
   );
