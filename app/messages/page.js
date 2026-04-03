@@ -114,6 +114,10 @@ export default function MessagesPage() {
   const [offer, setOffer] = useState(null);
   const [allOffers, setAllOffers] = useState([]);
   const [offerLoading, setOfferLoading] = useState(false);
+
+  // Buyer credibility state
+  const [buyerStats, setBuyerStats] = useState(null);
+  const [buyerStatsLoading, setBuyerStatsLoading] = useState(false);
   const [showAcceptModal, setShowAcceptModal] = useState(false);
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [showCounterForm, setShowCounterForm] = useState(false);
@@ -369,6 +373,19 @@ export default function MessagesPage() {
     setShowRejectModal(false);
     setShowCounterForm(false);
   }, [openConversationId]);
+
+  // Fetch buyer credibility stats when conversation changes
+  useEffect(() => {
+    const conv = conversations.find(c => c.id === openConversationId);
+    const buyerUuid = conv?.buyer_uuid;
+    if (!buyerUuid) { setBuyerStats(null); return; }
+    setBuyerStatsLoading(true);
+    fetch(`/api/seller/buyer-stats?buyer_id=${buyerUuid}`)
+      .then(r => r.json())
+      .then(data => setBuyerStats(data))
+      .catch(() => setBuyerStats(null))
+      .finally(() => setBuyerStatsLoading(false));
+  }, [openConversationId, conversations]);
 
   const handleOfferAction = async (action, extraData = {}) => {
     if (!offer) return;
@@ -810,21 +827,23 @@ export default function MessagesPage() {
                 </div>
 
                 {/* BUYER CREDIBILITY */}
-                {offer && (
-                  <div className="px-5 py-4 border-b border-[#E8E8E4]">
-                    <p className="text-[11px] font-semibold text-[#A8A8A4] uppercase tracking-[1.1px] mb-3">Buyer Credibility</p>
+                <div className="px-5 py-4 border-b border-[#E8E8E4]">
+                  <p className="text-[11px] font-semibold text-[#A8A8A4] uppercase tracking-[1.1px] mb-3">Buyer Credibility</p>
+                  {buyerStatsLoading ? (
+                    <div className="flex items-center justify-center h-12"><Loader2 className="w-4 h-4 animate-spin text-[#A8A8A4]" /></div>
+                  ) : (
                     <div className="grid grid-cols-2 gap-2">
                       <div className="border border-[#E8E8E4] rounded px-3 py-2.5 text-center">
-                        <p className="text-[18px] font-bold text-[#1A1816]">—</p>
+                        <p className="text-[18px] font-bold text-[#4A90E2]">{buyerStats?.pastDeals ?? 0}</p>
                         <p className="text-[11px] text-[#737370] mt-0.5">Past Deals</p>
                       </div>
                       <div className="border border-[#E8E8E4] rounded px-3 py-2.5 text-center">
-                        <p className="text-[18px] font-bold text-[#1A1816]">—</p>
+                        <p className="text-[18px] font-bold text-[#0F6E56]">{buyerStats ? `${buyerStats.successRate}%` : '0%'}</p>
                         <p className="text-[11px] text-[#737370] mt-0.5">Success Rate</p>
                       </div>
                     </div>
-                  </div>
-                )}
+                  )}
+                </div>
 
                 {/* RESPOND TO OFFER — always visible, disabled when no pending offer */}
                 {!(offer && (offer.status === 'accepted' || offer.status === 'rejected' || offer.status === 'countered')) && (
