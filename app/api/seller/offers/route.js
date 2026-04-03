@@ -86,7 +86,7 @@ function buildEmailHtml(logoUrl, title, titleColor, propertyBlock, bodyHtml, cta
     <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;background:#ffffff">
       <tr>
         <td style="background:#ffffff;padding:24px 40px;text-align:center;border-bottom:2px solid #D03839">
-          <img src="https://deelmap.co/deelmap.png" alt="Deelmap" height="36" style="display:inline-block;height:36px;width:auto;border:0" />
+          <img src="https://sellerportaldeelmap-production.up.railway.app/deelmap.png" alt="Deelmap" height="36" style="display:inline-block;height:36px;width:auto;border:0" />
         </td>
       </tr>
       <tr>
