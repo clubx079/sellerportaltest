@@ -65,30 +65,49 @@ function buildPropertyBlock({ address, price, bedrooms, bathrooms, sqft, thumbna
     sqft ? `${Number(sqft).toLocaleString()} sqft` : null,
   ].filter(Boolean).join(' · ');
   return `
-    ${thumbnail ? `<img src="${thumbnail}" alt="Property" style="width:100%;max-height:200px;object-fit:cover;display:block;border-radius:8px;margin-bottom:12px" />` : ''}
-    <div style="background:#F9F9F7;border-radius:8px;padding:14px 16px;margin:0 0 16px">
-      ${address ? `<p style="margin:0 0 4px;font-size:14px;font-weight:600;color:#1A1816">${String(address).replace(/</g, '&lt;')}</p>` : ''}
-      ${details ? `<p style="margin:0;font-size:13px;color:#737370">${details}</p>` : ''}
-      ${price ? `<p style="margin:4px 0 0;font-size:13px;color:#737370">Asking: <strong style="color:#1A1816">${formatCurrency(price)}</strong></p>` : ''}
-    </div>`;
+    <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #E8E8E4;border-radius:4px;overflow:hidden;margin-bottom:20px">
+      ${thumbnail ? `<tr><td style="padding:0"><img src="${thumbnail}" alt="Property" style="width:100%;max-height:180px;object-fit:cover;display:block" /></td></tr>` : ''}
+      <tr><td style="background:#FAFAF8;padding:12px 16px;border-top:1px solid #E8E8E4">
+        <p style="margin:0 0 2px;font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:#A8A8A4">Property</p>
+      </td></tr>
+      <tr><td style="padding:12px 16px">
+        ${address ? `<p style="margin:0 0 4px;font-size:14px;font-weight:700;color:#1A1816">${String(address).replace(/</g, '&lt;')}</p>` : ''}
+        ${details ? `<p style="margin:0;font-size:13px;color:#737370">${details}</p>` : ''}
+        ${price ? `<p style="margin:4px 0 0;font-size:13px;color:#737370">Asking: <strong style="color:#1A1816">${formatCurrency(price)}</strong></p>` : ''}
+      </td></tr>
+    </table>`;
 }
 
 function buildEmailHtml(logoUrl, title, titleColor, propertyBlock, bodyHtml, ctaUrl, ctaLabel) {
   return `
-<!DOCTYPE html><html><head><meta charset="utf-8"></head>
-<body style="margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f5f5f5;padding:24px">
-  <div style="max-width:560px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08)">
-    <div style="background:#1A1816;color:#fff;padding:24px;text-align:center">
-      <img src="${logoUrl}" alt="Deelmap" width="160" height="48" style="display:block;max-width:160px;height:auto;border:0;margin:0 auto" />
-    </div>
-    <div style="padding:24px">
-      <p style="margin:0 0 16px;font-size:18px;font-weight:600;color:${titleColor || '#1A1816'}">${title}</p>
-      ${propertyBlock}
-      ${bodyHtml}
-      <a href="${ctaUrl}" style="display:inline-block;background:#D03839;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px;margin-top:16px">${ctaLabel}</a>
-    </div>
-    <div style="padding:16px;text-align:center;font-size:12px;color:#888;border-top:1px solid #eee">Deelmap</div>
-  </div>
+<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#F5F5F3;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif">
+  <table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:32px 16px">
+    <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;background:#ffffff">
+      <tr>
+        <td style="background:#ffffff;padding:24px 40px;text-align:center;border-bottom:2px solid #D03839">
+          <img src="https://deelmap.co/deelmap.png" alt="Deelmap" height="36" style="display:inline-block;height:36px;width:auto;border:0" />
+        </td>
+      </tr>
+      <tr>
+        <td style="padding:36px 40px 32px;background:#ffffff">
+          <h1 style="margin:0 0 16px;font-size:22px;font-weight:700;color:${titleColor || '#1A1816'};letter-spacing:-0.4px;line-height:1.25">${title}</h1>
+          ${propertyBlock}
+          ${bodyHtml}
+          <table cellpadding="0" cellspacing="0" style="margin-top:20px">
+            <tr><td style="background:#D03839;border-radius:4px">
+              <a href="${ctaUrl}" style="display:inline-block;padding:12px 24px;color:#ffffff;text-decoration:none;font-size:14px;font-weight:600">${ctaLabel}</a>
+            </td></tr>
+          </table>
+        </td>
+      </tr>
+      <tr>
+        <td style="background:#FAFAF8;border-top:1px solid #E8E8E4;padding:20px 40px;text-align:center">
+          <p style="margin:0;font-size:12px;color:#A8A8A4">© 2026 Deelmap. All rights reserved.</p>
+        </td>
+      </tr>
+    </table>
+  </td></tr></table>
 </body></html>`;
 }
 

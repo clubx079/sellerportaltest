@@ -53,25 +53,39 @@ async function sendEmailToBuyer(buyerEmail, buyerName, sellerName, messageText, 
     const propertyText = String(propertyAddress || '').trim();
     // Same template structure as buyer portal sendEmailToSeller (buyer → seller)
     const html = `
-<!DOCTYPE html>
-<html>
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f5f5f5;padding:24px">
-  <div style="max-width:560px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08)">
-    <div style="background:#002A3A;color:#fff;padding:24px;text-align:center">
-      <img src="${logoUrl}" alt="Deelmap" width="160" height="48" style="display:block;max-width:160px;height:auto;border:0;margin:0 auto" />
-    </div>
-    <div style="padding:24px">
-      <p style="margin:0 0 12px;font-size:18px;font-weight:600;color:#002A3A">New message on Deelmap</p>
-      <p style="margin:0 0 8px;font-size:14px;color:#666">From <strong style="color:#002A3A">${(sellerName || 'Property seller').replace(/</g, '&lt;')}</strong></p>
-      <p style="margin:0 0 8px;font-size:14px;color:#666">Property: <strong style="color:#002A3A">${propertyText ? propertyText.replace(/</g, '&lt;') : '—'}</strong></p>
-      <div style="background:#f8f9fa;border-left:4px solid #002A3A;padding:16px;border-radius:4px;margin:16px 0;font-size:15px;line-height:1.5;color:#333">${(preview || '').replace(/</g, '&lt;').replace(/\n/g, '<br>')}</div>
-      <a href="${messagesUrl}" style="display:inline-block;background:#002A3A;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px">Respond</a>
-    </div>
-    <div style="padding:16px;text-align:center;font-size:12px;color:#888;border-top:1px solid #eee">You received this because you have an active conversation on Deelmap.</div>
-  </div>
-</body>
-</html>`;
+<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#F5F5F3;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif">
+  <table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:32px 16px">
+    <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;background:#ffffff">
+      <tr>
+        <td style="background:#ffffff;padding:24px 40px;text-align:center;border-bottom:2px solid #D03839">
+          <img src="https://deelmap.co/deelmap.png" alt="Deelmap" height="36" style="display:inline-block;height:36px;width:auto;border:0" />
+        </td>
+      </tr>
+      <tr>
+        <td style="padding:36px 40px 32px;background:#ffffff">
+          <p style="margin:0 0 6px;font-size:14px;color:#737370">Hi ${(buyerName || 'there').replace(/</g, '&lt;')},</p>
+          <h1 style="margin:0 0 12px;font-size:22px;font-weight:700;color:#1A1816;letter-spacing:-0.4px;line-height:1.25">You have a new message</h1>
+          <p style="margin:0 0 20px;font-size:14px;line-height:1.65;color:#737370"><strong style="color:#1A1816">${(sellerName || 'Property seller').replace(/</g, '&lt;')}</strong>${propertyText ? ` sent you a message about <strong style="color:#1A1816">${propertyText.replace(/</g, '&lt;')}</strong>` : ' sent you a message'}.</p>
+          <div style="border-left:3px solid #D03839;padding:12px 16px;background:#FAFAF8;border-radius:0 4px 4px 0;margin-bottom:28px">
+            <p style="margin:0 0 4px;font-size:12px;font-weight:600;color:#D03839">${(sellerName || 'Seller').replace(/</g, '&lt;')}</p>
+            <p style="margin:0;font-size:14px;color:#1A1816;line-height:1.5">${(preview || '').replace(/</g, '&lt;').replace(/\n/g, '<br>')}</p>
+          </div>
+          <table cellpadding="0" cellspacing="0">
+            <tr><td style="background:#D03839;border-radius:4px">
+              <a href="${messagesUrl}" style="display:inline-block;padding:12px 24px;color:#ffffff;text-decoration:none;font-size:14px;font-weight:600">Reply to Message</a>
+            </td></tr>
+          </table>
+        </td>
+      </tr>
+      <tr>
+        <td style="background:#FAFAF8;border-top:1px solid #E8E8E4;padding:20px 40px;text-align:center">
+          <p style="margin:0;font-size:12px;color:#A8A8A4">© 2026 Deelmap. All rights reserved.</p>
+        </td>
+      </tr>
+    </table>
+  </td></tr></table>
+</body></html>`;
     await resend.emails.send({
       from: process.env.RESEND_FROM_EMAIL || 'Deelmap <notifications@deelmap.com>',
       to: buyerEmail,
