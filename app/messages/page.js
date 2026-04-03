@@ -590,7 +590,7 @@ export default function MessagesPage() {
                                     : <p className="text-[12px] font-medium text-[#444441] mb-1">{buyerDisplayName}</p>
                                   }
                                   <div className={`flex ${isSeller ? 'justify-end' : 'justify-start'}`}>
-                                    <div className="bg-white border border-[#E8E8E4] rounded-lg px-4 py-3 shadow-sm min-w-[200px] max-w-[70%]">
+                                    <div className="bg-white border border-[#E8E8E4] rounded-lg px-4 py-3 shadow-sm w-full max-w-[300px]">
                                       <div className="flex items-center justify-between mb-2">
                                         <span className="inline-block text-[11px] font-semibold px-2 py-0.5 rounded-full bg-[#EBF3FC] text-[#4A90E2]">
                                           {isCounter ? 'Counter offer' : 'Offer submitted'}
