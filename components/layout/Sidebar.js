@@ -1,345 +1,160 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { usePathname, useRouter } from 'next/navigation'
+import { usePathname } from 'next/navigation'
 import {
-  LayoutDashboard,
-  Building2,
-  MessageCircle,
-  X,
-  LogOut,
-  MapPin,
-  User
+  LayoutDashboard, Building2, MessageCircle, X, Settings,
+  FileText, TrendingUp, BarChart3
 } from 'lucide-react'
 
 const DESKTOP_BREAKPOINT = 1024
 
-export default function Sidebar({ isOpen, setIsOpen, activeItem, setActiveItem, collapsed, onCollapsedChange }) {
+export default function Sidebar({ isOpen, setIsOpen, activeItem, setActiveItem }) {
   const pathname = usePathname()
-  const router = useRouter()
   const [logoError, setLogoError] = useState(false)
-  const leaveTimeoutRef = useRef(null)
-  const [isDesktop, setIsDesktop] = useState(false)
-
-  const isCollapsed = collapsed ?? true
-  // When mobile menu is open (isOpen), show full content like desktop expanded; on desktop use collapse state
-  const showExpanded = isOpen || !isCollapsed
-  const [expandedContentVisible, setExpandedContentVisible] = useState(false)
-  const expandContentTimeoutRef = useRef(null)
-
-  useEffect(() => {
-    const mql = window.matchMedia(`(min-width: ${DESKTOP_BREAKPOINT}px)`)
-    const update = () => setIsDesktop(mql.matches)
-    update()
-    mql.addEventListener('change', update)
-    return () => mql.removeEventListener('change', update)
-  }, [])
-
-  // Fade in expanded content after width starts growing so it doesn’t pop
-  useEffect(() => {
-    if (showExpanded) {
-      if (isOpen) {
-        setExpandedContentVisible(true)
-        if (expandContentTimeoutRef.current) {
-          clearTimeout(expandContentTimeoutRef.current)
-          expandContentTimeoutRef.current = null
-        }
-      } else {
-        expandContentTimeoutRef.current = setTimeout(() => {
-          setExpandedContentVisible(true)
-          expandContentTimeoutRef.current = null
-        }, 120)
-      }
-    } else {
-      if (expandContentTimeoutRef.current) {
-        clearTimeout(expandContentTimeoutRef.current)
-        expandContentTimeoutRef.current = null
-      }
-      setExpandedContentVisible(false)
-    }
-    return () => {
-      if (expandContentTimeoutRef.current) clearTimeout(expandContentTimeoutRef.current)
-    }
-  }, [showExpanded, isOpen])
-
-  const handleLogout = () => {
-    localStorage.removeItem('seller_user')
-    router.push('/login')
-  }
-
-  const menuItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
-    { id: 'properties', label: 'Properties', icon: Building2, path: '/properties' },
-    { id: 'messages', label: 'Messages', icon: MessageCircle, path: '/messages' }
-  ]
-
   const [sellerUser, setSellerUser] = useState(null)
   const [messagesUnreadCount, setMessagesUnreadCount] = useState(0)
+  const [listingsCount, setListingsCount] = useState(0)
+  const [offersCount, setOffersCount] = useState(0)
+
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem('seller_user')
-      if (raw) setSellerUser(JSON.parse(raw))
-    } catch (_) {}
+    try { const raw = localStorage.getItem('seller_user'); if (raw) setSellerUser(JSON.parse(raw)) } catch {}
   }, [])
 
   useEffect(() => {
     const sellerId = sellerUser?.id || sellerUser?.userId
     if (!sellerId) return
-
-    let mounted = true
-    let timer = null
-
-    const fetchUnread = async () => {
+    let mounted = true, timer = null
+    const fetchCounts = async () => {
       try {
-        const res = await fetch('/api/seller/chat?action=get_conversations', {
-          headers: {
-            Authorization: `Bearer ${sellerId}`
-          }
-        })
+        const res = await fetch('/api/seller/chat?action=get_conversations', { headers: { Authorization: `Bearer ${sellerId}` } })
         const data = await res.json()
         if (!mounted) return
-        if (data?.success && Array.isArray(data.conversations)) {
-          const total = data.conversations.reduce((sum, c) => sum + Number(c.unread_count || 0), 0)
-          setMessagesUnreadCount(total)
-        }
-      } catch (_) {
-        // Keep sidebar resilient if unread call fails.
-      }
+        if (data?.success && Array.isArray(data.conversations)) setMessagesUnreadCount(data.conversations.reduce((sum, c) => sum + Number(c.unread_count || 0), 0))
+      } catch {}
+      try {
+        const { createClient } = await import('@supabase/supabase-js')
+        const sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
+        const { count: lCount } = await sb.from('properties').select('*', { count: 'exact', head: true }).eq('seller_id', sellerId)
+        if (mounted && lCount != null) setListingsCount(lCount)
+      } catch {}
+      try {
+        const oRes = await fetch('/api/seller/offers', { headers: { Authorization: `Bearer ${sellerId}` } })
+        const oData = await oRes.json()
+        if (!mounted) return
+        if (oData?.pendingCount != null) setOffersCount(oData.pendingCount)
+      } catch {}
     }
 
-    fetchUnread()
-    timer = setInterval(() => {
-      if (typeof document === 'undefined' || document.visibilityState === 'visible') {
-        fetchUnread()
-      }
-    }, 10000)
-
-    return () => {
-      mounted = false
-      if (timer) clearInterval(timer)
-    }
+    fetchCounts()
+    timer = setInterval(() => { if (typeof document === 'undefined' || document.visibilityState === 'visible') fetchCounts() }, 30000)
+    return () => { mounted = false; if (timer) clearInterval(timer) }
   }, [sellerUser?.id, sellerUser?.userId])
-
-  useEffect(() => {
-    menuItems.forEach((item) => {
-      if (item.path === pathname) setActiveItem(item.id)
-    })
-  }, [pathname])
 
   const handleItemClick = (item) => {
     setActiveItem(item.id)
-    if (typeof window !== 'undefined' && window.innerWidth < 1024) {
-      setIsOpen(false)
+    if (typeof window !== 'undefined' && window.innerWidth < DESKTOP_BREAKPOINT) setIsOpen(false)
+  }
+
+  const sections = [
+    {
+      label: 'MAIN',
+      items: [
+        { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
+        { id: 'properties', label: 'My listings', icon: Building2, path: '/properties', badge: listingsCount || null },
+        { id: 'messages', label: 'Messages', icon: MessageCircle, path: '/messages', badge: messagesUnreadCount, badgeRed: true },
+        { id: 'offers', label: 'Offers received', icon: FileText, path: '/offers', badge: offersCount || null },
+      ]
+    },
+    {
+      label: 'TOOLS',
+      items: [
+        { id: 'analytics', label: 'Analytics', icon: BarChart3, path: '/analytics' },
+        { id: 'insights', label: 'Market Insights', icon: TrendingUp, path: '/insights' },
+      ]
+    },
+    {
+      label: 'ACCOUNT',
+      items: [
+        { id: 'settings', label: 'Settings', icon: Settings, path: '/settings' },
+      ]
     }
-  }
+  ]
 
-  const handleMouseEnter = () => {
-    if (!isDesktop) return
-    if (leaveTimeoutRef.current) {
-      clearTimeout(leaveTimeoutRef.current)
-      leaveTimeoutRef.current = null
-    }
-    onCollapsedChange?.(false)
-  }
-
-  const handleMouseLeave = () => {
-    if (!isDesktop) return
-    leaveTimeoutRef.current = setTimeout(() => {
-      onCollapsedChange?.(true)
-      leaveTimeoutRef.current = null
-    }, 280)
-  }
-
-  useEffect(() => () => {
-    if (leaveTimeoutRef.current) clearTimeout(leaveTimeoutRef.current)
-  }, [])
+  useEffect(() => {
+    sections.forEach(s => s.items.forEach(item => {
+      if (pathname === item.path || pathname?.startsWith(item.path + '/')) setActiveItem(item.id)
+    }))
+  }, [pathname])
 
   return (
     <>
-      {isOpen && (
-        <div
-          className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40 lg:hidden"
-          onClick={() => setIsOpen(false)}
-          aria-hidden="true"
-        />
-      )}
+      {isOpen && <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40 lg:hidden" onClick={() => setIsOpen(false)} />}
 
-      <aside
-        className={`fixed top-0 left-0 z-50 h-full bg-white border-r border-slate-200 flex flex-col shadow-sm
-          transition-[transform,width,min-width] duration-300 ease-in-out
-          ${isOpen ? 'translate-x-0 w-72' : '-translate-x-full w-0'}
-          lg:translate-x-0
-          ${showExpanded ? 'lg:w-60 lg:min-w-60' : 'lg:w-[72px] lg:min-w-[72px]'}
-          overflow-hidden
-          pt-[env(safe-area-inset-top,0px)] lg:pt-0
-        `}
-        onMouseEnter={handleMouseEnter}
-        onMouseLeave={handleMouseLeave}
-      >
-        {/* Logo / Brand - collapsed: icon only, expanded: full logo */}
-        <div className="flex items-center justify-between gap-2 px-3 py-4 border-b border-slate-100 min-h-[73px] shrink-0">
-          <Link href="/dashboard" className="flex items-center gap-3 min-w-0 flex-1 overflow-hidden">
-            {showExpanded ? (
-              <span
-                className={`flex items-center gap-3 min-w-0 transition-opacity duration-200 ease-out ${
-                  expandedContentVisible ? 'opacity-100' : 'opacity-0'
-                }`}
-              >
-                <div className="relative h-9 w-[120px] flex-shrink-0 flex items-center justify-center">
-                  {!logoError ? (
-                    <Image
-                      src="/assets/logo copy.png"
-                      alt="DeelMap"
-                      width={120}
-                      height={36}
-                      className="h-9 w-auto object-contain"
-                      priority
-                      onError={() => setLogoError(true)}
-                    />
-                  ) : (
-                    <div className="w-9 h-9 bg-brandRed rounded-lg flex items-center justify-center">
-                      <MapPin className="w-5 h-5 text-white" />
-                    </div>
-                  )}
-                </div>
-                <span className="text-xs font-medium text-slate-600 uppercase tracking-wider whitespace-nowrap">Seller</span>
-              </span>
+      <aside className={`
+        fixed top-0 left-0 z-50 h-full bg-white border-r border-[#E8E8E4]
+        flex flex-col w-[260px] min-w-[260px]
+        transition-transform duration-300 ease-in-out
+        ${isOpen ? 'translate-x-0' : '-translate-x-full'}
+        lg:translate-x-0
+      `}>
+        {/* Logo */}
+        <div className="flex items-center justify-start px-4 py-3 border-b border-[#E8E8E4] shrink-0">
+          <Link href="/dashboard" className="block">
+            {!logoError ? (
+              <Image src="/assets/logo.svg" alt="DeelMap" width={180} height={56} className="h-14 w-auto object-contain" priority onError={() => setLogoError(true)} />
             ) : (
-              <div className="w-10 h-10 flex items-center justify-center shrink-0 mx-auto">
-                {!logoError ? (
-                  <Image
-                    src="/assets/sidebar_logo.png"
-                    alt="DeelMap"
-                    width={40}
-                    height={40}
-                    className="w-10 h-10 object-contain"
-                    onError={() => setLogoError(true)}
-                  />
-                ) : (
-                  <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                    <MapPin className="w-5 h-5 text-primary" />
-                  </div>
-                )}
-              </div>
+              <span className="text-[18px] font-bold text-[#1A1816]">DeelMap</span>
             )}
           </Link>
-          <button
-            type="button"
-            onClick={() => setIsOpen(false)}
-            className="lg:hidden p-2 rounded-xl bg-slate-100 active:bg-slate-200 transition-colors shrink-0 touch-manipulation"
-            aria-label="Close menu"
-          >
-            <X className="w-5 h-5 text-slate-600" />
-          </button>
+          {isOpen && (
+            <button onClick={() => setIsOpen(false)} className="lg:hidden absolute top-4 right-3 p-2 rounded hover:bg-[#FAFAF8] text-[#737370] transition-colors duration-200" aria-label="Close menu">
+              <X className="w-5 h-5" />
+            </button>
+          )}
         </div>
 
-        {/* Nav */}
-        <nav className="flex-1 overflow-y-auto py-6 px-3 space-y-1 scrollbar-hide">
-          {menuItems.map((item) => {
-            const Icon = item.icon
-            const isActive = activeItem === item.id
-            const isMessages = item.id === 'messages'
-            const showUnread = isMessages && messagesUnreadCount > 0
-            return (
-              <Link
-                key={item.id}
-                href={item.path}
-                onClick={() => handleItemClick(item)}
-                title={showExpanded ? undefined : item.label}
-                className={`w-full flex items-center gap-3 rounded-xl transition-all duration-150 group ${
-                  showExpanded ? 'px-3 py-2.5' : 'px-0 py-2.5 justify-center'
-                } ${
-                  isActive
-                    ? 'bg-primary/10 text-primary'
-                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
-                }`}
-              >
-                <div className="relative shrink-0">
-                  <Icon className={`w-5 h-5 flex-shrink-0 ${isActive ? 'text-primary' : 'text-slate-400 group-hover:text-slate-600'}`} />
-                  {showUnread && !showExpanded && (
-                    <span className="absolute -top-1.5 -right-1.5 inline-flex items-center justify-center min-w-[16px] h-4 px-1 text-[10px] font-bold leading-none text-white bg-brandRed rounded-full">
-                      {messagesUnreadCount > 9 ? '9+' : messagesUnreadCount}
-                    </span>
-                  )}
-                </div>
-                {showExpanded && (
-                  <div className={`flex items-center justify-between gap-2 min-w-0 flex-1 transition-opacity duration-200 ease-out ${
-                    expandedContentVisible ? 'opacity-100' : 'opacity-0'
-                  }`}>
-                    <span className="text-sm font-medium truncate">{item.label}</span>
-                    {showUnread && (
-                      <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 text-[10px] font-bold leading-none text-white bg-brandRed rounded-full">
-                        {messagesUnreadCount > 99 ? '99+' : messagesUnreadCount}
-                      </span>
-                    )}
-                  </div>
-                )}
-              </Link>
-            )
-          })}
-        </nav>
+        {/* Navigation */}
+        <nav className="flex-1 overflow-y-auto py-4 px-3">
+          {sections.map((section, si) => (
+            <div key={si} className="mb-5">
+              <p className="px-3 mb-2 text-[11px] font-semibold text-[#A8A8A4] uppercase tracking-[1.1px]">
+                {section.label}
+              </p>
+              <div className="flex flex-col gap-0.5">
+                {section.items.map(item => {
+                  const Icon = item.icon
+                  const isActive = activeItem === item.id
+                  const hasBadge = item.badge > 0
 
-        {/* Footer: Settings + Logout */}
-        <div className="px-3 py-4 border-t border-slate-100 space-y-1 shrink-0">
-          <Link
-            href="/settings"
-            onClick={() => typeof window !== 'undefined' && window.innerWidth < DESKTOP_BREAKPOINT && setIsOpen(false)}
-            title={showExpanded ? undefined : 'Settings'}
-            className={`group/user w-full flex items-center gap-3 rounded-xl transition-all duration-150 ${
-              showExpanded ? 'px-3 py-2.5' : 'px-0 py-2.5 justify-center'
-            } ${
-              pathname === '/settings'
-                ? 'bg-primary/10 text-primary'
-                : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
-            }`}
-          >
-            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-              <User className="w-4 h-4 text-primary" />
+                  return (
+                    <Link
+                      key={item.id} href={item.path} onClick={() => handleItemClick(item)}
+                      className={`flex items-center gap-2.5 px-3 py-2.5 rounded text-[14px] transition-all duration-200 ${
+                        isActive ? 'bg-[#FAFAF8] text-[#1A1816] font-semibold' : 'text-[#444441] hover:bg-[#FAFAF8] hover:text-[#1A1816]'
+                      }`}
+                    >
+                      <Icon className={`w-[18px] h-[18px] flex-shrink-0 ${isActive ? 'text-[#1A1816]' : 'text-[#737370]'}`} />
+                      <div className="flex items-center justify-between gap-2 min-w-0 flex-1">
+                        <span className="truncate">{item.label}</span>
+                        {hasBadge && (
+                          <span className={`inline-flex items-center justify-center min-w-[22px] h-[22px] px-1.5 text-[11px] font-semibold rounded ${
+                            item.badgeRed ? 'bg-[#D03839] text-white' : 'bg-[#FAFAF8] text-[#444441] border border-[#E8E8E4]'
+                          }`}>
+                            {item.badge > 99 ? '99+' : item.badge}
+                          </span>
+                        )}
+                      </div>
+                    </Link>
+                  )
+                })}
+              </div>
             </div>
-            {showExpanded && (
-              <div
-                className={`min-w-0 flex-1 overflow-hidden transition-opacity duration-200 ease-out ${
-                  expandedContentVisible ? 'opacity-100' : 'opacity-0'
-                }`}
-              >
-                <p className="text-xs font-medium text-slate-500 truncate">Settings</p>
-                <p className="text-sm font-medium text-slate-900 truncate">
-                  {sellerUser?.email || sellerUser?.contact_person_name || 'Account'}
-                </p>
-              </div>
-            )}
-          </Link>
-          <button
-            type="button"
-            onClick={() => {
-              if (typeof window !== 'undefined' && window.innerWidth < DESKTOP_BREAKPOINT) setIsOpen(false)
-              handleLogout()
-            }}
-            title={showExpanded ? undefined : 'Logout'}
-            className={`w-full flex items-center gap-3 rounded-xl text-red-600 hover:bg-red-50 transition-all duration-150 ${
-              showExpanded ? 'px-3 py-2.5' : 'px-0 py-2.5 justify-center'
-            }`}
-          >
-            <LogOut className="w-5 h-5 flex-shrink-0" />
-            {showExpanded && (
-              <span
-                className={`text-sm font-medium transition-opacity duration-200 ease-out ${
-                  expandedContentVisible ? 'opacity-100' : 'opacity-0'
-                }`}
-              >
-                Logout
-              </span>
-            )}
-          </button>
-        </div>
+          ))}
+        </nav>
       </aside>
-
-      <style jsx>{`
-        .scrollbar-hide::-webkit-scrollbar { display: none; }
-        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
-      `}</style>
     </>
   )
 }

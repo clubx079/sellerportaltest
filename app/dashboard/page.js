@@ -1,316 +1,184 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { supabase } from "@/lib/supabase";
-import { motion } from "framer-motion";
 import Link from "next/link";
+import Image from "next/image";
 import { getCurrentCurrencySymbol } from "@/lib/currency";
 import {
-  Building2,
-  PlusCircle,
-  List,
-  Archive,
-  ArrowRight,
-  ChevronRight,
-  MessageCircle,
-  Eye,
-  Home,
-  CircleDollarSign,
-  TrendingUp,
-  TrendingDown,
+  Building2, PlusCircle, ChevronRight, ChevronLeft, MessageCircle,
+  Eye, Home, CircleDollarSign, FileText, BarChart3, Megaphone,
+  Edit3, Bed, Bath, Square, Bell, TrendingUp, TrendingDown, CheckCircle2,
+  MapPin, Heart
 } from "lucide-react";
 
-const container = {
-  hidden: { opacity: 0 },
-  show: {
-    opacity: 1,
-    transition: { staggerChildren: 0.06, delayChildren: 0.1 },
-  },
-};
+// Design system avatar colors
+// Light pastel backgrounds + darker text pairs from design system
+const AVATAR_PAIRS = [
+  { bg: '#FEF0EF', text: '#D03839' },  // primary-surface / primary
+  { bg: '#E4F5EC', text: '#0F6E56' },  // success-surface / success
+  { bg: '#FEF3E2', text: '#B5620A' },  // warning-surface / warning
+  { bg: '#EBF3FC', text: '#4A90E2' },  // blue light / blue
+  { bg: '#F3EEFF', text: '#7C3AED' },  // purple light / purple
+];
+function getAvatarPair(seed = '') {
+  const str = String(seed || 'u');
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) hash = (hash * 31 + str.charCodeAt(i)) | 0;
+  return AVATAR_PAIRS[Math.abs(hash) % AVATAR_PAIRS.length];
+}
+function getInitials(name) {
+  if (!name) return 'B';
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+  return parts[0].substring(0, 2).toUpperCase();
+}
 
-const item = {
-  hidden: { opacity: 0, y: 16 },
-  show: { opacity: 1, y: 0 },
-};
+function uuidToNumericConvId(uuid) {
+  if (!uuid) return null;
+  const match = String(uuid).match(/00000000-0000-0000-0000-([0-9a-f]{12})$/i);
+  if (match) return parseInt(match[1], 16);
+  return null;
+}
 
 export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState(null);
-  const [dateRange, setDateRange] = useState({ from: null, to: null });
-  const [showDatePicker, setShowDatePicker] = useState(false);
   const [stats, setStats] = useState({
-    totalProperties: 0,
-    activeProperties: 0,
+    activeProperties: 0, totalViews: 0, offersReceived: 0, dealsClosed: 0,
+    recentlyAdded: 0, viewsThisWeek: 0, offersThisWeek: 0, closedThisMonth: 0,
     trashProperties: 0,
-    totalValue: 0,
-    soldProperties: 0,
-    totalRevenue: 0,
-    underContractProperties: 0,
-    availableProperties: 0,
-    averagePrice: 0,
-    totalBedrooms: 0,
-    totalBathrooms: 0,
-    recentlyAdded: 0,
-    totalViews: 0,
-    totalInquiries: 0,
   });
   const [recentProperties, setRecentProperties] = useState([]);
   const [recentQueries, setRecentQueries] = useState([]);
-  const [statusBreakdown, setStatusBreakdown] = useState([]);
   const [currency, setCurrency] = useState("$");
-  const [trends, setTrends] = useState({
-    activeListings: null,
-    views: null,
-    inquiries: null,
-    portfolioValue: null,
-  });
+  const scrollRef = useRef(null);
+  const [notifications, setNotifications] = useState([]);
+  const [notifUnread, setNotifUnread] = useState(0);
+  const [notifOpen, setNotifOpen] = useState(false);
+  const notifRef = useRef(null);
 
   useEffect(() => {
     const userStr = localStorage.getItem("seller_user");
     if (userStr) setUser(JSON.parse(userStr));
     setCurrency(getCurrentCurrencySymbol());
     fetchDashboardData();
-  }, [dateRange.from, dateRange.to]);
+  }, []);
+
+  // Close notification dropdown when clicking outside
+  useEffect(() => {
+    function handleClick(e) {
+      if (notifRef.current && !notifRef.current.contains(e.target)) setNotifOpen(false);
+    }
+    if (notifOpen) document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [notifOpen]);
+
+  // Fetch notifications on mount and every 30s
+  useEffect(() => {
+    const userStr = localStorage.getItem("seller_user");
+    const sellerId = userStr ? JSON.parse(userStr)?.id : null;
+    if (!sellerId) return;
+    let mounted = true, timer = null;
+    const fetchNotifs = async () => {
+      try {
+        const res = await fetch('/api/seller/notifications', { headers: { Authorization: `Bearer ${sellerId}` } });
+        const data = await res.json();
+        if (!mounted) return;
+        if (Array.isArray(data?.notifications)) setNotifications(data.notifications);
+        if (data?.unreadCount != null) setNotifUnread(data.unreadCount);
+      } catch {}
+    };
+    fetchNotifs();
+    timer = setInterval(() => { if (document.visibilityState === 'visible') fetchNotifs(); }, 30000);
+    return () => { mounted = false; clearInterval(timer); };
+  }, []);
 
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
       const userStr = localStorage.getItem("seller_user");
-      if (!userStr) {
-        setLoading(false);
-        return;
-      }
+      if (!userStr) { setLoading(false); return; }
       const currentUser = JSON.parse(userStr);
       const currentUserId = currentUser.id;
 
-      const { data: sellerData } = await supabase
-        .from("seller_applications")
-        .select("temp_seller_id")
-        .eq("id", currentUserId)
-        .maybeSingle();
+      const { data: sellerData } = await supabase.from("seller_applications").select("temp_seller_id").eq("id", currentUserId).maybeSingle();
       const tempSellerId = sellerData?.temp_seller_id ?? null;
 
-      const { data: manualList = [] } = await supabase
-        .from("properties")
-        .select("*")
-        .eq("seller_id", currentUserId)
-        .order("created_at", { ascending: false });
-
+      // Manual properties
+      const { data: manualList = [] } = await supabase.from("properties").select("*").eq("seller_id", currentUserId).order("created_at", { ascending: false });
       let manualWithImages = manualList || [];
       if (manualWithImages.length > 0) {
-        const ids = manualWithImages.map((p) => p.id);
-        const { data: imagesData } = await supabase
-          .from("property_images")
-          .select("id, image_url, sort_order, property_id")
-          .in("property_id", ids)
-          .order("sort_order");
+        const ids = manualWithImages.map(p => p.id);
+        const { data: imagesData } = await supabase.from("property_images").select("id, image_url, sort_order, property_id").in("property_id", ids).order("sort_order");
         const imagesByProperty = {};
-        (imagesData || []).forEach((img) => {
-          if (!imagesByProperty[img.property_id]) imagesByProperty[img.property_id] = [];
-          imagesByProperty[img.property_id].push(img);
-        });
-        manualWithImages = manualWithImages.map((p) => ({
-          ...p,
-          _source: "manual",
-          property_photos: (imagesByProperty[p.id] || [])
-            .map((img) => ({
-              photo_url: img.image_url,
-              display_order: img.sort_order,
-              is_featured: false,
-            }))
-            .sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0)),
-        }));
+        (imagesData || []).forEach(img => { if (!imagesByProperty[img.property_id]) imagesByProperty[img.property_id] = []; imagesByProperty[img.property_id].push(img); });
+        manualWithImages = manualWithImages.map(p => ({ ...p, _source: "manual", property_photos: (imagesByProperty[p.id] || []).map(img => ({ photo_url: img.image_url, display_order: img.sort_order })).sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0)) }));
       } else {
-        manualWithImages = (manualList || []).map((p) => ({ ...p, _source: "manual", property_photos: [] }));
+        manualWithImages = (manualList || []).map(p => ({ ...p, _source: "manual", property_photos: [] }));
       }
 
+      // Scraped properties
       let scrapedList = [];
       if (tempSellerId) {
-        const { data: wholesaleList, error: wholesaleError } = await supabase
-          .from("wholesale_deals")
-          .select(
-            `*,
-            property_photos (id, photo_url, display_order, is_featured)`
-          )
-          .eq("temp_seller_id", tempSellerId)
-          .order("created_at", { ascending: false });
-        if (!wholesaleError && wholesaleList) {
-          scrapedList = wholesaleList.map((p) => ({ ...p, _source: "scraped" }));
-        }
+        const { data: wholesaleList, error: wholesaleError } = await supabase.from("wholesale_deals").select(`*, property_photos (id, photo_url, display_order, is_featured)`).eq("temp_seller_id", tempSellerId).order("created_at", { ascending: false });
+        if (!wholesaleError && wholesaleList) scrapedList = wholesaleList.map(p => ({ ...p, _source: "scraped" }));
       }
 
-      const normalizeStatus = (p) => {
-        const s = (p.status || "").toLowerCase();
-        if (s === "archived") return "archived";
-        if (s === "published" || s === "active") return "active";
-        return "draft";
-      };
-
+      const normalizeStatus = p => { const s = (p.status || "").toLowerCase(); if (s === "archived") return "archived"; if (s === "published" || s === "active") return "active"; return "draft"; };
       const combined = [
-        ...manualWithImages.map((p) => ({
-          ...p,
-          _normalizedStatus: normalizeStatus(p),
-          property_status: p.property_status || "available",
-        })),
-        ...scrapedList.map((p) => ({
-          ...p,
-          _normalizedStatus: normalizeStatus(p),
-          property_status: p.property_status || (p.status === "active" ? "available" : "available"),
-        })),
+        ...manualWithImages.map(p => ({ ...p, _normalizedStatus: normalizeStatus(p), property_status: p.property_status || "available" })),
+        ...scrapedList.map(p => ({ ...p, _normalizedStatus: normalizeStatus(p), property_status: p.property_status || "available" })),
       ].sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
 
-      let allProperties = combined;
-      if (dateRange.from && dateRange.to) {
-        const fromStart = new Date(dateRange.from);
-        fromStart.setHours(0, 0, 0, 0);
-        const toEnd = new Date(dateRange.to);
-        toEnd.setHours(23, 59, 59, 999);
-        allProperties = combined.filter((p) => {
-          const created = new Date(p.created_at);
-          return created >= fromStart && created <= toEnd;
-        });
-      }
+      const sevenDaysAgo = new Date(); sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+      const activeList = combined.filter(p => p._normalizedStatus !== "archived");
+      const soldList = combined.filter(p => (p.property_status || "").toLowerCase() === "sold");
+      const recentCount = combined.filter(p => new Date(p.created_at) >= sevenDaysAgo).length;
 
-      const sevenDaysAgo = new Date();
-      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-
-      const activeList = allProperties.filter((p) => p._normalizedStatus !== "archived");
-      const trashList = allProperties.filter((p) => p._normalizedStatus === "archived");
-      const soldList = allProperties.filter((p) => (p.property_status || "").toLowerCase() === "sold");
-
-      const totalValue = activeList.reduce((sum, p) => sum + (parseFloat(p.price) || 0), 0);
-      const totalRevenue = soldList.reduce((sum, p) => sum + (parseFloat(p.price) || 0), 0);
-      const availableCount = activeList.filter((p) => (p.property_status || "").toLowerCase() === "available").length;
-      const underContractCount = activeList.filter(
-        (p) => (p.property_status || "").toLowerCase() === "under_contract"
-      ).length;
-      const pendingCount = activeList.filter((p) => (p.property_status || "").toLowerCase() === "pending").length;
-      const activeCount = activeList.length;
-      const recentCount = allProperties.filter((p) => new Date(p.created_at) >= sevenDaysAgo).length;
-
-      // Total views and period-over-period for trend
-      let totalViews = 0;
-      let viewsLast30Days = 0;
-      let viewsPrevious30Days = 0;
+      // Views
+      let totalViews = 0, viewsThisWeek = 0;
       try {
         const res = await fetch(`/api/seller/dashboard-stats?userId=${encodeURIComponent(currentUserId)}`);
         const data = await res.json();
         totalViews = Number(data.totalViews) || 0;
-        viewsLast30Days = Number(data.viewsLast30Days) || 0;
-        viewsPrevious30Days = Number(data.viewsPrevious30Days) || 0;
-      } catch (_) {}
+        viewsThisWeek = Number(data.viewsLast7Days || data.viewsLast30Days) || 0;
+      } catch {}
 
-      // Conversations = inquiries; keep full list for count and period trend
+      // Conversations
       let totalInquiries = 0;
-      let inquiriesLast30Days = 0;
-      let inquiriesPrevious30Days = 0;
       try {
-        const res = await fetch("/api/seller/chat?action=get_conversations", {
-          headers: { Authorization: `Bearer ${currentUserId}` },
-        });
+        const res = await fetch("/api/seller/chat?action=get_conversations", { headers: { Authorization: `Bearer ${currentUserId}` } });
         const data = await res.json();
         const conversations = data.conversations || [];
         totalInquiries = conversations.length;
-        setRecentQueries(conversations.slice(0, 6));
-        const now = Date.now();
-        const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
-        const sixtyDaysMs = 60 * 24 * 60 * 60 * 1000;
-        conversations.forEach((c) => {
-          const t = c.created_at ? new Date(c.created_at).getTime() : 0;
-          if (t >= now - thirtyDaysMs) inquiriesLast30Days += 1;
-          else if (t >= now - sixtyDaysMs && t < now - thirtyDaysMs) inquiriesPrevious30Days += 1;
-        });
-      } catch (_) {
-        setRecentQueries([]);
-      }
+        setRecentQueries(conversations.slice(0, 5));
+      } catch { setRecentQueries([]); }
 
-      // Previous stats from last visit (for active listings & portfolio value trend)
-      const storageKey = "seller_dashboard_prev_stats";
-      let prevActive = 0;
-      let prevValue = 0;
+      // Offers
+      let offersReceived = 0, offersThisWeek = 0;
       try {
-        const raw = localStorage.getItem(storageKey);
-        if (raw) {
-          const prev = JSON.parse(raw);
-          prevActive = Number(prev.activeProperties) || 0;
-          prevValue = Number(prev.totalValue) || 0;
-        }
-      } catch (_) {}
-      try {
-        localStorage.setItem(
-          storageKey,
-          JSON.stringify({
-            activeProperties: activeCount,
-            totalValue,
-            totalViews,
-            totalInquiries,
-          })
-        );
-      } catch (_) {}
-
-      // Compute trend percentages
-      const viewPct =
-        viewsPrevious30Days > 0
-          ? Math.round(((viewsLast30Days - viewsPrevious30Days) / viewsPrevious30Days) * 100)
-          : viewsLast30Days > 0
-          ? 100
-          : null;
-      const inquiryPct =
-        inquiriesPrevious30Days > 0
-          ? Math.round(((inquiriesLast30Days - inquiriesPrevious30Days) / inquiriesPrevious30Days) * 100)
-          : inquiriesLast30Days > 0
-          ? 100
-          : null;
-      const activePct = prevActive > 0 ? Math.round(((activeCount - prevActive) / prevActive) * 100) : null;
-      const valuePct = prevValue > 0 ? Math.round(((totalValue - prevValue) / prevValue) * 100) : null;
-
-      setTrends({
-        activeListings: activePct != null ? { pct: Math.abs(activePct), isUp: activePct >= 0 } : null,
-        views: viewPct != null ? { pct: Math.abs(viewPct), isUp: viewPct >= 0 } : null,
-        inquiries: inquiryPct != null ? { pct: Math.abs(inquiryPct), isUp: inquiryPct >= 0 } : null,
-        portfolioValue: valuePct != null ? { pct: Math.abs(valuePct), isUp: valuePct >= 0 } : null,
-      });
+        const oRes = await fetch('/api/seller/offers', { headers: { Authorization: `Bearer ${currentUserId}` } });
+        const oData = await oRes.json();
+        const allOffers = oData.offers || [];
+        offersReceived = allOffers.length;
+        offersThisWeek = allOffers.filter(o => new Date(o.created_at) >= sevenDaysAgo).length;
+      } catch {}
 
       setStats({
-        totalProperties: combined.length,
-        activeProperties: activeCount,
-        trashProperties: trashList.length,
-        totalValue,
-        soldProperties: soldList.length,
-        totalRevenue,
-        underContractProperties: underContractCount,
-        availableProperties: availableCount,
-        averagePrice:
-          activeList.filter((p) => p.price).length > 0
-            ? totalValue / activeList.filter((p) => p.price).length
-            : 0,
-        totalBedrooms: activeList.reduce((sum, p) => sum + (parseInt(p.bedrooms) || 0), 0),
-        totalBathrooms: activeList.reduce((sum, p) => sum + (parseFloat(p.bathrooms) || 0), 0),
-        recentlyAdded: recentCount,
+        activeProperties: activeList.length,
         totalViews,
-        totalInquiries,
+        offersReceived,
+        dealsClosed: soldList.length,
+        recentlyAdded: recentCount,
+        viewsThisWeek,
+        offersThisWeek,
+        closedThisMonth: 0,
+        trashProperties: combined.filter(p => p._normalizedStatus === "archived").length,
       });
-
-      setRecentProperties(combined.slice(0, 5));
-
-      const statusData = [
-        { name: "Available", count: availableCount, color: "bg-status-available" },
-        { name: "Sold Out", count: soldList.length, color: "bg-status-sold" },
-        { name: "Pending", count: pendingCount, color: "bg-status-pending" },
-        { name: "Under Contract", count: underContractCount, color: "bg-status-contract" },
-      ];
-      const totalActive = availableCount + soldList.length + underContractCount + pendingCount;
-      setStatusBreakdown(
-        statusData.map((item) => ({
-          ...item,
-          percentage: totalActive > 0 ? Math.round((item.count / totalActive) * 100) : 0,
-        }))
-      );
-    } catch (error) {
-      console.error("Error fetching dashboard data:", error);
-    } finally {
-      setLoading(false);
-    }
+      setRecentProperties(activeList.slice(0, 8));
+    } catch (error) { console.error("Error fetching dashboard data:", error); }
+    finally { setLoading(false); }
   };
 
   const firstName = (() => {
@@ -318,753 +186,318 @@ export default function DashboardPage() {
     return raw.trim().split(/\s+/)[0] || "Seller";
   })();
 
-  const formatDateRangeLabel = (from, to) => {
-    if (!from || !to) return "Custom dates";
-    const fromDate = new Date(from);
-    const toDate = new Date(to);
-    const opts = { month: "short", day: "numeric" };
-    const sameYear = fromDate.getFullYear() === toDate.getFullYear();
-    const fromStr = fromDate.toLocaleDateString("en-US", opts);
-    const toStr = toDate.toLocaleDateString("en-US", sameYear ? opts : { ...opts, year: "numeric" });
-    return `${fromStr} – ${toStr}`;
+  const getCurrentDate = () => new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+
+  const formatTimeAgo = (ds) => {
+    if (!ds) return "";
+    const diff = Date.now() - new Date(ds).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return "now";
+    if (mins < 60) return `${mins}m ago`;
+    const hours = Math.floor(mins / 60);
+    if (hours < 24) return `${hours}h ago`;
+    return `${Math.floor(hours / 24)}d ago`;
   };
 
-  const formatTimeAgo = (dateString) => {
-    if (!dateString) return "";
-    const d = new Date(dateString);
-    const now = new Date();
-    const diffMs = now - d;
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMins / 60);
-    const diffDays = Math.floor(diffHours / 24);
-    if (diffDays > 0) return `${diffDays}d ago`;
-    if (diffHours > 0) return `${diffHours}h ago`;
-    if (diffMins > 0) return `${diffMins}m ago`;
-    return "Just now";
+  const formatCurrency = (amount) => !amount ? `${currency}0` : `${currency}${Number(amount).toLocaleString()}`;
+
+  const scrollListings = (dir) => {
+    if (scrollRef.current) scrollRef.current.scrollBy({ left: dir === 'left' ? -340 : 340, behavior: 'smooth' });
   };
 
-  const presets = [
-    { label: "All", from: null, to: null },
+  const getFeatureImage = (property) => {
+    const photos = property?.property_photos || [];
+    const sorted = [...photos].sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0));
+    return sorted[0]?.photo_url || null;
+  };
+
+  const kpiCards = [
     {
-      label: "7 days",
-      from: (() => {
-        const d = new Date();
-        d.setDate(d.getDate() - 7);
-        return d.toISOString().slice(0, 10);
-      })(),
-      to: new Date().toISOString().slice(0, 10),
+      label: "Active listings", value: stats.activeProperties,
+      sub: stats.recentlyAdded > 0 ? `+${stats.recentlyAdded} this week` : null, subUp: true,
+      icon: <Home className="w-4 h-4 text-[#D03839]" />, iconBg: "#FEF0EF"
     },
     {
-      label: "30 days",
-      from: (() => {
-        const d = new Date();
-        d.setDate(d.getDate() - 30);
-        return d.toISOString().slice(0, 10);
-      })(),
-      to: new Date().toISOString().slice(0, 10),
+      label: "Total views", value: stats.totalViews.toLocaleString(),
+      sub: stats.viewsThisWeek > 0 ? `+${stats.viewsThisWeek} this week` : null, subUp: true,
+      icon: <Eye className="w-4 h-4 text-[#4A90E2]" />, iconBg: "#EBF3FC"
+    },
+    {
+      label: "Offers received", value: stats.offersReceived,
+      sub: stats.offersThisWeek > 0 ? `+${stats.offersThisWeek} this week` : null, subUp: true,
+      icon: <FileText className="w-4 h-4 text-[#B5620A]" />, iconBg: "#FEF3E2"
+    },
+    {
+      label: "Deals closed", value: stats.dealsClosed,
+      sub: stats.closedThisMonth !== 0 ? `${stats.closedThisMonth > 0 ? '+' : ''}${stats.closedThisMonth} this month` : null,
+      subUp: stats.closedThisMonth >= 0,
+      icon: <CheckCircle2 className="w-4 h-4 text-[#0F6E56]" />, iconBg: "#E4F5EC"
     },
   ];
 
-  const kpiCards = [
-    { label: "Active listings", value: stats.activeProperties, sub: "live now", icon: Home, color: "bg-white border-slate-200 text-slate-900", trendKey: "activeListings" },
-    { label: "Property views", value: stats.totalViews, sub: "total viewers", icon: Eye, color: "bg-white border-slate-200 text-slate-900", trendKey: "views" },
-    { label: "Inquiries", value: stats.totalInquiries, sub: "people asked", icon: MessageCircle, color: "bg-white border-slate-200 text-slate-900", trendKey: "inquiries" },
-    { label: "Portfolio value", value: `${currency}${(stats.totalValue || 0).toLocaleString()}`, sub: "active listings", icon: CircleDollarSign, color: "bg-white border-slate-200 text-slate-900", trendKey: "portfolioValue" },
+  const manageItems = [
+    { label: "Post a new deal", desc: "Create a listing", icon: <PlusCircle className="w-5 h-5 text-[#737370]" />, href: "/properties/new" },
+    { label: "Edit Listings", desc: "Update your deals", icon: <Edit3 className="w-5 h-5 text-[#4A90E2]" />, href: "/properties" },
+    { label: "View Offers", desc: `${stats.offersReceived} pending offers`, icon: <FileText className="w-5 h-5 text-[#B5620A]" />, href: "/offers" },
+    { label: "Promote Listing", desc: "Boost visibility", icon: <Megaphone className="w-5 h-5 text-[#7C3AED]" />, href: "/properties" },
   ];
 
   return (
-    <div className="space-y-6 sm:space-y-8 pb-8">
-      {/* Hero: minimal — welcome + CTA */}
-      <motion.div
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-        className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary via-primary/95 to-[#033d5c] text-white shadow-xl"
-      >
-        <div
-          className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_rgba(255,255,255,0.14)_0%,transparent_55%)]"
-          aria-hidden
-        />
-        <div className="relative px-5 py-6 sm:px-8 sm:py-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Welcome back, {firstName}</h1>
-          <Link
-            href="/properties/new"
-            className="inline-flex items-center gap-2 px-5 py-2.5 bg-white text-primary font-semibold rounded-xl hover:bg-white/95 transition-all duration-200 shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] shrink-0"
-          >
-            <PlusCircle className="w-5 h-5" />
-            Add property
-          </Link>
-        </div>
-      </motion.div>
-
-      {/* Date filter — compact */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.1 }}
-        className="flex flex-wrap items-center justify-between gap-3"
-      >
-        <p className="text-sm text-slate-500">
-          {loading
-            ? "Loading…"
-            : dateRange.from && dateRange.to
-            ? "Filtered by date range"
-            : `All time${stats.recentlyAdded > 0 ? ` · ${stats.recentlyAdded} added in last 7 days` : ""}`}
-        </p>
-        <div className="flex items-center gap-2 flex-wrap">
-          {presets.map((preset) => {
-            const active =
-              (!dateRange.from && !dateRange.to && !preset.from) ||
-              (dateRange.from === preset.from && dateRange.to === preset.to);
-            return (
-              <button
-                key={preset.label}
-                type="button"
-                onClick={() => {
-                  setDateRange({ from: preset.from, to: preset.to });
-                  setShowDatePicker(false);
-                }}
-                className={`px-3.5 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                  active ? "bg-primary text-white shadow-md" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                }`}
-              >
-                {preset.label}
-              </button>
-            );
-          })}
-          <div className="relative shrink-0">
-            <button
-              type="button"
-              onClick={() => setShowDatePicker(!showDatePicker)}
-              className="flex items-center gap-2 min-w-[10.5rem] px-3.5 py-2 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors text-sm font-medium text-slate-700 text-left"
-            >
-              <span className="truncate min-w-0">
-                {dateRange.from && dateRange.to
-                  ? (() => {
-                      const match = presets.find(
-                        (p) => p.from && p.to && dateRange.from === p.from && dateRange.to === p.to
-                      );
-                      return match ? match.label : formatDateRangeLabel(dateRange.from, dateRange.to);
-                    })()
-                  : "Custom dates"}
-              </span>
-            </button>
-            {showDatePicker && (
-              <>
-                <div className="fixed inset-0 z-10" onClick={() => setShowDatePicker(false)} aria-hidden="true" />
-                <div className="absolute right-0 top-full mt-2 z-20 bg-white rounded-xl border border-slate-200 shadow-xl p-4 min-w-[260px]">
-                  <p className="text-xs font-medium text-slate-600 mb-3">Filter by date range</p>
-                  <div className="space-y-2">
-                    <div>
-                      <label className="block text-xs text-slate-500 mb-1">From</label>
-                      <input
-                        type="date"
-                        value={dateRange.from || ""}
-                        onChange={(e) => setDateRange((prev) => ({ ...prev, from: e.target.value || null }))}
-                        className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs text-slate-500 mb-1">To</label>
-                      <input
-                        type="date"
-                        value={dateRange.to || ""}
-                        onChange={(e) => setDateRange((prev) => ({ ...prev, to: e.target.value || null }))}
-                        className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
-                      />
-                    </div>
-                  </div>
-                  <div className="flex gap-2 mt-3">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setDateRange({ from: null, to: null });
-                        setShowDatePicker(false);
-                      }}
-                      className="flex-1 px-3 py-2 text-sm font-medium text-slate-600 bg-slate-100 rounded-lg hover:bg-slate-200"
-                    >
-                      Clear
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setShowDatePicker(false)}
-                      className="flex-1 px-3 py-2 text-sm font-medium text-white bg-primary rounded-lg hover:bg-primary/90"
-                    >
-                      Apply
-                    </button>
-                  </div>
-                </div>
-              </>
-            )}
+    <div className="min-h-full bg-[#FAFAF8]" style={{ fontFamily: 'var(--font-dm-sans), sans-serif' }}>
+      {/* Header */}
+      <div className="px-2 lg:px-4 pt-5 pb-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-[24px] font-normal text-[#1A1816] tracking-[-0.56px]">Welcome Back, {firstName}</h1>
+            <p className="text-[14px] text-[#737370] mt-0.5">{getCurrentDate()}</p>
           </div>
-        </div>
-      </motion.div>
-
-      {/* KPI cards — prominent, animated */}
-      <motion.div
-        variants={container}
-        initial="hidden"
-        animate="show"
-        className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5"
-      >
-        {kpiCards.map((card, i) => (
-          <motion.div
-            key={card.label}
-            variants={item}
-            whileHover={{ y: -4, transition: { duration: 0.2 } }}
-            className={`rounded-2xl border ${card.color} p-5 sm:p-6 shadow-sm hover:shadow-md transition-shadow duration-300`}
-          >
-            <div className="flex items-start justify-between gap-3 w-full">
-              <div className="min-w-0">
-                <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">{card.label}</p>
-                {loading ? (
-                  <div className="h-9 w-24 bg-slate-100 rounded-lg mt-2 animate-pulse" />
-                ) : (
-                  <>
-                    <div className="flex items-baseline gap-2 mt-2 flex-wrap">
-                      <p
-                        className="text-xl sm:text-2xl font-bold tabular-nums truncate"
-                        title={typeof card.value === "string" ? card.value : String(card.value)}
-                      >
-                        {card.value}
-                      </p>
-                      {card.trendKey && trends[card.trendKey] && (
-                        <span
-                          className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md text-[10px] font-semibold tabular-nums ${
-                            trends[card.trendKey].isUp ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"
-                          }`}
-                          title={trends[card.trendKey].isUp ? "Up from previous period" : "Down from previous period"}
-                        >
-                          {trends[card.trendKey].isUp ? <TrendingUp className="w-3 h-3 shrink-0" /> : <TrendingDown className="w-3 h-3 shrink-0" />}
-                          {trends[card.trendKey].pct}%
-                        </span>
-                      )}
-                    </div>
-                    {card.sub && (
-                      <p className="text-[11px] text-slate-400 mt-0.5">{card.sub}</p>
-                    )}
-                  </>
+          <div className="flex items-center gap-3">
+            {/* Notification Bell */}
+            <div className="relative" ref={notifRef}>
+              <button
+                onClick={() => setNotifOpen(prev => !prev)}
+                className="relative p-2.5 rounded border border-[#E8E8E4] hover:bg-[#FAFAF8] transition-colors duration-200"
+              >
+                <Bell className="w-4 h-4 text-[#444441]" />
+                {notifUnread > 0 && (
+                  <span className="absolute top-1 right-1 min-w-[16px] h-[16px] flex items-center justify-center px-1 text-[10px] font-bold text-white bg-[#D03839] rounded-full leading-none">
+                    {notifUnread > 99 ? '99+' : notifUnread}
+                  </span>
                 )}
-              </div>
-              {card.icon && (
-                <div className="shrink-0 w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-500">
-                  <card.icon className="w-5 h-5" />
+              </button>
+              {notifOpen && (
+                <div className="fixed top-[70px] left-3 right-3 lg:absolute lg:top-full lg:left-auto lg:right-0 lg:mt-2 lg:w-[380px] bg-white border border-[#E8E8E4] rounded-lg shadow-xl z-[200] overflow-hidden">
+                  <div className="flex items-center justify-between px-4 py-3 border-b border-[#E8E8E4]">
+                    <span className="text-[13px] font-semibold text-[#1A1816]">Notifications</span>
+                    {notifUnread > 0 && (
+                      <button
+                        onClick={async () => {
+                          const sellerId = user?.id;
+                          if (!sellerId) return;
+                          await fetch('/api/seller/notifications', { method: 'POST', headers: { Authorization: `Bearer ${sellerId}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'mark_all_read' }) });
+                          setNotifUnread(0);
+                          setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
+                        }}
+                        className="text-[11px] text-[#D03839] font-medium hover:underline"
+                      >
+                        Mark all read
+                      </button>
+                    )}
+                  </div>
+                  <div className="max-h-[320px] overflow-y-auto">
+                    {notifications.length === 0 ? (
+                      <div className="flex items-center justify-center h-16 text-[13px] text-[#737370]">No notifications yet</div>
+                    ) : (
+                      notifications.map(n => {
+                        const convNumeric = uuidToNumericConvId(n.related_conversation_id);
+                        const href = convNumeric ? `/messages?conversation=${convNumeric}` : '/messages';
+                        return (
+                          <Link
+                            key={n.id}
+                            href={href}
+                            onClick={async () => {
+                              setNotifOpen(false);
+                              if (!n.is_read) {
+                                const sellerId = user?.id;
+                                if (sellerId) {
+                                  await fetch('/api/seller/notifications', { method: 'POST', headers: { Authorization: `Bearer ${sellerId}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'mark_read', notification_id: n.id }) });
+                                  setNotifications(prev => prev.map(x => x.id === n.id ? { ...x, is_read: true } : x));
+                                  setNotifUnread(prev => Math.max(0, prev - 1));
+                                }
+                              }
+                            }}
+                            className={`flex items-start gap-3 px-4 py-3 border-l-2 transition-colors hover:bg-[#FAFAF8] ${n.is_read ? 'border-l-transparent bg-white' : 'border-l-[#D03839] bg-[#FAFAF8]'}`}
+                          >
+                            <Bell className="w-4 h-4 text-[#737370] flex-shrink-0 mt-0.5" />
+                            <div className="flex-1 min-w-0">
+                              <p className={`text-[13px] truncate ${n.is_read ? 'text-[#444441]' : 'font-semibold text-[#1A1816]'}`}>{n.title}</p>
+                              <p className="text-[11px] text-[#737370] truncate mt-0.5">{n.body}</p>
+                              <p className="text-[10px] text-[#A8A8A4] mt-1">{n.created_at ? new Date(n.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : ''}</p>
+                            </div>
+                          </Link>
+                        );
+                      })
+                    )}
+                  </div>
                 </div>
               )}
             </div>
-          </motion.div>
-        ))}
-      </motion.div>
-
-      {/* Main content: Recent Properties + Queries */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 sm:gap-6">
-        {/* Recent Properties — responsive table / cards */}
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="lg:col-span-2 bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300"
-        >
-          <div className="px-4 sm:px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-            <h2 className="text-base font-semibold text-slate-900">Recent listings</h2>
-            <Link
-              href="/properties"
-              className="text-sm font-medium text-primary hover:text-primary/80 inline-flex items-center gap-1 transition-colors"
-            >
-              View all <ChevronRight className="w-4 h-4" />
+            <Link href="/properties/new" className="flex items-center gap-2 px-4 py-2.5 bg-[#1A1816] text-white text-[14px] font-semibold rounded hover:bg-[#2a2826] transition-colors duration-200">
+              <PlusCircle className="w-4 h-4" />
+              Post a deal
             </Link>
           </div>
-          <div className="overflow-x-auto">
-            {/* Desktop table */}
-            <table className="w-full hidden sm:table">
-              <thead className="bg-slate-50/80 border-b border-slate-100">
-                <tr>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
-                    Property
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600 uppercase tracking-wider">
-                    Price
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {loading
-                  ? [...Array(5)].map((_, i) => (
-                      <tr key={i} className="animate-pulse">
-                        <td className="px-4 sm:px-6 py-4">
-                          <div className="h-4 w-32 bg-slate-100 rounded" />
-                        </td>
-                        <td className="px-4 py-4">
-                          <div className="h-6 w-16 bg-slate-100 rounded-md" />
-                        </td>
-                        <td className="px-4 py-4">
-                          <div className="h-4 w-20 bg-slate-100 rounded ml-auto" />
-                        </td>
-                      </tr>
-                    ))
-                  : recentProperties.length === 0
-                  ? (
-                      <tr>
-                        <td colSpan="3" className="px-6 py-12 text-center">
-                          <div className="flex flex-col items-center gap-3">
-                            <div className="w-14 h-14 rounded-full bg-slate-100 flex items-center justify-center">
-                              <Building2 className="w-7 h-7 text-slate-400" />
-                            </div>
-                            <p className="text-sm font-medium text-slate-700">No properties yet</p>
-                            <p className="text-xs text-slate-500 max-w-xs">
-                              Add your first listing to start reaching buyers.
-                            </p>
-                            <Link
-                              href="/properties/new"
-                              className="inline-flex items-center gap-2 mt-2 px-5 py-2.5 bg-primary text-white text-sm font-medium rounded-xl hover:bg-primary/90 transition-colors"
-                            >
-                              <PlusCircle className="w-4 h-4" /> Add property
-                            </Link>
-                          </div>
-                        </td>
-                      </tr>
-                    )
-                  : recentProperties.map((property) => {
-                      const sortedImages = [...(property.property_photos || [])].sort(
-                        (a, b) => (a.display_order ?? 0) - (b.display_order ?? 0)
-                      );
-                      const firstImage = sortedImages?.[0]?.photo_url;
-                      const displayAddress = property.full_address || property.address || "Property";
-                      const ps = (property.property_status || "").toLowerCase();
-                      const statusLabel =
-                        property._normalizedStatus === "archived"
-                          ? "Archived"
-                          : property._normalizedStatus === "draft"
-                          ? "Draft"
-                          : ps === "sold"
-                          ? "Sold"
-                          : ps === "under_contract"
-                          ? "Under Contract"
-                          : ps === "pending"
-                          ? "Pending"
-                          : "Available";
-                      const statusClass =
-                        property._normalizedStatus === "archived"
-                          ? "bg-slate-200 text-slate-600"
-                          : property._normalizedStatus === "draft"
-                          ? "bg-amber-100 text-amber-800"
-                          : ps === "sold"
-                          ? "bg-red-100 text-red-700"
-                          : ps === "under_contract"
-                          ? "bg-teal-100 text-teal-700"
-                          : ps === "pending"
-                          ? "bg-orange-100 text-orange-700"
-                          : "bg-emerald-100 text-emerald-700";
-                      return (
-                        <tr key={property.id} className="hover:bg-slate-50/80 transition-colors group">
-                          <td className="px-4 sm:px-6 py-4">
-                            <Link
-                              href={`/properties/edit/${property.id}`}
-                              className="flex items-center gap-3 group-hover:text-primary transition-colors"
-                            >
-                              {firstImage ? (
-                                <div className="w-12 h-12 rounded-xl bg-slate-100 overflow-hidden shrink-0">
-                                  <img
-                                    src={firstImage}
-                                    alt=""
-                                    className="w-full h-full object-cover"
-                                  />
-                                </div>
-                              ) : (
-                                <div className="w-12 h-12 rounded-xl bg-slate-100 shrink-0 flex items-center justify-center">
-                                  <Building2 className="w-6 h-6 text-slate-400" />
-                                </div>
-                              )}
-                              <div className="min-w-0">
-                                <p className="text-sm font-medium text-slate-900 truncate max-w-[200px]">
-                                  {displayAddress}
-                                </p>
-                                <p className="text-xs text-slate-500 truncate max-w-[200px]">
-                                  {property.city && property.state
-                                    ? `${property.city}, ${property.state}`
-                                    : "—"}
-                                </p>
-                              </div>
-                            </Link>
-                          </td>
-                          <td className="px-4 py-4">
-                            <span
-                              className={`inline-flex px-2.5 py-1 rounded-lg text-xs font-medium ${statusClass}`}
-                            >
-                              {statusLabel}
-                            </span>
-                          </td>
-                          <td className="px-4 py-4 text-right">
-                            <span className="text-sm font-semibold text-slate-900 tabular-nums">
-                              {currency}
-                              {parseFloat(property.price || 0).toLocaleString()}
-                            </span>
-                          </td>
-                        </tr>
-                      );
-                    })}
-              </tbody>
-            </table>
-            {/* Mobile cards */}
-            <div className="sm:hidden divide-y divide-slate-100">
-              {loading
-                ? [...Array(3)].map((_, i) => (
-                    <div key={i} className="p-4 animate-pulse">
-                      <div className="h-4 w-3/4 bg-slate-100 rounded mb-2" />
-                      <div className="h-6 w-1/2 bg-slate-100 rounded" />
-                    </div>
-                  ))
-                : recentProperties.length === 0
-                ? (
-                    <div className="p-8 text-center">
-                      <Building2 className="w-10 h-10 text-slate-300 mx-auto mb-2" />
-                      <p className="text-sm font-medium text-slate-600">No properties yet</p>
-                      <Link
-                        href="/properties/new"
-                        className="inline-flex items-center gap-1.5 mt-2 text-sm font-medium text-primary"
-                      >
-                        Add property <ArrowRight className="w-4 h-4" />
-                      </Link>
-                    </div>
-                  )
-                : recentProperties.map((property) => {
-                    const displayAddress = property.full_address || property.address || "Property";
-                    const ps = (property.property_status || "").toLowerCase();
-                    const statusLabel =
-                      property._normalizedStatus === "archived"
-                        ? "Archived"
-                        : property._normalizedStatus === "draft"
-                        ? "Draft"
-                        : ps === "sold"
-                        ? "Sold"
-                        : ps === "under_contract"
-                        ? "Under Contract"
-                        : ps === "pending"
-                        ? "Pending"
-                        : "Available";
-                    const statusClass =
-                      property._normalizedStatus === "archived"
-                        ? "bg-slate-200 text-slate-600"
-                        : property._normalizedStatus === "draft"
-                        ? "bg-amber-100 text-amber-800"
-                        : ps === "sold"
-                        ? "bg-red-100 text-red-700"
-                        : ps === "under_contract"
-                        ? "bg-teal-100 text-teal-700"
-                        : ps === "pending"
-                        ? "bg-orange-100 text-orange-700"
-                        : "bg-emerald-100 text-emerald-700";
-                    return (
-                      <Link
-                        key={property.id}
-                        href={`/properties/edit/${property.id}`}
-                        className="block p-4 hover:bg-slate-50/80 transition-colors"
-                      >
-                        <p className="text-sm font-medium text-slate-900 truncate">{displayAddress}</p>
-                        <div className="flex items-center justify-between mt-1">
-                          <span className={`inline-flex px-2 py-0.5 rounded text-xs font-medium ${statusClass}`}>
-                            {statusLabel}
-                          </span>
-                          <span className="text-sm font-semibold text-slate-900 tabular-nums">
-                            {currency}
-                            {parseFloat(property.price || 0).toLocaleString()}
-                          </span>
-                        </div>
-                      </Link>
-                    );
-                  })}
-            </div>
-          </div>
-        </motion.div>
-
-        {/* Recent queries (buyer conversations) */}
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.25 }}
-          className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300"
-        >
-          <div className="px-4 sm:px-6 py-4 border-b border-slate-100">
-            <h2 className="text-base font-semibold text-slate-900">Recent queries</h2>
-            <p className="text-xs text-slate-500 mt-0.5">Latest buyer messages</p>
-          </div>
-          <div className="p-4 space-y-1 max-h-[380px] overflow-y-auto scrollbar-hide">
-            {loading
-              ? [...Array(4)].map((_, i) => (
-                  <div key={i} className="flex items-start gap-3 p-3 animate-pulse">
-                    <div className="w-10 h-10 bg-slate-100 rounded-full shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <div className="h-4 w-24 bg-slate-100 rounded mb-1.5" />
-                      <div className="h-3 w-32 bg-slate-50 rounded mb-1" />
-                      <div className="h-3 w-full max-w-[180px] bg-slate-50 rounded mb-1" />
-                      <div className="h-3 w-12 bg-slate-50 rounded" />
-                    </div>
-                  </div>
-                ))
-              : recentQueries.length === 0
-              ? (
-                  <div className="text-center py-10 px-4">
-                    <MessageCircle className="w-10 h-10 text-slate-300 mx-auto mb-2" />
-                    <p className="text-sm font-medium text-slate-600">No recent queries</p>
-                    <p className="text-xs text-slate-500 mt-1">Buyer messages will appear here.</p>
-                  </div>
-                )
-              : recentQueries.map((q) => (
-                  <Link
-                    key={q.id}
-                    href={`/messages?conversation=${q.id}`}
-                    className="flex items-start gap-3 p-3 rounded-xl hover:bg-slate-50/80 transition-colors group"
-                  >
-                    <div className="relative shrink-0">
-                      {q.property_thumbnail_url ? (
-                        <div className="w-10 h-10 rounded-full overflow-hidden bg-slate-100 ring-2 ring-white shadow-sm">
-                          <img
-                            src={q.property_thumbnail_url}
-                            alt=""
-                            className="w-full h-full object-cover"
-                          />
-                        </div>
-                      ) : (
-                        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
-                          <MessageCircle className="w-5 h-5" />
-                        </div>
-                      )}
-                      {q.has_unread && (
-                        <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-primary ring-2 ring-white" />
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-slate-900 truncate">
-                        {q.buyer_name || "Buyer"}
-                      </p>
-                      {q.property_address && (
-                        <p className="text-[11px] text-slate-600 mt-0.5 flex items-center gap-1 truncate">
-                          <Home className="w-3 h-3 shrink-0 text-primary/70" aria-hidden />
-                          <span className="truncate">{q.property_address}</span>
-                        </p>
-                      )}
-                      <p className="text-xs text-slate-600 mt-1 line-clamp-2">
-                        {q.last_message_preview || "No message yet"}
-                      </p>
-                      <p className="text-xs text-slate-400 mt-0.5">{formatTimeAgo(q.last_message_at)}</p>
-                    </div>
-                    <ChevronRight className="w-4 h-4 text-slate-400 shrink-0 group-hover:text-primary transition-colors" />
-                  </Link>
-                ))}
-          </div>
-          <div className="px-4 py-3 border-t border-slate-100">
-            <Link
-              href="/messages"
-              className="block text-center text-sm font-medium text-slate-600 hover:text-primary transition-colors"
-            >
-              Open messages
-            </Link>
-          </div>
-        </motion.div>
+        </div>
       </div>
 
-      {/* Status breakdown + Quick actions */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 sm:gap-6">
-        {/* Listing status — modern donut chart */}
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-          className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300"
-        >
-          <div className="px-4 sm:px-6 py-4 border-b border-slate-100">
-            <h2 className="text-base font-semibold text-slate-900">Listing status</h2>
-            <p className="text-xs text-slate-500 mt-0.5">By availability</p>
-          </div>
-          <div className="p-5 sm:p-6">
-            {loading ? (
-              <div className="flex justify-center">
-                <div className="w-40 h-40 rounded-full bg-slate-100 animate-pulse" />
-              </div>
-            ) : statusBreakdown.length === 0 ? (
-              <p className="text-sm text-slate-500 text-center py-8">No data yet</p>
-            ) : (
-              <div className="flex flex-col sm:flex-row items-center gap-6">
-                <motion.div
-                  initial={{ scale: 0.92, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-                  className="relative w-36 h-36 sm:w-40 sm:h-40 shrink-0"
-                >
-                  <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-sm" aria-hidden>
-                    <defs>
-                      <filter id="listing-donut-shadow" x="-20%" y="-20%" width="140%" height="140%">
-                        <feDropShadow dx="0" dy="2" stdDeviation="2" floodOpacity="0.08" />
-                      </filter>
-                      <linearGradient id="listing-donut-center" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" stopColor="#ffffff" />
-                        <stop offset="100%" stopColor="#f1f5f9" />
-                      </linearGradient>
-                    </defs>
-                    <g transform="rotate(-90 50 50)" filter="url(#listing-donut-shadow)">
-                      {(() => {
-                        const colors = {
-                          Available: "#10B981",
-                          "Sold Out": "#EF4444",
-                          Pending: "#ea580c",
-                          "Under Contract": "#0d9488",
-                        };
-                        const R = 40;
-                        const r = 24;
-                        const cx = 50;
-                        const cy = 50;
-                        const segments = statusBreakdown.filter((item) => (item.percentage || 0) > 0);
-                        if (segments.length === 0) {
-                          const o1 = cx + R;
-                          const o2 = cx - R;
-                          const i1 = cx + r;
-                          const i2 = cx - r;
-                          return (
-                            <path
-                              d={`M ${o1} ${cy} A ${R} ${R} 0 0 1 ${o2} ${cy} A ${R} ${R} 0 0 1 ${o1} ${cy} L ${i1} ${cy} A ${r} ${r} 0 0 1 ${i2} ${cy} A ${r} ${r} 0 0 1 ${i1} ${cy} Z`}
-                              fill="#e2e8f0"
-                              stroke="white"
-                              strokeWidth="2"
-                            />
-                          );
-                        }
-                        let currentAngle = 0;
-                        return segments.map((seg) => {
-                          const pct = Math.min(100, Math.max(0, seg.percentage || 0));
-                          let angle = (pct / 100) * 360;
-                          if (angle < 0.5) return null;
-                          if (angle >= 359.5) angle = 359.5;
-                          const startAngle = currentAngle;
-                          currentAngle += angle;
-                          const startRad = (startAngle * Math.PI) / 180;
-                          const endRad = (currentAngle * Math.PI) / 180;
-                          const x1 = cx + R * Math.cos(startRad);
-                          const y1 = cy + R * Math.sin(startRad);
-                          const x2 = cx + R * Math.cos(endRad);
-                          const y2 = cy + R * Math.sin(endRad);
-                          const x3 = cx + r * Math.cos(endRad);
-                          const y3 = cy + r * Math.sin(endRad);
-                          const x4 = cx + r * Math.cos(startRad);
-                          const y4 = cy + r * Math.sin(startRad);
-                          const largeArc = angle > 180 ? 1 : 0;
-                          const d = [
-                            `M ${x1} ${y1}`,
-                            `A ${R} ${R} 0 ${largeArc} 1 ${x2} ${y2}`,
-                            `L ${x3} ${y3}`,
-                            `A ${r} ${r} 0 ${largeArc} 0 ${x4} ${y4}`,
-                            "Z",
-                          ].join(" ");
-                          return (
-                            <path
-                              key={seg.name}
-                              d={d}
-                              fill={colors[seg.name] || "#94a3b8"}
-                              stroke="white"
-                              strokeWidth="2"
-                            />
-                          );
-                        });
-                      })()}
-                    </g>
-                    <circle cx="50" cy="50" r="20" fill="url(#listing-donut-center)" stroke="#e2e8f0" strokeWidth="1" />
-                    <text
-                      x="50"
-                      y="46"
-                      textAnchor="middle"
-                      fontSize="18"
-                      fontWeight="700"
-                      fill="#0f172a"
-                      fontFamily="system-ui, -apple-system, sans-serif"
-                    >
-                      {stats.activeProperties}
-                    </text>
-                    <text
-                      x="50"
-                      y="58"
-                      textAnchor="middle"
-                      fontSize="9"
-                      fontWeight="500"
-                      fill="#64748b"
-                      fontFamily="system-ui, -apple-system, sans-serif"
-                    >
-                      active
-                    </text>
-                  </svg>
-                </motion.div>
-                <div className="space-y-1 flex-1 min-w-0">
-                  {statusBreakdown.map((seg, i) => {
-                    const dotColors = {
-                      Available: "bg-emerald-500",
-                      "Sold Out": "bg-red-500",
-                      Pending: "bg-orange-500",
-                      "Under Contract": "bg-teal-500",
-                    };
-                    return (
-                      <motion.div
-                        key={seg.name}
-                        initial={{ opacity: 0, x: -8 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: 0.25 + i * 0.05, duration: 0.3 }}
-                        className="flex items-center justify-between gap-3 py-2.5 px-2.5 rounded-lg hover:bg-slate-50/80 transition-colors"
-                      >
-                        <div className="flex items-center gap-2.5 min-w-0">
-                          <span
-                            className={`flex h-3.5 w-3.5 rounded-full shrink-0 ${dotColors[seg.name] || "bg-slate-400"} ring-2 ring-white shadow-sm`}
-                            aria-hidden
-                          />
-                          <span className="text-sm font-medium text-slate-700 truncate">{seg.name}</span>
-                        </div>
-                        <div className="flex items-baseline gap-2 shrink-0">
-                          <span className="text-base font-bold text-slate-900 tabular-nums">{seg.count}</span>
-                          <span className="text-xs text-slate-500 tabular-nums">({seg.percentage || 0}%)</span>
-                        </div>
-                      </motion.div>
-                    );
-                  })}
+      <div className="px-2 lg:px-4 py-5">
+        {/* KPI Cards */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+          {kpiCards.map(card => (
+            <div key={card.label} className="bg-white rounded border border-[#E8E8E4] px-4 py-5 flex flex-col">
+              {/* Top row — label + icon */}
+              <div className="flex items-start justify-between mb-5">
+                <p className="text-[13px] font-medium text-[#737370]">{card.label}</p>
+                <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0" style={{ backgroundColor: card.iconBg }}>
+                  {card.icon}
                 </div>
+              </div>
+              {/* Number + trend */}
+              {loading ? (
+                <div className="h-9 w-16 bg-[#FAFAF8] rounded animate-pulse" />
+              ) : (
+                <div>
+                  <p className="text-[36px] font-bold text-[#1A1816] leading-none tracking-tight">{card.value}</p>
+                  {card.sub && (
+                    <p className={`text-[12px] font-medium mt-2 flex items-center gap-1 ${card.subUp ? 'text-[#0F6E56]' : 'text-[#D03839]'}`}>
+                      {card.subUp ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+                      {card.sub}
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+
+        {/* My Listings + Recent Messages */}
+        <div className="grid grid-cols-1 xl:grid-cols-5 gap-5 mb-8">
+          {/* My Listings */}
+          <div className="xl:col-span-3 bg-white rounded border border-[#E8E8E4] overflow-hidden">
+            {/* Header */}
+            <div className="flex items-center justify-between px-4 py-3 border-b border-[#E8E8E4]">
+              <h2 className="text-[14px] font-normal text-[#1A1816]">My listings</h2>
+              <Link href="/properties" className="text-[13px] font-medium text-[#737370] hover:text-[#1A1816] transition-colors duration-200">View all</Link>
+            </div>
+
+            {loading ? (
+              <div className="min-h-[340px] flex flex-col items-center justify-center gap-3">
+                <div className="animate-spin rounded-full h-8 w-8 border-2 border-[#E8E8E4] border-t-[#1A1816]"></div>
+                <p className="text-[13px] text-[#A8A8A4]">Loading listings...</p>
+              </div>
+            ) : recentProperties.length === 0 ? (
+              <div className="p-8 text-center min-h-[340px] flex flex-col items-center justify-center">
+                <Building2 className="w-8 h-8 text-[#A8A8A4] mx-auto mb-3" />
+                <p className="text-[14px] font-medium text-[#444441] mb-3">No listings yet</p>
+                <Link href="/properties/new" className="inline-flex items-center gap-2 px-4 py-2 bg-[#D03839] text-white text-[13px] font-semibold rounded hover:bg-[#E0493B] transition-colors duration-200">
+                  <PlusCircle className="w-4 h-4" /> Post a deal
+                </Link>
+              </div>
+            ) : (
+              <div className="flex gap-4 p-4 overflow-x-auto">
+                {recentProperties.map(property => {
+                  const image = getFeatureImage(property);
+                  const title = property.title || property.full_address || property.address || 'Property';
+                  const city = property.city || '';
+                  const state = property.state || '';
+                  const location = [city, state].filter(Boolean).join(', ');
+                  const ps = (property.property_status || 'active').toLowerCase();
+                  const statusLabel = ps === 'active' ? 'Active' : ps === 'under_review' ? 'Under review' : ps === 'sold' ? 'Sold' : 'Active';
+                  const statusStyle = ps === 'active'
+                    ? 'bg-[#E4F5EC] text-[#0F6E56]'
+                    : ps === 'sold'
+                    ? 'bg-[#EBF3FC] text-[#4A90E2]'
+                    : 'bg-[#F3F3F0] text-[#737370]';
+
+                  return (
+                    <div key={property.id} className="bg-white rounded border border-[#E8E8E4] overflow-hidden flex-shrink-0 w-[85vw] sm:w-[calc(50%-8px)]">
+                      {/* Image */}
+                      <div className="relative h-[220px] bg-[#FAFAF8]">
+                        {image ? (
+                          <img src={image} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center"><Building2 className="w-8 h-8 text-[#A8A8A4]" /></div>
+                        )}
+                        <span className={`absolute top-3 left-3 px-2.5 py-1 text-[12px] font-semibold rounded-full ${statusStyle}`}>
+                          {statusLabel}
+                        </span>
+                      </div>
+
+                      {/* Content */}
+                      <div className="p-4">
+                        <p className="text-[16px] font-semibold text-[#1A1816] mb-1.5 line-clamp-1">{title}</p>
+                        <div className="flex items-center gap-1.5 text-[13px] text-[#737370] mb-3">
+                          {location && <><MapPin className="w-3.5 h-3.5 flex-shrink-0" /><span>{location}</span></>}
+                          {property.bedrooms && <><span className="text-[#E8E8E4]">•</span><span>{property.bedrooms} bed</span></>}
+                          {property.bathrooms && <><span className="text-[#E8E8E4]">•</span><span>{property.bathrooms} bath</span></>}
+                        </div>
+                        <p className="text-[28px] font-bold text-[#1A1816] leading-none mb-3">{formatCurrency(property.price)}</p>
+                        {/* Stats */}
+                        <div className="flex items-center gap-3 text-[12px] text-[#737370] mb-4">
+                          <span className="flex items-center gap-1"><Eye className="w-3.5 h-3.5" /> {property.view_count ?? 0} views</span>
+                          <span className="flex items-center gap-1"><Heart className="w-3.5 h-3.5" /> {property.saves_count ?? 0} saves</span>
+                          <span className="flex items-center gap-1"><FileText className="w-3.5 h-3.5" /> {property.offers_count ?? 0} offers</span>
+                        </div>
+                        {/* Buttons */}
+                        <div className="flex gap-2">
+                          <Link href={`/properties/edit/${property.id}`} className="flex-1 py-2.5 text-center border border-[#1A1816] text-[#1A1816] text-[13px] font-semibold rounded hover:bg-[#FAFAF8] transition-colors duration-200">
+                            Edit
+                          </Link>
+                          <Link href={`/properties/edit/${property.id}`} className="flex-1 py-2.5 text-center bg-[#FEF0EF] text-[#D03839] text-[13px] font-semibold rounded border border-[#D03839] hover:bg-[#fde4e3] transition-colors duration-200">
+                            View Deal
+                          </Link>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>
-        </motion.div>
 
-        {/* Quick Actions — spans 2 cols on lg so it's prominent */}
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.35 }}
-          className="lg:col-span-2 bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300"
-        >
-          <div className="px-4 sm:px-6 py-4 border-b border-slate-100">
-            <h2 className="text-base font-semibold text-slate-900">Quick actions</h2>
-            <p className="text-xs text-slate-500 mt-0.5">Shortcuts to manage your portfolio</p>
+          {/* Recent Messages */}
+          <div className="xl:col-span-2 bg-white rounded border border-[#E8E8E4] overflow-hidden flex flex-col">
+            <div className="px-4 py-3 border-b border-[#E8E8E4] flex items-center justify-between">
+              <h2 className="text-[14px] font-normal text-[#1A1816]">Recent messages</h2>
+              <Link href="/messages" className="text-[13px] font-medium text-[#737370] hover:text-[#1A1816] transition-colors duration-200">View all</Link>
+            </div>
+            {loading ? (
+              <div className="p-4 space-y-3">{[...Array(4)].map((_, i) => <div key={i} className="h-12 bg-[#FAFAF8] rounded animate-pulse" />)}</div>
+            ) : recentQueries.length === 0 ? (
+              <div className="p-8 text-center">
+                <MessageCircle className="w-8 h-8 text-[#A8A8A4] mx-auto mb-3" />
+                <p className="text-[14px] font-medium text-[#444441]">No messages yet</p>
+              </div>
+            ) : (
+              <div className="divide-y divide-[#E8E8E4]">
+                {recentQueries.map(q => (
+                  <Link key={q.id} href={`/messages?conversation=${q.id}`} className="flex items-start gap-3 px-4 py-3 hover:bg-[#FAFAF8] transition-colors duration-200">
+                    <div className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0" style={{ backgroundColor: getAvatarPair(q.buyer_name || q.id).bg }}>
+                      <span className="text-[12px] font-semibold" style={{ color: getAvatarPair(q.buyer_name || q.id).text }}>{getInitials(q.buyer_name)}</span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-[13px] font-semibold text-[#1A1816] truncate">{q.buyer_name || "Buyer"}</p>
+                        <span className="text-[11px] text-[#A8A8A4] flex-shrink-0">{formatTimeAgo(q.last_message_at)}</span>
+                      </div>
+                      <p className="text-[12px] text-[#737370] truncate mt-0.5">{q.last_message_preview || "No message yet"}</p>
+                    </div>
+                    {(q.unread_count ?? 0) > 0 && <span className="w-2.5 h-2.5 rounded-full bg-[#D03839] flex-shrink-0 mt-1.5"></span>}
+                  </Link>
+                ))}
+              </div>
+            )}
           </div>
-          <div className="p-4 sm:p-6 flex flex-col gap-2">
-            <Link
-              href="/properties/new"
-              className="flex items-center gap-3 px-4 py-3 rounded-xl bg-primary text-white hover:bg-primary/90 transition-colors text-sm font-semibold"
-            >
-              <PlusCircle className="w-5 h-5 shrink-0" />
-              Add property
-            </Link>
-            <Link
-              href="/properties"
-              className="flex items-center gap-3 px-4 py-3 rounded-xl border border-slate-200 hover:border-slate-300 hover:bg-slate-50 transition-colors text-sm font-medium text-slate-700"
-            >
-              <List className="w-5 h-5 shrink-0 text-slate-500" />
-              Manage listings
-            </Link>
-            <Link
-              href="/properties?view=trash"
-              className="flex items-center gap-3 px-4 py-3 rounded-xl border border-slate-200 hover:border-slate-300 hover:bg-slate-50 transition-colors text-sm font-medium text-slate-700"
-            >
-              <Archive className="w-5 h-5 shrink-0 text-slate-500" />
-              Archived
-            </Link>
+        </div>
+
+        {/* Manage Listings */}
+        <div>
+          <h2 className="text-[18px] font-bold text-[#1A1816] tracking-[-0.56px] mb-3">Manage Listings</h2>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            {manageItems.map(item => (
+              <Link key={item.label} href={item.href} className="flex items-center gap-3 bg-white rounded border border-[#E8E8E4] px-4 py-4 hover:bg-[#FAFAF8] transition-colors duration-200 group">
+                <div className="w-10 h-10 rounded-full bg-[#FAFAF8] flex items-center justify-center flex-shrink-0">
+                  {item.icon}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[13px] font-semibold text-[#1A1816]">{item.label}</p>
+                  <p className="text-[11px] text-[#A8A8A4]">{item.desc}</p>
+                </div>
+                <ChevronRight className="w-4 h-4 text-[#A8A8A4] flex-shrink-0" />
+              </Link>
+            ))}
           </div>
-        </motion.div>
+        </div>
       </div>
     </div>
   );

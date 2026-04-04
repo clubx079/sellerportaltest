@@ -2,10 +2,14 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { MessageCircle, Send, Search, ArrowLeft, Loader2, Check, CheckCheck, Pin, MoreVertical, ExternalLink } from 'lucide-react';
+import {
+  MessageCircle, Send, Search, ArrowLeft, Loader2, Check, CheckCheck,
+  Pin, Paperclip, Smile, MapPin, Mail, Phone, Shield, AlertCircle, X, MoreVertical
+} from 'lucide-react';
 import { createClient } from '@supabase/supabase-js';
 
 const API = '/api/seller/chat';
+const FONT = 'var(--font-dm-sans), sans-serif';
 
 function getSupabase() {
   if (typeof window === 'undefined') return null;
@@ -14,13 +18,27 @@ function getSupabase() {
   if (!url || !key) return null;
   return createClient(url, key);
 }
-const AVATAR_COLORS = ['#0F766E', '#2563EB', '#7C3AED', '#C2410C', '#BE185D', '#0369A1', '#047857', '#4F46E5'];
 
-function getAvatarColor(seed = '') {
+const AVATAR_PAIRS = [
+  { bg: '#FEF0EF', text: '#D03839' },
+  { bg: '#E4F5EC', text: '#0F6E56' },
+  { bg: '#FEF3E2', text: '#B5620A' },
+  { bg: '#EBF3FC', text: '#4A90E2' },
+  { bg: '#F3EEFF', text: '#7C3AED' },
+];
+
+function getAvatarPair(seed = '') {
   const str = String(seed || 'buyer');
   let hash = 0;
   for (let i = 0; i < str.length; i += 1) hash = (hash * 31 + str.charCodeAt(i)) | 0;
-  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
+  return AVATAR_PAIRS[Math.abs(hash) % AVATAR_PAIRS.length];
+}
+
+function getInitials(name) {
+  if (!name) return 'B';
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+  return parts[0].substring(0, 2).toUpperCase();
 }
 
 function capitalizeFirst(input = '') {
@@ -37,21 +55,20 @@ function getAuthHeaders() {
     const id = user?.id;
     if (!id) return {};
     return { Authorization: `Bearer ${id}` };
-  } catch {
-    return {};
-  }
+  } catch { return {}; }
 }
 
-function formatDate(dateString) {
+function formatTimeAgo(dateString) {
   if (!dateString) return '';
-  const date = new Date(dateString);
-  const now = new Date();
-  const diffMs = now - date;
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-  if (diffDays === 0) return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
-  if (diffDays === 1) return 'Yesterday';
-  if (diffDays < 7) return date.toLocaleDateString('en-US', { weekday: 'short' });
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  const diff = Date.now() - new Date(dateString).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'now';
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days === 1) return 'Yesterday';
+  return `${days}d ago`;
 }
 
 function formatTime(dateString) {
@@ -59,22 +76,16 @@ function formatTime(dateString) {
   return new Date(dateString).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
 }
 
-const MESSAGE_GROUP_WINDOW_MS = 5 * 60 * 1000;
-function groupMessagesByTime(msgs) {
-  if (!msgs?.length) return [];
-  const groups = [];
-  let current = [msgs[0]];
-  for (let i = 1; i < msgs.length; i++) {
-    const prev = new Date(msgs[i - 1].created_at).getTime();
-    const curr = new Date(msgs[i].created_at).getTime();
-    if (curr - prev <= MESSAGE_GROUP_WINDOW_MS) current.push(msgs[i]);
-    else {
-      groups.push(current);
-      current = [msgs[i]];
-    }
-  }
-  groups.push(current);
-  return groups;
+function formatDateHeader(timestamp) {
+  const date = new Date(timestamp);
+  const now = new Date();
+  if (date.toDateString() === now.toDateString()) return `Today, ${date.toLocaleDateString('en-US', { month: 'long' })}\n${date.getDate()}`;
+  return date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+}
+
+function formatCurrency(amount) {
+  if (!amount) return '$0';
+  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(amount);
 }
 
 export default function MessagesPage() {
@@ -95,19 +106,33 @@ export default function MessagesPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [contextAddress, setContextAddress] = useState('');
   const [contextConversationId, setContextConversationId] = useState(null);
-  const [chatTab, setChatTab] = useState('all'); // all | unread | unresponded
-  const [contextMenu, setContextMenu] = useState(null); // { x, y, conv }
-  const [headerMenuOpen, setHeaderMenuOpen] = useState(false);
+  const [contextMenu, setContextMenu] = useState(null);
   const messagesEndRef = useRef(null);
   const messageInputRef = useRef(null);
 
+  // Offer state
+  const [offer, setOffer] = useState(null);
+  const [allOffers, setAllOffers] = useState([]);
+  const [offerLoading, setOfferLoading] = useState(false);
+
+  // Buyer credibility state
+  const [buyerStats, setBuyerStats] = useState(null);
+  const [buyerStatsLoading, setBuyerStatsLoading] = useState(false);
+  const [showAcceptModal, setShowAcceptModal] = useState(false);
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [showCounterForm, setShowCounterForm] = useState(false);
+  const [counterAmount, setCounterAmount] = useState('');
+  const [counterTimeline, setCounterTimeline] = useState('30 days');
+  const [counterFinancing, setCounterFinancing] = useState('Cash');
+  const [counterNotes, setCounterNotes] = useState('');
+  const [offerActionLoading, setOfferActionLoading] = useState(false);
+  const [showMobilePropPanel, setShowMobilePropPanel] = useState(false);
+
   const scrollToBottom = () => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
 
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+  useEffect(() => { scrollToBottom(); }, [messages]);
 
-  // Heartbeat for message presence: only when tab is visible, so we skip email if seller is on messages
+  // Heartbeat
   useEffect(() => {
     if (typeof document === 'undefined') return;
     const headers = getAuthHeaders();
@@ -115,108 +140,70 @@ export default function MessagesPage() {
     let intervalId = null;
     const sendHeartbeat = () => {
       if (document.visibilityState === 'visible') {
-        fetch(API, {
-          method: 'POST',
-          headers: { ...headers, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'heartbeat' })
-        }).catch(() => {});
+        fetch(API, { method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'heartbeat' }) }).catch(() => {});
       }
     };
-    const onVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        sendHeartbeat();
-        intervalId = setInterval(sendHeartbeat, 25000);
-      } else {
-        if (intervalId) clearInterval(intervalId);
-        intervalId = null;
-      }
+    const onVis = () => {
+      if (document.visibilityState === 'visible') { sendHeartbeat(); intervalId = setInterval(sendHeartbeat, 25000); }
+      else { if (intervalId) clearInterval(intervalId); intervalId = null; }
     };
-    if (document.visibilityState === 'visible') {
-      sendHeartbeat();
-      intervalId = setInterval(sendHeartbeat, 25000);
-    }
-    document.addEventListener('visibilitychange', onVisibilityChange);
-    return () => {
-      document.removeEventListener('visibilitychange', onVisibilityChange);
-      if (intervalId) clearInterval(intervalId);
-    };
+    if (document.visibilityState === 'visible') { sendHeartbeat(); intervalId = setInterval(sendHeartbeat, 25000); }
+    document.addEventListener('visibilitychange', onVis);
+    return () => { document.removeEventListener('visibilitychange', onVis); if (intervalId) clearInterval(intervalId); };
   }, []);
 
   useEffect(() => {
-    const close = (e) => {
-      if (e && e.button !== undefined && e.button !== 0) return;
-      setContextMenu(null);
-    };
+    const close = () => setContextMenu(null);
     window.addEventListener('click', close);
     return () => window.removeEventListener('click', close);
   }, []);
 
+  // Initial load
   useEffect(() => {
     let cancelled = false;
     const headers = getAuthHeaders();
-    if (!headers.Authorization) {
-      setError('Please log in.');
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
-    setError(null);
+    if (!headers.Authorization) { setError('Please log in.'); setLoading(false); return; }
+    setLoading(true); setError(null);
     const url = buyerIdFromUrl
       ? `${API}?action=get_conversations&buyer_id=${encodeURIComponent(buyerIdFromUrl)}${propertyIdFromUrl ? `&property_id=${encodeURIComponent(propertyIdFromUrl)}` : ''}`
       : `${API}?action=get_conversations`;
     fetch(url, { headers })
-      .then((res) => res.json())
-      .then((data) => {
+      .then(r => r.json())
+      .then(data => {
         if (cancelled) return;
         const list = data.conversations || [];
-        setConversations(list);
-        setFilteredConversations(list);
+        setConversations(list); setFilteredConversations(list);
         if (data.openConversationId) {
           setOpenConversationId(data.openConversationId);
-          if (addressFromUrl) {
-            setContextAddress(addressFromUrl);
-            setContextConversationId(data.openConversationId);
-          }
+          if (addressFromUrl) { setContextAddress(addressFromUrl); setContextConversationId(data.openConversationId); }
           return;
         }
         if (conversationIdFromUrl && list.length > 0) {
-          const match = list.find((c) => String(c.id) === String(conversationIdFromUrl));
-          if (match) {
-            setOpenConversationId(match.id);
-            return;
-          }
+          const match = list.find(c => String(c.id) === String(conversationIdFromUrl));
+          if (match) { setOpenConversationId(match.id); return; }
         }
         if (buyerIdFromUrl) {
-          const existing = list.find((c) => {
-            const buyerMatch = c.buyer_uuid && String(c.buyer_uuid) === String(buyerIdFromUrl);
-            if (!buyerMatch) return false;
-            if (!propertyIdFromUrl) return true;
-            return String(c.property_id || '') === String(propertyIdFromUrl);
+          const existing = list.find(c => {
+            const match = c.buyer_uuid && String(c.buyer_uuid) === String(buyerIdFromUrl);
+            if (!match) return false;
+            return !propertyIdFromUrl || String(c.property_id || '') === String(propertyIdFromUrl);
           });
           if (existing) {
             setOpenConversationId(existing.id);
-            if (addressFromUrl) {
-              setContextAddress(addressFromUrl);
-              setContextConversationId(existing.id);
-            }
+            if (addressFromUrl) { setContextAddress(addressFromUrl); setContextConversationId(existing.id); }
             return;
           }
-          createConversation(buyerIdFromUrl, headers).then((id) => {
+          createConversation(buyerIdFromUrl, headers).then(id => {
             if (id) {
               setOpenConversationId(id);
-              if (addressFromUrl) {
-                setContextAddress(addressFromUrl);
-                setContextConversationId(id);
-              }
-              const newConv = { id, buyer_uuid: buyerIdFromUrl, buyer_name: 'Buyer', last_message_preview: null, last_message_at: new Date().toISOString(), is_active: true };
-              setConversations((prev) => [newConv, ...prev]);
-              setFilteredConversations((prev) => [newConv, ...prev]);
+              if (addressFromUrl) { setContextAddress(addressFromUrl); setContextConversationId(id); }
+              setConversations(prev => [{ id, buyer_uuid: buyerIdFromUrl, buyer_name: 'Buyer', last_message_preview: null, last_message_at: new Date().toISOString(), is_active: true }, ...prev]);
             }
             fetchConversations(headers);
           });
         }
       })
-      .catch((err) => { if (!cancelled) setError(err.message || 'Failed to load conversations'); })
+      .catch(err => { if (!cancelled) setError(err.message || 'Failed to load conversations'); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, [buyerIdFromUrl, propertyIdFromUrl, addressFromUrl, conversationIdFromUrl]);
@@ -227,21 +214,13 @@ export default function MessagesPage() {
     const url = buyerIdFromUrl
       ? `${API}?action=get_conversations&buyer_id=${encodeURIComponent(buyerIdFromUrl)}${propertyIdFromUrl ? `&property_id=${encodeURIComponent(propertyIdFromUrl)}` : ''}`
       : `${API}?action=get_conversations`;
-    fetch(url, { headers: h })
-      .then((res) => res.json())
-      .then((data) => {
-        const list = data.conversations || [];
-        setConversations(list);
-        setFilteredConversations(list);
-        // If current open chat got blocked/removed, close it.
-        if (openConversationId != null && !list.some((c) => c.id === openConversationId)) {
-          setOpenConversationId(null);
-        }
-      })
-      .catch(() => {});
+    fetch(url, { headers: h }).then(r => r.json()).then(data => {
+      const list = data.conversations || [];
+      setConversations(list); setFilteredConversations(list);
+      if (openConversationId != null && !list.some(c => c.id === openConversationId)) setOpenConversationId(null);
+    }).catch(() => {});
   }
 
-  // Refetch conversations periodically so unread counts update when new messages arrive in other chats
   useEffect(() => {
     const headers = getAuthHeaders();
     if (!headers.Authorization) return;
@@ -251,154 +230,77 @@ export default function MessagesPage() {
 
   async function createConversation(buyerId, headers) {
     const res = await fetch(API, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...headers },
-      body: JSON.stringify({
-        action: 'create_conversation',
-        buyerId,
-        propertyId: propertyIdFromUrl || null,
-        propertyAddress: addressFromUrl || null
-      })
+      method: 'POST', headers: { 'Content-Type': 'application/json', ...headers },
+      body: JSON.stringify({ action: 'create_conversation', buyerId, propertyId: propertyIdFromUrl || null, propertyAddress: addressFromUrl || null })
     });
     const data = await res.json().catch(() => ({}));
     return data.conversationId || null;
   }
 
+  // Load messages when conversation selected
   useEffect(() => {
-    if (!openConversationId) {
-      setMessages([]);
-      return;
-    }
+    if (!openConversationId) { setMessages([]); return; }
     const headers = getAuthHeaders();
     if (!headers.Authorization) return;
     fetch(`${API}?action=get_messages&conversation_id=${openConversationId}`, { headers })
-      .then((res) => res.json())
-      .then((data) => setMessages(data.messages || []))
-      .catch(() => setMessages([]));
-    fetch(API, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...headers },
-      body: JSON.stringify({ action: 'mark_as_read', conversationId: openConversationId })
-    }).catch(() => {});
-    // Clear unread count for this conversation in local state
-    setConversations((prev) => prev.map((c) => (c.id === openConversationId ? { ...c, unread_count: 0 } : c)));
-    setFilteredConversations((prev) => prev.map((c) => (c.id === openConversationId ? { ...c, unread_count: 0 } : c)));
+      .then(r => r.json()).then(data => setMessages(data.messages || [])).catch(() => setMessages([]));
+    fetch(API, { method: 'POST', headers: { 'Content-Type': 'application/json', ...headers }, body: JSON.stringify({ action: 'mark_as_read', conversationId: openConversationId }) }).catch(() => {});
+    setConversations(prev => prev.map(c => c.id === openConversationId ? { ...c, unread_count: 0 } : c));
+    setFilteredConversations(prev => prev.map(c => c.id === openConversationId ? { ...c, unread_count: 0 } : c));
   }, [openConversationId]);
 
-  // Realtime: new messages + read receipt updates (so double ticks update when buyer reads)
+  // Realtime
   useEffect(() => {
     if (!openConversationId) return () => {};
     const supabase = getSupabase();
     if (!supabase) return () => {};
     const channel = supabase
       .channel(`seller-conversation-${openConversationId}`, { config: { broadcast: { self: true } } })
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'messages',
-          filter: `conversation_id=eq.${openConversationId}`
-        },
-        (payload) => {
-          const updated = payload.new;
-          if (updated?.id != null && updated.is_read) {
-            setMessages((prev) =>
-              prev.map((msg) => (String(msg.id) === String(updated.id) ? { ...msg, is_read: true } : msg))
-            );
-          }
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'messages', filter: `conversation_id=eq.${openConversationId}` }, (payload) => {
+        const updated = payload.new;
+        if (updated?.id != null && updated.is_read) setMessages(prev => prev.map(msg => String(msg.id) === String(updated.id) ? { ...msg, is_read: true } : msg));
+      })
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `conversation_id=eq.${openConversationId}` }, (payload) => {
+        const newMsg = payload.new;
+        if (!newMsg || newMsg.id == null) return;
+        setMessages(prev => prev.some(m => String(m.id) === String(newMsg.id)) ? prev : [...prev, newMsg]);
+        const headers = getAuthHeaders();
+        if (headers.Authorization) {
+          fetch(API, { method: 'POST', headers: { 'Content-Type': 'application/json', ...headers }, body: JSON.stringify({ action: 'mark_as_read', conversationId: openConversationId }) }).catch(() => {});
         }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'messages',
-          filter: `conversation_id=eq.${openConversationId}`
-        },
-        (payload) => {
-          const newMsg = payload.new;
-          if (!newMsg || newMsg.id == null) return;
-          setMessages((prev) => {
-            if (prev.some((m) => String(m.id) === String(newMsg.id))) return prev;
-            return [...prev, newMsg];
-          });
-          // Seller is viewing this chat: mark as read and clear unread badge
-          const headers = getAuthHeaders();
-          if (headers.Authorization) {
-            fetch(API, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json', ...headers },
-              body: JSON.stringify({ action: 'mark_as_read', conversationId: openConversationId })
-            }).catch(() => {});
-          }
-          setConversations((prev) =>
-            prev.map((c) =>
-              c.id === openConversationId
-                ? {
-                    ...c,
-                    unread_count: 0,
-                    last_message_preview: (newMsg.message_text || '').slice(0, 200),
-                    last_message_at: newMsg.created_at || c.last_message_at
-                  }
-                : c
-            )
-          );
-          setFilteredConversations((prev) =>
-            prev.map((c) =>
-              c.id === openConversationId
-                ? {
-                    ...c,
-                    unread_count: 0,
-                    last_message_preview: (newMsg.message_text || '').slice(0, 200),
-                    last_message_at: newMsg.created_at || c.last_message_at
-                  }
-                : c
-            )
-          );
-          scrollToBottom();
-        }
-      )
+        setConversations(prev => prev.map(c => c.id === openConversationId ? { ...c, unread_count: 0, last_message_preview: (newMsg.message_text || '').slice(0, 200), last_message_at: newMsg.created_at || c.last_message_at } : c));
+        setFilteredConversations(prev => prev.map(c => c.id === openConversationId ? { ...c, unread_count: 0, last_message_preview: (newMsg.message_text || '').slice(0, 200), last_message_at: newMsg.created_at || c.last_message_at } : c));
+        scrollToBottom();
+      })
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'offers', filter: `conversation_id=eq.${openConversationId}` }, (payload) => {
+        const newOffer = payload.new;
+        if (!newOffer?.id) return;
+        setOffer(newOffer);
+        if (newOffer.offer_price) setCounterAmount(String(Math.round(newOffer.offer_price)));
+        scrollToBottom();
+      })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'offers', filter: `conversation_id=eq.${openConversationId}` }, (payload) => {
+        const updated = payload.new;
+        if (!updated?.id) return;
+        setOffer(prev => prev && String(prev.id) === String(updated.id) ? { ...prev, ...updated } : prev);
+      })
       .subscribe();
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    return () => supabase.removeChannel(channel);
   }, [openConversationId]);
 
-  // Open conversation from URL param ?conversation=id when list is ready
   useEffect(() => {
     if (!conversationIdFromUrl || conversations.length === 0) return;
-    const match = conversations.find((c) => String(c.id) === String(conversationIdFromUrl));
+    const match = conversations.find(c => String(c.id) === String(conversationIdFromUrl));
     if (match) setOpenConversationId(match.id);
   }, [conversationIdFromUrl, conversations]);
 
   useEffect(() => {
-    if (!searchQuery.trim()) {
-      setFilteredConversations(conversations);
-      return;
-    }
+    if (!searchQuery.trim()) { setFilteredConversations(conversations); return; }
     const q = searchQuery.toLowerCase();
-    setFilteredConversations(
-      conversations.filter((c) => (c.buyer_name || '').toLowerCase().includes(q) || (c.last_message_preview || '').toLowerCase().includes(q))
-    );
+    setFilteredConversations(conversations.filter(c => (c.buyer_name || '').toLowerCase().includes(q) || (c.last_message_preview || '').toLowerCase().includes(q) || (c.property_address || '').toLowerCase().includes(q)));
   }, [searchQuery, conversations]);
 
-  useEffect(() => {
-    const close = () => {
-      setContextMenu(null);
-    };
-    window.addEventListener('click', close);
-    return () => window.removeEventListener('click', close);
-  }, []);
-
   const displayedConversations = (filteredConversations || [])
-    .filter((c) => {
-      if (chatTab === 'all') return true;
-      if (chatTab === 'unread') return !!c.has_unread || (c.unread_count ?? 0) > 0;
-      if (chatTab === 'unresponded') return !!c.is_unresponded;
-      return true;
-    })
     .sort((a, b) => {
       if (!!a.is_pinned !== !!b.is_pinned) return a.is_pinned ? -1 : 1;
       return new Date(b.last_message_at || 0) - new Date(a.last_message_at || 0);
@@ -407,30 +309,15 @@ export default function MessagesPage() {
   const updateConversationPref = async (conversationId, patch) => {
     const headers = getAuthHeaders();
     if (!headers.Authorization) return;
-    await fetch(API, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...headers },
-      body: JSON.stringify({ action: 'update_conversation_pref', conversationId, ...patch })
-    }).catch(() => {});
+    await fetch(API, { method: 'POST', headers: { 'Content-Type': 'application/json', ...headers }, body: JSON.stringify({ action: 'update_conversation_pref', conversationId, ...patch }) }).catch(() => {});
     fetchConversations(headers);
   };
 
   const deleteConversation = async (conversationId) => {
     const headers = getAuthHeaders();
     if (!headers.Authorization) return;
-    setError(null);
-    const res = await fetch(API, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...headers },
-      body: JSON.stringify({ action: 'delete_conversation', conversationId })
-    });
-    const data = await res.json().catch(() => ({}));
-    if (res.ok) {
-      if (openConversationId === conversationId) setOpenConversationId(null);
-      fetchConversations(headers);
-    } else {
-      setError(data?.error || 'Failed to delete conversation. Please try again.');
-    }
+    const res = await fetch(API, { method: 'POST', headers: { 'Content-Type': 'application/json', ...headers }, body: JSON.stringify({ action: 'delete_conversation', conversationId }) });
+    if (res.ok) { if (openConversationId === conversationId) setOpenConversationId(null); fetchConversations(headers); }
   };
 
   const sendMessage = () => {
@@ -439,62 +326,23 @@ export default function MessagesPage() {
     const headers = getAuthHeaders();
     if (!headers.Authorization) return;
     setSending(true);
-    fetch(API, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...headers },
-      body: JSON.stringify({
-        action: 'send_message',
-        conversationId: openConversationId,
-        messageText: text
-      })
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        // Log email notification status so you can see in browser console if mail was sent/skipped
-        if (data.emailNotification) {
-          const en = data.emailNotification;
-          if (en.status === 'sent') {
-            console.log('[Messages] Email notification: sent to', en.to);
-          } else if (en.status === 'failed') {
-            console.warn('[Messages] Email notification: failed:', en.reason);
-          } else {
-            console.log('[Messages] Email notification: skipped —', en.reason || 'unknown');
-          }
-        }
+    fetch(API, { method: 'POST', headers: { 'Content-Type': 'application/json', ...headers }, body: JSON.stringify({ action: 'send_message', conversationId: openConversationId, messageText: text }) })
+      .then(r => r.json())
+      .then(data => {
         if (data.message) {
           const msg = data.message;
-          setMessages((prev) => {
-            if (prev.some((m) => String(m.id) === String(msg.id))) return prev;
-            return [...prev, msg];
-          });
+          setMessages(prev => prev.some(m => String(m.id) === String(msg.id)) ? prev : [...prev, msg]);
           setMessageText('');
-          // Update conversation list so left panel shows new last message and time
           const preview = (msg.message_text || text).slice(0, 200);
           const at = msg.created_at || new Date().toISOString();
-          setConversations((prev) => {
-            const updated = prev.map((c) =>
-              c.id === openConversationId ? { ...c, last_message_preview: preview, last_message_at: at } : c
-            );
-            // Move this conversation to top
-            const idx = updated.findIndex((c) => c.id === openConversationId);
-            if (idx > 0) {
-              const [conv] = updated.splice(idx, 1);
-              return [conv, ...updated];
-            }
+          const updateList = prev => {
+            const updated = prev.map(c => c.id === openConversationId ? { ...c, last_message_preview: preview, last_message_at: at } : c);
+            const idx = updated.findIndex(c => c.id === openConversationId);
+            if (idx > 0) { const [conv] = updated.splice(idx, 1); return [conv, ...updated]; }
             return updated;
-          });
-          setFilteredConversations((prev) => {
-            const updated = prev.map((c) =>
-              c.id === openConversationId ? { ...c, last_message_preview: preview, last_message_at: at } : c
-            );
-            const idx = updated.findIndex((c) => c.id === openConversationId);
-            if (idx > 0) {
-              const [conv] = updated.splice(idx, 1);
-              return [conv, ...updated];
-            }
-            return updated;
-          });
-          // Refocus message input so user can type again without clicking
+          };
+          setConversations(updateList);
+          setFilteredConversations(updateList);
           setTimeout(() => messageInputRef.current?.focus(), 0);
         }
       })
@@ -502,134 +350,167 @@ export default function MessagesPage() {
       .finally(() => setSending(false));
   };
 
-  const selectedConversation = conversations.find((c) => c.id === openConversationId);
-  const buyerDisplayName = (selectedConversation?.buyer_name && String(selectedConversation.buyer_name).trim()) ? String(selectedConversation.buyer_name).trim() : 'Buyer';
+  // Fetch offer when conversation changes
+  useEffect(() => {
+    if (!openConversationId) { setOffer(null); setAllOffers([]); return; }
+    const headers = getAuthHeaders();
+    if (!headers.Authorization) return;
+    setOfferLoading(true);
+    fetch(`/api/seller/offers?conversation_id=${openConversationId}`, { headers })
+      .then(r => r.json())
+      .then(data => {
+        const offers = data.offers || [];
+        setAllOffers(offers);
+        // Latest pending offer drives the respond panel
+        const latest = offers.find(o => o.status !== 'expired') || offers[0] || null;
+        setOffer(latest || null);
+        if (latest?.offer_price) setCounterAmount(String(Math.round(latest.offer_price)));
+      })
+      .catch(() => { setOffer(null); setAllOffers([]); })
+      .finally(() => setOfferLoading(false));
+    // Reset offer UI state on conversation change
+    setShowAcceptModal(false);
+    setShowRejectModal(false);
+    setShowCounterForm(false);
+  }, [openConversationId]);
+
+  // Fetch buyer credibility stats when conversation changes
+  useEffect(() => {
+    const conv = conversations.find(c => c.id === openConversationId);
+    const buyerUuid = conv?.buyer_uuid;
+    if (!buyerUuid) { setBuyerStats(null); return; }
+    setBuyerStatsLoading(true);
+    fetch(`/api/seller/buyer-stats?buyer_id=${buyerUuid}`)
+      .then(r => r.json())
+      .then(data => setBuyerStats(data))
+      .catch(() => setBuyerStats(null))
+      .finally(() => setBuyerStatsLoading(false));
+  }, [openConversationId, conversations]);
+
+  const handleOfferAction = async (action, extraData = {}) => {
+    if (!offer) return;
+    const headers = getAuthHeaders();
+    if (!headers.Authorization) return;
+    setOfferActionLoading(true);
+    try {
+      const res = await fetch('/api/seller/offers', {
+        method: 'PATCH',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ offer_id: offer.id, action, ...extraData }),
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) throw new Error(data.error || 'Action failed');
+      // Refresh offer + messages in parallel
+      const [refreshRes, msgsRes] = await Promise.all([
+        fetch(`/api/seller/offers?conversation_id=${openConversationId}`, { headers }),
+        fetch(`${API}?action=get_messages&conversation_id=${openConversationId}`, { headers }),
+      ]);
+      const refreshData = await refreshRes.json();
+      const offers = refreshData.offers || [];
+      setAllOffers(offers);
+      const latest = offers.find(o => o.status !== 'expired') || offers[0] || null;
+      setOffer(latest || null);
+      const msgsData = await msgsRes.json();
+      if (msgsData.messages) setMessages(msgsData.messages);
+      setShowAcceptModal(false);
+      setShowRejectModal(false);
+      setShowCounterForm(false);
+    } catch (err) {
+      alert(err.message || 'Something went wrong');
+    } finally {
+      setOfferActionLoading(false);
+    }
+  };
+
+  const selectedConversation = conversations.find(c => c.id === openConversationId);
+  const buyerDisplayName = selectedConversation?.buyer_name?.trim() || 'Buyer';
   const selectedPropertyAddress = selectedConversation?.property_address || null;
-  const buyerInitial = (buyerDisplayName.charAt(0) || 'B').toUpperCase();
+
+  // Merge offers as synthetic items, filter out text-based offer messages
+  const offerItems = allOffers.map(o => ({ ...o, _isOffer: true }));
+  const filteredMessages = messages.filter(m =>
+    !(m.message_text || '').startsWith('Offer submitted:') &&
+    !(m.message_text || '').startsWith('Counter offer:')
+  );
+  const allItems = [...filteredMessages, ...offerItems].sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+
+  // Group combined items by date
+  const messagesByDate = allItems.reduce((acc, item) => {
+    const key = new Date(item.created_at).toDateString();
+    if (!acc[key]) acc[key] = [];
+    acc[key].push(item);
+    return acc;
+  }, {});
 
   return (
-    <div className="flex flex-col h-full min-h-0 flex-1 overflow-hidden bg-slate-50 -m-4 lg:-m-6">
+    <div className="flex flex-col h-full min-h-0 flex-1 overflow-hidden -m-4 lg:-m-6" style={{ fontFamily: FONT }}>
       {error && (
-        <div className="rounded-xl bg-red-50 border border-red-100 p-4 mb-3 shrink-0">
-          <p className="text-sm text-red-800">{error}</p>
+        <div className="rounded bg-[#FEF0EF] border border-[#F5C4C0] p-3 mb-3 shrink-0">
+          <p className="text-[13px] text-[#D03839]">{error}</p>
         </div>
       )}
 
-      <div className="flex-1 flex min-h-0 border border-slate-200 bg-white overflow-hidden">
-        {/* Left panel - conversation list: only this list scrolls (sticky header + scrollable list) */}
-        <div className={`${openConversationId ? 'hidden lg:flex' : 'flex'} flex-col w-full lg:w-[380px] border-r border-slate-200 bg-white shrink-0 min-h-0 overflow-hidden`}>
-          <div className="flex-shrink-0 p-3 border-b border-slate-200">
-            <h2 className="text-base font-semibold text-slate-900 mb-2">Messages</h2>
+      <div className="flex-1 flex min-h-0 bg-white overflow-hidden">
+        {/* Left Panel — Conversation List */}
+        <div className={`${openConversationId ? 'hidden lg:flex' : 'flex'} flex-col w-full lg:w-[320px] border-r border-[#E8E8E4] bg-white shrink-0 min-h-0 overflow-hidden`}>
+          <div className="flex-shrink-0 px-5 pt-5 pb-4">
+            <h2 className="text-[20px] font-bold text-[#1A1816] tracking-[-0.66px] mb-4">All Messages</h2>
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#A8A8A4]" />
               <input
-                type="text"
-                placeholder="Search conversations..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-9 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/20 focus:border-slate-900 transition-all"
+                type="text" placeholder="Search conversations"
+                value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-4 py-2.5 bg-[#FAFAF8] border border-[#E8E8E4] rounded text-[14px] text-[#1A1816] placeholder-[#A8A8A4] focus:outline-none focus:border-[#D03839] focus:ring-1 focus:ring-[rgba(208,56,57,.12)] transition-all duration-200"
               />
             </div>
-            <div className="mt-2 grid w-full grid-cols-3 rounded-lg border border-slate-200 bg-slate-50 p-0.5 text-xs">
-              <button
-                type="button"
-                onClick={() => setChatTab('all')}
-                className={`w-full px-2.5 py-1 rounded-md ${chatTab === 'all' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600'}`}
-              >
-                All
-              </button>
-              <button
-                type="button"
-                onClick={() => setChatTab('unread')}
-                className={`w-full px-2.5 py-1 rounded-md ${chatTab === 'unread' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600'}`}
-              >
-                Unread
-              </button>
-              <button
-                type="button"
-                onClick={() => setChatTab('unresponded')}
-                className={`w-full px-2.5 py-1 rounded-md ${chatTab === 'unresponded' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600'}`}
-              >
-                Unresponded
-              </button>
-            </div>
           </div>
-          <div className="flex-1 min-h-0 overflow-y-auto p-3">
+
+          <div className="flex-1 min-h-0 overflow-y-auto">
             {loading ? (
-              <div className="flex items-center justify-center h-full">
-                <div className="animate-spin rounded-full h-8 w-8 border-2 border-slate-200 border-t-slate-900" />
+              <div className="flex items-center justify-center h-40">
+                <div className="animate-spin rounded-full h-8 w-8 border-2 border-[#E8E8E4] border-t-[#1A1816]" />
               </div>
             ) : displayedConversations.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-full text-slate-600 p-8">
-                <div className="w-14 h-14 bg-slate-100 rounded-full flex items-center justify-center mb-4">
-                  <MessageCircle className="w-7 h-7 text-slate-400" />
-                </div>
-                <p className="text-sm font-medium text-slate-700 mb-1">{searchQuery ? 'No conversations found' : 'No conversations yet'}</p>
-                {!searchQuery && <p className="text-xs text-slate-600 text-center">Start a conversation from a property&apos;s analytics.</p>}
+              <div className="flex flex-col items-center justify-center h-40 text-center px-6">
+                <MessageCircle className="w-8 h-8 text-[#A8A8A4] mb-3" />
+                <p className="text-[14px] font-medium text-[#444441]">{searchQuery ? 'No conversations found' : 'No conversations yet'}</p>
               </div>
             ) : (
-              <div className="space-y-2">
-                {displayedConversations.map((c) => {
-                  const unread = !!c.has_unread || (c.unread_count ?? 0) > 0;
+              <div>
+                {displayedConversations.map(c => {
+                  const name = capitalizeFirst(c.buyer_name || 'Buyer');
+                  const initials = getInitials(name);
+                  const isActive = openConversationId === c.id;
+                  const hasUnread = (c.unread_count ?? 0) > 0;
+
                   return (
                     <div
                       key={c.id}
                       onClick={() => setOpenConversationId(c.id)}
-                      onContextMenu={(e) => {
-                        e.preventDefault();
-                        setContextMenu({ x: e.clientX, y: e.clientY, conv: c });
-                      }}
-                      className={`p-3 cursor-pointer transition-all duration-200 rounded-xl ${
-                        openConversationId === c.id ? 'bg-[#002A3A]/10 border border-[#002A3A]/20' : 'bg-white border border-transparent hover:bg-[#F3F4F6]'
+                      onContextMenu={e => { e.preventDefault(); setContextMenu({ x: e.clientX, y: e.clientY, conv: c }); }}
+                      className={`flex items-start gap-3 px-5 py-3.5 cursor-pointer transition-colors duration-200 border-l-2 ${
+                        isActive ? 'bg-[#FAFAF8] border-l-[#D03839]' : 'border-l-transparent hover:bg-[#FAFAF8]'
                       }`}
                     >
-                      <div className="flex items-start gap-3">
-                        {/* Avatar: property thumbnail or buyer initial (same as buyer portal) */}
-                        <div className="relative shrink-0">
-                          {c.property_thumbnail_url ? (
-                            <div className="w-10 h-10 rounded-full overflow-hidden bg-slate-100 flex items-center justify-center">
-                              <img
-                                src={c.property_thumbnail_url}
-                                alt=""
-                                className="w-full h-full object-cover"
-                              />
-                            </div>
-                          ) : (
-                            <div
-                              className="w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold text-sm"
-                              style={{ backgroundColor: getAvatarColor(c.buyer_name || c.buyer_uuid || c.id) }}
-                            >
-                              {(c.buyer_name || 'B').charAt(0).toUpperCase()}
-                            </div>
-                          )}
-                          {unread && (
-                            <span className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-[#b29578] border-2 border-white rounded-full" aria-hidden />
-                          )}
+                      <div
+                        className="w-10 h-10 rounded-full flex items-center justify-center text-[13px] font-semibold flex-shrink-0"
+                        style={{ backgroundColor: getAvatarPair(name).bg, color: getAvatarPair(name).text }}
+                      >
+                        {initials}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2">
+                          <h3 className={`text-[14px] truncate ${hasUnread ? 'font-bold text-[#1A1816]' : 'font-medium text-[#1A1816]'}`}>{name}</h3>
+                          <span className="text-[11px] text-[#A8A8A4] flex-shrink-0">{formatTimeAgo(c.last_message_at)}</span>
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-baseline justify-between gap-2 mb-1">
-                            <div className="flex items-center gap-2 flex-1 min-w-0">
-                              <h3 className={`truncate text-sm ${unread ? 'font-bold text-slate-900' : 'font-medium text-slate-900'}`} title={c.property_address ? `${c.buyer_first_name || (c.buyer_name || 'Buyer').trim().split(/\s+/)[0] || 'Buyer'} - ${c.property_address}` : (c.buyer_name || 'Buyer')}>
-                                {c.property_address
-                                  ? `${capitalizeFirst(c.buyer_first_name || (c.buyer_name || 'Buyer').trim().split(/\s+/)[0] || 'Buyer')} - ${c.property_address}`
-                                  : capitalizeFirst(c.buyer_first_name || (c.buyer_name || 'Buyer').trim().split(/\s+/)[0] || 'Buyer')}
-                              </h3>
-                              {c.is_pinned && (
-                                <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-100 text-amber-700 shrink-0" title="Pinned">
-                                  <Pin className="w-3 h-3" />
-                                </span>
-                              )}
-                              {(c.unread_count ?? 0) > 0 && (
-                                <span className="flex-shrink-0 inline-flex items-center justify-center w-5 h-5 text-[10px] font-bold text-white bg-[#002A3A] rounded-full">
-                                  {(c.unread_count ?? 0) > 9 ? '9+' : (c.unread_count ?? 0)}
-                                </span>
-                              )}
-                            </div>
-                            <span className="text-[11px] text-slate-600 flex-shrink-0">{formatDate(c.last_message_at)}</span>
-                          </div>
-                          <p className={`text-xs truncate mb-0 ${unread ? 'text-slate-800 font-medium' : 'text-slate-600'}`}>
+                        {c.buyer_email && (
+                          <p className="text-[11px] text-[#A8A8A4] truncate mt-0">{c.buyer_email}</p>
+                        )}
+                        <div className="flex items-center justify-between gap-2 mt-0.5">
+                          <p className={`text-[12px] truncate ${hasUnread ? 'text-[#444441] font-medium' : 'text-[#737370]'}`}>
                             {c.last_message_preview || 'No messages yet'}
                           </p>
+                          {hasUnread && <span className="w-2.5 h-2.5 rounded-full bg-[#D03839] flex-shrink-0"></span>}
                         </div>
                       </div>
                     </div>
@@ -640,136 +521,122 @@ export default function MessagesPage() {
           </div>
         </div>
 
-        {/* Right panel - chat: header fixed, only messages area scrolls */}
+        {/* Center Panel — Chat */}
         <div className={`${openConversationId ? 'flex' : 'hidden lg:flex'} flex-1 flex-col bg-white min-w-0 min-h-0`}>
           {!openConversationId ? (
-            <div className="flex-1 flex items-center justify-center bg-slate-50 min-h-0">
+            <div className="flex-1 flex items-center justify-center bg-[#FAFAF8]">
               <div className="text-center">
-                <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm border border-slate-200">
-                  <MessageCircle className="w-8 h-8 text-slate-400" />
-                </div>
-                <h3 className="text-base font-semibold text-slate-900 mb-1">Select a conversation</h3>
-                <p className="text-sm text-slate-600">Choose a conversation from the list or start one from property analytics.</p>
+                <MessageCircle className="w-10 h-10 text-[#A8A8A4] mx-auto mb-3" />
+                <h3 className="text-[14px] font-semibold text-[#1A1816] mb-1">Select a conversation</h3>
+                <p className="text-[13px] text-[#737370]">Choose a conversation to view messages</p>
               </div>
             </div>
           ) : (
             <>
-              {/* Header - full name, property address, options (View listing) */}
-              <div className="flex-shrink-0 px-5 py-4 border-b border-slate-200 bg-white">
+              {/* Chat Header */}
+              <div className="flex-shrink-0 px-6 py-4 border-b border-[#E8E8E4] bg-white">
                 <div className="flex items-center gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setOpenConversationId(null)}
-                    className="lg:hidden p-2 -ml-2 rounded-xl hover:bg-slate-100 transition-colors"
-                  >
-                    <ArrowLeft className="w-5 h-5 text-slate-600" />
+                  <button type="button" onClick={() => setOpenConversationId(null)} className="lg:hidden p-2 -ml-2 rounded hover:bg-[#FAFAF8] transition-colors duration-200">
+                    <ArrowLeft className="w-5 h-5 text-[#444441]" />
                   </button>
-                  <div className="flex items-center gap-3 flex-1 min-w-0">
-                    {/* Header avatar: property thumbnail or buyer initial (same as buyer portal) */}
-                    {selectedConversation?.property_thumbnail_url ? (
-                      <div className="w-10 h-10 rounded-full overflow-hidden bg-slate-100 flex items-center justify-center shrink-0">
-                        <img
-                          src={selectedConversation.property_thumbnail_url}
-                          alt=""
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                    ) : (
-                      <div
-                        className="w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold text-sm shrink-0"
-                        style={{ backgroundColor: getAvatarColor(selectedConversation?.buyer_name || selectedConversation?.buyer_uuid || selectedConversation?.id) }}
-                      >
-                        {buyerInitial}
-                      </div>
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <h2 className="font-semibold text-slate-900 text-sm truncate">{buyerDisplayName}</h2>
-                      {(selectedPropertyAddress || (contextAddress && openConversationId === contextConversationId)) && (
-                        <p className="text-[11px] text-slate-600 truncate mt-0.5">{selectedPropertyAddress || contextAddress}</p>
-                      )}
-                    </div>
+                  <div className="flex-1 min-w-0">
+                    <h2 className="text-[16px] font-bold text-[#1A1816]">{buyerDisplayName}</h2>
+                    <p className="text-[13px] text-[#737370]">Interested Buyer</p>
                   </div>
-                  <div className="relative shrink-0">
+                  {selectedPropertyAddress && (
                     <button
                       type="button"
-                      onClick={() => setHeaderMenuOpen((v) => !v)}
-                      className="p-2 rounded-xl hover:bg-slate-100 transition-colors"
-                      aria-label="More options"
+                      onClick={() => setShowMobilePropPanel(true)}
+                      className="xl:hidden p-2 rounded hover:bg-[#FAFAF8] transition-colors duration-200 flex-shrink-0"
                     >
-                      <MoreVertical className="w-5 h-5 text-slate-600" />
+                      <MoreVertical className="w-5 h-5 text-[#444441]" />
                     </button>
-                    {headerMenuOpen && (
-                      <>
-                        <div className="fixed inset-0 z-40" onClick={() => setHeaderMenuOpen(false)} aria-hidden />
-                        <div className="absolute right-0 top-full mt-1 z-50 w-52 rounded-xl border border-slate-200 bg-white shadow-lg py-1">
-                          {(selectedConversation?.property_slug || selectedConversation?.property_id) && (
-                            <a
-                              href={`${process.env.NEXT_PUBLIC_DEELMAP_VIEW_BASE_URL || 'https://ableman.co'}/${selectedConversation.property_slug || selectedConversation.property_id}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              onClick={() => setHeaderMenuOpen(false)}
-                              className="flex items-center gap-2 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 w-full"
-                            >
-                              <ExternalLink className="w-4 h-4 shrink-0" />
-                              View listing
-                            </a>
-                          )}
-                        </div>
-                      </>
-                    )}
-                  </div>
+                  )}
                 </div>
               </div>
 
-              {/* Messages - only this area scrolls; header and input stay fixed */}
-              <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-5 py-4 bg-slate-50">
+              {/* Messages */}
+              <div className="flex-1 min-h-0 overflow-y-auto px-6 py-4 bg-white">
                 {messages.length === 0 ? (
                   <div className="flex items-center justify-center h-full">
                     <div className="text-center">
-                      <div className="w-14 h-14 bg-white rounded-full flex items-center justify-center mx-auto mb-3 shadow-sm border border-slate-200">
-                        <Send className="w-7 h-7 text-slate-400" />
-                      </div>
-                      <p className="text-sm font-medium text-slate-700">No messages yet</p>
-                      <p className="text-xs text-slate-600 mt-1">Start the conversation</p>
+                      <Send className="w-8 h-8 text-[#A8A8A4] mx-auto mb-3" />
+                      <p className="text-[14px] font-medium text-[#444441]">No messages yet</p>
+                      <p className="text-[12px] text-[#737370] mt-1">Start the conversation</p>
                     </div>
                   </div>
                 ) : (
-                  <div className="space-y-4">
-                    {groupMessagesByTime(messages).map((group) => (
-                      <div key={group[0].id} className="space-y-2">
-                        {group.map((m) => {
-                          const isSeller = m.sender_type === 'seller';
-                          const isLastInGroup = m.id === group[group.length - 1].id;
-                          return (
-                            <div key={m.id} className={`flex ${isSeller ? 'justify-end' : 'justify-start'}`}>
-                              <div className="flex flex-col max-w-[70%]">
-                                <div
-                                  className={`rounded-2xl px-4 py-3 ${
-                                    isSeller
-                                      ? 'bg-[#002A3A] text-white rounded-br-sm'
-                                      : 'bg-white text-slate-900 rounded-bl-sm shadow-sm border border-slate-200'
-                                  }`}
-                                >
-                                  {m.message_text && (
-                                    <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">{m.message_text}</p>
-                                  )}
-                                </div>
-                                {isLastInGroup && (
-                                  <div className={`flex items-center gap-1 mt-1.5 px-1 ${isSeller ? 'justify-end' : 'justify-start'}`}>
-                                    <span className="text-[11px] text-slate-400">{formatTime(m.created_at)}</span>
-                                    {isSeller && (
-                                      m.is_read ? (
-                                        <CheckCheck className="w-3.5 h-3.5 text-blue-500 shrink-0" aria-hidden />
-                                      ) : (
-                                        <Check className="w-3.5 h-3.5 text-slate-400 shrink-0" aria-hidden />
-                                      )
-                                    )}
+                  <div className="space-y-5">
+                    {Object.entries(messagesByDate).map(([dateKey, msgs]) => (
+                      <div key={dateKey}>
+                        <div className="flex items-center justify-center mb-4">
+                          <span className="text-[12px] text-[#A8A8A4] font-medium bg-white px-3">
+                            {formatDateHeader(msgs[0].created_at)}
+                          </span>
+                        </div>
+                        <div className="space-y-4">
+                          {msgs.map((item, idx) => {
+                            const statusColors = { pending: 'bg-[#EBF3FC] text-[#4A90E2]', accepted: 'bg-[#E4F5EC] text-[#0F6E56]', rejected: 'bg-[#FEF0EF] text-[#D03839]', countered: 'bg-[#FFF7ED] text-[#C27A12]', withdrawn: 'bg-[#F3F3F1] text-[#737370]' };
+                            const statusLabel = { pending: 'Pending', accepted: 'Accepted', rejected: 'Rejected', countered: 'Countered', withdrawn: 'Withdrawn' };
+
+                            // Offer card from offers table (has its own status)
+                            if (item._isOffer) {
+                              const isCounter = !!item.parent_offer_id;
+                              const isSeller = isCounter; // counter offers are sent by seller
+                              return (
+                                <div key={`offer-${item.id}`}>
+                                  {isSeller
+                                    ? <p className="text-[12px] font-medium text-[#444441] mb-1 text-right">You</p>
+                                    : <p className="text-[12px] font-medium text-[#444441] mb-1">{buyerDisplayName}</p>
+                                  }
+                                  <div className={`flex ${isSeller ? 'justify-end' : 'justify-start'}`}>
+                                    <div className="bg-white border border-[#E8E8E4] rounded-lg px-4 py-3 shadow-sm w-full max-w-[300px]">
+                                      <div className="flex items-center justify-between mb-2">
+                                        <span className="inline-block text-[11px] font-semibold px-2 py-0.5 rounded-full bg-[#EBF3FC] text-[#4A90E2]">
+                                          {isCounter ? 'Counter offer' : 'Offer submitted'}
+                                        </span>
+                                        <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${statusColors[item.status] || statusColors.pending}`}>
+                                          {statusLabel[item.status] || item.status}
+                                        </span>
+                                      </div>
+                                      <p className="text-[22px] font-bold text-[#1A1816] leading-none mb-1">{formatCurrency(item.offer_price)}</p>
+                                      {(item.financing_type || item.closing_timeline) && (
+                                        <p className="text-[12px] text-[#737370]">
+                                          {[item.financing_type, item.closing_timeline ? `Close in ${item.closing_timeline}` : null].filter(Boolean).join(' · ')}
+                                        </p>
+                                      )}
+                                      <span className="text-[11px] text-[#A8A8A4] mt-1 block">{formatTime(item.created_at)}</span>
+                                    </div>
                                   </div>
-                                )}
+                                </div>
+                              );
+                            }
+
+                            // Regular message
+                            const m = item;
+                            const isSeller = m.sender_type === 'seller';
+                            return (
+                              <div key={m.id}>
+                                {isSeller && <p className="text-[12px] font-medium text-[#444441] mb-1 text-right">You</p>}
+                                {!isSeller && <p className="text-[12px] font-medium text-[#444441] mb-1">{buyerDisplayName}</p>}
+                                <div className={`flex ${isSeller ? 'justify-end' : 'justify-start'}`}>
+                                  <div className="max-w-[70%]">
+                                    <div className={`rounded-lg px-4 py-3 ${isSeller ? 'bg-[#FEF0EF] text-[#1A1816] border border-[#F5C4C0]' : 'bg-[#FAFAF8] text-[#1A1816] border border-[#E8E8E4]'}`}>
+                                      {m.message_text && <p className="text-[14px] leading-relaxed whitespace-pre-wrap break-words">{m.message_text}</p>}
+                                    </div>
+                                    <div className={`flex items-center gap-1 mt-1 ${isSeller ? 'justify-end' : 'justify-start'}`}>
+                                      <span className="text-[11px] text-[#A8A8A4]">{formatTime(m.created_at)}</span>
+                                      {isSeller && (m.is_read
+                                        ? <CheckCheck className="w-3.5 h-3.5 text-[#4A90E2]" />
+                                        : <Check className="w-3.5 h-3.5 text-[#A8A8A4]" />
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
                               </div>
-                            </div>
-                          );
-                        })}
+                            );
+                          })}
+                        </div>
                       </div>
                     ))}
                     <div ref={messagesEndRef} className="h-1" />
@@ -777,27 +644,24 @@ export default function MessagesPage() {
                 )}
               </div>
 
-              {/* Input - fixed at bottom */}
-              <div className="flex-shrink-0 px-5 py-4 border-t border-slate-200 bg-white">
-                <form
-                  onSubmit={(e) => { e.preventDefault(); sendMessage(); }}
-                  className="flex items-end gap-2"
-                >
+              {/* Input */}
+              <div className="flex-shrink-0 px-6 py-4 border-t border-[#E8E8E4] bg-white">
+                <form onSubmit={e => { e.preventDefault(); sendMessage(); }} className="flex items-end gap-2">
+                  <button type="button" className="p-2.5 rounded hover:bg-[#FAFAF8] transition-colors duration-200 flex-shrink-0">
+                    <Paperclip className="w-5 h-5 text-[#737370]" />
+                  </button>
+                  <button type="button" className="p-2.5 rounded hover:bg-[#FAFAF8] transition-colors duration-200 flex-shrink-0">
+                    <Smile className="w-5 h-5 text-[#737370]" />
+                  </button>
                   <textarea
-                    ref={messageInputRef}
-                    value={messageText}
-                    onChange={(e) => setMessageText(e.target.value)}
-                    onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }}
-                    placeholder="Type a message..."
-                    disabled={sending}
-                    rows={1}
-                    className="flex-1 resize-none px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-slate-900/20 focus:border-slate-900 disabled:opacity-50 disabled:cursor-not-allowed max-h-32 transition-all"
+                    ref={messageInputRef} value={messageText}
+                    onChange={e => setMessageText(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }}
+                    placeholder="Type your message" disabled={sending} rows={1}
+                    className="flex-1 resize-none px-4 py-2.5 bg-[#FAFAF8] border border-[#E8E8E4] rounded text-[14px] text-[#1A1816] placeholder-[#A8A8A4] focus:outline-none focus:border-[#D03839] focus:ring-1 focus:ring-[rgba(208,56,57,.12)] disabled:opacity-50 max-h-32 transition-all duration-200"
                   />
-                  <button
-                    type="submit"
-                    disabled={!messageText.trim() || sending}
-                    className="p-2.5 bg-slate-900 hover:bg-slate-800 disabled:bg-slate-200 rounded-xl transition-colors disabled:cursor-not-allowed shrink-0"
-                  >
+                  <button type="submit" disabled={!messageText.trim() || sending}
+                    className="p-2.5 bg-[#D03839] hover:bg-[#E0493B] disabled:bg-[#F5C4C0] rounded transition-colors duration-200 disabled:cursor-not-allowed flex-shrink-0">
                     {sending ? <Loader2 className="w-5 h-5 text-white animate-spin" /> : <Send className="w-5 h-5 text-white" />}
                   </button>
                 </form>
@@ -805,25 +669,377 @@ export default function MessagesPage() {
             </>
           )}
         </div>
+
+        {/* Right Panel — Offer Details */}
+        {openConversationId && selectedConversation && (
+          <div className="hidden xl:flex flex-col w-[300px] border-l border-[#E8E8E4] bg-white overflow-y-auto shrink-0">
+
+            {/* COUNTER OFFER FORM */}
+            {showCounterForm ? (
+              <>
+                <div className="px-5 py-4 border-b border-[#E8E8E4] flex items-center justify-between">
+                  <h3 className="text-[16px] font-bold text-[#1A1816]">Send counter offer</h3>
+                  <button onClick={() => setShowCounterForm(false)} className="p-1 rounded hover:bg-[#FAFAF8]">
+                    <X className="w-4 h-4 text-[#737370]" />
+                  </button>
+                </div>
+                <div className="px-5 py-4 flex flex-col gap-4">
+                  <div>
+                    <label className="block text-[13px] font-medium text-[#1A1816] mb-1.5">Counter price</label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#737370] text-[13px]">$</span>
+                      <input
+                        type="text"
+                        value={counterAmount}
+                        onChange={e => setCounterAmount(e.target.value.replace(/[^0-9]/g, ''))}
+                        className="w-full pl-6 pr-3 py-2.5 border border-[#E8E8E4] rounded text-[14px] text-[#1A1816] focus:outline-none focus:border-[#D03839]"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-[13px] font-medium text-[#1A1816] mb-1.5">Closing Timeline</label>
+                    <select value={counterTimeline} onChange={e => setCounterTimeline(e.target.value)}
+                      className="w-full px-3 py-2.5 border border-[#E8E8E4] rounded text-[14px] text-[#1A1816] bg-white focus:outline-none focus:border-[#D03839] appearance-none"
+                      style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23737370' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 10px center' }}>
+                      {['30 days','45 days','60 days','As-is'].map(o => <option key={o}>{o}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-[13px] font-medium text-[#1A1816] mb-1.5">Financing type</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {['Cash','Loan'].map(type => (
+                        <button key={type} type="button" onClick={() => setCounterFinancing(type)}
+                          className={`flex items-center gap-2 px-3 py-2.5 border rounded text-[13px] font-medium transition-colors ${
+                            counterFinancing === type ? 'border-[#D03839] text-[#D03839]' : 'border-[#E8E8E4] text-[#444441] hover:border-[#D03839]/30'
+                          }`}>
+                          <div className={`w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center ${counterFinancing === type ? 'border-[#D03839]' : 'border-[#A8A8A4]'}`}>
+                            {counterFinancing === type && <div className="w-1.5 h-1.5 rounded-full bg-[#D03839]" />}
+                          </div>
+                          {type}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-[13px] font-medium text-[#1A1816] mb-1.5">Notes to Buyer</label>
+                    <textarea value={counterNotes} onChange={e => setCounterNotes(e.target.value)}
+                      placeholder="e.g. Price reflects recent comparable sales..."
+                      rows={3}
+                      className="w-full px-3 py-2.5 border border-[#E8E8E4] rounded text-[13px] text-[#1A1816] resize-none focus:outline-none focus:border-[#D03839] placeholder-[#A8A8A4]"
+                    />
+                  </div>
+                  <div className="flex items-start gap-2 bg-[#FEF9EC] border border-[#F5D78E] rounded px-3 py-2.5">
+                    <AlertCircle className="w-3.5 h-3.5 text-[#B5620A] flex-shrink-0 mt-0.5" />
+                    <p className="text-[12px] text-[#B5620A]">The buyer will be notified immediately and can accept, counter, or decline your offer</p>
+                  </div>
+                  <button
+                    onClick={() => handleOfferAction('counter', {
+                      counter_data: { amount: Number(counterAmount), closing_timeline: counterTimeline, financing_type: counterFinancing, notes: counterNotes }
+                    })}
+                    disabled={offerActionLoading || !counterAmount}
+                    className="w-full py-3 bg-[#D03839] text-white text-[14px] font-semibold rounded hover:bg-[#E0493B] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {offerActionLoading ? 'Sending...' : 'Send counter'}
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                {/* Header */}
+                <div className="px-5 py-4 border-b border-[#E8E8E4]">
+                  <h3 className="text-[18px] font-bold text-[#1A1816]">Offer Details</h3>
+                  <p className="text-[13px] text-[#737370]">Buyer & Offer</p>
+                </div>
+
+                {/* BUYER INFO */}
+                <div className="px-5 py-4 border-b border-[#E8E8E4]">
+                  <p className="text-[11px] font-semibold text-[#A8A8A4] uppercase tracking-[1.1px] mb-3">Buyer Info</p>
+                  <div className="flex items-center gap-3 mb-3">
+                    <div
+                      className="w-10 h-10 rounded-full flex items-center justify-center text-[13px] font-semibold flex-shrink-0"
+                      style={{ backgroundColor: getAvatarPair(buyerDisplayName).bg, color: getAvatarPair(buyerDisplayName).text }}
+                    >
+                      {getInitials(buyerDisplayName)}
+                    </div>
+                    <div>
+                      <p className="text-[14px] font-semibold text-[#1A1816]">{buyerDisplayName}</p>
+                      <div className="flex items-center gap-1 mt-0.5">
+                        <Shield className="w-3 h-3 text-[#0F6E56]" />
+                        <span className="text-[11px] text-[#0F6E56] font-medium">Verified buyer</span>
+                      </div>
+                    </div>
+                  </div>
+                  {selectedConversation.buyer_email && (
+                    <div className="flex items-center gap-2 text-[13px] text-[#444441] mb-1.5">
+                      <Mail className="w-4 h-4 text-[#737370]" />
+                      <span className="truncate">{selectedConversation.buyer_email}</span>
+                    </div>
+                  )}
+                  {selectedConversation.buyer_phone && (
+                    <div className="flex items-center gap-2 text-[13px] text-[#444441]">
+                      <Phone className="w-4 h-4 text-[#737370]" />
+                      <span>{selectedConversation.buyer_phone}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* OFFER DETAILS */}
+                <div className="px-5 py-4 border-b border-[#E8E8E4]">
+                  <p className="text-[11px] font-semibold text-[#A8A8A4] uppercase tracking-[1.1px] mb-3">Offer Details</p>
+                  {offerLoading ? (
+                    <div className="flex items-center justify-center h-16"><Loader2 className="w-5 h-5 animate-spin text-[#A8A8A4]" /></div>
+                  ) : !offer ? (
+                    <p className="text-[13px] text-[#737370]">No offer yet from this buyer.</p>
+                  ) : (
+                    <>
+                      <p className="text-[28px] font-bold text-[#1A1816] tracking-[-0.56px] mb-1">{formatCurrency(offer.offer_price)}</p>
+                      <div className="mb-3">
+                        {offer.status === 'pending' && <span className="inline-block px-2 py-0.5 bg-[#FEF3E2] text-[#B5620A] text-[11px] font-semibold rounded">Negotiating</span>}
+                        {offer.status === 'accepted' && <span className="inline-block px-2 py-0.5 bg-[#E4F5EC] text-[#0F6E56] text-[11px] font-semibold rounded">Accepted</span>}
+                        {offer.status === 'rejected' && <span className="inline-block px-2 py-0.5 bg-[#FEF0EF] text-[#D03839] text-[11px] font-semibold rounded">Rejected</span>}
+                        {offer.status === 'countered' && <span className="inline-block px-2 py-0.5 bg-[#EBF3FC] text-[#4A90E2] text-[11px] font-semibold rounded">Counter Sent</span>}
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="border border-[#E8E8E4] rounded px-3 py-2.5">
+                          <p className="text-[11px] text-[#737370]">Closing</p>
+                          <p className="text-[13px] font-semibold text-[#1A1816]">{offer.closing_timeline || '—'}</p>
+                        </div>
+                        <div className="border border-[#E8E8E4] rounded px-3 py-2.5">
+                          <p className="text-[11px] text-[#737370]">Financing</p>
+                          <p className="text-[13px] font-semibold text-[#1A1816]">{offer.financing_type || '—'}</p>
+                        </div>
+                        <div className="border border-[#E8E8E4] rounded px-3 py-2.5">
+                          <p className="text-[11px] text-[#737370]">Inspection</p>
+                          <p className="text-[13px] font-semibold text-[#1A1816]">{offer.inspection_period || 'Waived'}</p>
+                        </div>
+                        <div className="border border-[#E8E8E4] rounded px-3 py-2.5">
+                          <p className="text-[11px] text-[#737370]">Submitted</p>
+                          <p className="text-[13px] font-semibold text-[#1A1816]">
+                            {offer.created_at ? new Date(offer.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'Today'}
+                          </p>
+                        </div>
+                      </div>
+                      {offer.notes && (
+                        <p className="mt-3 text-[12px] text-[#737370] italic">&quot;{offer.notes}&quot;</p>
+                      )}
+                    </>
+                  )}
+                </div>
+
+                {/* BUYER CREDIBILITY */}
+                <div className="px-5 py-4 border-b border-[#E8E8E4]">
+                  <p className="text-[11px] font-semibold text-[#A8A8A4] uppercase tracking-[1.1px] mb-3">Buyer Credibility</p>
+                  {buyerStatsLoading ? (
+                    <div className="flex items-center justify-center h-12"><Loader2 className="w-4 h-4 animate-spin text-[#A8A8A4]" /></div>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="border border-[#E8E8E4] rounded px-3 py-2.5 text-center">
+                        <p className="text-[18px] font-bold text-[#4A90E2]">{buyerStats?.pastDeals ?? 0}</p>
+                        <p className="text-[11px] text-[#737370] mt-0.5">Past Deals</p>
+                      </div>
+                      <div className="border border-[#E8E8E4] rounded px-3 py-2.5 text-center">
+                        <p className="text-[18px] font-bold text-[#0F6E56]">{buyerStats ? `${buyerStats.successRate}%` : '0%'}</p>
+                        <p className="text-[11px] text-[#737370] mt-0.5">Success Rate</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* RESPOND TO OFFER — always visible, disabled when no pending offer */}
+                {!(offer && (offer.status === 'accepted' || offer.status === 'rejected' || offer.status === 'countered')) && (
+                  <div className="px-5 py-4">
+                    <p className="text-[11px] font-semibold text-[#A8A8A4] uppercase tracking-[1.1px] mb-3">Respond to Offer</p>
+                    {!offer || offer.status !== 'pending' ? (
+                      <p className="text-[12px] text-[#A8A8A4] mb-3">No offer received yet</p>
+                    ) : null}
+                    <button
+                      onClick={() => offer && offer.status === 'pending' ? setShowAcceptModal(true) : undefined}
+                      disabled={!offer || offer.status !== 'pending'}
+                      className="w-full py-3 bg-[#D03839] text-white text-[14px] font-semibold rounded transition-colors duration-200 mb-2 disabled:opacity-40 disabled:cursor-not-allowed hover:enabled:bg-[#E0493B]">
+                      Accept Offer
+                    </button>
+                    <button
+                      onClick={() => offer && offer.status === 'pending' ? (setShowCounterForm(true), setCounterAmount(String(Math.round(offer.offer_price || 0)))) : undefined}
+                      disabled={!offer || offer.status !== 'pending'}
+                      className="w-full py-3 border border-[#E8E8E4] text-[#1A1816] text-[14px] font-semibold rounded transition-colors duration-200 mb-2 disabled:opacity-40 disabled:cursor-not-allowed hover:enabled:bg-[#FAFAF8]">
+                      Counter Offer
+                    </button>
+                    <button
+                      onClick={() => offer && offer.status === 'pending' ? setShowRejectModal(true) : undefined}
+                      disabled={!offer || offer.status !== 'pending'}
+                      className="w-full py-2.5 text-[#737370] text-[13px] font-medium transition-colors duration-200 text-center disabled:opacity-40 disabled:cursor-not-allowed hover:enabled:text-[#D03839]">
+                      Reject Offer
+                    </button>
+                  </div>
+                )}
+
+                {/* Post-action states */}
+                {offer && offer.status === 'accepted' && (
+                  <div className="px-5 py-4">
+                    <div className="bg-[#E4F5EC] border border-[#A8DFBA] rounded-lg px-4 py-3">
+                      <p className="text-[13px] font-semibold text-[#0F6E56] mb-1">Next Steps</p>
+                      <p className="text-[12px] text-[#0F6E56]">Coordinate with the buyer to proceed to contract signing.</p>
+                    </div>
+                  </div>
+                )}
+                {offer && offer.status === 'rejected' && (
+                  <div className="px-5 py-4">
+                    <div className="bg-[#FEF0EF] border border-[#F5C4C0] rounded-lg px-4 py-3">
+                      <p className="text-[13px] font-semibold text-[#D03839]">Offer rejected</p>
+                      <p className="text-[12px] text-[#D03839] mt-1">You can still continue the conversation.</p>
+                    </div>
+                  </div>
+                )}
+                {offer && offer.status === 'countered' && (
+                  <div className="px-5 py-4">
+                    <div className="bg-[#EBF3FC] border border-[#B0CFF0] rounded-lg px-4 py-3">
+                      <p className="text-[13px] font-semibold text-[#4A90E2]">Counter offer sent</p>
+                      <p className="text-[12px] text-[#4A90E2] mt-1">Waiting for buyer's response.</p>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        )}
+
+        {/* Mobile Property Panel */}
+        {showMobilePropPanel && selectedConversation && (
+          <div className="xl:hidden fixed inset-0 z-[90] flex justify-end" onClick={() => setShowMobilePropPanel(false)}>
+            <div className="w-full max-w-sm bg-white h-full overflow-y-auto shadow-2xl flex flex-col" onClick={e => e.stopPropagation()}>
+              <div className="px-5 py-4 border-b border-[#E8E8E4] flex items-center justify-between flex-shrink-0">
+                <div>
+                  <h3 className="text-[16px] font-bold text-[#1A1816]">Property Details</h3>
+                  <p className="text-[13px] text-[#737370] truncate max-w-[200px]">{selectedPropertyAddress || 'Conversation'}</p>
+                </div>
+                <button onClick={() => setShowMobilePropPanel(false)} className="p-2 rounded hover:bg-[#FAFAF8] transition-colors">
+                  <X className="w-5 h-5 text-[#444441]" />
+                </button>
+              </div>
+              <div className="px-5 py-4 border-b border-[#E8E8E4]">
+                <p className="text-[11px] font-semibold text-[#A8A8A4] uppercase tracking-[1.1px] mb-3">Buyer Info</p>
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0" style={{ backgroundColor: getAvatarPair(buyerDisplayName).bg }}>
+                    <span className="text-[13px] font-semibold" style={{ color: getAvatarPair(buyerDisplayName).text }}>{getInitials(buyerDisplayName)}</span>
+                  </div>
+                  <div>
+                    <p className="text-[14px] font-semibold text-[#1A1816]">{buyerDisplayName}</p>
+                    <div className="flex items-center gap-1">
+                      <Shield className="w-3 h-3 text-[#0F6E56]" />
+                      <span className="text-[11px] text-[#0F6E56] font-medium">Verified buyer</span>
+                    </div>
+                  </div>
+                </div>
+                {selectedConversation.buyer_email && (
+                  <div className="flex items-center gap-2 text-[13px] text-[#444441] mb-1.5">
+                    <Mail className="w-4 h-4 text-[#737370]" />
+                    <span className="truncate">{selectedConversation.buyer_email}</span>
+                  </div>
+                )}
+                {selectedConversation.buyer_phone && (
+                  <div className="flex items-center gap-2 text-[13px] text-[#444441]">
+                    <Phone className="w-4 h-4 text-[#737370]" />
+                    <span>{selectedConversation.buyer_phone}</span>
+                  </div>
+                )}
+              </div>
+              {offer && (
+                <div className="px-5 py-4 border-b border-[#E8E8E4]">
+                  <p className="text-[11px] font-semibold text-[#A8A8A4] uppercase tracking-[1.1px] mb-3">Offer Details</p>
+                  <p className="text-[28px] font-bold text-[#1A1816] mb-1">{formatCurrency(offer.offer_price)}</p>
+                  {offer.status === 'pending' && <span className="inline-block px-2 py-0.5 bg-[#FEF3E2] text-[#B5620A] text-[11px] font-semibold rounded">Negotiating</span>}
+                  {offer.status === 'accepted' && <span className="inline-block px-2 py-0.5 bg-[#E4F5EC] text-[#0F6E56] text-[11px] font-semibold rounded">Accepted</span>}
+                  {offer.status === 'rejected' && <span className="inline-block px-2 py-0.5 bg-[#FEF0EF] text-[#D03839] text-[11px] font-semibold rounded">Rejected</span>}
+                  {offer.status === 'countered' && <span className="inline-block px-2 py-0.5 bg-[#EBF3FC] text-[#4A90E2] text-[11px] font-semibold rounded">Counter Sent</span>}
+                </div>
+              )}
+              {selectedPropertyAddress && (
+                <div className="px-5 py-4">
+                  <p className="text-[11px] font-semibold text-[#A8A8A4] uppercase tracking-[1.1px] mb-2">Property</p>
+                  <div className="flex items-start gap-2 text-[13px] text-[#444441]">
+                    <MapPin className="w-4 h-4 text-[#737370] flex-shrink-0 mt-0.5" />
+                    <span>{selectedPropertyAddress}</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Accept Offer Modal */}
+        {showAcceptModal && offer && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50" onClick={() => setShowAcceptModal(false)}>
+            <div className="bg-white rounded-xl w-full max-w-[400px] p-6 shadow-2xl" onClick={e => e.stopPropagation()}>
+              <div className="flex items-center justify-center w-12 h-12 rounded-full bg-[#E4F5EC] mx-auto mb-4">
+                <Check className="w-6 h-6 text-[#0F6E56]" />
+              </div>
+              <h3 className="text-[18px] font-bold text-[#1A1816] text-center mb-2">Accept this offer?</h3>
+              <p className="text-[14px] text-[#444441] text-center mb-4">
+                You're about to accept {formatCurrency(offer.offer_price)} from {buyerDisplayName}. This action cannot be undone.
+              </p>
+              <div className="flex items-start gap-2 bg-[#FEF9EC] border border-[#F5D78E] rounded-lg px-3 py-2.5 mb-5">
+                <AlertCircle className="w-4 h-4 text-[#B5620A] flex-shrink-0 mt-0.5" />
+                <p className="text-[12px] text-[#B5620A]">Both parties will be notified and next steps will begin automatically</p>
+              </div>
+              <div className="flex gap-3">
+                <button onClick={() => setShowAcceptModal(false)}
+                  className="flex-1 py-3 border border-[#E8E8E4] text-[#444441] text-[14px] font-medium rounded-lg hover:bg-[#FAFAF8] transition-colors">
+                  Cancel
+                </button>
+                <button onClick={() => handleOfferAction('accept')} disabled={offerActionLoading}
+                  className="flex-1 py-3 bg-[#D03839] text-white text-[14px] font-semibold rounded-lg hover:bg-[#E0493B] transition-colors disabled:opacity-50">
+                  {offerActionLoading ? 'Accepting...' : 'Accept Offer'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Reject Offer Modal */}
+        {showRejectModal && offer && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50" onClick={() => setShowRejectModal(false)}>
+            <div className="bg-white rounded-xl w-full max-w-[400px] p-6 shadow-2xl" onClick={e => e.stopPropagation()}>
+              <h3 className="text-[18px] font-bold text-[#1A1816] text-center mb-2">Reject this offer?</h3>
+              <p className="text-[14px] text-[#444441] text-center mb-4">
+                This action will decline {buyerDisplayName}'s offer of {formatCurrency(offer.offer_price)}. You can still continue the conversation after rejecting.
+              </p>
+              <div className="flex items-start gap-2 bg-[#FEF9EC] border border-[#F5D78E] rounded-lg px-3 py-2.5 mb-5">
+                <AlertCircle className="w-4 h-4 text-[#B5620A] flex-shrink-0 mt-0.5" />
+                <p className="text-[12px] text-[#B5620A]">Both parties will be notified and next steps will begin automatically</p>
+              </div>
+              <div className="flex gap-3">
+                <button onClick={() => setShowRejectModal(false)}
+                  className="flex-1 py-3 border border-[#E8E8E4] text-[#444441] text-[14px] font-medium rounded-lg hover:bg-[#FAFAF8] transition-colors">
+                  Cancel
+                </button>
+                <button onClick={() => handleOfferAction('reject')} disabled={offerActionLoading}
+                  className="flex-1 py-3 bg-[#D03839] text-white text-[14px] font-semibold rounded-lg hover:bg-[#E0493B] transition-colors disabled:opacity-50">
+                  {offerActionLoading ? 'Rejecting...' : 'Reject Offer'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
+
+      {/* Context Menu */}
       {contextMenu?.conv && (
         <div
-          className="fixed z-[90] w-44 rounded-2xl border border-slate-200/80 bg-white/95 backdrop-blur-sm shadow-[0_12px_32px_rgba(15,23,42,0.18)] p-1.5"
+          className="fixed z-[90] w-44 rounded border border-[#E8E8E4] bg-white shadow-lg p-1"
           style={{ top: contextMenu.y, left: contextMenu.x }}
-          onClick={(e) => e.stopPropagation()}
+          onClick={e => e.stopPropagation()}
         >
-          <div className="px-2.5 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-400">Actions</div>
-          <button className="w-full text-left text-sm px-3 py-2 rounded-xl text-slate-700 hover:bg-slate-100 transition-colors" onClick={() => { updateConversationPref(contextMenu.conv.id, { is_pinned: !contextMenu.conv.is_pinned }); setContextMenu(null); }}>
-            {contextMenu.conv.is_pinned ? 'Unpin user' : 'Pin user'}
+          <button className="w-full text-left text-[13px] px-3 py-2 rounded text-[#444441] hover:bg-[#FAFAF8] transition-colors duration-200" onClick={() => { updateConversationPref(contextMenu.conv.id, { is_pinned: !contextMenu.conv.is_pinned }); setContextMenu(null); }}>
+            {contextMenu.conv.is_pinned ? 'Unpin' : 'Pin conversation'}
           </button>
-          <button className="w-full text-left text-sm px-3 py-2 rounded-xl text-slate-700 hover:bg-slate-100 transition-colors" onClick={() => { updateConversationPref(contextMenu.conv.id, { mark_unread: true }); setContextMenu(null); }}>
+          <button className="w-full text-left text-[13px] px-3 py-2 rounded text-[#444441] hover:bg-[#FAFAF8] transition-colors duration-200" onClick={() => { updateConversationPref(contextMenu.conv.id, { mark_unread: true }); setContextMenu(null); }}>
             Mark as unread
           </button>
-          <div className="my-1 border-t border-slate-200" />
-          <button className="w-full text-left text-sm px-3 py-2 rounded-xl text-red-600 hover:bg-red-50 transition-colors" onClick={() => { deleteConversation(contextMenu.conv.id); setContextMenu(null); }}>
+          <div className="my-1 border-t border-[#E8E8E4]" />
+          <button className="w-full text-left text-[13px] px-3 py-2 rounded text-[#D03839] hover:bg-[#FEF0EF] transition-colors duration-200" onClick={() => { deleteConversation(contextMenu.conv.id); setContextMenu(null); }}>
             Delete chat
           </button>
-          <button className="w-full text-left text-sm px-3 py-2 rounded-xl text-red-600 hover:bg-red-50 transition-colors" onClick={() => { updateConversationPref(contextMenu.conv.id, { is_blocked: true }); setContextMenu(null); }}>
+          <button className="w-full text-left text-[13px] px-3 py-2 rounded text-[#D03839] hover:bg-[#FEF0EF] transition-colors duration-200" onClick={() => { updateConversationPref(contextMenu.conv.id, { is_blocked: true }); setContextMenu(null); }}>
             Block user
           </button>
         </div>

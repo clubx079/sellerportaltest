@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { Plus, Edit2, Trash2, Eye, Search, X, Building2, ChevronLeft, ChevronRight, MapPin, DollarSign, RotateCcw, BarChart2, Link2 } from 'lucide-react';
+import { Plus, Edit2, Trash2, Eye, Search, X, Building2, ChevronLeft, ChevronRight, MapPin, DollarSign, RotateCcw, BarChart2, Link2, Home, FileEdit } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import DeleteConfirmModal from '@/components/properties/DeleteConfirmModal';
 import PropertyViewModal from '@/components/properties/PropertyViewModal';
@@ -484,7 +484,7 @@ const PropertiesManagement = () => {
         <div className="flex justify-end">
           <button
             onClick={() => router.push('/properties/new')}
-            className="flex items-center gap-1.5 bg-primary hover:bg-primary-700 text-white px-3 py-1.5 rounded-xl text-xs font-medium transition-all duration-200 shrink-0"
+            className="flex items-center gap-1.5 bg-[#D03839] hover:bg-[#E0493B] text-white px-3 py-2 rounded text-[13px] font-semibold transition-colors shrink-0"
           >
             <Plus size={14} />
             <span className="hidden sm:inline">Add Property</span>
@@ -495,23 +495,37 @@ const PropertiesManagement = () => {
 
       {/* Stats: only on Active view; minimal and professional. Trash view shows a single summary line. */}
       {viewMode === 'active' ? (
-        <div className="grid grid-cols-3 gap-2">
-          <div className="bg-white rounded-lg border border-gray-200 px-3 py-2 md:px-4 md:py-3">
-            <p className="text-[10px] md:text-xs font-medium text-gray-500 uppercase tracking-wider">Total</p>
-            <p className="text-base md:text-xl font-semibold text-gray-900 mt-0.5">{totalProperties}</p>
+        <div className="grid grid-cols-3 gap-3">
+          <div className="bg-white rounded border border-[#E8E8E4] px-4 py-5 flex flex-col">
+            <div className="flex items-start justify-between mb-5">
+              <p className="text-[13px] font-medium text-[#737370]">Total listings</p>
+              <div className="w-8 h-8 rounded-full bg-[#EBF3FC] flex items-center justify-center flex-shrink-0">
+                <Home className="w-4 h-4 text-[#4A90E2]" />
+              </div>
+            </div>
+            <p className="text-[36px] font-bold text-[#1A1816] leading-none tracking-tight">{totalProperties}</p>
           </div>
-          <div className="bg-white rounded-lg border border-gray-200 px-3 py-2 md:px-4 md:py-3">
-            <p className="text-[10px] md:text-xs font-medium text-gray-500 uppercase tracking-wider">Active</p>
-            <p className="text-base md:text-xl font-semibold text-gray-900 mt-0.5">{activeProperties}</p>
+          <div className="bg-white rounded border border-[#E8E8E4] px-4 py-5 flex flex-col">
+            <div className="flex items-start justify-between mb-5">
+              <p className="text-[13px] font-medium text-[#737370]">Active</p>
+              <div className="w-8 h-8 rounded-full bg-[#E4F5EC] flex items-center justify-center flex-shrink-0">
+                <BarChart2 className="w-4 h-4 text-[#0F6E56]" />
+              </div>
+            </div>
+            <p className="text-[36px] font-bold text-[#1A1816] leading-none tracking-tight">{activeProperties}</p>
           </div>
           <button
             type="button"
             onClick={() => setFilterStatus('draft')}
-            className="bg-white rounded-lg border border-gray-200 px-3 py-2 md:px-4 md:py-3 text-left hover:border-gray-300 hover:bg-gray-50/50 transition-colors"
+            className="bg-white rounded border border-[#E8E8E4] px-4 py-5 flex flex-col text-left hover:bg-[#FAFAF8] transition-colors"
           >
-            <p className="text-[10px] md:text-xs font-medium text-gray-500 uppercase tracking-wider">Draft</p>
-            <p className="text-base md:text-xl font-semibold text-gray-900 mt-0.5">{draftProperties}</p>
-            <p className="hidden md:block text-xs text-gray-400 mt-1">Filter table by draft</p>
+            <div className="flex items-start justify-between mb-5">
+              <p className="text-[13px] font-medium text-[#737370]">Draft</p>
+              <div className="w-8 h-8 rounded-full bg-[#FEF3E2] flex items-center justify-center flex-shrink-0">
+                <FileEdit className="w-4 h-4 text-[#B5620A]" />
+              </div>
+            </div>
+            <p className="text-[36px] font-bold text-[#1A1816] leading-none tracking-tight">{draftProperties}</p>
           </button>
         </div>
       ) : (
@@ -522,75 +536,68 @@ const PropertiesManagement = () => {
 
       {/* Table Card */}
       <div className="bg-white rounded-lg border border-gray-200 overflow-hidden shadow-card">
-        {/* Controls */}
-        <div className="px-4 py-3 border-b border-gray-200 space-y-2">
-          {/* Row 1: Search + Rows per page */}
-          <div className="flex items-center gap-2">
-            <div className="relative flex-1">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
-              <input
-                type="text"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-8 pr-8 py-1.5 text-xs border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-gray-400 bg-white"
-                placeholder="Search by title or location..."
-              />
-              {searchTerm && (
-                <button
-                  onClick={() => setSearchTerm('')}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                >
-                  <X className="w-3.5 h-3.5" />
-                </button>
-              )}
-            </div>
-            <select
-              value={entriesPerPage}
-              onChange={(e) => {
-                setEntriesPerPage(Number(e.target.value));
-                setCurrentPage(1);
-              }}
-              className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-gray-400 bg-white text-gray-700 shrink-0"
-            >
-              <option value={10}>10 rows</option>
-              <option value={25}>25 rows</option>
-              <option value={50}>50 rows</option>
-              <option value={100}>100 rows</option>
-            </select>
+        {/* Controls — single row */}
+        <div className="px-4 py-3 border-b border-gray-200 flex items-center gap-2 flex-wrap">
+          <div className="relative flex-1 min-w-[160px]">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-8 pr-8 py-1.5 text-xs border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-gray-400 bg-white"
+              placeholder="Search by title or location..."
+            />
+            {searchTerm && (
+              <button
+                onClick={() => setSearchTerm('')}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
           </div>
-
-          {/* Row 2: Status + Property Status + Clear */}
-          <div className="grid grid-cols-3 gap-2">
-            <select
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
-              className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-gray-400 bg-white text-gray-700"
-            >
-              <option value="">Status</option>
-              <option value="draft">Draft</option>
-              <option value="active">Active</option>
-              <option value="published">Published</option>
-              <option value="incomplete">Incomplete</option>
-              <option value="inactive">Inactive</option>
-            </select>
-            <select
-              value={filterPropertyStatus}
-              onChange={(e) => setFilterPropertyStatus(e.target.value)}
-              className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-gray-400 bg-white text-gray-700"
-            >
-              <option value="">Prop. Status</option>
-              <option value="available">Available</option>
-              <option value="pending">Pending</option>
-              <option value="sold">Sold</option>
-              <option value="under_contract">Under Contract</option>
-            </select>
-            <button
-              onClick={clearFilters}
-              className="text-xs bg-red-50 hover:bg-red-100 text-red-600 rounded-lg px-2 py-1.5 transition-colors"
-            >
-              Clear
-            </button>
-          </div>
+          <select
+            value={filterStatus}
+            onChange={(e) => setFilterStatus(e.target.value)}
+            className="text-xs border border-[#E8E8E4] rounded px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-[#D03839]/20 focus:border-[#D03839] bg-white text-[#1A1816] shrink-0"
+          >
+            <option value="">Status</option>
+            <option value="draft">Draft</option>
+            <option value="active">Active</option>
+            <option value="published">Published</option>
+            <option value="incomplete">Incomplete</option>
+            <option value="inactive">Inactive</option>
+          </select>
+          <select
+            value={filterPropertyStatus}
+            onChange={(e) => setFilterPropertyStatus(e.target.value)}
+            className="text-xs border border-[#E8E8E4] rounded px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-[#D03839]/20 focus:border-[#D03839] bg-white text-[#1A1816] shrink-0"
+          >
+            <option value="">Property Status</option>
+            <option value="available">Available</option>
+            <option value="pending">Pending</option>
+            <option value="sold">Sold</option>
+            <option value="under_contract">Under Contract</option>
+          </select>
+          <select
+            value={entriesPerPage}
+            onChange={(e) => {
+              setEntriesPerPage(Number(e.target.value));
+              setCurrentPage(1);
+            }}
+            className="text-xs border border-gray-200 rounded px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-gray-400 bg-white text-gray-700 shrink-0"
+          >
+            <option value={10}>10 rows</option>
+            <option value={25}>25 rows</option>
+            <option value={50}>50 rows</option>
+            <option value={100}>100 rows</option>
+          </select>
+          <button
+            onClick={clearFilters}
+            className="text-xs bg-[#FEF0EF] hover:bg-[#FEE4E3] text-[#D03839] rounded px-3 py-1.5 transition-colors font-medium shrink-0"
+          >
+            Clear
+          </button>
         </div>
 
         {/* Desktop: Table */}
@@ -646,11 +653,7 @@ const PropertiesManagement = () => {
                       <div className="flex items-center gap-2">
                         {getFeaturedImage(property) && (
                           <div className="w-10 h-10 rounded-lg bg-gray-100 overflow-hidden shrink-0">
-                            <img
-                              src={getFeaturedImage(property)}
-                              alt={property.full_address || property.address}
-                              className="w-full h-full object-cover"
-                            />
+                            <img src={getFeaturedImage(property)} alt={property.full_address || property.address} className="w-full h-full object-cover" />
                           </div>
                         )}
                         <div>
@@ -671,9 +674,7 @@ const PropertiesManagement = () => {
                       </div>
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
-                      <span className="text-xs font-semibold text-gray-900">
-                        ${parseFloat(property.price || 0).toLocaleString()}
-                      </span>
+                      <span className="text-xs font-semibold text-gray-900">${parseFloat(property.price || 0).toLocaleString()}</span>
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
                       <span className="text-xs text-gray-700">{property.property_type || 'N/A'}</span>
@@ -693,13 +694,8 @@ const PropertiesManagement = () => {
                                 ? 'border-green-200 text-green-700 bg-green-50 hover:bg-green-100'
                                 : 'border-amber-200 text-amber-700 bg-amber-50 hover:bg-amber-100'
                             } disabled:opacity-50 disabled:cursor-not-allowed`}
-                            title={(property.status || 'active').toLowerCase() === 'inactive' ? 'Activate listing' : 'Deactivate listing'}
                           >
-                            {statusUpdatingId === `${property._source}-${property.id}`
-                              ? 'Saving...'
-                              : (property.status || 'active').toLowerCase() === 'inactive'
-                                ? 'Activate'
-                                : 'Deactivate'}
+                            {statusUpdatingId === `${property._source}-${property.id}` ? 'Saving...' : (property.status || 'active').toLowerCase() === 'inactive' ? 'Activate' : 'Deactivate'}
                           </button>
                         )}
                       </div>
@@ -713,68 +709,28 @@ const PropertiesManagement = () => {
                       <div className="flex items-center justify-end gap-0.5">
                         {viewMode === 'trash' ? (
                           <>
-                            <button
-                              onClick={() => handleRestore(property)}
-                              className="flex items-center justify-center w-8 h-8 rounded-lg text-gray-400 hover:text-primary hover:bg-gray-100 transition-colors"
-                              title="Restore"
-                            >
+                            <button onClick={() => handleRestore(property)} className="flex items-center justify-center w-8 h-8 rounded-lg text-gray-400 hover:text-primary hover:bg-gray-100 transition-colors" title="Restore">
                               <RotateCcw className="w-4 h-4" strokeWidth={2} />
                             </button>
-                            <button
-                              onClick={() => handleDeleteClick(property)}
-                              className="flex items-center justify-center w-8 h-8 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
-                              title="Delete Permanently"
-                            >
+                            <button onClick={() => handleDeleteClick(property)} className="flex items-center justify-center w-8 h-8 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors" title="Delete Permanently">
                               <Trash2 className="w-4 h-4" strokeWidth={2} />
                             </button>
                           </>
                         ) : (
                           <>
-                            <a
-                              href={`${DEELMAP_VIEW_BASE_URL.replace(/\/$/, '')}/${property.slug || property.id}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="flex items-center justify-center w-8 h-8 rounded-lg text-gray-400 hover:text-primary hover:bg-gray-100 transition-colors"
-                              title="View on site"
-                            >
+                            <a href={`${DEELMAP_VIEW_BASE_URL.replace(/\/$/, '')}/${property.slug || property.id}`} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center w-8 h-8 rounded-lg text-gray-400 hover:text-primary hover:bg-gray-100 transition-colors" title="View on site">
                               <Eye className="w-4 h-4" strokeWidth={2} />
                             </a>
-                            <button
-                              onClick={() => {
-                                setPropertyForUTM({
-                                  ...property,
-                                  slug: property.slug || property.id,
-                                  id: property.id,
-                                });
-                                setShowUTMModal(true);
-                              }}
-                              className="flex items-center justify-center w-8 h-8 rounded-lg text-gray-400 hover:text-primary hover:bg-gray-100 transition-colors"
-                              title="Share links (UTM)"
-                            >
+                            <button onClick={() => { setPropertyForUTM({ ...property, slug: property.slug || property.id, id: property.id }); setShowUTMModal(true); }} className="flex items-center justify-center w-8 h-8 rounded-lg text-gray-400 hover:text-primary hover:bg-gray-100 transition-colors" title="Share links (UTM)">
                               <Link2 className="w-4 h-4" strokeWidth={2} />
                             </button>
-                            <button
-                              onClick={() => router.push(`/properties/edit/${property.id}`)}
-                              className="flex items-center justify-center w-8 h-8 rounded-lg text-gray-400 hover:text-primary hover:bg-gray-100 transition-colors"
-                              title="Edit"
-                            >
+                            <button onClick={() => router.push(`/properties/edit/${property.id}`)} className="flex items-center justify-center w-8 h-8 rounded-lg text-gray-400 hover:text-primary hover:bg-gray-100 transition-colors" title="Edit">
                               <Edit2 className="w-4 h-4" strokeWidth={2} />
                             </button>
-                            <button
-                              onClick={() => {
-                                setPropertyForAnalytics(property);
-                                setShowAnalyticsSidebar(true);
-                              }}
-                              className="flex items-center justify-center w-8 h-8 rounded-lg text-gray-400 hover:text-primary hover:bg-gray-100 transition-colors"
-                              title="Analytics"
-                            >
+                            <button onClick={() => { setPropertyForAnalytics(property); setShowAnalyticsSidebar(true); }} className="flex items-center justify-center w-8 h-8 rounded-lg text-gray-400 hover:text-primary hover:bg-gray-100 transition-colors" title="Analytics">
                               <BarChart2 className="w-4 h-4" strokeWidth={2} />
                             </button>
-                            <button
-                              onClick={() => handleArchiveClick(property)}
-                              className="flex items-center justify-center w-8 h-8 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
-                              title="Move to Trash"
-                            >
+                            <button onClick={() => handleArchiveClick(property)} className="flex items-center justify-center w-8 h-8 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors" title="Move to Trash">
                               <Trash2 className="w-4 h-4" strokeWidth={2} />
                             </button>
                           </>
@@ -815,18 +771,11 @@ const PropertiesManagement = () => {
             </div>
           ) : (
             currentEntries.map((property, index) => (
-              <div
-                key={`${property._source}-${property.id}`}
-                className="p-4 hover:bg-gray-50/50 transition-colors"
-              >
+              <div key={`${property._source}-${property.id}`} className="p-4 hover:bg-gray-50/50 transition-colors">
                 <div className="flex gap-3">
                   {getFeaturedImage(property) ? (
                     <div className="w-20 h-20 rounded-xl bg-gray-100 overflow-hidden shrink-0">
-                      <img
-                        src={getFeaturedImage(property)}
-                        alt={property.full_address || property.address}
-                        className="w-full h-full object-cover"
-                      />
+                      <img src={getFeaturedImage(property)} alt={property.full_address || property.address} className="w-full h-full object-cover" />
                     </div>
                   ) : (
                     <div className="w-20 h-20 rounded-xl bg-gray-100 shrink-0 flex items-center justify-center">
@@ -834,9 +783,7 @@ const PropertiesManagement = () => {
                     </div>
                   )}
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900 line-clamp-2">
-                      {property.full_address || property.address || property.slug?.replace(/-/g, ' ') || 'N/A'}
-                    </p>
+                    <p className="text-sm font-medium text-gray-900 line-clamp-2">{property.full_address || property.address || property.slug?.replace(/-/g, ' ') || 'N/A'}</p>
                     <div className="flex flex-wrap items-center gap-1.5 mt-1">
                       <span className={`inline-flex px-2 py-0.5 rounded text-[10px] font-medium border ${property._source === 'manual' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-amber-50 text-amber-700 border-amber-200'}`}>
                         {property._source === 'manual' ? 'Manual' : 'DeelScout'}
@@ -861,61 +808,28 @@ const PropertiesManagement = () => {
                 <div className="flex items-center justify-end gap-1 mt-3 pt-3 border-t border-gray-100">
                   {viewMode === 'trash' ? (
                     <>
-                      <button
-                        onClick={() => handleRestore(property)}
-                        className="flex items-center justify-center w-9 h-9 rounded-lg text-gray-500 hover:text-primary hover:bg-gray-100 transition-colors"
-                        title="Restore"
-                      >
+                      <button onClick={() => handleRestore(property)} className="flex items-center justify-center w-9 h-9 rounded-lg text-gray-500 hover:text-primary hover:bg-gray-100 transition-colors" title="Restore">
                         <RotateCcw className="w-4 h-4" strokeWidth={2} />
                       </button>
-                      <button
-                        onClick={() => handleDeleteClick(property)}
-                        className="flex items-center justify-center w-9 h-9 rounded-lg text-gray-500 hover:text-red-600 hover:bg-red-50 transition-colors"
-                        title="Delete Permanently"
-                      >
+                      <button onClick={() => handleDeleteClick(property)} className="flex items-center justify-center w-9 h-9 rounded-lg text-gray-500 hover:text-red-600 hover:bg-red-50 transition-colors" title="Delete Permanently">
                         <Trash2 className="w-4 h-4" strokeWidth={2} />
                       </button>
                     </>
                   ) : (
                     <>
-                      <a
-                        href={`${DEELMAP_VIEW_BASE_URL.replace(/\/$/, '')}/${property.slug || property.id}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center justify-center w-9 h-9 rounded-lg text-gray-500 hover:text-primary hover:bg-gray-100 transition-colors"
-                        title="View on site"
-                      >
+                      <a href={`${DEELMAP_VIEW_BASE_URL.replace(/\/$/, '')}/${property.slug || property.id}`} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center w-9 h-9 rounded-lg text-gray-500 hover:text-primary hover:bg-gray-100 transition-colors" title="View on site">
                         <Eye className="w-4 h-4" strokeWidth={2} />
                       </a>
-                      <button
-                        onClick={() => {
-                          setPropertyForUTM({ ...property, slug: property.slug || property.id, id: property.id });
-                          setShowUTMModal(true);
-                        }}
-                        className="flex items-center justify-center w-9 h-9 rounded-lg text-gray-500 hover:text-primary hover:bg-gray-100 transition-colors"
-                        title="Share links"
-                      >
+                      <button onClick={() => { setPropertyForUTM({ ...property, slug: property.slug || property.id, id: property.id }); setShowUTMModal(true); }} className="flex items-center justify-center w-9 h-9 rounded-lg text-gray-500 hover:text-primary hover:bg-gray-100 transition-colors" title="Share links">
                         <Link2 className="w-4 h-4" strokeWidth={2} />
                       </button>
-                      <button
-                        onClick={() => router.push(`/properties/edit/${property.id}`)}
-                        className="flex items-center justify-center w-9 h-9 rounded-lg text-gray-500 hover:text-primary hover:bg-gray-100 transition-colors"
-                        title="Edit"
-                      >
+                      <button onClick={() => router.push(`/properties/edit/${property.id}`)} className="flex items-center justify-center w-9 h-9 rounded-lg text-gray-500 hover:text-primary hover:bg-gray-100 transition-colors" title="Edit">
                         <Edit2 className="w-4 h-4" strokeWidth={2} />
                       </button>
-                      <button
-                        onClick={() => { setPropertyForAnalytics(property); setShowAnalyticsSidebar(true); }}
-                        className="flex items-center justify-center w-9 h-9 rounded-lg text-gray-500 hover:text-primary hover:bg-gray-100 transition-colors"
-                        title="Analytics"
-                      >
+                      <button onClick={() => { setPropertyForAnalytics(property); setShowAnalyticsSidebar(true); }} className="flex items-center justify-center w-9 h-9 rounded-lg text-gray-500 hover:text-primary hover:bg-gray-100 transition-colors" title="Analytics">
                         <BarChart2 className="w-4 h-4" strokeWidth={2} />
                       </button>
-                      <button
-                        onClick={() => handleArchiveClick(property)}
-                        className="flex items-center justify-center w-9 h-9 rounded-lg text-gray-500 hover:text-red-600 hover:bg-red-50 transition-colors"
-                        title="Move to Trash"
-                      >
+                      <button onClick={() => handleArchiveClick(property)} className="flex items-center justify-center w-9 h-9 rounded-lg text-gray-500 hover:text-red-600 hover:bg-red-50 transition-colors" title="Move to Trash">
                         <Trash2 className="w-4 h-4" strokeWidth={2} />
                       </button>
                     </>
@@ -1036,14 +950,16 @@ const PropertiesManagement = () => {
       )}
 
       {showAnalyticsSidebar && propertyForAnalytics && (
-        <PropertyAnalyticsSidebar
-          propertyId={propertyForAnalytics.id}
-          propertyName={propertyForAnalytics.full_address || propertyForAnalytics.address || propertyForAnalytics.slug}
-          onClose={() => {
-            setShowAnalyticsSidebar(false);
-            setPropertyForAnalytics(null);
-          }}
-        />
+        <div className="!mt-0">
+          <PropertyAnalyticsSidebar
+            propertyId={propertyForAnalytics.id}
+            propertyName={propertyForAnalytics.full_address || propertyForAnalytics.address || propertyForAnalytics.slug}
+            onClose={() => {
+              setShowAnalyticsSidebar(false);
+              setPropertyForAnalytics(null);
+            }}
+          />
+        </div>
       )}
     </div>
   );

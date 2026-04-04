@@ -347,19 +347,19 @@ export default function NewPropertyPage() {
   };
 
   return (
-    <div className="space-y-3 md:space-y-4">
+    <div className="space-y-3 md:space-y-4" style={{ fontFamily: 'var(--font-dm-sans), sans-serif' }}>
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <button
             onClick={() => router.back()}
-            className="p-2 rounded-lg hover:bg-neutral-100 transition-colors"
+            className="p-2 rounded hover:bg-[#F0F0EE] transition-colors"
           >
-            <ArrowLeft size={20} className="text-neutral-600" />
+            <ArrowLeft size={20} className="text-[#737370]" />
           </button>
           <div>
-            <h1 className="text-lg md:text-xl font-semibold tracking-tight text-neutral-900">Add New Property</h1>
-            <p className="text-xs text-neutral-500 mt-0.5">Create a new wholesale property listing</p>
+            <h1 className="text-[18px] md:text-[20px] font-bold tracking-[-0.4px] text-[#1A1816]">Add New Property</h1>
+            <p className="text-[12px] text-[#737370] mt-0.5">Create a new wholesale property listing</p>
           </div>
         </div>
         <div className="flex gap-2">
@@ -367,7 +367,7 @@ export default function NewPropertyPage() {
             type="button"
             onClick={() => handleSave('draft')}
             disabled={saving || imageUploadStatus.isUploading}
-            className="flex items-center justify-center gap-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center justify-center gap-2 bg-[#FAFAF8] hover:bg-[#E8E8E4] text-[#1A1816] px-3 py-2 rounded text-[13px] font-medium border border-[#E8E8E4] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Save size={16} />
             <span>
@@ -382,7 +382,7 @@ export default function NewPropertyPage() {
             type="button"
             onClick={() => handleSave('active')}
             disabled={saving || imageUploadStatus.isUploading}
-            className="flex items-center justify-center gap-2 bg-primary hover:bg-primary-700 text-white px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center justify-center gap-2 bg-[#D03839] hover:bg-[#E0493B] text-white px-3 py-2 rounded text-[13px] font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Eye size={16} />
             <span>
@@ -397,24 +397,24 @@ export default function NewPropertyPage() {
 
       {/* Notifications */}
       {error && (
-        <div className="flex items-start gap-3 p-3 bg-red-50 border border-red-200 rounded-xl text-red-700">
+        <div className="flex items-start gap-3 p-3 bg-[#FEF0EF] border border-[#F5C4C0] rounded text-[#D03839]">
           <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
           <div className="flex-1">
-            <p className="text-sm font-medium">{error}</p>
+            <p className="text-[13px] font-medium">{error}</p>
           </div>
-          <button onClick={() => setError(null)} className="text-red-400 hover:text-red-600">
+          <button onClick={() => setError(null)} className="text-[#D03839]/60 hover:text-[#D03839]">
             <X className="w-4 h-4" />
           </button>
         </div>
       )}
 
       {success && (
-        <div className="flex items-start gap-3 p-3 bg-green-50 border border-green-200 rounded-xl text-green-700">
+        <div className="flex items-start gap-3 p-3 bg-[#E4F5EC] border border-[#A8DFBA] rounded text-[#0F6E56]">
           <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
           <div className="flex-1">
-            <p className="text-sm font-medium">{success}</p>
+            <p className="text-[13px] font-medium">{success}</p>
           </div>
-          <button onClick={() => setSuccess(null)} className="text-green-400 hover:text-green-600">
+          <button onClick={() => setSuccess(null)} className="text-[#0F6E56]/60 hover:text-[#0F6E56]">
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -422,30 +422,30 @@ export default function NewPropertyPage() {
 
       {featuredImageModal.open && (
         <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-[1px] flex items-center justify-center p-4">
-          <div className="w-full max-w-md bg-white border border-neutral-200 rounded-2xl shadow-2xl overflow-hidden">
-            <div className="px-5 py-4 border-b border-neutral-200 bg-neutral-50">
-              <h3 className="text-base font-semibold text-neutral-900">Select featured image</h3>
-              <p className="text-xs text-neutral-600 mt-1">
+          <div className="w-full max-w-md bg-white border border-[#E8E8E4] rounded-lg shadow-2xl overflow-hidden">
+            <div className="px-5 py-4 border-b border-[#E8E8E4] bg-[#FAFAF8]">
+              <h3 className="text-[15px] font-semibold text-[#1A1816]">Select featured image</h3>
+              <p className="text-[12px] text-[#737370] mt-1">
                 Your listing has {featuredImageModal.imageCount} uploaded image{featuredImageModal.imageCount > 1 ? 's' : ''} but no featured one selected.
               </p>
             </div>
             <div className="px-5 py-4">
-              <p className="text-sm text-neutral-700 leading-6">
+              <p className="text-[13px] text-[#1A1816] leading-6">
                 Featured image is used as the main thumbnail on listings. You can choose one manually, or continue and automatically use the first uploaded image.
               </p>
             </div>
-            <div className="px-5 py-4 border-t border-neutral-200 bg-white flex items-center justify-end gap-2">
+            <div className="px-5 py-4 border-t border-[#E8E8E4] bg-white flex items-center justify-end gap-2">
               <button
                 type="button"
                 onClick={handleFeaturedModalSelectManually}
-                className="px-3.5 py-2 text-sm font-medium rounded-lg border border-neutral-300 text-neutral-700 hover:bg-neutral-50 transition-colors"
+                className="px-3.5 py-2 text-[13px] font-medium rounded border border-[#E8E8E4] text-[#1A1816] hover:bg-[#FAFAF8] transition-colors"
               >
                 Select manually
               </button>
               <button
                 type="button"
                 onClick={handleFeaturedModalAutoSelect}
-                className="px-3.5 py-2 text-sm font-medium rounded-lg bg-primary text-white hover:bg-primary-700 transition-colors"
+                className="px-3.5 py-2 text-[13px] font-medium rounded bg-[#D03839] text-white hover:bg-[#E0493B] transition-colors"
               >
                 Use first image
               </button>
@@ -456,11 +456,11 @@ export default function NewPropertyPage() {
 
       {/* Upload Warning */}
       {imageUploadStatus.isUploading && (
-        <div className="flex items-start gap-3 p-4 bg-blue-50 border border-blue-200 rounded-xl">
-          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
+        <div className="flex items-start gap-3 p-4 bg-[#EBF3FC] border border-[#B3D4F5] rounded">
+          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-[#4A90E2]"></div>
           <div>
-            <h4 className="font-medium text-blue-900 mb-1">Uploading Images</h4>
-            <p className="text-sm text-blue-700">
+            <h4 className="font-medium text-[#1A1816] mb-1 text-[13px]">Uploading Images</h4>
+            <p className="text-[13px] text-[#737370]">
               Please wait for {imageUploadStatus.uploadingCount} image{imageUploadStatus.uploadingCount > 1 ? 's' : ''} to finish uploading before publishing.
             </p>
           </div>
@@ -468,8 +468,8 @@ export default function NewPropertyPage() {
       )}
 
       {/* Tabs */}
-      <div className="bg-white rounded-xl border border-neutral-200 overflow-hidden">
-        <div className="flex border-b border-neutral-200 overflow-x-auto scrollbar-hide">
+      <div className="bg-white rounded border border-[#E8E8E4] overflow-hidden">
+        <div className="flex border-b border-[#E8E8E4] overflow-x-auto scrollbar-hide">
           {[
             { id: 'basic', label: 'Basic Info' },
             { id: 'images', label: 'Images' },
@@ -481,10 +481,10 @@ export default function NewPropertyPage() {
             <button
               key={tab.id}
               onClick={() => handleTabChange(tab.id)}
-              className={`px-4 md:px-6 py-3 md:py-4 font-medium transition-colors whitespace-nowrap text-xs md:text-sm ${
+              className={`px-4 md:px-6 py-3 md:py-4 font-medium transition-colors whitespace-nowrap text-[12px] md:text-[13px] ${
                 activeTab === tab.id
-                  ? 'text-primary border-b-2 border-primary bg-primary/5'
-                  : 'text-neutral-600 hover:text-neutral-900'
+                  ? 'text-[#D03839] border-b-2 border-[#D03839] bg-[#FEF0EF]/30'
+                  : 'text-[#737370] hover:text-[#1A1816]'
               }`}
             >
               {tab.label}
@@ -498,45 +498,45 @@ export default function NewPropertyPage() {
           {activeTab === 'basic' && (
             <div className="space-y-6">
               <div>
-                <label className="block text-sm font-semibold text-neutral-700 mb-2">Property Title *</label>
+                <label className="block text-[13px] font-semibold text-[#1A1816] mb-2">Property Title *</label>
                 <input
                   type="text"
                   value={formData.title || ''}
                   onChange={(e) => handleInputChange('title', e.target.value)}
-                  className="w-full px-4 py-3 border-2 border-neutral-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all text-sm"
+                  className="w-full px-4 py-3 border border-[#E8E8E4] rounded focus:border-[#D03839] focus:outline-none transition-colors text-[13px] text-[#1A1816] placeholder:text-[#A8A8A4]"
                   placeholder="Luxury Beachfront Hotel in Miami"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-neutral-700 mb-2">Location *</label>
+                <label className="block text-[13px] font-semibold text-[#1A1816] mb-2">Location *</label>
                 <GooglePlacesAutocomplete
                   onAddressSelect={handleAddressSelect}
                   defaultValue={formData.location || ''}
                 />
-                <p className="text-xs text-neutral-500 mt-1">
+                <p className="text-[12px] text-[#737370] mt-1">
                   Start typing to search for an address
                 </p>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-semibold text-neutral-700 mb-2">Price ($)</label>
+                  <label className="block text-[13px] font-semibold text-[#1A1816] mb-2">Price ($)</label>
                   <input
                     type="number"
                     value={formData.price || ''}
                     onChange={(e) => handleInputChange('price', e.target.value)}
-                    className="w-full px-4 py-3 border-2 border-neutral-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all text-sm"
+                    className="w-full px-4 py-3 border border-[#E8E8E4] rounded focus:border-[#D03839] focus:outline-none transition-colors text-[13px] text-[#1A1816] placeholder:text-[#A8A8A4]"
                     placeholder="2500000"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-neutral-700 mb-2">Property Type</label>
+                  <label className="block text-[13px] font-semibold text-[#1A1816] mb-2">Property Type</label>
                   <select
                     value={formData.property_type ?? ''}
                     onChange={(e) => handleInputChange('property_type', e.target.value)}
-                    className="w-full px-4 py-3 border-2 border-neutral-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all text-sm"
+                    className="w-full px-4 py-3 border border-[#E8E8E4] rounded focus:border-[#D03839] focus:outline-none transition-colors text-[13px] text-[#1A1816]"
                   >
                     <option value="">Select property type</option>
                     {PROPERTY_TYPES.map((type) => (
@@ -548,35 +548,35 @@ export default function NewPropertyPage() {
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-sm font-semibold text-neutral-700 mb-2">Rooms/Units</label>
+                  <label className="block text-[13px] font-semibold text-[#1A1816] mb-2">Rooms/Units</label>
                   <input
                     type="number"
                     value={formData.bedrooms || ''}
                     onChange={(e) => handleInputChange('bedrooms', e.target.value)}
-                    className="w-full px-4 py-3 border-2 border-neutral-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all text-sm"
+                    className="w-full px-4 py-3 border border-[#E8E8E4] rounded focus:border-[#D03839] focus:outline-none transition-colors text-[13px] text-[#1A1816] placeholder:text-[#A8A8A4]"
                     placeholder="50"
                     min="0"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-neutral-700 mb-2">Bathrooms</label>
+                  <label className="block text-[13px] font-semibold text-[#1A1816] mb-2">Bathrooms</label>
                   <input
                     type="number"
                     step="0.5"
                     value={formData.bathrooms || ''}
                     onChange={(e) => handleInputChange('bathrooms', e.target.value)}
-                    className="w-full px-4 py-3 border-2 border-neutral-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all text-sm"
+                    className="w-full px-4 py-3 border border-[#E8E8E4] rounded focus:border-[#D03839] focus:outline-none transition-colors text-[13px] text-[#1A1816] placeholder:text-[#A8A8A4]"
                     placeholder="50"
                     min="0"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-neutral-700 mb-2">Floor Area (sqft)</label>
+                  <label className="block text-[13px] font-semibold text-[#1A1816] mb-2">Floor Area (sqft)</label>
                   <input
                     type="number"
                     value={formData.floor_area || ''}
                     onChange={(e) => handleInputChange('floor_area', e.target.value)}
-                    className="w-full px-4 py-3 border-2 border-neutral-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all text-sm"
+                    className="w-full px-4 py-3 border border-[#E8E8E4] rounded focus:border-[#D03839] focus:outline-none transition-colors text-[13px] text-[#1A1816] placeholder:text-[#A8A8A4]"
                     placeholder="25000"
                     min="0"
                   />
@@ -584,11 +584,11 @@ export default function NewPropertyPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-neutral-700 mb-2">Property Status</label>
+                <label className="block text-[13px] font-semibold text-[#1A1816] mb-2">Property Status</label>
                 <select
                   value={formData.property_status || 'available'}
                   onChange={(e) => handleInputChange('property_status', e.target.value)}
-                  className="w-full px-4 py-3 border-2 border-neutral-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all text-sm"
+                  className="w-full px-4 py-3 border border-[#E8E8E4] rounded focus:border-[#D03839] focus:outline-none transition-colors text-[13px] text-[#1A1816]"
                 >
                   {PROPERTY_STATUSES.map(status => (
                     <option key={status.value} value={status.value}>{status.label}</option>
@@ -599,23 +599,23 @@ export default function NewPropertyPage() {
               {/* Featured Image Preview */}
               {imageUploadStatus.images.length > 0 && (
                 <div>
-                  <label className="block text-sm font-semibold text-neutral-700 mb-2">Featured Image</label>
-                  <div className="border-2 border-neutral-200 rounded-xl p-4 bg-neutral-50">
+                  <label className="block text-[13px] font-semibold text-[#1A1816] mb-2">Featured Image</label>
+                  <div className="border border-[#E8E8E4] rounded p-4 bg-[#FAFAF8]">
                     {imageUploadStatus.images.some(img => img.status === 'completed' && img.isFeatured) ? (
                       <div className="flex items-center gap-4">
                         <img
                           src={imageUploadStatus.images.find(img => img.status === 'completed' && img.isFeatured)?.imageUrl}
                           alt="Featured"
-                          className="w-24 h-24 object-cover rounded-lg"
+                          className="w-24 h-24 object-cover rounded"
                         />
                         <div>
-                          <p className="text-sm font-medium text-neutral-900 mb-1">Featured image selected</p>
-                          <p className="text-xs text-neutral-500">You can change or clear this in the Images tab</p>
+                          <p className="text-[13px] font-medium text-[#1A1816] mb-1">Featured image selected</p>
+                          <p className="text-[12px] text-[#737370]">You can change or clear this in the Images tab</p>
                         </div>
                       </div>
                     ) : (
                       <div className="text-center py-4">
-                        <p className="text-sm text-neutral-500">Select a featured image in the Images tab</p>
+                        <p className="text-[13px] text-[#737370]">Select a featured image in the Images tab</p>
                       </div>
                     )}
                   </div>
@@ -626,8 +626,8 @@ export default function NewPropertyPage() {
 
           {/* Images Tab */}
           <div className={activeTab === 'images' ? '' : 'hidden'}>
-            <h3 className="text-lg font-semibold text-neutral-900 mb-2">Property Images</h3>
-            <p className="text-sm text-neutral-600 mb-6">
+            <h3 className="text-[15px] font-semibold text-[#1A1816] mb-2">Property Images</h3>
+            <p className="text-[13px] text-[#737370] mb-6">
               Upload property images. They will be automatically compressed and uploaded immediately. The first image will be set as the featured image.
             </p>
             <ImageGalleryManager
@@ -642,15 +642,15 @@ export default function NewPropertyPage() {
           {/* Inspection Report Tab */}
           {activeTab === 'inspection' && (
             <div>
-              <h3 className="text-lg font-semibold text-neutral-900 mb-2">Inspection Report</h3>
-              <p className="text-sm text-neutral-600 mb-6">
+              <h3 className="text-[15px] font-semibold text-[#1A1816] mb-2">Inspection Report</h3>
+              <p className="text-[13px] text-[#737370] mb-6">
                 Upload the inspection report for this property (PDF or DOC format)
               </p>
 
               {!inspectionReport.url ? (
-                <div className="border-2 border-dashed border-neutral-300 rounded-xl p-8 text-center">
-                  <Upload className="w-12 h-12 text-neutral-400 mx-auto mb-4" />
-                  <p className="text-sm text-neutral-600 mb-4">
+                <div className="border border-dashed border-[#E8E8E4] rounded p-8 text-center">
+                  <Upload className="w-12 h-12 text-[#A8A8A4] mx-auto mb-4" />
+                  <p className="text-[13px] text-[#737370] mb-4">
                     Upload PDF or DOC file
                   </p>
                   <input
@@ -663,7 +663,7 @@ export default function NewPropertyPage() {
                   />
                   <label
                     htmlFor="inspection-upload"
-                    className={`inline-flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary-700 text-white rounded-lg text-sm font-medium transition-colors cursor-pointer ${
+                    className={`inline-flex items-center gap-2 px-4 py-2 bg-[#D03839] hover:bg-[#E0493B] text-white rounded text-[13px] font-medium transition-colors cursor-pointer ${
                       inspectionReport.uploading ? 'opacity-50 cursor-not-allowed' : ''
                     }`}
                   >
@@ -671,19 +671,19 @@ export default function NewPropertyPage() {
                   </label>
                 </div>
               ) : (
-                <div className="bg-neutral-50 border border-neutral-200 rounded-xl p-4">
+                <div className="bg-[#FAFAF8] border border-[#E8E8E4] rounded p-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
-                        <Upload className="w-5 h-5 text-primary" />
+                      <div className="w-10 h-10 bg-[#D03839]/10 rounded flex items-center justify-center">
+                        <Upload className="w-5 h-5 text-[#D03839]" />
                       </div>
                       <div>
-                        <p className="text-sm font-medium text-neutral-900">Inspection Report</p>
+                        <p className="text-[13px] font-medium text-[#1A1816]">Inspection Report</p>
                         <a
                           href={inspectionReport.url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-xs text-primary hover:underline"
+                          className="text-[12px] text-[#D03839] hover:underline"
                         >
                           View Document
                         </a>
@@ -691,7 +691,7 @@ export default function NewPropertyPage() {
                     </div>
                     <button
                       onClick={handleRemoveInspection}
-                      className="p-2 rounded-lg hover:bg-neutral-200 text-neutral-500 transition-colors"
+                      className="p-2 rounded hover:bg-[#E8E8E4] text-[#737370] transition-colors"
                     >
                       <X className="w-4 h-4" />
                     </button>
@@ -705,7 +705,7 @@ export default function NewPropertyPage() {
           {activeTab === 'content' && (
             <div className="space-y-6">
               <div>
-                <label className="block text-sm font-semibold text-neutral-700 mb-2">Property Description</label>
+                <label className="block text-[13px] font-semibold text-[#1A1816] mb-2">Property Description</label>
                 <TextEditor
                   ref={descRef}
                   id="description-editor"
@@ -715,7 +715,7 @@ export default function NewPropertyPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-neutral-700 mb-2">Repairs & Renovation</label>
+                <label className="block text-[13px] font-semibold text-[#1A1816] mb-2">Repairs & Renovation</label>
                 <TextEditor
                   ref={repairsRef}
                   id="repairs-editor"
@@ -730,34 +730,34 @@ export default function NewPropertyPage() {
           {activeTab === 'seo' && (
             <div className="space-y-6">
               <div>
-                <h3 className="text-lg font-semibold text-neutral-900 mb-4">Search Engine Optimization</h3>
+                <h3 className="text-[15px] font-semibold text-[#1A1816] mb-4">Search Engine Optimization</h3>
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-semibold text-neutral-700 mb-2">SEO Title</label>
+                    <label className="block text-[13px] font-semibold text-[#1A1816] mb-2">SEO Title</label>
                     <input
                       type="text"
                       value={formData.seo_title || ''}
                       onChange={(e) => handleInputChange('seo_title', e.target.value)}
-                      className="w-full px-4 py-3 border-2 border-neutral-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all text-sm"
+                      className="w-full px-4 py-3 border border-[#E8E8E4] rounded focus:border-[#D03839] focus:outline-none transition-colors text-[13px] text-[#1A1816] placeholder:text-[#A8A8A4]"
                       placeholder="Luxury Beachfront Hotel Investment Opportunity"
                       maxLength="60"
                     />
-                    <div className="text-xs text-neutral-500 mt-1">
+                    <div className="text-[12px] text-[#737370] mt-1">
                       {(formData.seo_title || '').length}/60 characters
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-sm font-semibold text-neutral-700 mb-2">SEO Description</label>
+                    <label className="block text-[13px] font-semibold text-[#1A1816] mb-2">SEO Description</label>
                     <textarea
                       value={formData.seo_description || ''}
                       onChange={(e) => handleInputChange('seo_description', e.target.value)}
-                      className="w-full px-4 py-3 border-2 border-neutral-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all text-sm"
+                      className="w-full px-4 py-3 border border-[#E8E8E4] rounded focus:border-[#D03839] focus:outline-none transition-colors text-[13px] text-[#1A1816] placeholder:text-[#A8A8A4]"
                       rows="3"
                       placeholder="Discover this stunning wholesale hotel property..."
                       maxLength="160"
                     />
-                    <div className="text-xs text-neutral-500 mt-1">
+                    <div className="text-[12px] text-[#737370] mt-1">
                       {(formData.seo_description || '').length}/160 characters
                     </div>
                   </div>
@@ -765,26 +765,26 @@ export default function NewPropertyPage() {
               </div>
 
               <div>
-                <h3 className="text-lg font-semibold text-neutral-900 mb-4">Social Media</h3>
+                <h3 className="text-[15px] font-semibold text-[#1A1816] mb-4">Social Media</h3>
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-semibold text-neutral-700 mb-2">Social Title</label>
+                    <label className="block text-[13px] font-semibold text-[#1A1816] mb-2">Social Title</label>
                     <input
                       type="text"
                       value={formData.social_title || ''}
                       onChange={(e) => handleInputChange('social_title', e.target.value)}
-                      className="w-full px-4 py-3 border-2 border-neutral-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all text-sm"
+                      className="w-full px-4 py-3 border border-[#E8E8E4] rounded focus:border-[#D03839] focus:outline-none transition-colors text-[13px] text-[#1A1816] placeholder:text-[#A8A8A4]"
                       placeholder="Same as SEO title"
                       maxLength="60"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-semibold text-neutral-700 mb-2">Social Description</label>
+                    <label className="block text-[13px] font-semibold text-[#1A1816] mb-2">Social Description</label>
                     <textarea
                       value={formData.social_description || ''}
                       onChange={(e) => handleInputChange('social_description', e.target.value)}
-                      className="w-full px-4 py-3 border-2 border-neutral-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all text-sm"
+                      className="w-full px-4 py-3 border border-[#E8E8E4] rounded focus:border-[#D03839] focus:outline-none transition-colors text-[13px] text-[#1A1816] placeholder:text-[#A8A8A4]"
                       rows="3"
                       placeholder="Same as SEO description"
                       maxLength="160"
@@ -792,15 +792,15 @@ export default function NewPropertyPage() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-semibold text-neutral-700 mb-2">Social Image URL</label>
+                    <label className="block text-[13px] font-semibold text-[#1A1816] mb-2">Social Image URL</label>
                     <input
                       type="url"
                       value={formData.social_image_url || ''}
                       onChange={(e) => handleInputChange('social_image_url', e.target.value)}
-                      className="w-full px-4 py-3 border-2 border-neutral-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all text-sm"
+                      className="w-full px-4 py-3 border border-[#E8E8E4] rounded focus:border-[#D03839] focus:outline-none transition-colors text-[13px] text-[#1A1816] placeholder:text-[#A8A8A4]"
                       placeholder="https://example.com/image.jpg"
                     />
-                    <div className="text-xs text-neutral-500 mt-1">
+                    <div className="text-[12px] text-[#737370] mt-1">
                       Leave empty to use first uploaded image
                     </div>
                   </div>
@@ -812,55 +812,55 @@ export default function NewPropertyPage() {
           {/* Preview Tab */}
           {activeTab === 'preview' && (
             <div className="space-y-6">
-              <div className="bg-neutral-50 border border-neutral-200 rounded-xl p-6">
-                <h3 className="text-lg font-semibold text-neutral-900 mb-4">Property Preview</h3>
+              <div className="bg-[#FAFAF8] border border-[#E8E8E4] rounded p-6">
+                <h3 className="text-[15px] font-semibold text-[#1A1816] mb-4">Property Preview</h3>
                 <div className="space-y-4">
                   <div>
-                    <p className="text-xs text-neutral-500 mb-1">Title</p>
-                    <p className="text-base font-semibold text-neutral-900">{formData.title || 'No title'}</p>
+                    <p className="text-[12px] text-[#737370] mb-1">Title</p>
+                    <p className="text-[15px] font-semibold text-[#1A1816]">{formData.title || 'No title'}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-neutral-500 mb-1">Location</p>
-                    <p className="text-sm text-neutral-700">{formData.location || 'No location'}</p>
+                    <p className="text-[12px] text-[#737370] mb-1">Location</p>
+                    <p className="text-[13px] text-[#1A1816]">{formData.location || 'No location'}</p>
                   </div>
                   <div className="grid grid-cols-3 gap-4">
                     <div>
-                      <p className="text-xs text-neutral-500 mb-1">Price</p>
-                      <p className="text-sm font-semibold text-neutral-900">${parseFloat(formData.price || 0).toLocaleString()}</p>
+                      <p className="text-[12px] text-[#737370] mb-1">Price</p>
+                      <p className="text-[13px] font-semibold text-[#1A1816]">${parseFloat(formData.price || 0).toLocaleString()}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-neutral-500 mb-1">Rooms</p>
-                      <p className="text-sm text-neutral-700">{formData.bedrooms || 0}</p>
+                      <p className="text-[12px] text-[#737370] mb-1">Rooms</p>
+                      <p className="text-[13px] text-[#1A1816]">{formData.bedrooms || 0}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-neutral-500 mb-1">Area</p>
-                      <p className="text-sm text-neutral-700">{formData.floor_area ? `${formData.floor_area} sqft` : 'N/A'}</p>
+                      <p className="text-[12px] text-[#737370] mb-1">Area</p>
+                      <p className="text-[13px] text-[#1A1816]">{formData.floor_area ? `${formData.floor_area} sqft` : 'N/A'}</p>
                     </div>
                   </div>
                   {formData.description && (
                     <div>
-                      <p className="text-xs text-neutral-500 mb-2">Description</p>
+                      <p className="text-[12px] text-[#737370] mb-2">Description</p>
                       <div
-                        className="text-sm text-neutral-700 prose prose-sm max-w-none"
+                        className="text-[13px] text-[#1A1816] prose prose-sm max-w-none"
                         dangerouslySetInnerHTML={{ __html: formData.description }}
                       />
                     </div>
                   )}
                   {formData.repairs && (
                     <div>
-                      <p className="text-xs text-neutral-500 mb-2">Repairs & Renovation</p>
+                      <p className="text-[12px] text-[#737370] mb-2">Repairs & Renovation</p>
                       <div
-                        className="text-sm text-neutral-700 prose prose-sm max-w-none"
+                        className="text-[13px] text-[#1A1816] prose prose-sm max-w-none"
                         dangerouslySetInnerHTML={{ __html: formData.repairs }}
                       />
                     </div>
                   )}
                   {imageUploadStatus.images.filter(img => img.status === 'completed').length > 0 && (
                     <div>
-                      <p className="text-xs text-neutral-500 mb-2">
+                      <p className="text-[12px] text-[#737370] mb-2">
                         Images ({imageUploadStatus.images.filter(img => img.status === 'completed').length})
                         {imageUploadStatus.images.filter(img => img.status === 'completed').length > 8 &&
-                          <span className="text-neutral-400">
+                          <span className="text-[#A8A8A4]">
                             {showAllPreviewImages ? ' • Showing all' : ' • Showing first 8'}
                           </span>
                         }
@@ -869,7 +869,7 @@ export default function NewPropertyPage() {
                         <button
                           type="button"
                           onClick={() => setShowAllPreviewImages(prev => !prev)}
-                          className="text-xs font-medium text-primary hover:text-primary-700 mb-3"
+                          className="text-[12px] font-medium text-[#D03839] hover:text-[#E0493B] mb-3"
                         >
                           {showAllPreviewImages ? 'Show first 8' : 'Show all'}
                         </button>
@@ -883,7 +883,7 @@ export default function NewPropertyPage() {
                               <img
                                 src={img.imageUrl}
                                 alt={`Preview ${idx + 1}`}
-                                className="w-full h-32 object-cover rounded-lg border-2 border-neutral-200"
+                                className="w-full h-32 object-cover rounded border border-[#E8E8E4]"
                               />
                               {img.isFeatured && (
                                 <div className="absolute top-1 left-1 px-1.5 py-0.5 bg-yellow-500 text-white text-[10px] font-medium rounded">

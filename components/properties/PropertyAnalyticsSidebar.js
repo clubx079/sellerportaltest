@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
-import { Calendar, ArrowDownUp, Users, Eye, Smartphone, Monitor, Tablet } from 'lucide-react';
+import { Users, Eye, Clock, Image as ImageIcon, Smartphone, Monitor, Tablet, X, ChevronDown, BarChart2 } from 'lucide-react';
 
 function formatDuration(seconds) {
   if (seconds == null || seconds === 0) return '—';
@@ -17,24 +17,12 @@ function formatDuration(seconds) {
   return s ? `${totalMinutes}m ${s}s` : `${totalMinutes}m`;
 }
 
-function formatDate(iso) {
+function formatDateShort(iso) {
   if (!iso) return '—';
   const d = new Date(iso);
   return d.toLocaleDateString(undefined, {
     month: 'short',
     day: 'numeric',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  });
-}
-
-function formatDateShort(iso) {
-  if (!iso) return '—';
-  const d = new Date(iso);
-  return d.toLocaleDateString(undefined, {
-    month: '2-digit',
-    day: '2-digit',
     year: 'numeric',
     hour: '2-digit',
     minute: '2-digit'
@@ -51,15 +39,15 @@ function displayName(row) {
 function getDeviceIcon(deviceType) {
   if (!deviceType) return null;
   const t = deviceType.toLowerCase();
-  if (t === 'mobile') return <Smartphone className="w-3.5 h-3.5 text-gray-700 shrink-0" />;
-  if (t === 'tablet') return <Tablet className="w-3.5 h-3.5 text-gray-700 shrink-0" />;
-  return <Monitor className="w-3.5 h-3.5 text-gray-700 shrink-0" />;
+  if (t === 'mobile') return <Smartphone className="w-3 h-3" />;
+  if (t === 'tablet') return <Tablet className="w-3 h-3" />;
+  return <Monitor className="w-3 h-3" />;
 }
 
 const PERIOD_OPTIONS = [
-  { value: 'last7days', label: 'Last 7 Days' },
-  { value: 'last30days', label: 'Last 30 Days' },
-  { value: 'all', label: 'All time' }
+  { value: 'last7days', label: '7 Days' },
+  { value: 'last30days', label: '30 Days' },
+  { value: 'all', label: 'All Time' }
 ];
 
 const SORT_OPTIONS = [
@@ -68,6 +56,21 @@ const SORT_OPTIONS = [
   { value: 'page_views', label: 'Page views' }
 ];
 
+const AVATAR_PAIRS = [
+  { bg: '#FEF0EF', text: '#D03839' },
+  { bg: '#E4F5EC', text: '#0F6E56' },
+  { bg: '#FEF3E2', text: '#B5620A' },
+  { bg: '#EBF3FC', text: '#4A90E2' },
+  { bg: '#F3EEFF', text: '#7C3AED' },
+];
+
+function getAvatarPair(seed = '') {
+  const str = String(seed || 'G');
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) hash = (hash * 31 + str.charCodeAt(i)) | 0;
+  return AVATAR_PAIRS[Math.abs(hash) % AVATAR_PAIRS.length];
+}
+
 export default function PropertyAnalyticsSidebar({ propertyId, propertyName, onClose }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -75,6 +78,7 @@ export default function PropertyAnalyticsSidebar({ propertyId, propertyName, onC
   const [mounted, setMounted] = useState(false);
   const [period, setPeriod] = useState('all');
   const [sortBy, setSortBy] = useState('last_visit');
+  const [sortOpen, setSortOpen] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -104,199 +108,331 @@ export default function PropertyAnalyticsSidebar({ propertyId, propertyName, onC
         if (!res.ok) throw new Error(res.status === 403 ? 'Access denied' : 'Failed to load analytics');
         return res.json();
       })
-      .then((json) => {
-        if (!cancelled) setData(json);
-      })
-      .catch((err) => {
-        if (!cancelled) setError(err.message || 'Failed to load analytics');
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
+      .then((json) => { if (!cancelled) setData(json); })
+      .catch((err) => { if (!cancelled) setError(err.message || 'Failed to load analytics'); })
+      .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, [propertyId, period, sortBy]);
 
   const agg = data?.aggregates || {};
   const sessions = data?.viewerSessions || [];
 
+  // Computed aggregates from sessions
+  const totalPhotos = sessions.reduce((sum, s) => sum + (Number(s.images_viewed) || 0), 0);
+  const durationsWithData = sessions.filter(s => (s.duration_seconds ?? s.active_time_seconds) != null);
+  const avgDuration = durationsWithData.length > 0
+    ? durationsWithData.reduce((sum, s) => sum + (s.duration_seconds ?? s.active_time_seconds ?? 0), 0) / durationsWithData.length
+    : null;
+
+  const sortLabel = SORT_OPTIONS.find(o => o.value === sortBy)?.label || 'Sort';
+
   return (
     <>
-      {/* Backdrop - light overlay, no blur to avoid fuzzy edges */}
+      {/* Backdrop */}
       <div
-        className={`fixed inset-0 z-40 bg-slate-900/25 transition-all duration-300 ease-out ${
-          mounted ? 'opacity-100' : 'opacity-0'
-        }`}
+        className={`fixed inset-0 z-40 bg-black/30 transition-opacity duration-300 ease-out ${mounted ? 'opacity-100' : 'opacity-0'}`}
         onClick={onClose}
         aria-hidden="true"
       />
+
       {/* Sidebar */}
       <aside
-        className={`fixed top-0 right-0 bottom-0 w-[50vw] min-w-[320px] max-w-2xl z-50 flex flex-col overflow-hidden bg-white border-l border-slate-200 transition-transform duration-300 ease-out ${
-          mounted ? 'translate-x-0' : 'translate-x-full'
-        }`}
-        style={{
-          boxShadow: mounted ? '-12px 0 40px rgba(2, 43, 65, 0.08), -4px 0 16px rgba(0,0,0,0.04)' : 'none'
-        }}
+        className={`fixed top-0 right-0 bottom-0 w-[480px] min-w-[320px] max-w-full z-50 flex flex-col overflow-hidden bg-white border-l border-[#E8E8E4] transition-transform duration-300 ease-out ${mounted ? 'translate-x-0' : 'translate-x-full'}`}
+        style={{ boxShadow: '-12px 0 40px rgba(0,0,0,0.10)' }}
         aria-label="Property analytics"
       >
-        {/* Header — dark blue */}
-        <div className="flex-shrink-0 flex items-center justify-between px-6 py-5 bg-primary">
-          <div className="min-w-0 pr-4">
-            <h2 className="text-lg font-semibold text-white tracking-tight">Property analytics</h2>
-            {propertyName && (
-              <p className="text-sm text-white/80 mt-0.5 truncate" title={propertyName}>
-                {propertyName}
-              </p>
-            )}
+        {/* ── Header ── */}
+        <div className="flex-shrink-0 bg-[#D03839] px-5 py-4">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-9 h-9 rounded bg-white/20 flex items-center justify-center flex-shrink-0">
+                <BarChart2 className="w-4.5 h-4.5 text-white" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[11px] font-semibold text-white/70 uppercase tracking-[1.1px] mb-0.5">Property Analytics</p>
+                {propertyName && (
+                  <h2 className="text-[15px] font-bold text-white leading-snug truncate" title={propertyName}>
+                    {propertyName}
+                  </h2>
+                )}
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded bg-white/20 hover:bg-white/30 text-white transition-colors duration-200 mt-0.5"
+              aria-label="Close"
+            >
+              <X className="w-4 h-4" />
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-lg text-white/70 hover:text-white hover:bg-white/10 active:scale-95 transition-all duration-200"
-            aria-label="Close"
-          >
-            <span className="text-xl leading-none font-light">×</span>
-          </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto bg-slate-50/70">
+        {/* ── Period filter tabs ── */}
+        <div className="flex-shrink-0 flex items-center gap-1.5 px-5 py-3 bg-white border-b border-[#E8E8E4]">
+          <span className="text-[11px] font-semibold text-[#A8A8A4] uppercase tracking-[1px] mr-1">Period:</span>
+          {PERIOD_OPTIONS.map((opt) => (
+            <button
+              key={opt.value}
+              onClick={() => setPeriod(opt.value)}
+              className={`h-7 px-3 rounded text-[12px] font-semibold transition-colors duration-200 ${
+                period === opt.value
+                  ? 'bg-[#1A1816] text-white'
+                  : 'bg-[#FAFAF8] text-[#737370] hover:bg-[#F0F0EC] hover:text-[#1A1816] border border-[#E8E8E4]'
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+
+        {/* ── Scrollable body ── */}
+        <div className="flex-1 overflow-y-auto bg-[#FAFAF8]">
+
+          {/* Loading */}
           {loading && (
-            <div className="flex flex-col items-center justify-center py-24 gap-5">
-              <div className="w-10 h-10 border-2 border-primary/15 border-t-primary rounded-full animate-spin" />
-              <p className="text-sm font-medium text-slate-700">Loading analytics…</p>
-              <div className="h-20 w-full max-w-[200px] rounded-xl bg-slate-200/50 animate-pulse" />
-              <div className="h-32 w-full max-w-[280px] rounded-xl bg-slate-200/40 animate-pulse" />
+            <div className="flex flex-col items-center justify-center py-24 gap-3">
+              <div className="w-8 h-8 border-2 border-[#E8E8E4] border-t-[#D03839] rounded-full animate-spin" />
+              <p className="text-[13px] font-medium text-[#737370]">Loading analytics…</p>
             </div>
           )}
 
+          {/* Error */}
           {error && (
-            <div
-              className="mx-6 mt-6 p-5 rounded-xl bg-red-50 border border-red-100/80"
-              role="alert"
-            >
-              <p className="text-sm text-red-800 font-medium">{error}</p>
+            <div className="mx-5 mt-5 p-4 rounded bg-[#FEF0EF] border border-[#F5C4C0]" role="alert">
+              <p className="text-[13px] text-[#D03839] font-semibold">{error}</p>
             </div>
           )}
 
           {!loading && !error && data && (
-            <div className="p-4 space-y-4">
-              {/* Row 1: Unique viewers */}
-              <div className="flex items-center gap-2">
-                <Users className="w-4 h-4 text-primary" />
-                <span className="text-xs font-semibold text-slate-900">Unique viewers</span>
-                <span className="text-sm font-bold text-slate-900 tabular-nums">{agg.uniqueViewers ?? 0}</span>
-              </div>
+            <div className="p-5 space-y-5">
 
-              {/* Row 2: Date range + sort filters */}
-              <div className="flex items-center gap-3 flex-wrap">
-                <div className="flex items-center gap-1.5">
-                  <Calendar className="w-3.5 h-3.5 text-slate-700" />
-                  <select
-                    value={period}
-                    onChange={(e) => setPeriod(e.target.value)}
-                    className="text-xs font-medium border border-slate-200 rounded-md px-2 py-1.5 bg-white text-slate-900 focus:ring-1 focus:ring-primary/20 focus:border-primary outline-none min-w-0"
-                  >
-                    {PERIOD_OPTIONS.map((o) => (
-                      <option key={o.value} value={o.value}>{o.label}</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <ArrowDownUp className="w-3.5 h-3.5 text-slate-700" />
-                  <select
-                    value={sortBy}
-                    onChange={(e) => setSortBy(e.target.value)}
-                    className="text-xs font-medium border border-slate-200 rounded-md px-2 py-1.5 bg-white text-slate-900 focus:ring-1 focus:ring-primary/20 focus:border-primary outline-none min-w-0"
-                  >
-                    {SORT_OPTIONS.map((o) => (
-                      <option key={o.value} value={o.value}>{o.label}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              {/* Viewing activity section */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-semibold text-slate-900 flex items-center gap-2">
-                    <span className="w-1 h-4 rounded-full bg-primary" />
-                    Viewing activity
-                  </h3>
-                  <span className="text-xs font-medium text-gray-900 tabular-nums">{sessions.length} {sessions.length === 1 ? 'viewer' : 'viewers'}</span>
-                </div>
-                {sessions.length === 0 ? (
-                  <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 py-10 text-center px-4">
-                    <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center mx-auto mb-2">
-                      <Eye className="w-5 h-5 text-slate-600" />
+              {/* ── Row 1: 2 stat cards ── */}
+              <div className="grid grid-cols-2 gap-3">
+                {/* Unique Viewers */}
+                <div className="bg-white border border-[#E8E8E4] rounded p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-7 h-7 rounded bg-[#FEF0EF] flex items-center justify-center flex-shrink-0">
+                      <Users className="w-3.5 h-3.5 text-[#D03839]" />
                     </div>
-                    <p className="text-sm font-semibold text-gray-900">No activity yet</p>
-                    <p className="text-xs text-gray-900 mt-1 max-w-[220px] mx-auto">When buyers view this property, they’ll appear here.</p>
+                    <p className="text-[11px] font-semibold text-[#A8A8A4] uppercase tracking-[0.8px]">Unique Viewers</p>
+                  </div>
+                  <p className="text-[28px] font-bold text-[#1A1816] leading-none">{agg.uniqueViewers ?? 0}</p>
+                </div>
+
+                {/* Avg. Time */}
+                <div className="bg-white border border-[#E8E8E4] rounded p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-7 h-7 rounded bg-[#EFF6FF] flex items-center justify-center flex-shrink-0">
+                      <Clock className="w-3.5 h-3.5 text-[#0369A1]" />
+                    </div>
+                    <p className="text-[11px] font-semibold text-[#A8A8A4] uppercase tracking-[0.8px]">Avg. Time</p>
+                  </div>
+                  <p className="text-[28px] font-bold text-[#1A1816] leading-none">{formatDuration(avgDuration)}</p>
+                </div>
+              </div>
+
+              {/* ── Row 2: Device breakdown (full width) ── */}
+              {(() => {
+                const desktop = sessions.filter(s => !s.device_type || s.device_type.toLowerCase() === 'desktop').length;
+                const mobile = sessions.filter(s => s.device_type?.toLowerCase() === 'mobile').length;
+                const tablet = sessions.filter(s => s.device_type?.toLowerCase() === 'tablet').length;
+                const total = sessions.length || 1;
+                return (
+                  <div className="bg-white border border-[#E8E8E4] rounded p-4">
+                    <p className="text-[11px] font-semibold text-[#A8A8A4] uppercase tracking-[0.8px] mb-3">Device Breakdown</p>
+                    <div className="flex items-center gap-4">
+                      {/* Desktop */}
+                      <div className="flex items-center gap-2 flex-1">
+                        <div className="w-7 h-7 rounded bg-[#EFF6FF] flex items-center justify-center flex-shrink-0">
+                          <Monitor className="w-3.5 h-3.5 text-[#0369A1]" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-[18px] font-bold text-[#1A1816] leading-none">{desktop}</p>
+                          <p className="text-[11px] text-[#737370] mt-0.5">Desktop</p>
+                        </div>
+                      </div>
+                      <div className="w-px h-8 bg-[#E8E8E4]" />
+                      {/* Mobile */}
+                      <div className="flex items-center gap-2 flex-1">
+                        <div className="w-7 h-7 rounded bg-[#E4F5EC] flex items-center justify-center flex-shrink-0">
+                          <Smartphone className="w-3.5 h-3.5 text-[#0F6E56]" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-[18px] font-bold text-[#1A1816] leading-none">{mobile}</p>
+                          <p className="text-[11px] text-[#737370] mt-0.5">Mobile</p>
+                        </div>
+                      </div>
+                      <div className="w-px h-8 bg-[#E8E8E4]" />
+                      {/* Tablet */}
+                      <div className="flex items-center gap-2 flex-1">
+                        <div className="w-7 h-7 rounded bg-[#FEF3E2] flex items-center justify-center flex-shrink-0">
+                          <Tablet className="w-3.5 h-3.5 text-[#B5620A]" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-[18px] font-bold text-[#1A1816] leading-none">{tablet}</p>
+                          <p className="text-[11px] text-[#737370] mt-0.5">Tablet</p>
+                        </div>
+                      </div>
+                    </div>
+                    {/* Progress bar */}
+                    {sessions.length > 0 && (
+                      <div className="mt-3 flex h-1.5 rounded-full overflow-hidden gap-0.5">
+                        {desktop > 0 && <div className="bg-[#0369A1] rounded-full" style={{ width: `${(desktop / total) * 100}%` }} />}
+                        {mobile > 0 && <div className="bg-[#0F6E56] rounded-full" style={{ width: `${(mobile / total) * 100}%` }} />}
+                        {tablet > 0 && <div className="bg-[#B5620A] rounded-full" style={{ width: `${(tablet / total) * 100}%` }} />}
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+
+              {/* ── Viewer Activity ── */}
+              <div>
+                {/* Section header */}
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <span className="w-1 h-4 rounded-full bg-[#D03839] flex-shrink-0" />
+                    <h3 className="text-[13px] font-bold text-[#1A1816]">Viewer Activity</h3>
+                    <span className="text-[11px] font-semibold text-[#737370] bg-[#F0F0EC] px-2 py-0.5 rounded-full">
+                      {sessions.length}
+                    </span>
+                  </div>
+                  {/* Sort dropdown */}
+                  <div className="relative">
+                    <button
+                      onClick={() => setSortOpen(v => !v)}
+                      className="flex items-center gap-1.5 h-7 px-2.5 bg-white border border-[#E8E8E4] rounded text-[12px] font-semibold text-[#1A1816] hover:border-[#1A1816] transition-colors"
+                    >
+                      {sortLabel}
+                      <ChevronDown className={`w-3 h-3 text-[#737370] transition-transform duration-200 ${sortOpen ? 'rotate-180' : ''}`} />
+                    </button>
+                    {sortOpen && (
+                      <div className="absolute top-full right-0 mt-1.5 bg-white border border-[#E8E8E4] rounded shadow-lg z-10 w-36 overflow-hidden">
+                        {SORT_OPTIONS.map((opt) => (
+                          <button
+                            key={opt.value}
+                            onClick={() => { setSortBy(opt.value); setSortOpen(false); }}
+                            className={`w-full text-left px-3 py-2 text-[12px] transition-colors hover:bg-[#FAFAF8] ${
+                              sortBy === opt.value ? 'font-bold text-[#1A1816]' : 'text-[#444441]'
+                            }`}
+                          >
+                            {opt.label}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Empty state */}
+                {sessions.length === 0 ? (
+                  <div className="rounded border border-dashed border-[#E8E8E4] bg-white py-12 text-center">
+                    <div className="w-10 h-10 rounded-full bg-[#F0F0EC] flex items-center justify-center mx-auto mb-3">
+                      <Eye className="w-5 h-5 text-[#A8A8A4]" />
+                    </div>
+                    <p className="text-[14px] font-semibold text-[#1A1816] mb-1">No activity yet</p>
+                    <p className="text-[12px] text-[#737370] max-w-[200px] mx-auto">
+                      When buyers view this listing, they'll appear here.
+                    </p>
                   </div>
                 ) : (
-                  <div className="space-y-2.5">
+                  <div className="space-y-2">
                     {sessions.map((row, idx) => {
                       const name = displayName(row);
                       const initial = (name && name !== 'Guest' ? name.charAt(0) : (row.user_email || 'G').charAt(0)).toUpperCase();
+                      const avatarPair = getAvatarPair(name);
                       const views = row.page_views != null ? Number(row.page_views) : 0;
                       const duration = row.duration_seconds ?? row.active_time_seconds;
                       const timing = duration != null ? formatDuration(duration) : null;
                       const images = row.images_viewed != null ? Number(row.images_viewed) : 0;
-                      const firstSeen = row.view_start_time ? formatDateShort(row.view_start_time) : null;
-                      const lastSeen = row.view_end_time ? formatDateShort(row.view_end_time) : (row.created_at ? formatDateShort(row.created_at) : null);
-                      const device = row.device_type ? (row.device_type.toLowerCase() === 'tablet' ? 'Tablet' : row.device_type.toLowerCase() === 'mobile' ? 'Mobile' : 'Desktop') : null;
-                      const tags = [];
-                      if (row.scrolled_to_bottom) tags.push('Scrolled');
-                      if (row.viewed_description) tags.push('Description');
-                      if (row.viewed_repairs) tags.push('Repairs');
-                      const canMessage = !!row.user_id;
+                      const lastSeen = row.view_end_time
+                        ? formatDateShort(row.view_end_time)
+                        : row.view_start_time
+                        ? formatDateShort(row.view_start_time)
+                        : row.created_at
+                        ? formatDateShort(row.created_at)
+                        : null;
+                      const device = row.device_type
+                        ? row.device_type.toLowerCase() === 'tablet' ? 'Tablet'
+                          : row.device_type.toLowerCase() === 'mobile' ? 'Mobile'
+                          : 'Desktop'
+                        : null;
+                      const engagementTags = [];
+                      if (row.scrolled_to_bottom) engagementTags.push('Scrolled');
+                      if (row.viewed_description) engagementTags.push('Description');
+                      if (row.viewed_repairs) engagementTags.push('Repairs');
+
                       return (
                         <div
                           key={(row.user_email || 'guest') + (row.view_start_time || '') + idx}
-                          className="group rounded-lg border border-slate-200 bg-white p-3 hover:border-primary/20 transition-colors"
+                          className="bg-white border border-[#E8E8E4] rounded p-3.5 hover:border-[#D03839]/30 transition-colors duration-200"
                         >
-                          <div className="flex gap-2.5">
-                            <div className="flex-shrink-0 w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center">
-                              <span className="text-sm font-semibold text-primary">{initial}</span>
+                          <div className="flex gap-3">
+                            {/* Avatar */}
+                            <div className="flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center" style={{ backgroundColor: avatarPair.bg }}>
+                              <span className="text-[13px] font-bold" style={{ color: avatarPair.text }}>{initial}</span>
                             </div>
-                            <div className="min-w-0 flex-1 space-y-1">
-                              <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-                                <p className="text-sm font-semibold text-slate-900 capitalize leading-tight">
-                                  {name || 'Guest'}
+
+                            <div className="min-w-0 flex-1">
+                              {/* Name + source + device row */}
+                              <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mb-1.5">
+                                <p className="text-[13px] font-bold text-[#1A1816] leading-none capitalize">
+                                  {name}
                                 </p>
                                 {row.utm_source && (
-                                  <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-slate-100 text-gray-900 text-[11px] font-medium capitalize">
+                                  <span className="inline-flex items-center h-5 px-2 rounded-full bg-[#FEF0EF] text-[#D03839] text-[10px] font-semibold capitalize border border-[#F5C4C0]">
                                     {row.utm_source}
                                   </span>
                                 )}
                                 {device && (
-                                  <span className="inline-flex items-center gap-1 text-xs text-gray-900">
+                                  <span className="inline-flex items-center gap-1 h-5 px-2 rounded-full bg-[#F0F0EC] text-[#737370] text-[10px] font-semibold">
                                     {getDeviceIcon(row.device_type)}
                                     {device}
                                   </span>
                                 )}
                               </div>
-                              {/* Page views, photos viewed, time spent — inline, black text */}
-                              <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-gray-900">
-                                <span>{views} view{views !== 1 ? 's' : ''}</span>
-                                {images > 0 && <span>{images} photo{images !== 1 ? 's' : ''}</span>}
-                                {timing && <span>{timing}</span>}
+
+                              {/* Stats row */}
+                              <div className="flex items-center gap-3 text-[12px] text-[#737370] mb-1.5">
+                                <span className="flex items-center gap-1">
+                                  <Eye className="w-3 h-3" />
+                                  {views} view{views !== 1 ? 's' : ''}
+                                </span>
+                                {images > 0 && (
+                                  <span className="flex items-center gap-1">
+                                    <ImageIcon className="w-3 h-3" />
+                                    {images} photo{images !== 1 ? 's' : ''}
+                                  </span>
+                                )}
+                                {timing && (
+                                  <span className="flex items-center gap-1">
+                                    <Clock className="w-3 h-3" />
+                                    {timing}
+                                  </span>
+                                )}
                               </div>
-                              {tags.length > 0 && (
-                                <div className="flex flex-wrap gap-1">
-                                  {tags.map((t) => (
+
+                              {/* Engagement tags */}
+                              {engagementTags.length > 0 && (
+                                <div className="flex flex-wrap gap-1 mb-1.5">
+                                  {engagementTags.map((t) => (
                                     <span
                                       key={t}
-                                      className="inline-flex items-center px-1.5 py-0.5 rounded bg-slate-100 text-gray-900 text-[11px] font-medium"
+                                      className="inline-flex items-center h-5 px-2 rounded-full bg-[#E4F5EC] text-[#0F6E56] text-[10px] font-semibold"
                                     >
                                       {t}
                                     </span>
                                   ))}
                                 </div>
                               )}
-                              <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-gray-900 pt-0.5">
-                                {firstSeen && <span>First: {firstSeen}</span>}
-                                {lastSeen && lastSeen !== firstSeen && <span>Last: {lastSeen}</span>}
-                              </div>
+
+                              {/* Last seen */}
+                              {lastSeen && (
+                                <p className="text-[11px] text-[#A8A8A4]">
+                                  Last seen: {lastSeen}
+                                </p>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -305,6 +441,7 @@ export default function PropertyAnalyticsSidebar({ propertyId, propertyName, onC
                   </div>
                 )}
               </div>
+
             </div>
           )}
         </div>
