@@ -116,7 +116,7 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col relative">
+    <div className="min-h-screen bg-[#FAFAF8] flex flex-col relative">
       {/* Logo top left – same as login */}
       <Link
         href="/"
@@ -134,28 +134,28 @@ export default function ForgotPasswordPage() {
               onError={() => setLogoError(true)}
             />
           ) : (
-            <div className="w-10 h-10 rounded-xl bg-slate-900 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-xl bg-[#1A1816] flex items-center justify-center">
               <MapPin className="w-5 h-5 text-white" />
             </div>
           )}
         </div>
-        <span className="text-xl font-bold text-slate-900 uppercase tracking-wide -translate-y-0.5">Seller</span>
+        <span className="text-xl font-bold text-[#1A1816] uppercase tracking-wide -translate-y-0.5">Seller</span>
       </Link>
 
       <div className="flex-1 flex items-center justify-center px-4 py-10 pt-24">
         <div className="w-full max-w-md">
-          <Link href="/login" className="inline-flex items-center gap-2 text-slate-600 hover:text-slate-900 mb-4">
+          <Link href="/login" className="inline-flex items-center gap-2 text-[#444441] hover:text-[#1A1816] mb-4">
             <ArrowLeft className="w-4 h-4" />
             Back to login
           </Link>
 
-          <div className="bg-white border border-slate-200 rounded-2xl p-7 shadow-sm">
+          <div className="bg-white border border-[#E8E8E4] rounded-2xl p-7 shadow-sm">
             <div className="text-center mb-6">
-              <div className="w-14 h-14 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-3">
-                <Lock className="w-7 h-7 text-slate-700" />
+              <div className="w-14 h-14 rounded-full bg-[#E8E8E4] flex items-center justify-center mx-auto mb-3">
+                <Lock className="w-7 h-7 text-[#444441]" />
               </div>
-              <h1 className="text-2xl font-semibold text-slate-900">Forgot Password</h1>
-              <p className="text-sm text-slate-600 mt-1">
+              <h1 className="text-2xl font-semibold text-[#1A1816]">Forgot Password</h1>
+              <p className="text-sm text-[#444441] mt-1">
                 {step === "request" && "Enter your seller email to get a verification code."}
                 {step === "verify" && "Enter the 6-digit code sent to your email."}
                 {step === "reset" && "Set your new password."}
@@ -168,12 +168,12 @@ export default function ForgotPasswordPage() {
             {step === "request" && (
               <form onSubmit={requestCode} className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Email</label>
+                  <label className="block text-sm font-medium text-[#444441] mb-2">Email</label>
                   <input
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary"
+                    className="w-full px-4 py-3 border border-[#D4D4CF] rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary"
                     required
                   />
                 </div>
@@ -186,12 +186,12 @@ export default function ForgotPasswordPage() {
             {step === "verify" && (
               <form onSubmit={verifyCode} className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Verification code</label>
+                  <label className="block text-sm font-medium text-[#444441] mb-2">Verification code</label>
                   <input
                     type="text"
                     value={otp}
                     onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                    className="w-full px-4 py-3 border border-slate-300 rounded-xl text-center tracking-[0.35em] text-xl focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary"
+                    className="w-full px-4 py-3 border border-[#D4D4CF] rounded-xl text-center tracking-[0.35em] text-xl focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary"
                     maxLength={6}
                     required
                   />
@@ -203,7 +203,7 @@ export default function ForgotPasswordPage() {
                   type="button"
                   onClick={handleResendCode}
                   disabled={resendLoading || resendCooldown > 0}
-                  className="w-full text-sm font-medium text-slate-600 hover:text-slate-900 disabled:opacity-50 disabled:cursor-not-allowed py-2"
+                  className="w-full text-sm font-medium text-[#444441] hover:text-[#1A1816] disabled:opacity-50 disabled:cursor-not-allowed py-2"
                 >
                   {resendLoading ? "Sending..." : resendCooldown > 0 ? `Resend code in ${resendCooldown}s` : "Resend code"}
                 </button>
@@ -213,23 +213,23 @@ export default function ForgotPasswordPage() {
             {step === "reset" && (
               <form onSubmit={resetPassword} className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">New password</label>
+                  <label className="block text-sm font-medium text-[#444441] mb-2">New password</label>
                   <input
                     type="password"
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
-                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary"
+                    className="w-full px-4 py-3 border border-[#D4D4CF] rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary"
                     minLength={6}
                     required
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Confirm new password</label>
+                  <label className="block text-sm font-medium text-[#444441] mb-2">Confirm new password</label>
                   <input
                     type="password"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary"
+                    className="w-full px-4 py-3 border border-[#D4D4CF] rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary"
                     minLength={6}
                     required
                   />

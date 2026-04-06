@@ -145,10 +145,10 @@ function MagicLinkRegisterContent() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-[#FAFAF8] flex items-center justify-center p-4">
         <div className="text-center">
-          <Loader2 className="w-12 h-12 text-[#112F58] animate-spin mx-auto mb-4" />
-          <p className="text-gray-600">Validating your registration link...</p>
+          <Loader2 className="w-12 h-12 text-[#D03839] animate-spin mx-auto mb-4" />
+          <p className="text-[#444441]">Validating your registration link...</p>
         </div>
       </div>
     )
@@ -156,7 +156,7 @@ function MagicLinkRegisterContent() {
 
   if (!tokenValid) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-[#FAFAF8] flex items-center justify-center p-4">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -165,11 +165,11 @@ function MagicLinkRegisterContent() {
           <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <AlertCircle className="w-8 h-8 text-red-600" />
           </div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Invalid Link</h2>
-          <p className="text-gray-600 mb-6">{message.text || 'This registration link is invalid or has expired.'}</p>
+          <h2 className="text-2xl font-bold text-[#1A1816] mb-2">Invalid Link</h2>
+          <p className="text-[#444441] mb-6">{message.text || 'This registration link is invalid or has expired.'}</p>
           <button
             onClick={() => router.push('/login')}
-            className="px-6 py-3 bg-[#112F58] text-white rounded-lg hover:bg-[#0d243f] transition-colors"
+            className="px-6 py-3 bg-[#D03839] text-white rounded-lg hover:bg-[#E0493B] transition-colors"
           >
             Go to Login
           </button>
@@ -179,7 +179,7 @@ function MagicLinkRegisterContent() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-[#FAFAF8] flex items-center justify-center p-4">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -187,13 +187,13 @@ function MagicLinkRegisterContent() {
       >
         {/* Header */}
         <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-[#112F58] rounded-full flex items-center justify-center mx-auto mb-4">
+          <div className="w-16 h-16 bg-[#D03839] rounded-full flex items-center justify-center mx-auto mb-4">
             <CheckCircle className="w-8 h-8 text-white" />
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Complete Your Registration</h1>
-          <p className="text-gray-600">
+          <h1 className="text-3xl font-bold text-[#1A1816] mb-2">Complete Your Registration</h1>
+          <p className="text-[#444441]">
             Your property at <span className="font-semibold">{tokenData?.property_address}</span> has received{' '}
-            <span className="font-semibold text-[#112F58]">{tokenData?.views_count} views</span>!
+            <span className="font-semibold text-[#D03839]">{tokenData?.views_count} views</span>!
           </p>
         </div>
 
@@ -222,17 +222,17 @@ function MagicLinkRegisterContent() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             {/* Contact Person Name */}
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
+              <label className="block text-sm font-semibold text-[#444441] mb-2">
                 Your Name <span className="text-red-500">*</span>
               </label>
               <div className="relative">
-                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[#A8A8A4]" />
                 <input
                   type="text"
                   required
                   value={formData.contact_person_name}
                   onChange={(e) => setFormData({ ...formData, contact_person_name: e.target.value })}
-                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#112F58] focus:border-transparent"
+                  className="w-full pl-10 pr-4 py-3 border border-[#D4D4CF] rounded-lg focus:ring-2 focus:ring-[#D03839] focus:border-transparent"
                   placeholder="John Smith"
                 />
               </div>
@@ -240,17 +240,17 @@ function MagicLinkRegisterContent() {
 
             {/* Email */}
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
+              <label className="block text-sm font-semibold text-[#444441] mb-2">
                 Email Address <span className="text-red-500">*</span>
               </label>
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[#A8A8A4]" />
                 <input
                   type="email"
                   required
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#112F58] focus:border-transparent"
+                  className="w-full pl-10 pr-4 py-3 border border-[#D4D4CF] rounded-lg focus:ring-2 focus:ring-[#D03839] focus:border-transparent"
                   placeholder="john@example.com"
                 />
               </div>
@@ -258,33 +258,33 @@ function MagicLinkRegisterContent() {
 
             {/* Phone (Pre-filled, Read-only) */}
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
+              <label className="block text-sm font-semibold text-[#444441] mb-2">
                 Phone Number
               </label>
               <div className="relative">
-                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[#A8A8A4]" />
                 <input
                   type="tel"
                   readOnly
                   value={tokenData?.phone_number}
-                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg bg-gray-50 text-gray-600"
+                  className="w-full pl-10 pr-4 py-3 border border-[#D4D4CF] rounded-lg bg-[#FAFAF8] text-[#444441]"
                 />
               </div>
-              <p className="text-xs text-gray-500 mt-1">This is the phone number associated with your property</p>
+              <p className="text-xs text-[#737370] mt-1">This is the phone number associated with your property</p>
             </div>
 
             {/* Business Name */}
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
+              <label className="block text-sm font-semibold text-[#444441] mb-2">
                 Business/Company Name
               </label>
               <div className="relative">
-                <Building className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <Building className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[#A8A8A4]" />
                 <input
                   type="text"
                   value={formData.business_name}
                   onChange={(e) => setFormData({ ...formData, business_name: e.target.value })}
-                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#112F58] focus:border-transparent"
+                  className="w-full pl-10 pr-4 py-3 border border-[#D4D4CF] rounded-lg focus:ring-2 focus:ring-[#D03839] focus:border-transparent"
                   placeholder="ABC Real Estate"
                 />
               </div>
@@ -292,37 +292,37 @@ function MagicLinkRegisterContent() {
 
             {/* Password */}
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
+              <label className="block text-sm font-semibold text-[#444441] mb-2">
                 Password <span className="text-red-500">*</span>
               </label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[#A8A8A4]" />
                 <input
                   type="password"
                   required
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#112F58] focus:border-transparent"
+                  className="w-full pl-10 pr-4 py-3 border border-[#D4D4CF] rounded-lg focus:ring-2 focus:ring-[#D03839] focus:border-transparent"
                   placeholder="••••••••"
                   minLength={6}
                 />
               </div>
-              <p className="text-xs text-gray-500 mt-1">Minimum 6 characters</p>
+              <p className="text-xs text-[#737370] mt-1">Minimum 6 characters</p>
             </div>
 
             {/* Confirm Password */}
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
+              <label className="block text-sm font-semibold text-[#444441] mb-2">
                 Confirm Password <span className="text-red-500">*</span>
               </label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[#A8A8A4]" />
                 <input
                   type="password"
                   required
                   value={formData.confirm_password}
                   onChange={(e) => setFormData({ ...formData, confirm_password: e.target.value })}
-                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#112F58] focus:border-transparent"
+                  className="w-full pl-10 pr-4 py-3 border border-[#D4D4CF] rounded-lg focus:ring-2 focus:ring-[#D03839] focus:border-transparent"
                   placeholder="••••••••"
                 />
               </div>
@@ -331,16 +331,16 @@ function MagicLinkRegisterContent() {
 
           {/* Description */}
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
+            <label className="block text-sm font-semibold text-[#444441] mb-2">
               About Your Business (Optional)
             </label>
             <div className="relative">
-              <FileText className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
+              <FileText className="absolute left-3 top-3 w-5 h-5 text-[#A8A8A4]" />
               <textarea
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 rows={3}
-                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#112F58] focus:border-transparent"
+                className="w-full pl-10 pr-4 py-3 border border-[#D4D4CF] rounded-lg focus:ring-2 focus:ring-[#D03839] focus:border-transparent"
                 placeholder="Tell us about your real estate business..."
               />
             </div>
@@ -352,8 +352,8 @@ function MagicLinkRegisterContent() {
             disabled={submitting}
             className={`w-full py-3.5 rounded-lg font-semibold transition-colors flex items-center justify-center gap-2 ${
               submitting
-                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                : 'bg-[#112F58] text-white hover:bg-[#0d243f]'
+                ? 'bg-[#E8E8E4] text-[#737370] cursor-not-allowed'
+                : 'bg-[#D03839] text-white hover:bg-[#E0493B]'
             }`}
           >
             {submitting ? (
@@ -367,12 +367,12 @@ function MagicLinkRegisterContent() {
           </button>
 
           {/* Footer */}
-          <p className="text-center text-sm text-gray-600">
+          <p className="text-center text-sm text-[#444441]">
             Already have an account?{' '}
             <button
               type="button"
               onClick={() => router.push('/login')}
-              className="text-[#112F58] hover:underline font-semibold"
+              className="text-[#D03839] hover:underline font-semibold"
             >
               Sign in here
             </button>
@@ -387,10 +387,10 @@ function MagicLinkRegisterContent() {
 export default function MagicLinkRegisterPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-[#FAFAF8] flex items-center justify-center p-4">
         <div className="text-center">
-          <Loader2 className="w-12 h-12 text-[#112F58] animate-spin mx-auto mb-4" />
-          <p className="text-gray-600">Loading...</p>
+          <Loader2 className="w-12 h-12 text-[#D03839] animate-spin mx-auto mb-4" />
+          <p className="text-[#444441]">Loading...</p>
         </div>
       </div>
     }>
