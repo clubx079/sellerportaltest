@@ -72,7 +72,6 @@ export default function Sidebar({ isOpen, setIsOpen, activeItem, setActiveItem }
       label: 'TOOLS',
       items: [
         { id: 'analytics', label: 'Analytics', icon: BarChart3, path: '/analytics' },
-        { id: 'insights', label: 'Market Insights', icon: TrendingUp, path: '/insights' },
       ]
     },
     {

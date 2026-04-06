@@ -137,7 +137,7 @@ export default function PropertyAnalyticsSidebar({ propertyId, propertyName, onC
 
       {/* Sidebar */}
       <aside
-        className={`fixed top-0 right-0 bottom-0 w-[480px] min-w-[320px] max-w-full z-50 flex flex-col overflow-hidden bg-white border-l border-[#E8E8E4] transition-transform duration-300 ease-out ${mounted ? 'translate-x-0' : 'translate-x-full'}`}
+        className={`fixed top-0 right-0 bottom-0 w-[480px] min-w-[320px] max-w-full z-50 flex flex-col overflow-hidden bg-white transition-transform duration-300 ease-out ${mounted ? 'translate-x-0' : 'translate-x-full'}`}
         style={{ boxShadow: '-12px 0 40px rgba(0,0,0,0.10)' }}
         aria-label="Property analytics"
       >
@@ -145,9 +145,6 @@ export default function PropertyAnalyticsSidebar({ propertyId, propertyName, onC
         <div className="flex-shrink-0 bg-[#D03839] px-5 py-4">
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-center gap-3 min-w-0">
-              <div className="w-9 h-9 rounded bg-white/20 flex items-center justify-center flex-shrink-0">
-                <BarChart2 className="w-4.5 h-4.5 text-white" />
-              </div>
               <div className="min-w-0">
                 <p className="text-[11px] font-semibold text-white/70 uppercase tracking-[1.1px] mb-0.5">Property Analytics</p>
                 {propertyName && (
