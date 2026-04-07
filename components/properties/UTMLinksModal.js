@@ -5,9 +5,9 @@ import { X, Copy, Check, ExternalLink, Link2, Users, Info } from 'lucide-react';
 
 const PLATFORMS = [
   { name: 'Facebook', code: 'facebook', utm: 'fb', icon: 'https://cdn.simpleicons.org/facebook/1877F2' },
-  { name: 'Mailchimp', code: 'mailchimp', utm: 'mc', icon: 'https://cdn.simpleicons.org/mailchimp/FFE01B' },
   { name: 'Twitter', code: 'twitter', utm: 'x', icon: 'https://cdn.simpleicons.org/x/000000' },
   { name: 'Instagram', code: 'instagram', utm: 'ig', icon: 'https://cdn.simpleicons.org/instagram/E4405F' },
+  { name: 'Email', code: 'email', utm: 'email', icon: 'https://cdn.simpleicons.org/gmail/EA4335' },
 ];
 
 const DEELMAP_VIEW_BASE_URL = typeof window !== 'undefined'

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import {
-  Eye, Users, Clock, TrendingUp, TrendingDown, Smartphone, Monitor, Tablet,
+  Eye, Users, Clock, TrendingUp, TrendingDown, Smartphone, Monitor,
   BarChart2, Link2, MapPin, ArrowUpRight, Minus, Activity, Image, FileText,
   ChevronDown, Loader2, Check
 } from 'lucide-react';
@@ -178,7 +178,8 @@ export default function SellerAnalyticsPage() {
   const eng = data?.engagement || {};
   const recent = data?.recentViewers || [];
 
-  const totalDevice = (devices.mobile || 0) + (devices.desktop || 0) + (devices.tablet || 0);
+  const mobileCount = (devices.mobile || 0) + (devices.tablet || 0);
+  const totalDevice = mobileCount + (devices.desktop || 0);
   const devicePct = (n) => totalDevice > 0 ? Math.round((n / totalDevice) * 100) : 0;
 
   const trendLabel = s.viewTrend != null
@@ -385,21 +386,20 @@ export default function SellerAnalyticsPage() {
             ) : (
               <>
                 {[
-                  { label: 'Mobile', key: 'mobile', icon: <Smartphone className="w-3.5 h-3.5 text-[#737370]" /> },
-                  { label: 'Desktop', key: 'desktop', icon: <Monitor className="w-3.5 h-3.5 text-[#737370]" /> },
-                  { label: 'Tablet', key: 'tablet', icon: <Tablet className="w-3.5 h-3.5 text-[#737370]" /> },
-                ].map(({ label, key, icon }) => (
-                  <div key={key} className="flex items-center gap-3">
+                  { label: 'Mobile', count: mobileCount, icon: <Smartphone className="w-3.5 h-3.5 text-[#737370]" /> },
+                  { label: 'Desktop', count: devices.desktop || 0, icon: <Monitor className="w-3.5 h-3.5 text-[#737370]" /> },
+                ].map(({ label, count, icon }) => (
+                  <div key={label} className="flex items-center gap-3">
                     <div className="flex items-center gap-1.5 w-20 shrink-0">
                       {icon}
                       <span className="text-[12px] text-[#737370]">{label}</span>
                     </div>
                     <div className="flex-1 h-2 bg-[#F0F0EE] rounded-full overflow-hidden">
-                      <div className="h-full bg-[#D03839] rounded-full" style={{ width: `${devicePct(devices[key] || 0)}%` }} />
+                      <div className="h-full bg-[#D03839] rounded-full" style={{ width: `${devicePct(count)}%` }} />
                     </div>
                     <div className="text-right shrink-0 w-14">
-                      <span className="text-[12px] font-semibold text-[#1A1816]">{devicePct(devices[key] || 0)}%</span>
-                      <span className="text-[11px] text-[#A8A8A4] ml-1">({devices[key] || 0})</span>
+                      <span className="text-[12px] font-semibold text-[#1A1816]">{devicePct(count)}%</span>
+                      <span className="text-[11px] text-[#A8A8A4] ml-1">({count})</span>
                     </div>
                   </div>
                 ))}
@@ -521,10 +521,9 @@ export default function SellerAnalyticsPage() {
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-1 text-[12px] text-[#737370]">
-                          {r.device?.toLowerCase() === 'mobile' && <Smartphone className="w-3 h-3" />}
+                          {(r.device?.toLowerCase() === 'mobile' || r.device?.toLowerCase() === 'tablet') && <Smartphone className="w-3 h-3" />}
                           {r.device?.toLowerCase() === 'desktop' && <Monitor className="w-3 h-3" />}
-                          {r.device?.toLowerCase() === 'tablet' && <Tablet className="w-3 h-3" />}
-                          <span className="capitalize">{r.device || '—'}</span>
+                          <span className="capitalize">{r.device?.toLowerCase() === 'tablet' ? 'Mobile' : (r.device || '—')}</span>
                         </div>
                       </td>
                       <td className="px-4 py-3">
