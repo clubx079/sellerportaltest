@@ -718,7 +718,7 @@ const PropertiesManagement = () => {
                           </>
                         ) : (
                           <>
-                            <a href={`${DEELMAP_VIEW_BASE_URL.replace(/\/$/, '')}/${property.slug || property.id}`} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center w-8 h-8 rounded-lg text-[#A8A8A4] hover:text-primary hover:bg-[#E8E8E4] transition-colors" title="View on site">
+                            <a href={`${DEELMAP_VIEW_BASE_URL.replace(/\/$/, '')}/${property.slug || property.id}?preview=1`} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center w-8 h-8 rounded-lg text-[#A8A8A4] hover:text-primary hover:bg-[#E8E8E4] transition-colors" title="View on site">
                               <Eye className="w-4 h-4" strokeWidth={2} />
                             </a>
                             <button onClick={() => { setPropertyForUTM({ ...property, slug: property.slug || property.id, id: property.id }); setShowUTMModal(true); }} className="flex items-center justify-center w-8 h-8 rounded-lg text-[#A8A8A4] hover:text-primary hover:bg-[#E8E8E4] transition-colors" title="Share links (UTM)">
@@ -817,7 +817,7 @@ const PropertiesManagement = () => {
                     </>
                   ) : (
                     <>
-                      <a href={`${DEELMAP_VIEW_BASE_URL.replace(/\/$/, '')}/${property.slug || property.id}`} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center w-9 h-9 rounded-lg text-[#737370] hover:text-primary hover:bg-[#E8E8E4] transition-colors" title="View on site">
+                      <a href={`${DEELMAP_VIEW_BASE_URL.replace(/\/$/, '')}/${property.slug || property.id}?preview=1`} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center w-9 h-9 rounded-lg text-[#737370] hover:text-primary hover:bg-[#E8E8E4] transition-colors" title="View on site">
                         <Eye className="w-4 h-4" strokeWidth={2} />
                       </a>
                       <button onClick={() => { setPropertyForUTM({ ...property, slug: property.slug || property.id, id: property.id }); setShowUTMModal(true); }} className="flex items-center justify-center w-9 h-9 rounded-lg text-[#737370] hover:text-primary hover:bg-[#E8E8E4] transition-colors" title="Share links">
