@@ -137,7 +137,6 @@ function LoginForm() {
               </div>
             )}
           </div>
-          <span className="text-lg sm:text-xl font-bold text-[#1A1816] tracking-wide -translate-y-0.5 sm:-translate-y-1 truncate">Seller</span>
         </div>
       </Link>
 
