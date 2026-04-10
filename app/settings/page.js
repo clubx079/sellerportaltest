@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { getCurrentCurrencySymbol } from '@/lib/currency';
-import { Eye, EyeOff, User, Building, Globe, Linkedin, Save, Building2, ShieldBan } from 'lucide-react';
+import { Eye, EyeOff, User, Building, Globe, Linkedin, Save, Building2, ShieldBan, LogOut } from 'lucide-react';
 
 const businessTypes = [
   { value: 'individual', label: 'Individual Seller' },
@@ -394,6 +394,24 @@ export default function SettingsPage() {
           </div>
         </div>
       )}
+
+      {/* Logout */}
+      <div className="bg-white rounded border border-[#E8E8E4] p-5">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-[14px] font-medium text-[#1A1816]">Sign out</p>
+            <p className="text-[12px] text-[#737370] mt-0.5">You will be returned to the login page</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => { localStorage.removeItem('seller_user'); router.push('/login'); }}
+            className="flex items-center gap-2 px-4 py-2.5 rounded border border-[#E8E8E4] text-[13px] font-medium text-[#D03839] hover:bg-[#FEF0EF] hover:border-[#F5C4C0] transition-colors duration-200"
+          >
+            <LogOut className="w-4 h-4" />
+            Sign out
+          </button>
+        </div>
+      </div>
 
       {/* Blocked Tab */}
       {activeTab === 'blocked' && (
