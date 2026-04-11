@@ -23,18 +23,37 @@ export async function POST(request) {
       return NextResponse.json({ error: 'seller_id and plan_type are required' }, { status: 400 })
     }
 
-    // Fetch seller to get stripe_customer_id
+    // Fetch seller email
     const { data: seller, error: sellerError } = await supabase
       .from('seller_applications')
-      .select('stripe_customer_id, email')
+      .select('email, contact_person_name')
       .eq('id', seller_id)
       .single()
 
-    if (sellerError || !seller?.stripe_customer_id) {
+    if (sellerError || !seller) {
       return NextResponse.json({ error: 'Seller not found' }, { status: 404 })
     }
 
-    const customerId = seller.stripe_customer_id
+    // Check if a Stripe customer already exists for this seller (in seller_plans)
+    let customerId = null
+    const { data: existingPlan } = await supabase
+      .from('seller_plans')
+      .select('stripe_customer_id')
+      .eq('seller_id', seller_id)
+      .not('stripe_customer_id', 'is', null)
+      .maybeSingle()
+
+    if (existingPlan?.stripe_customer_id) {
+      customerId = existingPlan.stripe_customer_id
+    } else {
+      // Create a new Stripe customer
+      const customer = await stripe.customers.create({
+        email: seller.email,
+        name: seller.contact_person_name || seller.email,
+        metadata: { seller_id, source: 'deelmap_seller_onboarding' },
+      })
+      customerId = customer.id
+    }
 
     // --- STANDARD: one-time PaymentIntent ($29 × quantity) ---
     if (plan_type === 'standard') {

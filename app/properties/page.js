@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { Plus, Edit2, Trash2, Eye, Search, X, Building2, ChevronLeft, ChevronRight, MapPin, DollarSign, RotateCcw, BarChart2, Link2, Home, FileEdit } from 'lucide-react';
+import { Plus, Edit2, Trash2, Search, X, Building2, ChevronLeft, ChevronRight, MapPin, DollarSign, RotateCcw, BarChart2, Link2, Home, FileEdit } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import DeleteConfirmModal from '@/components/properties/DeleteConfirmModal';
 import PropertyViewModal from '@/components/properties/PropertyViewModal';
@@ -458,10 +458,10 @@ const PropertiesManagement = () => {
           <h1 className="text-lg md:text-xl font-semibold tracking-tight text-[#1A1816] truncate">Properties</h1>
         </div>
         <div className="flex justify-center">
-          <div className="flex items-center gap-0.5 p-1 rounded-xl bg-[#E8E8E4] border border-[#E8E8E4]/80">
+          <div className="flex items-center gap-0.5 p-1 rounded bg-[#E8E8E4] border border-[#E8E8E4]/80">
             <button
               onClick={() => setViewModeAndUrl('active')}
-              className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all duration-200 ${
+              className={`px-3 py-1.5 text-xs font-semibold rounded transition-all duration-200 ${
                 viewMode === 'active'
                   ? 'bg-white text-primary shadow-sm border border-[#E8E8E4]/80'
                   : 'text-[#444441] hover:text-[#1A1816] hover:bg-[#FAFAF8]/80'
@@ -471,7 +471,7 @@ const PropertiesManagement = () => {
             </button>
             <button
               onClick={() => setViewModeAndUrl('trash')}
-              className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all duration-200 ${
+              className={`px-3 py-1.5 text-xs font-semibold rounded transition-all duration-200 ${
                 viewMode === 'trash'
                   ? 'bg-white text-brandRed shadow-sm border border-[#E8E8E4]/80'
                   : 'text-[#444441] hover:text-[#1A1816] hover:bg-[#FAFAF8]/80'
@@ -487,8 +487,8 @@ const PropertiesManagement = () => {
             className="flex items-center gap-1.5 bg-[#D03839] hover:bg-[#E0493B] text-white px-3 py-2 rounded text-[13px] font-semibold transition-colors shrink-0"
           >
             <Plus size={14} />
-            <span className="hidden sm:inline">Add Property</span>
-            <span className="sm:hidden">Add</span>
+            <span className="hidden sm:inline">Post a Deal</span>
+            <span className="sm:hidden">Post</span>
           </button>
         </div>
       </div>
@@ -529,13 +529,13 @@ const PropertiesManagement = () => {
           </button>
         </div>
       ) : (
-        <div className="bg-white rounded-lg border border-[#E8E8E4] px-4 py-3">
+        <div className="bg-white rounded border border-[#E8E8E4] px-4 py-3">
           <p className="text-sm text-[#444441]"><span className="font-semibold text-[#1A1816]">{totalProperties}</span> {totalProperties === 1 ? 'listing' : 'listings'} in trash</p>
         </div>
       )}
 
       {/* Table Card */}
-      <div className="bg-white rounded-lg border border-[#E8E8E4] overflow-hidden shadow-card">
+      <div className="bg-white rounded border border-[#E8E8E4] overflow-hidden shadow-card">
         {/* Controls — single row */}
         <div className="px-4 py-3 border-b border-[#E8E8E4] flex items-center gap-2 flex-wrap">
           <div className="relative flex-1 min-w-[160px]">
@@ -652,7 +652,7 @@ const PropertiesManagement = () => {
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
                         {getFeaturedImage(property) && (
-                          <div className="w-10 h-10 rounded-lg bg-[#E8E8E4] overflow-hidden shrink-0">
+                          <div className="w-10 h-10 rounded bg-[#E8E8E4] overflow-hidden shrink-0">
                             <img src={getFeaturedImage(property)} alt={property.full_address || property.address} className="w-full h-full object-cover" />
                           </div>
                         )}
@@ -709,28 +709,25 @@ const PropertiesManagement = () => {
                       <div className="flex items-center justify-end gap-0.5">
                         {viewMode === 'trash' ? (
                           <>
-                            <button onClick={() => handleRestore(property)} className="flex items-center justify-center w-8 h-8 rounded-lg text-[#A8A8A4] hover:text-primary hover:bg-[#E8E8E4] transition-colors" title="Restore">
+                            <button onClick={() => handleRestore(property)} className="flex items-center justify-center w-8 h-8 rounded text-[#A8A8A4] hover:text-primary hover:bg-[#E8E8E4] transition-colors" title="Restore">
                               <RotateCcw className="w-4 h-4" strokeWidth={2} />
                             </button>
-                            <button onClick={() => handleDeleteClick(property)} className="flex items-center justify-center w-8 h-8 rounded-lg text-[#A8A8A4] hover:text-red-600 hover:bg-red-50 transition-colors" title="Delete Permanently">
+                            <button onClick={() => handleDeleteClick(property)} className="flex items-center justify-center w-8 h-8 rounded text-[#A8A8A4] hover:text-red-600 hover:bg-red-50 transition-colors" title="Delete Permanently">
                               <Trash2 className="w-4 h-4" strokeWidth={2} />
                             </button>
                           </>
                         ) : (
                           <>
-                            <a href={`${DEELMAP_VIEW_BASE_URL.replace(/\/$/, '')}/${property.slug || property.id}?preview=1`} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center w-8 h-8 rounded-lg text-[#A8A8A4] hover:text-primary hover:bg-[#E8E8E4] transition-colors" title="View on site">
-                              <Eye className="w-4 h-4" strokeWidth={2} />
-                            </a>
-                            <button onClick={() => { setPropertyForUTM({ ...property, slug: property.slug || property.id, id: property.id }); setShowUTMModal(true); }} className="flex items-center justify-center w-8 h-8 rounded-lg text-[#A8A8A4] hover:text-primary hover:bg-[#E8E8E4] transition-colors" title="Share links (UTM)">
+                            <button onClick={() => { setPropertyForUTM({ ...property, slug: property.slug || property.id, id: property.id }); setShowUTMModal(true); }} className="flex items-center justify-center w-8 h-8 rounded text-[#A8A8A4] hover:text-primary hover:bg-[#E8E8E4] transition-colors" title="Share links (UTM)">
                               <Link2 className="w-4 h-4" strokeWidth={2} />
                             </button>
-                            <button onClick={() => router.push(`/properties/edit/${property.id}`)} className="flex items-center justify-center w-8 h-8 rounded-lg text-[#A8A8A4] hover:text-primary hover:bg-[#E8E8E4] transition-colors" title="Edit">
+                            <button onClick={() => router.push(`/properties/edit/${property.id}`)} className="flex items-center justify-center w-8 h-8 rounded text-[#A8A8A4] hover:text-primary hover:bg-[#E8E8E4] transition-colors" title="Edit">
                               <Edit2 className="w-4 h-4" strokeWidth={2} />
                             </button>
-                            <button onClick={() => { setPropertyForAnalytics(property); setShowAnalyticsSidebar(true); }} className="flex items-center justify-center w-8 h-8 rounded-lg text-[#A8A8A4] hover:text-primary hover:bg-[#E8E8E4] transition-colors" title="Analytics">
+                            <button onClick={() => { setPropertyForAnalytics(property); setShowAnalyticsSidebar(true); }} className="flex items-center justify-center w-8 h-8 rounded text-[#A8A8A4] hover:text-primary hover:bg-[#E8E8E4] transition-colors" title="Analytics">
                               <BarChart2 className="w-4 h-4" strokeWidth={2} />
                             </button>
-                            <button onClick={() => handleArchiveClick(property)} className="flex items-center justify-center w-8 h-8 rounded-lg text-[#A8A8A4] hover:text-red-600 hover:bg-red-50 transition-colors" title="Move to Trash">
+                            <button onClick={() => handleArchiveClick(property)} className="flex items-center justify-center w-8 h-8 rounded text-[#A8A8A4] hover:text-red-600 hover:bg-red-50 transition-colors" title="Move to Trash">
                               <Trash2 className="w-4 h-4" strokeWidth={2} />
                             </button>
                           </>
@@ -750,7 +747,7 @@ const PropertiesManagement = () => {
             [...Array(3)].map((_, i) => (
               <div key={i} className="p-4 animate-pulse">
                 <div className="flex gap-3">
-                  <div className="w-20 h-20 rounded-xl bg-[#E8E8E4] shrink-0" />
+                  <div className="w-20 h-20 rounded bg-[#E8E8E4] shrink-0" />
                   <div className="flex-1 space-y-2">
                     <div className="h-4 w-3/4 bg-[#E8E8E4] rounded" />
                     <div className="h-3 w-1/2 bg-[#E8E8E4] rounded" />
@@ -774,11 +771,11 @@ const PropertiesManagement = () => {
               <div key={`${property._source}-${property.id}`} className="p-4 hover:bg-[#FAFAF8]/50 transition-colors">
                 <div className="flex gap-3">
                   {getFeaturedImage(property) ? (
-                    <div className="w-20 h-20 rounded-xl bg-[#E8E8E4] overflow-hidden shrink-0">
+                    <div className="w-20 h-20 rounded bg-[#E8E8E4] overflow-hidden shrink-0">
                       <img src={getFeaturedImage(property)} alt={property.full_address || property.address} className="w-full h-full object-cover" />
                     </div>
                   ) : (
-                    <div className="w-20 h-20 rounded-xl bg-[#E8E8E4] shrink-0 flex items-center justify-center">
+                    <div className="w-20 h-20 rounded bg-[#E8E8E4] shrink-0 flex items-center justify-center">
                       <Building2 className="w-8 h-8 text-[#A8A8A4]" />
                     </div>
                   )}
@@ -808,28 +805,25 @@ const PropertiesManagement = () => {
                 <div className="flex items-center justify-end gap-1 mt-3 pt-3 border-t border-[#E8E8E4]">
                   {viewMode === 'trash' ? (
                     <>
-                      <button onClick={() => handleRestore(property)} className="flex items-center justify-center w-9 h-9 rounded-lg text-[#737370] hover:text-primary hover:bg-[#E8E8E4] transition-colors" title="Restore">
+                      <button onClick={() => handleRestore(property)} className="flex items-center justify-center w-9 h-9 rounded text-[#737370] hover:text-primary hover:bg-[#E8E8E4] transition-colors" title="Restore">
                         <RotateCcw className="w-4 h-4" strokeWidth={2} />
                       </button>
-                      <button onClick={() => handleDeleteClick(property)} className="flex items-center justify-center w-9 h-9 rounded-lg text-[#737370] hover:text-red-600 hover:bg-red-50 transition-colors" title="Delete Permanently">
+                      <button onClick={() => handleDeleteClick(property)} className="flex items-center justify-center w-9 h-9 rounded text-[#737370] hover:text-red-600 hover:bg-red-50 transition-colors" title="Delete Permanently">
                         <Trash2 className="w-4 h-4" strokeWidth={2} />
                       </button>
                     </>
                   ) : (
                     <>
-                      <a href={`${DEELMAP_VIEW_BASE_URL.replace(/\/$/, '')}/${property.slug || property.id}?preview=1`} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center w-9 h-9 rounded-lg text-[#737370] hover:text-primary hover:bg-[#E8E8E4] transition-colors" title="View on site">
-                        <Eye className="w-4 h-4" strokeWidth={2} />
-                      </a>
-                      <button onClick={() => { setPropertyForUTM({ ...property, slug: property.slug || property.id, id: property.id }); setShowUTMModal(true); }} className="flex items-center justify-center w-9 h-9 rounded-lg text-[#737370] hover:text-primary hover:bg-[#E8E8E4] transition-colors" title="Share links">
+                      <button onClick={() => { setPropertyForUTM({ ...property, slug: property.slug || property.id, id: property.id }); setShowUTMModal(true); }} className="flex items-center justify-center w-9 h-9 rounded text-[#737370] hover:text-primary hover:bg-[#E8E8E4] transition-colors" title="Share links">
                         <Link2 className="w-4 h-4" strokeWidth={2} />
                       </button>
-                      <button onClick={() => router.push(`/properties/edit/${property.id}`)} className="flex items-center justify-center w-9 h-9 rounded-lg text-[#737370] hover:text-primary hover:bg-[#E8E8E4] transition-colors" title="Edit">
+                      <button onClick={() => router.push(`/properties/edit/${property.id}`)} className="flex items-center justify-center w-9 h-9 rounded text-[#737370] hover:text-primary hover:bg-[#E8E8E4] transition-colors" title="Edit">
                         <Edit2 className="w-4 h-4" strokeWidth={2} />
                       </button>
-                      <button onClick={() => { setPropertyForAnalytics(property); setShowAnalyticsSidebar(true); }} className="flex items-center justify-center w-9 h-9 rounded-lg text-[#737370] hover:text-primary hover:bg-[#E8E8E4] transition-colors" title="Analytics">
+                      <button onClick={() => { setPropertyForAnalytics(property); setShowAnalyticsSidebar(true); }} className="flex items-center justify-center w-9 h-9 rounded text-[#737370] hover:text-primary hover:bg-[#E8E8E4] transition-colors" title="Analytics">
                         <BarChart2 className="w-4 h-4" strokeWidth={2} />
                       </button>
-                      <button onClick={() => handleArchiveClick(property)} className="flex items-center justify-center w-9 h-9 rounded-lg text-[#737370] hover:text-red-600 hover:bg-red-50 transition-colors" title="Move to Trash">
+                      <button onClick={() => handleArchiveClick(property)} className="flex items-center justify-center w-9 h-9 rounded text-[#737370] hover:text-red-600 hover:bg-red-50 transition-colors" title="Move to Trash">
                         <Trash2 className="w-4 h-4" strokeWidth={2} />
                       </button>
                     </>
@@ -853,7 +847,7 @@ const PropertiesManagement = () => {
               <button
                 onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                 disabled={currentPage === 1}
-                className="p-1.5 rounded-lg border border-[#E8E8E4] hover:bg-[#E8E8E4] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                className="p-1.5 rounded border border-[#E8E8E4] hover:bg-[#E8E8E4] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                 title="Previous"
               >
                 <ChevronLeft className="w-3.5 h-3.5" />
@@ -875,7 +869,7 @@ const PropertiesManagement = () => {
                   <button
                     key={pageNum}
                     onClick={() => setCurrentPage(pageNum)}
-                    className={`min-w-[28px] h-7 px-2 text-xs font-medium rounded-lg transition-colors ${currentPage === pageNum
+                    className={`min-w-[28px] h-7 px-2 text-xs font-medium rounded transition-colors ${currentPage === pageNum
                       ? 'bg-primary text-white'
                       : 'border border-[#E8E8E4] text-[#444441] hover:bg-[#E8E8E4]'
                       }`}
@@ -888,7 +882,7 @@ const PropertiesManagement = () => {
               <button
                 onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                 disabled={currentPage === totalPages}
-                className="p-1.5 rounded-lg border border-[#E8E8E4] hover:bg-[#E8E8E4] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                className="p-1.5 rounded border border-[#E8E8E4] hover:bg-[#E8E8E4] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                 title="Next"
               >
                 <ChevronRight className="w-3.5 h-3.5" />

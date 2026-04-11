@@ -324,7 +324,7 @@ export default function DashboardPage() {
             </div>
             <Link href="/properties/new" className="flex items-center gap-2 px-4 py-2.5 bg-[#1A1816] text-white text-[14px] font-semibold rounded hover:bg-[#2a2826] transition-colors duration-200">
               <PlusCircle className="w-4 h-4" />
-              Post a deal
+              Post a Deal
             </Link>
           </div>
         </div>
@@ -366,7 +366,7 @@ export default function DashboardPage() {
           <div className="xl:col-span-3 bg-white rounded border border-[#E8E8E4] overflow-hidden">
             {/* Header */}
             <div className="flex items-center justify-between px-4 py-3 border-b border-[#E8E8E4]">
-              <h2 className="text-[14px] font-normal text-[#1A1816]">My listings</h2>
+              <h2 className="text-[14px] font-normal text-[#1A1816]">My Listings</h2>
               <Link href="/properties" className="text-[13px] font-medium text-[#737370] hover:text-[#1A1816] transition-colors duration-200">View all</Link>
             </div>
 
@@ -380,7 +380,7 @@ export default function DashboardPage() {
                 <Building2 className="w-8 h-8 text-[#A8A8A4] mx-auto mb-3" />
                 <p className="text-[14px] font-medium text-[#444441] mb-3">No listings yet</p>
                 <Link href="/properties/new" className="inline-flex items-center gap-2 px-4 py-2 bg-[#D03839] text-white text-[13px] font-semibold rounded hover:bg-[#E0493B] transition-colors duration-200">
-                  <PlusCircle className="w-4 h-4" /> Post a deal
+                  <PlusCircle className="w-4 h-4" /> Post a Deal
                 </Link>
               </div>
             ) : (

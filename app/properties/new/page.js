@@ -358,7 +358,7 @@ export default function NewPropertyPage() {
             <ArrowLeft size={20} className="text-[#737370]" />
           </button>
           <div>
-            <h1 className="text-[18px] md:text-[20px] font-bold tracking-[-0.4px] text-[#1A1816]">Add New Property</h1>
+            <h1 className="text-[18px] md:text-[20px] font-bold tracking-[-0.4px] text-[#1A1816]">Post a Deal</h1>
             <p className="text-[12px] text-[#737370] mt-0.5">Create a new wholesale property listing</p>
           </div>
         </div>

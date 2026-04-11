@@ -48,7 +48,7 @@ export async function POST(request) {
 
         await supabase
           .from('seller_applications')
-          .update({ status: 'approved', onboarding_step: 5 })
+          .update({ status: 'approved' })
           .eq('id', seller_id)
 
         break
@@ -76,7 +76,7 @@ export async function POST(request) {
 
         await supabase
           .from('seller_applications')
-          .update({ status: 'approved', onboarding_step: 5 })
+          .update({ status: 'approved' })
           .eq('id', seller_id)
 
         break

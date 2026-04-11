@@ -132,7 +132,7 @@ function LoginForm() {
                 onError={() => setLogoError(true)}
               />
             ) : (
-              <div className="w-9 h-9 rounded-xl bg-[#1A1816] flex items-center justify-center">
+              <div className="w-9 h-9 rounded bg-[#1A1816] flex items-center justify-center">
                 <MapPin className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
               </div>
             )}
@@ -171,7 +171,7 @@ function LoginForm() {
           </div>
 
           {/* Form Card – responsive padding */}
-          <div className="login-card-enter bg-white border-2 border-[#E8E8E4] rounded-xl p-5 sm:p-6 lg:p-8 shadow-lg relative z-10 transition-all duration-300 ease-out hover:shadow-xl hover:-translate-y-0.5">
+          <div className="login-card-enter bg-white border-2 border-[#E8E8E4] rounded p-5 sm:p-6 lg:p-8 shadow-lg relative z-10 transition-all duration-300 ease-out hover:shadow-xl hover:-translate-y-0.5">
             <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
               {/* Email */}
               <div>

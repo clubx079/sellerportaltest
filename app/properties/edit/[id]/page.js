@@ -575,7 +575,7 @@ export default function EditPropertyPage() {
         <div className="flex items-center gap-3">
           <button
             onClick={() => router.back()}
-            className="p-2 rounded-lg hover:bg-neutral-100 transition-colors"
+            className="p-2 rounded hover:bg-neutral-100 transition-colors"
           >
             <ArrowLeft size={20} className="text-neutral-600" />
           </button>
@@ -589,7 +589,7 @@ export default function EditPropertyPage() {
             type="button"
             onClick={() => handleSave('draft')}
             disabled={saving || imageUploadStatus.isUploading}
-            className="flex items-center justify-center gap-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center justify-center gap-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 px-3 py-2 rounded text-sm font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Save size={16} />
             <span>
@@ -604,7 +604,7 @@ export default function EditPropertyPage() {
             type="button"
             onClick={() => handleSave('active')}
             disabled={saving || imageUploadStatus.isUploading}
-            className="flex items-center justify-center gap-2 bg-primary hover:bg-primary-700 text-white px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center justify-center gap-2 bg-primary hover:bg-primary-700 text-white px-3 py-2 rounded text-sm font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Eye size={16} />
             <span>
@@ -619,7 +619,7 @@ export default function EditPropertyPage() {
 
       {/* Notifications */}
       {error && (
-        <div className="flex items-start gap-3 p-3 bg-red-50 border border-red-200 rounded-xl text-red-700">
+        <div className="flex items-start gap-3 p-3 bg-red-50 border border-red-200 rounded text-red-700">
           <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
           <div className="flex-1">
             <p className="text-sm font-medium">{error}</p>
@@ -631,7 +631,7 @@ export default function EditPropertyPage() {
       )}
 
       {success && (
-        <div className="flex items-start gap-3 p-3 bg-green-50 border border-green-200 rounded-xl text-green-700">
+        <div className="flex items-start gap-3 p-3 bg-green-50 border border-green-200 rounded text-green-700">
           <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
           <div className="flex-1">
             <p className="text-sm font-medium">{success}</p>
@@ -644,7 +644,7 @@ export default function EditPropertyPage() {
 
       {/* Upload Warning */}
       {imageUploadStatus.isUploading && (
-        <div className="flex items-start gap-3 p-4 bg-blue-50 border border-blue-200 rounded-xl">
+        <div className="flex items-start gap-3 p-4 bg-blue-50 border border-blue-200 rounded">
           <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
           <div>
             <h4 className="font-medium text-blue-900 mb-1">Uploading Images</h4>
@@ -656,7 +656,7 @@ export default function EditPropertyPage() {
       )}
 
       {/* Tabs */}
-      <div className="bg-white rounded-xl border border-neutral-200 overflow-hidden">
+      <div className="bg-white rounded border border-neutral-200 overflow-hidden">
         <div className="flex border-b border-neutral-200 overflow-x-auto scrollbar-hide">
           {[
             { id: 'basic', label: 'Basic Info' },
@@ -691,7 +691,7 @@ export default function EditPropertyPage() {
                   type="text"
                   value={formData.title || ''}
                   onChange={(e) => handleInputChange('title', e.target.value)}
-                  className="w-full px-4 py-3 border-2 border-neutral-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all text-sm"
+                  className="w-full px-4 py-3 border-2 border-neutral-200 rounded focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all text-sm"
                   placeholder="Luxury Beachfront Hotel in Miami"
                   required
                 />
@@ -715,7 +715,7 @@ export default function EditPropertyPage() {
                     type="number"
                     value={formData.price || ''}
                     onChange={(e) => handleInputChange('price', e.target.value)}
-                    className="w-full px-4 py-3 border-2 border-neutral-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all text-sm"
+                    className="w-full px-4 py-3 border-2 border-neutral-200 rounded focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all text-sm"
                     placeholder="2500000"
                   />
                 </div>
@@ -724,7 +724,7 @@ export default function EditPropertyPage() {
                   <select
                     value={formData.property_type ?? ''}
                     onChange={(e) => handleInputChange('property_type', e.target.value)}
-                    className="w-full px-4 py-3 border-2 border-neutral-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all text-sm"
+                    className="w-full px-4 py-3 border-2 border-neutral-200 rounded focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all text-sm"
                   >
                     <option value="">Select property type</option>
                     {PROPERTY_TYPES.map((type) => (
@@ -741,7 +741,7 @@ export default function EditPropertyPage() {
                     type="number"
                     value={formData.bedrooms || ''}
                     onChange={(e) => handleInputChange('bedrooms', e.target.value)}
-                    className="w-full px-4 py-3 border-2 border-neutral-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all text-sm"
+                    className="w-full px-4 py-3 border-2 border-neutral-200 rounded focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all text-sm"
                     placeholder="50"
                     min="0"
                   />
@@ -753,7 +753,7 @@ export default function EditPropertyPage() {
                     step="0.5"
                     value={formData.bathrooms || ''}
                     onChange={(e) => handleInputChange('bathrooms', e.target.value)}
-                    className="w-full px-4 py-3 border-2 border-neutral-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all text-sm"
+                    className="w-full px-4 py-3 border-2 border-neutral-200 rounded focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all text-sm"
                     placeholder="50"
                     min="0"
                   />
@@ -764,7 +764,7 @@ export default function EditPropertyPage() {
                     type="number"
                     value={formData.floor_area || ''}
                     onChange={(e) => handleInputChange('floor_area', e.target.value)}
-                    className="w-full px-4 py-3 border-2 border-neutral-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all text-sm"
+                    className="w-full px-4 py-3 border-2 border-neutral-200 rounded focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all text-sm"
                     placeholder="25000"
                     min="0"
                   />
@@ -777,7 +777,7 @@ export default function EditPropertyPage() {
                   <select
                     value={formData.property_status || 'available'}
                     onChange={(e) => handleInputChange('property_status', e.target.value)}
-                    className="w-full px-4 py-3 border-2 border-neutral-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all text-sm"
+                    className="w-full px-4 py-3 border-2 border-neutral-200 rounded focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all text-sm"
                   >
                     {PROPERTY_STATUSES.map(status => (
                       <option key={status.value} value={status.value}>{status.label}</option>
@@ -790,13 +790,13 @@ export default function EditPropertyPage() {
               {imageUploadStatus.images.length > 0 && (
                 <div>
                   <label className="block text-sm font-semibold text-neutral-700 mb-2">Featured Image</label>
-                  <div className="border-2 border-neutral-200 rounded-xl p-4 bg-neutral-50">
+                  <div className="border-2 border-neutral-200 rounded p-4 bg-neutral-50">
                     {imageUploadStatus.images.some(img => img.status === 'completed' && img.isFeatured) ? (
                       <div className="flex items-center gap-4">
                         <img
                           src={imageUploadStatus.images.find(img => img.status === 'completed' && img.isFeatured)?.imageUrl}
                           alt="Featured"
-                          className="w-24 h-24 object-cover rounded-lg"
+                          className="w-24 h-24 object-cover rounded"
                         />
                         <div>
                           <p className="text-sm font-medium text-neutral-900 mb-1">Featured image selected</p>
@@ -838,7 +838,7 @@ export default function EditPropertyPage() {
               </p>
 
               {!inspectionReport.url ? (
-                <div className="border-2 border-dashed border-neutral-300 rounded-xl p-8 text-center">
+                <div className="border-2 border-dashed border-neutral-300 rounded p-8 text-center">
                   <Upload className="w-12 h-12 text-neutral-400 mx-auto mb-4" />
                   <p className="text-sm text-neutral-600 mb-4">
                     Upload PDF or DOC file
@@ -853,7 +853,7 @@ export default function EditPropertyPage() {
                   />
                   <label
                     htmlFor="inspection-upload"
-                    className={`inline-flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary-700 text-white rounded-lg text-sm font-medium transition-colors cursor-pointer ${
+                    className={`inline-flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary-700 text-white rounded text-sm font-medium transition-colors cursor-pointer ${
                       inspectionReport.uploading ? 'opacity-50 cursor-not-allowed' : ''
                     }`}
                   >
@@ -861,10 +861,10 @@ export default function EditPropertyPage() {
                   </label>
                 </div>
               ) : (
-                <div className="bg-neutral-50 border border-neutral-200 rounded-xl p-4">
+                <div className="bg-neutral-50 border border-neutral-200 rounded p-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
+                      <div className="w-10 h-10 bg-primary/10 rounded flex items-center justify-center">
                         <Upload className="w-5 h-5 text-primary" />
                       </div>
                       <div>
@@ -881,7 +881,7 @@ export default function EditPropertyPage() {
                     </div>
                     <button
                       onClick={handleRemoveInspection}
-                      className="p-2 rounded-lg hover:bg-neutral-200 text-neutral-500 transition-colors"
+                      className="p-2 rounded hover:bg-neutral-200 text-neutral-500 transition-colors"
                     >
                       <X className="w-4 h-4" />
                     </button>
@@ -928,7 +928,7 @@ export default function EditPropertyPage() {
                       type="text"
                       value={formData.seo_title || ''}
                       onChange={(e) => handleInputChange('seo_title', e.target.value)}
-                      className="w-full px-4 py-3 border-2 border-neutral-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all text-sm"
+                      className="w-full px-4 py-3 border-2 border-neutral-200 rounded focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all text-sm"
                       placeholder="Luxury Beachfront Hotel Investment Opportunity"
                       maxLength="60"
                     />
@@ -942,7 +942,7 @@ export default function EditPropertyPage() {
                     <textarea
                       value={formData.seo_description || ''}
                       onChange={(e) => handleInputChange('seo_description', e.target.value)}
-                      className="w-full px-4 py-3 border-2 border-neutral-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all text-sm"
+                      className="w-full px-4 py-3 border-2 border-neutral-200 rounded focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all text-sm"
                       rows="3"
                       placeholder="Discover this stunning wholesale hotel property..."
                       maxLength="160"
@@ -963,7 +963,7 @@ export default function EditPropertyPage() {
                       type="text"
                       value={formData.social_title || ''}
                       onChange={(e) => handleInputChange('social_title', e.target.value)}
-                      className="w-full px-4 py-3 border-2 border-neutral-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all text-sm"
+                      className="w-full px-4 py-3 border-2 border-neutral-200 rounded focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all text-sm"
                       placeholder="Same as SEO title"
                       maxLength="60"
                     />
@@ -974,7 +974,7 @@ export default function EditPropertyPage() {
                     <textarea
                       value={formData.social_description || ''}
                       onChange={(e) => handleInputChange('social_description', e.target.value)}
-                      className="w-full px-4 py-3 border-2 border-neutral-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all text-sm"
+                      className="w-full px-4 py-3 border-2 border-neutral-200 rounded focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all text-sm"
                       rows="3"
                       placeholder="Same as SEO description"
                       maxLength="160"
@@ -987,7 +987,7 @@ export default function EditPropertyPage() {
                       type="url"
                       value={formData.social_image_url || ''}
                       onChange={(e) => handleInputChange('social_image_url', e.target.value)}
-                      className="w-full px-4 py-3 border-2 border-neutral-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all text-sm"
+                      className="w-full px-4 py-3 border-2 border-neutral-200 rounded focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all text-sm"
                       placeholder="https://example.com/image.jpg"
                     />
                     <div className="text-xs text-neutral-500 mt-1">
@@ -1002,7 +1002,7 @@ export default function EditPropertyPage() {
           {/* Preview Tab */}
           {activeTab === 'preview' && (
             <div className="space-y-6">
-              <div className="bg-neutral-50 border border-neutral-200 rounded-xl p-6">
+              <div className="bg-neutral-50 border border-neutral-200 rounded p-6">
                 <h3 className="text-lg font-semibold text-neutral-900 mb-4">Property Preview</h3>
                 <div className="space-y-4">
                   <div>
@@ -1073,7 +1073,7 @@ export default function EditPropertyPage() {
                               <img
                                 src={img.imageUrl}
                                 alt={`Preview ${idx + 1}`}
-                                className="w-full h-32 object-cover rounded-lg border-2 border-neutral-200"
+                                className="w-full h-32 object-cover rounded border-2 border-neutral-200"
                               />
                               {img.isFeatured && (
                                 <div className="absolute top-1 left-1 px-1.5 py-0.5 bg-yellow-500 text-white text-[10px] font-medium rounded">

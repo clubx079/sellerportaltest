@@ -6,7 +6,7 @@ import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard, Building2, MessageCircle, X, Settings,
-  FileText, TrendingUp, BarChart3
+  FileText, TrendingUp, BarChart3, CreditCard
 } from 'lucide-react'
 
 const DESKTOP_BREAKPOINT = 1024
@@ -63,7 +63,7 @@ export default function Sidebar({ isOpen, setIsOpen, activeItem, setActiveItem }
       label: 'MAIN',
       items: [
         { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
-        { id: 'properties', label: 'My listings', icon: Building2, path: '/properties', badge: listingsCount || null },
+        { id: 'properties', label: 'My Listings', icon: Building2, path: '/properties', badge: listingsCount || null },
         { id: 'messages', label: 'Messages', icon: MessageCircle, path: '/messages', badge: messagesUnreadCount, badgeRed: true },
         { id: 'offers', label: 'Offers received', icon: FileText, path: '/offers', badge: offersCount || null },
       ]
@@ -77,6 +77,7 @@ export default function Sidebar({ isOpen, setIsOpen, activeItem, setActiveItem }
     {
       label: 'ACCOUNT',
       items: [
+        { id: 'billing', label: 'Billing', icon: CreditCard, path: '/billing' },
         { id: 'settings', label: 'Settings', icon: Settings, path: '/settings' },
       ]
     }

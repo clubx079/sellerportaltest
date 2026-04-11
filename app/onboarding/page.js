@@ -11,7 +11,7 @@ const stripePromise = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
   : null
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
-const inputCls = 'w-full h-[46px] px-4 border border-[#E8E8E4] rounded-lg text-[14px] text-[#1A1816] placeholder:text-[#A8A8A4] focus:outline-none focus:border-[#1A1816] transition-colors bg-white'
+const inputCls = 'w-full h-[46px] px-4 border border-[#E8E8E4] rounded text-[14px] text-[#1A1816] placeholder:text-[#A8A8A4] focus:outline-none focus:border-[#1A1816] transition-colors bg-white'
 const labelCls = 'block text-[13px] font-semibold text-[#1A1816] mb-1.5'
 const errorCls = 'text-[13px] text-[#D03839] mt-1'
 
@@ -107,7 +107,7 @@ function StepAccount({ onNext }) {
         </div>
       </div>
       {error && <p className={errorCls}>{error}</p>}
-      <button type="submit" disabled={loading} className="w-full h-[46px] bg-[#D03839] hover:bg-[#C73022] text-white text-[14px] font-semibold rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center gap-2 mt-2">
+      <button type="submit" disabled={loading} className="w-full h-[46px] bg-[#D03839] hover:bg-[#E0493B] text-white text-[14px] font-semibold rounded transition-colors disabled:opacity-50 flex items-center justify-center gap-2 mt-2">
         {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <>Continue <ChevronRight className="w-4 h-4" /></>}
       </button>
       <p className="text-center text-[13px] text-[#737370]">
@@ -187,7 +187,7 @@ function StepPhone({ onNext }) {
           </div>
           {error && <p className={errorCls}>{error}</p>}
           <button onClick={sendOtp} disabled={loading || phone.replace(/\D/g, '').length < 10}
-            className="w-full h-[46px] bg-[#D03839] hover:bg-[#C73022] text-white text-[14px] font-semibold rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
+            className="w-full h-[46px] bg-[#D03839] hover:bg-[#E0493B] text-white text-[14px] font-semibold rounded transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
             {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Send verification code'}
           </button>
         </>
@@ -206,7 +206,7 @@ function StepPhone({ onNext }) {
           </div>
           {error && <p className={errorCls}>{error}</p>}
           <button onClick={verifyOtp} disabled={loading || otp.length < 6}
-            className="w-full h-[46px] bg-[#D03839] hover:bg-[#C73022] text-white text-[14px] font-semibold rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
+            className="w-full h-[46px] bg-[#D03839] hover:bg-[#E0493B] text-white text-[14px] font-semibold rounded transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
             {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <>Verify <ChevronRight className="w-4 h-4" /></>}
           </button>
           <button onClick={() => { setSent(false); setOtp('') }} className="w-full text-center text-[13px] text-[#737370] hover:text-[#1A1816]">
@@ -232,7 +232,7 @@ function PlanCard({ plan, selected, annual, onSelect }) {
     <button
       type="button"
       onClick={() => onSelect(plan.id)}
-      className={`w-full text-left rounded-xl border-2 p-5 transition-all ${
+      className={`w-full text-left rounded border-2 p-5 transition-all ${
         selected === plan.id ? 'border-[#D03839] bg-[#FEF0EF]' : 'border-[#E8E8E4] bg-white hover:border-[#1A1816]'
       }`}
     >
@@ -251,14 +251,15 @@ function PlanCard({ plan, selected, annual, onSelect }) {
 }
 
 const PLANS = [
-  { id: 'standard', name: 'Standard', desc: 'List a property. No subscription required.' },
+  { id: 'standard', name: 'Pay Per Listing', desc: 'List a property. No subscription required. 30-day expiry.' },
   { id: 'pro',      name: 'Pro Seller', desc: '10 listings/month. Verified badge & advanced analytics.' },
   { id: 'enterprise', name: 'Enterprise', desc: 'Unlimited listings. For high-volume acquisition teams.' },
 ]
 
 function StepPlan({ onNext }) {
   const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null
-  const defaultPlan = searchParams?.get('plan') || 'standard'
+  const localPlan = typeof window !== 'undefined' ? (localStorage.getItem('deelmap_selected_plan') || '') : ''
+  const defaultPlan = searchParams?.get('plan') || (localPlan !== 'pay-per-listing' ? localPlan : '') || 'standard'
   const defaultBilling = searchParams?.get('billing') || 'monthly'
 
   const [selected, setSelected] = useState(defaultPlan)
@@ -284,7 +285,7 @@ function StepPlan({ onNext }) {
   return (
     <div className="space-y-4">
       {/* Annual toggle */}
-      <div className="flex items-center justify-between bg-[#FAFAF8] border border-[#E8E8E4] rounded-lg px-4 py-3">
+      <div className="flex items-center justify-between bg-[#FAFAF8] border border-[#E8E8E4] rounded px-4 py-3">
         <div className="flex items-center gap-3">
           <span className={`text-[13px] font-medium transition-colors ${!annual ? 'text-[#1A1816]' : 'text-[#A8A8A4]'}`}>Monthly</span>
           <button
@@ -307,7 +308,7 @@ function StepPlan({ onNext }) {
 
       {/* Quantity selector for Standard */}
       {selected === 'standard' && (
-        <div className="bg-[#FAFAF8] border border-[#E8E8E4] rounded-xl p-4 space-y-3">
+        <div className="bg-[#FAFAF8] border border-[#E8E8E4] rounded p-4 space-y-3">
           <p className="text-[13px] font-semibold text-[#1A1816]">How many listings do you need?</p>
           <div className="grid grid-cols-4 gap-2">
             {PRESET_QTY.map(n => (
@@ -315,7 +316,7 @@ function StepPlan({ onNext }) {
                 key={n}
                 type="button"
                 onClick={() => { setQty(n); setCustomQty(false) }}
-                className={`rounded-lg border py-2.5 text-center transition-all ${
+                className={`rounded border py-2.5 text-center transition-all ${
                   !customQty && qty === n
                     ? 'border-[#D03839] bg-[#FEF0EF] text-[#D03839]'
                     : 'border-[#E8E8E4] bg-white text-[#1A1816] hover:border-[#1A1816]'
@@ -332,7 +333,7 @@ function StepPlan({ onNext }) {
             </button>
           ) : (
             <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2 border border-[#E8E8E4] rounded-lg px-3 h-[40px]">
+              <div className="flex items-center gap-2 border border-[#E8E8E4] rounded px-3 h-[40px]">
                 <button onClick={() => setCustomVal(v => String(Math.max(1, (parseInt(v) || 1) - 1)))} className="text-[#737370] text-lg leading-none">−</button>
                 <input
                   type="number"
@@ -352,7 +353,7 @@ function StepPlan({ onNext }) {
 
       {/* Total */}
       {total !== null && (
-        <div className="flex justify-between items-center px-4 py-3 bg-[#1A1816] rounded-lg">
+        <div className="flex justify-between items-center px-4 py-3 bg-[#1A1816] rounded">
           <span className="text-[13px] font-medium text-white">{effectiveQty} listing{effectiveQty !== 1 ? 's' : ''} · one-time</span>
           <span className="text-[16px] font-bold text-white">${total.toLocaleString()}</span>
         </div>
@@ -360,7 +361,7 @@ function StepPlan({ onNext }) {
 
       <button
         onClick={handleNext}
-        className="w-full h-[46px] bg-[#D03839] hover:bg-[#C73022] text-white text-[14px] font-semibold rounded-lg transition-colors flex items-center justify-center gap-2"
+        className="w-full h-[46px] bg-[#D03839] hover:bg-[#E0493B] text-white text-[14px] font-semibold rounded transition-colors flex items-center justify-center gap-2"
       >
         Continue to payment <ChevronRight className="w-4 h-4" />
       </button>
@@ -407,7 +408,7 @@ function CheckoutForm({ session, onSuccess }) {
   return (
     <form onSubmit={handlePay} className="space-y-5">
       {/* Summary */}
-      <div className="bg-[#FAFAF8] border border-[#E8E8E4] rounded-xl p-4">
+      <div className="bg-[#FAFAF8] border border-[#E8E8E4] rounded p-4">
         <p className="text-[11px] font-semibold uppercase tracking-wider text-[#A8A8A4] mb-2">Order Summary</p>
         <div className="flex justify-between items-center">
           <span className="text-[14px] font-semibold text-[#1A1816] capitalize">
@@ -421,13 +422,13 @@ function CheckoutForm({ session, onSuccess }) {
       <PaymentElement />
 
       {error && (
-        <div className="p-3 bg-[#FEF0EF] border border-[#F5C0BF] rounded-lg text-[13px] text-[#D03839]">{error}</div>
+        <div className="p-3 bg-[#FEF0EF] border border-[#F5C0BF] rounded text-[13px] text-[#D03839]">{error}</div>
       )}
 
       <button
         type="submit"
         disabled={!stripe || processing}
-        className="w-full h-[46px] bg-[#D03839] hover:bg-[#C73022] text-white text-[14px] font-semibold rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+        className="w-full h-[46px] bg-[#D03839] hover:bg-[#E0493B] text-white text-[14px] font-semibold rounded transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
       >
         {processing
           ? <><Loader2 className="w-4 h-4 animate-spin" /> Processing...</>
@@ -476,15 +477,15 @@ function StepPayment({ onSuccess }) {
   )
 
   if (error) return (
-    <div className="p-4 bg-[#FEF0EF] border border-[#F5C0BF] rounded-lg text-[13px] text-[#D03839] text-center">{error}</div>
+    <div className="p-4 bg-[#FEF0EF] border border-[#F5C0BF] rounded text-[13px] text-[#D03839] text-center">{error}</div>
   )
 
   return stripePromise && clientSecret ? (
-    <Elements stripe={stripePromise} options={{ clientSecret }}>
+    <Elements stripe={stripePromise} options={{ clientSecret, terms: { card: 'never' } }}>
       <CheckoutForm session={session} onSuccess={onSuccess} />
     </Elements>
   ) : (
-    <div className="p-4 bg-[#FEF3E2] border border-[#F5D9A0] rounded-lg text-[13px] text-[#B5620A] text-center">
+    <div className="p-4 bg-[#FEF3E2] border border-[#F5D9A0] rounded text-[13px] text-[#B5620A] text-center">
       Stripe is not configured. Add <code className="font-mono">NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY</code> to env.
     </div>
   )
@@ -519,7 +520,7 @@ function StepSuccess() {
       </div>
       <button
         onClick={handleContinue}
-        className="w-full h-[46px] bg-[#D03839] hover:bg-[#C73022] text-white text-[14px] font-semibold rounded-lg transition-colors"
+        className="w-full h-[46px] bg-[#D03839] hover:bg-[#E0493B] text-white text-[14px] font-semibold rounded transition-colors"
       >
         Go to Dashboard
       </button>
@@ -561,7 +562,7 @@ function OnboardingContent() {
         </div>
 
         {/* Card */}
-        <div className="bg-white border border-[#E8E8E4] rounded-2xl p-8 shadow-sm">
+        <div className="bg-white border border-[#E8E8E4] rounded p-8 shadow-sm">
 
           {step < 4 && <StepDots current={step} />}
 
