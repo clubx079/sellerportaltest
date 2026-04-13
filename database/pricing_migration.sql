@@ -66,7 +66,11 @@ ALTER TABLE properties
   ADD COLUMN IF NOT EXISTS boost_ends_at            timestamptz,
   ADD COLUMN IF NOT EXISTS search_priority          int DEFAULT 0;
 
--- 6. Index for fast addon expiry queries
+-- 6. Unique constraint on seller_plans.seller_id (required for upsert / one plan per seller)
+ALTER TABLE seller_plans
+  ADD CONSTRAINT IF NOT EXISTS seller_plans_seller_id_unique UNIQUE (seller_id);
+
+-- 7. Index for fast addon expiry queries
 CREATE INDEX IF NOT EXISTS idx_listing_addons_ends_at ON listing_addons(ends_at) WHERE status = 'active';
 CREATE INDEX IF NOT EXISTS idx_seller_plans_seller_id ON seller_plans(seller_id);
 CREATE INDEX IF NOT EXISTS idx_wholesale_deals_boosted ON wholesale_deals(is_boosted, search_priority);

@@ -15,26 +15,65 @@ export async function POST(request) {
       return NextResponse.json({ error: 'seller_id and subscription_id are required' }, { status: 400 })
     }
 
+    // Retrieve full subscription data from Stripe
     const sub = await stripe.subscriptions.retrieve(subscription_id)
     const meta = sub.metadata || {}
+    const customerId = typeof sub.customer === 'string' ? sub.customer : sub.customer?.id
 
-    await supabase.from('seller_plans').upsert({
+    const planRow = {
       seller_id,
       plan_type:              meta.plan_type     || 'pro',
       billing_cycle:          meta.billing_cycle || 'monthly',
       status:                 sub.status === 'trialing' ? 'trialing' : 'active',
-      stripe_customer_id:     typeof sub.customer === 'string' ? sub.customer : sub.customer?.id,
+      stripe_customer_id:     customerId,
       stripe_subscription_id: sub.id,
       stripe_price_id:        sub.items.data[0]?.price?.id || null,
       trial_ends_at:          sub.trial_end ? new Date(sub.trial_end * 1000).toISOString() : null,
       current_period_start:   new Date(sub.current_period_start * 1000).toISOString(),
       current_period_end:     new Date(sub.current_period_end * 1000).toISOString(),
       listings_used_this_period: 0,
-    }, { onConflict: 'seller_id' })
+      updated_at:             new Date().toISOString(),
+    }
 
+    // Check if a plan row already exists for this seller
+    const { data: existing, error: selectErr } = await supabase
+      .from('seller_plans')
+      .select('id')
+      .eq('seller_id', seller_id)
+      .maybeSingle()
+
+    if (selectErr) {
+      console.error('[activate] select error:', selectErr)
+      return NextResponse.json({ error: selectErr.message }, { status: 500 })
+    }
+
+    if (existing) {
+      const { error: updateErr } = await supabase
+        .from('seller_plans')
+        .update(planRow)
+        .eq('id', existing.id)
+      if (updateErr) {
+        console.error('[activate] update error:', updateErr)
+        return NextResponse.json({ error: updateErr.message }, { status: 500 })
+      }
+    } else {
+      const { error: insertErr } = await supabase
+        .from('seller_plans')
+        .insert(planRow)
+      if (insertErr) {
+        console.error('[activate] insert error:', insertErr)
+        return NextResponse.json({ error: insertErr.message }, { status: 500 })
+      }
+    }
+
+    // Save stripe_customer_id to seller_applications as a reliable fallback
     await supabase
       .from('seller_applications')
-      .update({ status: 'approved' })
+      .update({
+        status: 'approved',
+        stripe_customer_id: customerId,
+        phone_verified: true,
+      })
       .eq('id', seller_id)
 
     return NextResponse.json({ success: true })

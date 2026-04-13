@@ -46,13 +46,29 @@ export async function POST(request) {
     if (existingPlan?.stripe_customer_id) {
       customerId = existingPlan.stripe_customer_id
     } else {
-      // Create a new Stripe customer
-      const customer = await stripe.customers.create({
-        email: seller.email,
-        name: seller.contact_person_name || seller.email,
-        metadata: { seller_id, source: 'deelmap_seller_onboarding' },
-      })
-      customerId = customer.id
+      // Also check seller_applications.stripe_customer_id as a fallback
+      const { data: appRow } = await supabase
+        .from('seller_applications')
+        .select('stripe_customer_id')
+        .eq('id', seller_id)
+        .maybeSingle()
+
+      if (appRow?.stripe_customer_id) {
+        customerId = appRow.stripe_customer_id
+      } else {
+        // Create a new Stripe customer
+        const customer = await stripe.customers.create({
+          email: seller.email,
+          name: seller.contact_person_name || seller.email,
+          metadata: { seller_id, source: 'deelmap_seller_onboarding' },
+        })
+        customerId = customer.id
+        // Save immediately so it's available even if seller_plans write fails later
+        await supabase
+          .from('seller_applications')
+          .update({ stripe_customer_id: customerId })
+          .eq('id', seller_id)
+      }
     }
 
     // --- STANDARD: one-time PaymentIntent ($29 × quantity) ---

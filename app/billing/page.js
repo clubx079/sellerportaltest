@@ -87,7 +87,8 @@ export default function BillingPage() {
     setLoading(true)
     setError(null)
     try {
-      const { data: planData } = await supabase
+      // Primary: seller_plans table
+      const { data: planData, error: planErr } = await supabase
         .from('seller_plans')
         .select('*')
         .eq('seller_id', sellerId)
@@ -95,15 +96,27 @@ export default function BillingPage() {
         .limit(1)
         .maybeSingle()
 
+      if (planErr) console.error('[billing] seller_plans query error:', planErr)
       setPlan(planData)
 
-      if (planData?.stripe_customer_id) {
+      // Resolve the Stripe customer ID — prefer seller_plans, fall back to seller_applications
+      let stripeCustomerId = planData?.stripe_customer_id
+      if (!stripeCustomerId) {
+        const { data: appRow } = await supabase
+          .from('seller_applications')
+          .select('stripe_customer_id')
+          .eq('id', sellerId)
+          .maybeSingle()
+        stripeCustomerId = appRow?.stripe_customer_id || null
+      }
+
+      if (stripeCustomerId) {
         // Payment method
         setPmLoading(true)
         fetch('/api/billing/payment-methods', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ customer_id: planData.stripe_customer_id }),
+          body: JSON.stringify({ customer_id: stripeCustomerId }),
         })
           .then(r => r.json())
           .then(d => setPaymentMethod(d.default_payment_method || null))
@@ -114,7 +127,7 @@ export default function BillingPage() {
         fetch('/api/billing/invoices', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ customer_id: planData.stripe_customer_id }),
+          body: JSON.stringify({ customer_id: stripeCustomerId }),
         })
           .then(r => r.json())
           .then(d => setInvoices(d.invoices || []))
