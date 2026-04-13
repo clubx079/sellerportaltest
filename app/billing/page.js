@@ -88,7 +88,7 @@ export default function BillingPage() {
     setError(null)
     try {
       // Primary: seller_plans table
-      const { data: planData, error: planErr } = await supabase
+      let { data: planData } = await supabase
         .from('seller_plans')
         .select('*')
         .eq('seller_id', sellerId)
@@ -96,7 +96,25 @@ export default function BillingPage() {
         .limit(1)
         .maybeSingle()
 
-      if (planErr) console.error('[billing] seller_plans query error:', planErr)
+      // If no plan row found, auto-sync from Stripe (heals accounts where activate failed)
+      if (!planData) {
+        const syncRes = await fetch('/api/billing/sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ seller_id: sellerId }),
+        })
+        const syncData = await syncRes.json()
+        if (syncData.synced) {
+          // Re-fetch the newly created row
+          const { data: refreshed } = await supabase
+            .from('seller_plans')
+            .select('*')
+            .eq('seller_id', sellerId)
+            .maybeSingle()
+          planData = refreshed
+        }
+      }
+
       setPlan(planData)
 
       // Resolve the Stripe customer ID — prefer seller_plans, fall back to seller_applications
