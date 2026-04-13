@@ -230,7 +230,7 @@ function LoginForm() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full min-h-[44px] sm:h-12 rounded-lg bg-[#D03839] hover:bg-[#E0493B] text-white text-sm font-semibold disabled:opacity-50 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#D03839] focus:ring-offset-2 active:scale-[0.99]"
+                className="w-full min-h-[44px] sm:h-12 rounded bg-[#D03839] hover:bg-[#E0493B] text-white text-sm font-semibold disabled:opacity-50 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#D03839] focus:ring-offset-2 active:scale-[0.99]"
               >
                 {loading ? 'Signing In...' : 'Sign In'}
               </button>
