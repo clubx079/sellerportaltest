@@ -1,6 +1,5 @@
 'use client'
 import { useState, useEffect } from 'react'
-import DashboardLayout from '@/components/layout/DashboardLayout'
 import {
   CreditCard, Check, AlertCircle, Loader2, ExternalLink,
   RefreshCw, FileText, Zap, Building2, Download,
@@ -153,8 +152,7 @@ export default function BillingPage() {
   const planIcon     = isEnterprise ? <Building2 className="w-5 h-5" /> : <Zap className="w-5 h-5" />
 
   return (
-    <DashboardLayout>
-      <div className="space-y-5">
+    <div className="space-y-5">
 
         {/* Page header */}
         <div>
@@ -410,7 +408,6 @@ export default function BillingPage() {
           )}
         </Section>
 
-      </div>
-    </DashboardLayout>
+    </div>
   )
 }
