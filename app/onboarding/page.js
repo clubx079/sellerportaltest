@@ -335,25 +335,60 @@ function CheckoutForm({ session, intentType, onSuccess }) {
     setProcessing(false)
   }
 
-  const plan = session.plan_type
-  const qty = session.quantity || 1
+  const plan    = session.plan_type
   const billing = session.billing_cycle
-  const amount = plan === 'standard' ? `$${(29 * qty).toLocaleString()} one-time`
-    : plan === 'pro' ? (billing === 'annual' ? '$948/year' : '$99/month')
-    : billing === 'annual' ? '$2,868/year' : '$299/month'
+  const isAnnual = billing === 'annual'
+  const isPro    = plan === 'pro'
+
+  // Full charge amounts
+  const monthlyPrice = isPro ? 99  : 299
+  const annualTotal  = isPro ? 948 : 2868
+  const dueToday     = isPro ? 0   : (isAnnual ? annualTotal : monthlyPrice)
+  const planName     = isPro ? 'Pro Seller' : 'Enterprise'
+
+  // What to show as the charge line
+  const chargeLabel  = isAnnual
+    ? `$${annualTotal.toLocaleString()} / year`
+    : `$${monthlyPrice} / month`
+
+  // Button label
+  const btnLabel = isPro
+    ? 'Start 7-Day Free Trial'
+    : isAnnual
+      ? `Pay $${annualTotal.toLocaleString()} & Subscribe`
+      : `Pay $${monthlyPrice} & Subscribe`
 
   return (
     <form onSubmit={handlePay} className="space-y-5">
-      {/* Summary */}
-      <div className="bg-[#FAFAF8] border border-[#E8E8E4] rounded p-4">
-        <p className="text-[11px] font-semibold uppercase tracking-wider text-[#A8A8A4] mb-2">Order Summary</p>
-        <div className="flex justify-between items-center">
-          <span className="text-[14px] font-semibold text-[#1A1816] capitalize">
-            {plan === 'standard' ? `Standard · ${qty} listing${qty !== 1 ? 's' : ''}` : `${plan} Seller · ${billing}`}
-          </span>
-          <span className="text-[14px] font-bold text-[#1A1816]">{amount}</span>
+      {/* Order Summary */}
+      <div className="bg-[#FAFAF8] border border-[#E8E8E4] rounded p-4 space-y-3">
+        <p className="text-[11px] font-semibold uppercase tracking-wider text-[#A8A8A4]">Order Summary</p>
+
+        <div className="flex justify-between items-start">
+          <div>
+            <p className="text-[14px] font-semibold text-[#1A1816]">{planName}</p>
+            <p className="text-[12px] text-[#737370]">{isAnnual ? 'Billed annually' : 'Billed monthly'}</p>
+          </div>
+          <p className="text-[14px] font-bold text-[#1A1816]">{chargeLabel}</p>
         </div>
-        {plan === 'pro' && <p className="text-[12px] text-[#0F6E56] mt-1.5">7-day free trial included</p>}
+
+        <div className="border-t border-[#E8E8E4] pt-3 flex justify-between items-center">
+          <p className="text-[13px] font-semibold text-[#1A1816]">Due today</p>
+          <p className="text-[15px] font-bold text-[#1A1816]">
+            {isPro ? '$0' : `$${dueToday.toLocaleString()}`}
+          </p>
+        </div>
+
+        {isPro && (
+          <p className="text-[12px] text-[#0F6E56]">
+            7-day free trial · then {chargeLabel} starting {isAnnual ? 'billed as one payment' : 'each month'}
+          </p>
+        )}
+        {isAnnual && !isPro && (
+          <p className="text-[12px] text-[#737370]">
+            Full annual amount charged at once — no monthly billing
+          </p>
+        )}
       </div>
 
       <PaymentElement />
@@ -367,11 +402,7 @@ function CheckoutForm({ session, intentType, onSuccess }) {
         disabled={!stripe || processing}
         className="w-full h-[46px] bg-[#D03839] hover:bg-[#E0493B] text-white text-[14px] font-semibold rounded transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
       >
-        {processing
-          ? <><Loader2 className="w-4 h-4 animate-spin" /> Processing...</>
-          : plan === 'standard' ? `Pay $${(29 * qty).toLocaleString()} & Get Started`
-          : plan === 'pro' ? 'Start Free Trial'
-          : 'Subscribe'}
+        {processing ? <><Loader2 className="w-4 h-4 animate-spin" /> Processing…</> : btnLabel}
       </button>
       <p className="text-center text-[12px] text-[#A8A8A4]">Secured by Stripe · Cancel anytime in settings</p>
     </form>
