@@ -343,7 +343,7 @@ function CheckoutForm({ session, intentType, onSuccess }) {
   // Full charge amounts
   const monthlyPrice = isPro ? 99  : 299
   const annualTotal  = isPro ? 948 : 2868
-  const dueToday     = isPro ? 0   : (isAnnual ? annualTotal : monthlyPrice)
+  const dueToday     = 0  // both Pro and Enterprise have 7-day free trial
   const planName     = isPro ? 'Pro Seller' : 'Enterprise'
 
   // What to show as the charge line
@@ -351,12 +351,8 @@ function CheckoutForm({ session, intentType, onSuccess }) {
     ? `$${annualTotal.toLocaleString()} / year`
     : `$${monthlyPrice} / month`
 
-  // Button label
-  const btnLabel = isPro
-    ? 'Start 7-Day Free Trial'
-    : isAnnual
-      ? `Pay $${annualTotal.toLocaleString()} & Subscribe`
-      : `Pay $${monthlyPrice} & Subscribe`
+  // Button label — both plans start with 7-day free trial
+  const btnLabel = 'Start 7-Day Free Trial'
 
   return (
     <form onSubmit={handlePay} className="space-y-5">
@@ -374,21 +370,12 @@ function CheckoutForm({ session, intentType, onSuccess }) {
 
         <div className="border-t border-[#E8E8E4] pt-3 flex justify-between items-center">
           <p className="text-[13px] font-semibold text-[#1A1816]">Due today</p>
-          <p className="text-[15px] font-bold text-[#1A1816]">
-            {isPro ? '$0' : `$${dueToday.toLocaleString()}`}
-          </p>
+          <p className="text-[15px] font-bold text-[#1A1816]">$0</p>
         </div>
 
-        {isPro && (
-          <p className="text-[12px] text-[#0F6E56]">
-            7-day free trial · then {chargeLabel} starting {isAnnual ? 'billed as one payment' : 'each month'}
-          </p>
-        )}
-        {isAnnual && !isPro && (
-          <p className="text-[12px] text-[#737370]">
-            Full annual amount charged at once — no monthly billing
-          </p>
-        )}
+        <p className="text-[12px] text-[#0F6E56]">
+          7-day free trial · then {chargeLabel} {isAnnual ? '— billed as one payment' : 'each month'}
+        </p>
       </div>
 
       <PaymentElement />
