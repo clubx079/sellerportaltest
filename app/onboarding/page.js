@@ -219,14 +219,11 @@ function StepPhone({ onNext }) {
 }
 
 // ─── Step 2: Plan Selection ───────────────────────────────────────────────────
-const PRESET_QTY = [1, 3, 5, 10]
-
 function PlanCard({ plan, selected, annual, onSelect }) {
-  const isStandard = plan.id === 'standard'
   const isPro = plan.id === 'pro'
-  const price = isStandard ? 29 : isPro ? (annual ? 948 : 99) : (annual ? 2868 : 299)
-  const period = isStandard ? 'per listing · stays live' : annual ? 'per year · billed annually' : 'per month'
-  const sub = isStandard ? null : (annual ? `Save 20% · $${isPro ? 79 : 239}/mo` : isPro ? '$19 per additional listing' : null)
+  const price = isPro ? (annual ? 79 : 99) : (annual ? 239 : 299)
+  const period = annual ? '/mo · billed annually' : '/mo'
+  const sub = annual ? `Save 20% · $${isPro ? 948 : 2868}/yr` : isPro ? '$19 per additional listing' : null
 
   return (
     <button
@@ -242,7 +239,7 @@ function PlanCard({ plan, selected, annual, onSelect }) {
       </div>
       <p className="text-[12px] text-[#737370] mb-3">{plan.desc}</p>
       <div className="flex items-end gap-1">
-        <span className="text-[26px] font-bold text-[#1A1816] leading-none">${price.toLocaleString()}</span>
+        <span className="text-[26px] font-bold text-[#1A1816] leading-none">${price}</span>
         <span className="text-[12px] text-[#737370] mb-0.5">{period}</span>
       </div>
       {sub && <p className="text-[11px] text-[#737370] mt-0.5">{sub}</p>}
@@ -251,33 +248,25 @@ function PlanCard({ plan, selected, annual, onSelect }) {
 }
 
 const PLANS = [
-  { id: 'standard', name: 'Pay Per Listing', desc: 'List a property. No subscription required. 30-day expiry.' },
-  { id: 'pro',      name: 'Pro Seller', desc: '10 listings/month. Verified badge & advanced analytics.' },
-  { id: 'enterprise', name: 'Enterprise', desc: 'Unlimited listings. For high-volume acquisition teams.' },
+  { id: 'pro',        name: 'Pro Seller',  desc: '10 listings/month. Verified badge & advanced analytics.' },
+  { id: 'enterprise', name: 'Enterprise',  desc: 'Unlimited listings. For high-volume acquisition teams.' },
 ]
 
 function StepPlan({ onNext }) {
   const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null
   const localPlan = typeof window !== 'undefined' ? (localStorage.getItem('deelmap_selected_plan') || '') : ''
-  const defaultPlan = searchParams?.get('plan') || (localPlan !== 'pay-per-listing' ? localPlan : '') || 'standard'
+  const defaultPlan = searchParams?.get('plan') || (localPlan !== 'pay-per-listing' ? localPlan : '') || 'pro'
   const defaultBilling = searchParams?.get('billing') || 'monthly'
 
-  const [selected, setSelected] = useState(defaultPlan)
+  const [selected, setSelected] = useState(defaultPlan === 'standard' ? 'pro' : defaultPlan)
   const [annual, setAnnual] = useState(defaultBilling === 'annual')
-  const [qty, setQty] = useState(1)
-  const [customQty, setCustomQty] = useState(false)
-  const [customVal, setCustomVal] = useState('')
-
-  const effectiveQty = customQty ? (parseInt(customVal) || 1) : qty
-  const total = selected === 'standard' ? 29 * effectiveQty : null
 
   const handleNext = () => {
     const session = JSON.parse(sessionStorage.getItem('onboarding') || '{}')
     sessionStorage.setItem('onboarding', JSON.stringify({
       ...session,
       plan_type: selected,
-      billing_cycle: selected === 'standard' ? 'one_time' : annual ? 'annual' : 'monthly',
-      quantity: effectiveQty,
+      billing_cycle: annual ? 'annual' : 'monthly',
     }))
     onNext()
   }
@@ -306,59 +295,6 @@ function StepPlan({ onNext }) {
         ))}
       </div>
 
-      {/* Quantity selector for Standard */}
-      {selected === 'standard' && (
-        <div className="bg-[#FAFAF8] border border-[#E8E8E4] rounded p-4 space-y-3">
-          <p className="text-[13px] font-semibold text-[#1A1816]">How many listings do you need?</p>
-          <div className="grid grid-cols-4 gap-2">
-            {PRESET_QTY.map(n => (
-              <button
-                key={n}
-                type="button"
-                onClick={() => { setQty(n); setCustomQty(false) }}
-                className={`rounded border py-2.5 text-center transition-all ${
-                  !customQty && qty === n
-                    ? 'border-[#D03839] bg-[#FEF0EF] text-[#D03839]'
-                    : 'border-[#E8E8E4] bg-white text-[#1A1816] hover:border-[#1A1816]'
-                }`}
-              >
-                <p className="text-[15px] font-bold">{n}</p>
-                <p className="text-[11px] text-[#737370]">${(29 * n).toLocaleString()}</p>
-              </button>
-            ))}
-          </div>
-          {!customQty ? (
-            <button onClick={() => setCustomQty(true)} className="text-[12px] text-[#737370] hover:text-[#1A1816] underline">
-              Enter a custom amount
-            </button>
-          ) : (
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2 border border-[#E8E8E4] rounded px-3 h-[40px]">
-                <button onClick={() => setCustomVal(v => String(Math.max(1, (parseInt(v) || 1) - 1)))} className="text-[#737370] text-lg leading-none">−</button>
-                <input
-                  type="number"
-                  min={1}
-                  value={customVal}
-                  onChange={e => setCustomVal(e.target.value)}
-                  className="w-12 text-center text-[14px] font-semibold focus:outline-none bg-transparent"
-                />
-                <button onClick={() => setCustomVal(v => String((parseInt(v) || 1) + 1))} className="text-[#737370] text-lg leading-none">+</button>
-              </div>
-              <span className="text-[13px] text-[#737370]">listings · ${(29 * (parseInt(customVal) || 1)).toLocaleString()} total</span>
-              <button onClick={() => setCustomQty(false)} className="text-[12px] text-[#737370] hover:text-[#1A1816] underline ml-auto">Presets</button>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Total */}
-      {total !== null && (
-        <div className="flex justify-between items-center px-4 py-3 bg-[#1A1816] rounded">
-          <span className="text-[13px] font-medium text-white">{effectiveQty} listing{effectiveQty !== 1 ? 's' : ''} · one-time</span>
-          <span className="text-[16px] font-bold text-white">${total.toLocaleString()}</span>
-        </div>
-      )}
-
       <button
         onClick={handleNext}
         className="w-full h-[46px] bg-[#D03839] hover:bg-[#E0493B] text-white text-[14px] font-semibold rounded transition-colors flex items-center justify-center gap-2"
@@ -370,7 +306,7 @@ function StepPlan({ onNext }) {
 }
 
 // ─── Step 3: Payment ──────────────────────────────────────────────────────────
-function CheckoutForm({ session, onSuccess }) {
+function CheckoutForm({ session, intentType, onSuccess }) {
   const stripe = useStripe()
   const elements = useElements()
   const [processing, setProcessing] = useState(false)
@@ -385,7 +321,8 @@ function CheckoutForm({ session, onSuccess }) {
     const { error: submitErr } = await elements.submit()
     if (submitErr) { setError(submitErr.message); setProcessing(false); return }
 
-    const { error: confirmErr } = await stripe.confirmPayment({
+    const confirmFn = intentType === 'setup' ? stripe.confirmSetup : stripe.confirmPayment
+    const { error: confirmErr } = await confirmFn.call(stripe, {
       elements,
       redirect: 'if_required',
     })
@@ -443,6 +380,7 @@ function CheckoutForm({ session, onSuccess }) {
 
 function StepPayment({ onSuccess }) {
   const [clientSecret, setClientSecret] = useState(null)
+  const [intentType, setIntentType] = useState('subscription')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [session, setSession] = useState({})
@@ -463,8 +401,12 @@ function StepPayment({ onSuccess }) {
     })
       .then(r => r.json())
       .then(d => {
-        if (d.clientSecret) setClientSecret(d.clientSecret)
-        else setError(d.error || 'Failed to initialize payment')
+        if (d.clientSecret) {
+          setClientSecret(d.clientSecret)
+          setIntentType(d.type || 'subscription')
+        } else {
+          setError(d.error || 'Failed to initialize payment')
+        }
       })
       .catch(() => setError('Failed to initialize payment'))
       .finally(() => setLoading(false))
@@ -482,7 +424,7 @@ function StepPayment({ onSuccess }) {
 
   return stripePromise && clientSecret ? (
     <Elements stripe={stripePromise} options={{ clientSecret, terms: { card: 'never' } }}>
-      <CheckoutForm session={session} onSuccess={onSuccess} />
+      <CheckoutForm session={session} intentType={intentType} onSuccess={onSuccess} />
     </Elements>
   ) : (
     <div className="p-4 bg-[#FEF3E2] border border-[#F5D9A0] rounded text-[13px] text-[#B5620A] text-center">
@@ -557,14 +499,12 @@ function OnboardingContent() {
         {/* Logo */}
         <div className="flex justify-center mb-8">
           <a href="/">
-            <img src="/deelmap.png" alt="Deelmap" className="h-10 object-contain" onError={e => { e.target.style.display = 'none' }} />
+            <img src="/assets/logo.svg" alt="Deelmap" className="h-14 w-auto object-contain" onError={e => { e.target.style.display = 'none' }} />
           </a>
         </div>
 
         {/* Card */}
         <div className="bg-white border border-[#E8E8E4] rounded p-8 shadow-sm">
-
-          {step < 4 && <StepDots current={step} />}
 
           {/* Heading */}
           {step < 4 && (
