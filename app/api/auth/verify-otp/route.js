@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { createClient } from '@supabase/supabase-js'
 
 let otpStore = new Map()
 if (typeof global !== 'undefined') {
@@ -8,7 +9,7 @@ if (typeof global !== 'undefined') {
 
 export async function POST(request) {
   try {
-    const { email, otp } = await request.json()
+    const { email, otp, seller_id, phone } = await request.json()
 
     if (!email || !otp) {
       return NextResponse.json({ error: 'Email and OTP are required' }, { status: 400 })
@@ -30,6 +31,24 @@ export async function POST(request) {
     }
 
     otpStore.delete(email)
+
+    // Save phone number to seller_applications if provided
+    if (seller_id && phone) {
+      try {
+        const supabase = createClient(
+          process.env.NEXT_PUBLIC_SUPABASE_URL,
+          process.env.SUPABASE_SERVICE_ROLE_KEY
+        )
+        await supabase
+          .from('seller_applications')
+          .update({ phone })
+          .eq('id', seller_id)
+      } catch (dbErr) {
+        console.error('[seller verify-otp] failed to save phone:', dbErr)
+        // Don't fail the request — OTP was valid
+      }
+    }
+
     return NextResponse.json({ success: true })
   } catch (err) {
     console.error('[seller verify-otp]', err)

@@ -158,7 +158,7 @@ function StepPhone({ onNext }) {
       const res = await fetch('/api/auth/verify-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: session.email, otp }),
+        body: JSON.stringify({ email: session.email, otp, seller_id: session.seller_id, phone }),
       })
       const data = await res.json()
       if (!res.ok) { setError(data.error || 'Invalid code'); setLoading(false); return }
