@@ -66,7 +66,7 @@ function StepAccount({ onNext }) {
         body: JSON.stringify(form),
       })
       const data = await res.json()
-      if (!res.ok) { setError(data.error || 'Something went wrong'); return }
+      if (!res.ok) { setError(data.error || 'Something went wrong'); setLoading(false); return }
       sessionStorage.setItem('onboarding', JSON.stringify({ seller_id: data.seller_id, email: form.email }))
       onNext()
     } catch { setError('Something went wrong. Please try again.') }

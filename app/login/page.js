@@ -120,14 +120,14 @@ function LoginForm() {
         className="login-logo-enter absolute top-4 left-4 right-4 sm:right-auto sm:left-8 z-20 flex items-center justify-between sm:justify-start gap-2 transition-opacity hover:opacity-80"
       >
         <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
-          <div className="h-8 w-[100px] sm:h-9 sm:w-[120px] flex items-center justify-center shrink-0">
+          <div className="h-14 w-[160px] flex items-center justify-center shrink-0">
             {!logoError ? (
               <Image
                 src="/assets/logo.svg"
                 alt="DeelMap"
-                width={120}
-                height={36}
-                className="h-8 w-auto sm:h-9 object-contain"
+                width={160}
+                height={56}
+                className="h-14 w-auto object-contain"
                 priority
                 onError={() => setLogoError(true)}
               />
@@ -187,7 +187,7 @@ function LoginForm() {
                   onChange={handleChange}
                   autoComplete="email"
                   required
-                  className="block w-full min-h-[44px] sm:h-12 px-4 rounded-lg border border-[#D4D4CF] bg-white text-[#1A1816] placeholder:text-[#A8A8A4] text-base focus:outline-none focus:ring-2 focus:ring-[#D03839]/20 focus:border-[#D03839] transition-all duration-200"
+                  className="block w-full min-h-[44px] sm:h-12 px-4 rounded border border-[#D4D4CF] bg-white text-[#1A1816] placeholder:text-[#A8A8A4] text-base focus:outline-none focus:ring-2 focus:ring-[#D03839]/20 focus:border-[#D03839] transition-all duration-200"
                 />
               </div>
 
@@ -206,7 +206,7 @@ function LoginForm() {
                     onChange={handleChange}
                     autoComplete="current-password"
                     required
-                    className="block w-full min-h-[44px] sm:h-12 px-4 pr-12 rounded-lg border border-[#D4D4CF] bg-white text-[#1A1816] placeholder:text-[#A8A8A4] text-base focus:outline-none focus:ring-2 focus:ring-[#D03839]/20 focus:border-[#D03839] transition-colors"
+                    className="block w-full min-h-[44px] sm:h-12 px-4 pr-12 rounded border border-[#D4D4CF] bg-white text-[#1A1816] placeholder:text-[#A8A8A4] text-base focus:outline-none focus:ring-2 focus:ring-[#D03839]/20 focus:border-[#D03839] transition-colors"
                   />
                   <button
                     type="button"

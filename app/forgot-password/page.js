@@ -126,14 +126,14 @@ export default function ForgotPasswordPage() {
         href="/"
         className="absolute top-6 left-6 sm:left-8 z-20 flex items-center gap-2 transition-opacity hover:opacity-80"
       >
-        <div className="h-9 w-[120px] flex items-center justify-center shrink-0">
+        <div className="h-14 w-[160px] flex items-center justify-center shrink-0">
           {!logoError ? (
             <Image
               src="/assets/logo.svg"
               alt="DeelMap"
-              width={120}
-              height={36}
-              className="h-9 w-auto object-contain"
+              width={160}
+              height={56}
+              className="h-14 w-auto object-contain"
               priority
               onError={() => setLogoError(true)}
             />
@@ -143,7 +143,6 @@ export default function ForgotPasswordPage() {
             </div>
           )}
         </div>
-        <span className="text-xl font-bold text-[#1A1816] uppercase tracking-wide -translate-y-0.5">Seller</span>
       </Link>
 
       <div className="flex-1 flex items-center justify-center px-4 py-10 pt-24">
