@@ -404,6 +404,11 @@ function StepPayment({ onSuccess }) {
         if (d.clientSecret) {
           setClientSecret(d.clientSecret)
           setIntentType(d.type || 'subscription')
+          // Store subscription_id so StepSuccess can activate the plan
+          if (d.subscription_id) {
+            const s2 = JSON.parse(sessionStorage.getItem('onboarding') || '{}')
+            sessionStorage.setItem('onboarding', JSON.stringify({ ...s2, subscription_id: d.subscription_id }))
+          }
         } else {
           setError(d.error || 'Failed to initialize payment')
         }
@@ -437,9 +442,23 @@ function StepPayment({ onSuccess }) {
 function StepSuccess() {
   const router = useRouter()
 
+  useEffect(() => {
+    // Activate the plan immediately — don't wait for the webhook
+    const session = JSON.parse(sessionStorage.getItem('onboarding') || '{}')
+    if (session.seller_id && session.subscription_id) {
+      fetch('/api/seller/plan/activate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          seller_id: session.seller_id,
+          subscription_id: session.subscription_id,
+        }),
+      }).catch(() => {}) // best-effort; webhook will also fire
+    }
+  }, [])
+
   const handleContinue = () => {
     const session = JSON.parse(sessionStorage.getItem('onboarding') || '{}')
-    // Log in the seller
     if (session.seller_id) {
       localStorage.setItem('seller_user', JSON.stringify({
         id: session.seller_id,
