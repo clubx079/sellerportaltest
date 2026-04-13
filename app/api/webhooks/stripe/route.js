@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { createClient } from '@supabase/supabase-js'
 
+const toISO = (ts) => (ts && ts > 0) ? new Date(ts * 1000).toISOString() : null
+
 export async function POST(request) {
   const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
   const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY)
@@ -61,18 +63,31 @@ export async function POST(request) {
 
         if (!seller_id) break
 
-        await supabase.from('seller_plans').upsert({
+        const { data: existingPlan } = await supabase
+          .from('seller_plans')
+          .select('id')
+          .eq('seller_id', seller_id)
+          .maybeSingle()
+
+        const planRow = {
           seller_id,
           plan_type,
           billing_cycle: billing_cycle || 'monthly',
           status: sub.status === 'trialing' ? 'trialing' : 'active',
-          stripe_customer_id: sub.customer,
+          stripe_customer_id: typeof sub.customer === 'string' ? sub.customer : sub.customer?.id,
           stripe_subscription_id: sub.id,
-          stripe_price_id: sub.items.data[0]?.price?.id,
-          trial_ends_at: sub.trial_end ? new Date(sub.trial_end * 1000).toISOString() : null,
-          current_period_start: new Date(sub.current_period_start * 1000).toISOString(),
-          current_period_end: new Date(sub.current_period_end * 1000).toISOString(),
-        }, { onConflict: 'seller_id' })
+          stripe_price_id: sub.items.data[0]?.price?.id || null,
+          trial_ends_at:        toISO(sub.trial_end),
+          current_period_start: toISO(sub.current_period_start),
+          current_period_end:   toISO(sub.current_period_end),
+          updated_at: new Date().toISOString(),
+        }
+
+        if (existingPlan) {
+          await supabase.from('seller_plans').update(planRow).eq('id', existingPlan.id)
+        } else {
+          await supabase.from('seller_plans').insert(planRow)
+        }
 
         await supabase
           .from('seller_applications')
@@ -92,8 +107,8 @@ export async function POST(request) {
             status: sub.status === 'trialing' ? 'trialing'
                   : sub.status === 'past_due' ? 'past_due'
                   : 'active',
-            current_period_start: new Date(sub.current_period_start * 1000).toISOString(),
-            current_period_end: new Date(sub.current_period_end * 1000).toISOString(),
+            current_period_start: toISO(sub.current_period_start),
+            current_period_end:   toISO(sub.current_period_end),
             updated_at: new Date().toISOString(),
           })
           .eq('stripe_subscription_id', sub.id)

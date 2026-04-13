@@ -9,6 +9,8 @@ export async function POST(request) {
     process.env.SUPABASE_SERVICE_ROLE_KEY
   )
 
+  const toISO = (ts) => (ts && ts > 0) ? new Date(ts * 1000).toISOString() : null
+
   try {
     const { seller_id, subscription_id } = await request.json()
     if (!seller_id || !subscription_id) {
@@ -28,9 +30,9 @@ export async function POST(request) {
       stripe_customer_id:     customerId,
       stripe_subscription_id: sub.id,
       stripe_price_id:        sub.items.data[0]?.price?.id || null,
-      trial_ends_at:          sub.trial_end ? new Date(sub.trial_end * 1000).toISOString() : null,
-      current_period_start:   new Date(sub.current_period_start * 1000).toISOString(),
-      current_period_end:     new Date(sub.current_period_end * 1000).toISOString(),
+      trial_ends_at:          toISO(sub.trial_end),
+      current_period_start:   toISO(sub.current_period_start),
+      current_period_end:     toISO(sub.current_period_end),
       listings_used_this_period: 0,
       updated_at:             new Date().toISOString(),
     }
