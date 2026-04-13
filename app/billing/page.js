@@ -154,7 +154,7 @@ export default function BillingPage() {
 
   return (
     <DashboardLayout>
-      <div className="max-w-2xl mx-auto space-y-6">
+      <div className="space-y-5">
 
         {/* Page header */}
         <div>
@@ -167,6 +167,9 @@ export default function BillingPage() {
             <AlertCircle className="w-4 h-4 flex-shrink-0" /> {error}
           </div>
         )}
+
+        {/* ── Plan + Payment Method side by side ───────────────────────── */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
 
         {/* ── Current Plan ─────────────────────────────────────────────── */}
         <Section
@@ -328,6 +331,8 @@ export default function BillingPage() {
             </div>
           )}
         </Section>
+
+        </div>{/* end grid */}
 
         {/* ── Billing History ──────────────────────────────────────────── */}
         <Section title="Billing History">
