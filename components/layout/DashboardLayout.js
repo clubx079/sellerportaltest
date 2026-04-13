@@ -19,7 +19,7 @@ export default function DashboardLayout({ children }) {
   const [user, setUser] = useState(null)
 
   useEffect(() => {
-    const isPublicPage = ['/login', '/register', '/forgot-password', '/apply', '/'].includes(pathname) || pathname.startsWith('/onboarding')
+    const isPublicPage = ['/login', '/register', '/forgot-password', '/apply', '/'].includes(pathname) || pathname.startsWith('/onboarding') || pathname.startsWith('/properties/preview')
     if (isPublicPage) { setLoading(false); return; }
     const userStr = localStorage.getItem('seller_user')
     if (!userStr) { router.push('/login'); return; }
@@ -46,7 +46,7 @@ export default function DashboardLayout({ children }) {
     return () => { document.body.style.overflow = '' }
   }, [isSidebarOpen])
 
-  const isPublicPage = ['/login', '/register', '/forgot-password', '/apply', '/'].includes(pathname) || pathname.startsWith('/onboarding')
+  const isPublicPage = ['/login', '/register', '/forgot-password', '/apply', '/'].includes(pathname) || pathname.startsWith('/onboarding') || pathname.startsWith('/properties/preview')
   if (isPublicPage) return <>{children}</>
 
   if (!user && loading) {

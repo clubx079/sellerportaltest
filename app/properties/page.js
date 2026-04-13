@@ -718,7 +718,7 @@ const PropertiesManagement = () => {
                           </>
                         ) : (
                           <>
-                            <button onClick={() => handleViewClick(property)} className="flex items-center justify-center w-8 h-8 rounded text-[#A8A8A4] hover:text-primary hover:bg-[#E8E8E4] transition-colors" title="View">
+                            <button onClick={() => router.push(`/properties/preview/${property.id}`)} className="flex items-center justify-center w-8 h-8 rounded text-[#A8A8A4] hover:text-primary hover:bg-[#E8E8E4] transition-colors" title="View">
                               <Eye className="w-4 h-4" strokeWidth={2} />
                             </button>
                             <button onClick={() => { setPropertyForUTM({ ...property, slug: property.slug || property.id, id: property.id }); setShowUTMModal(true); }} className="flex items-center justify-center w-8 h-8 rounded text-[#A8A8A4] hover:text-primary hover:bg-[#E8E8E4] transition-colors" title="Share links (UTM)">
@@ -817,7 +817,7 @@ const PropertiesManagement = () => {
                     </>
                   ) : (
                     <>
-                      <button onClick={() => handleViewClick(property)} className="flex items-center justify-center w-9 h-9 rounded text-[#737370] hover:text-primary hover:bg-[#E8E8E4] transition-colors" title="View">
+                      <button onClick={() => router.push(`/properties/preview/${property.id}`)} className="flex items-center justify-center w-9 h-9 rounded text-[#737370] hover:text-primary hover:bg-[#E8E8E4] transition-colors" title="View">
                         <Eye className="w-4 h-4" strokeWidth={2} />
                       </button>
                       <button onClick={() => { setPropertyForUTM({ ...property, slug: property.slug || property.id, id: property.id }); setShowUTMModal(true); }} className="flex items-center justify-center w-9 h-9 rounded text-[#737370] hover:text-primary hover:bg-[#E8E8E4] transition-colors" title="Share links">
