@@ -239,7 +239,7 @@ export default function PropertyPreviewPage() {
     if (window.google) {
       initMap()
     } else {
-      const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
+      const apiKey = process.env.NEXT_PUBLIC_GOOGLE_PLACES_API_KEY
       if (!apiKey) {
         if (mapRef.current) mapRef.current.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#737370;font-size:13px">Map not available</div>'
         return
