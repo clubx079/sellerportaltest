@@ -7,12 +7,14 @@ import imageCompression from 'browser-image-compression';
 
 const MAX_CONCURRENT_UPLOADS = 4;
 
+const ALLOWED_PHOTO_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
 const checkHeic = f => f.type === 'image/heic' || f.type === 'image/heif' || /\.(heic|heif)$/i.test(f.name)
-const isImage = f => f.type.startsWith('image/') || checkHeic(f)
+const isPhoto = f => ALLOWED_PHOTO_TYPES.includes(f.type) || checkHeic(f)
 
 export default function ImageGalleryManager({ images = [], onImagesChange, sellerId, storageBucket = 'sellerpropertyimages', uploadPathPrefix = null }) {
   const [localImages, setLocalImages] = useState(images);
   const [dragActive, setDragActive] = useState(false);
+  const [uploadError, setUploadError] = useState(null);
 
   const inFlightIdsRef = useRef(new Set());
   const imagesRef = useRef(localImages);
@@ -175,9 +177,15 @@ export default function ImageGalleryManager({ images = [], onImagesChange, selle
 
   const handleFileSelect = async (files) => {
     const fileArray = Array.from(files);
+    setUploadError(null);
 
-    // Filter only image files (including HEIC)
-    const imageFiles = fileArray.filter(file => isImage(file));
+    const imageFiles = fileArray.filter(file => isPhoto(file));
+    const rejectedFiles = fileArray.filter(file => !isPhoto(file));
+
+    if (rejectedFiles.length > 0) {
+      const names = rejectedFiles.map(f => f.name).join(', ');
+      setUploadError(`Only property photos are allowed (JPEG, PNG, WebP). Rejected: ${names}`);
+    }
 
     if (imageFiles.length === 0) return;
 
@@ -264,6 +272,12 @@ export default function ImageGalleryManager({ images = [], onImagesChange, selle
 
   return (
     <div className="space-y-4">
+      {uploadError && (
+        <div className="flex items-start gap-2 p-3 bg-[#FEF0EF] border border-[#F5C4C0] rounded text-[13px] text-[#D03839]">
+          <span className="flex-1">{uploadError}</span>
+          <button type="button" onClick={() => setUploadError(null)} className="flex-shrink-0 text-[#D03839] hover:text-[#B02020]"><X size={14} /></button>
+        </div>
+      )}
       {/* Upload Area */}
       <div
         onDragEnter={handleDrag}
@@ -301,7 +315,7 @@ export default function ImageGalleryManager({ images = [], onImagesChange, selle
             type="file"
             id="image-upload"
             multiple
-            accept="image/*,.heic,.heif"
+            accept="image/jpeg,image/jpg,image/png,image/webp,.heic,.heif"
             onChange={(e) => handleFileSelect(e.target.files)}
             className="hidden"
             disabled={totalUploading > 0}
