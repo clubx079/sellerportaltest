@@ -223,7 +223,7 @@ function PlanCard({ plan, selected, annual, onSelect }) {
   const isPro = plan.id === 'pro'
   const price = isPro ? (annual ? 79 : 99) : (annual ? 239 : 299)
   const period = annual ? '/mo · billed annually' : '/mo'
-  const sub = annual ? `Save 20% · $${isPro ? 948 : 2868}/yr` : isPro ? '$19 per additional listing' : null
+  const sub = annual ? `Save 20%` : isPro ? '$19 per additional listing' : null
 
   return (
     <button
