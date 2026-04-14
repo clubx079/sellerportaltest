@@ -125,6 +125,8 @@ export default function NewPropertyPage() {
     }));
   };
 
+  const TAB_ORDER = ['basic', 'images', 'ownership', 'content', 'seo', 'addons', 'preview'];
+
   const handleTabChange = (tabId) => {
     // Save editor content before switching tabs
     if (descRef.current) {
@@ -135,6 +137,55 @@ export default function NewPropertyPage() {
       const cleanRepairs = repairsRef.current.getCleanHTML?.() || repairsRef.current.getHTML?.() || '';
       setFormData(prev => ({ ...prev, repairs: cleanRepairs }));
     }
+
+    const targetIdx = TAB_ORDER.indexOf(tabId);
+    const currentIdx = TAB_ORDER.indexOf(activeTab);
+
+    // Gate forward navigation — validate completed steps
+    if (targetIdx > currentIdx) {
+      // Basic info required
+      if (targetIdx > TAB_ORDER.indexOf('basic')) {
+        if (!formData.location) {
+          setError('Please enter the property address.');
+          setActiveTab('basic');
+          return;
+        }
+        if (!formData.price) {
+          setError('Please enter the asking price.');
+          setActiveTab('basic');
+          return;
+        }
+        if (!formData.property_type) {
+          setError('Please select a property type.');
+          setActiveTab('basic');
+          return;
+        }
+      }
+      // At least 1 image required
+      if (targetIdx > TAB_ORDER.indexOf('images')) {
+        const completed = imageUploadStatus.images.filter(img => img.status === 'completed');
+        if (completed.length === 0) {
+          setError('Please upload at least one image.');
+          setActiveTab('images');
+          return;
+        }
+      }
+      // Ownership selection required
+      if (targetIdx > TAB_ORDER.indexOf('ownership')) {
+        if (!sellerType) {
+          setError('Please select your relationship to this property.');
+          setActiveTab('ownership');
+          return;
+        }
+        if (sellerType === 'wholesaler' && !contractUpload.url) {
+          setError('Please upload your assignment contract.');
+          setActiveTab('ownership');
+          return;
+        }
+      }
+    }
+
+    setError(null);
     setActiveTab(tabId);
   };
 
@@ -159,7 +210,35 @@ export default function NewPropertyPage() {
     }
 
     if (!formData.location) {
-      setError('Please fill in the Address before saving.');
+      setError('Please fill in the property address.');
+      setActiveTab('basic');
+      return;
+    }
+
+    if (publishStatus === 'active' && !formData.price) {
+      setError('Please enter the asking price.');
+      setActiveTab('basic');
+      return;
+    }
+
+    if (publishStatus === 'active' && !formData.property_type) {
+      setError('Please select a property type.');
+      setActiveTab('basic');
+      return;
+    }
+
+    if (publishStatus === 'active') {
+      const completed = imageUploadStatus.images.filter(img => img.status === 'completed');
+      if (completed.length === 0) {
+        setError('Please upload at least one image.');
+        setActiveTab('images');
+        return;
+      }
+    }
+
+    if (publishStatus === 'active' && !sellerType) {
+      setError('Please select your relationship to this property in the Ownership tab.');
+      setActiveTab('ownership');
       return;
     }
 
@@ -654,9 +733,8 @@ export default function NewPropertyPage() {
             { id: 'basic', label: 'Basic Info' },
             { id: 'images', label: 'Images' },
             { id: 'ownership', label: 'Ownership' },
-            { id: 'inspection', label: 'Inspection Report' },
             { id: 'content', label: 'Content' },
-            { id: 'seo', label: 'SEO & Social' },
+            { id: 'seo', label: 'SEO & Social (optional)' },
             { id: 'addons', label: 'Add-Ons' },
             { id: 'preview', label: 'Preview' }
           ].map((tab) => (
@@ -912,68 +990,6 @@ export default function NewPropertyPage() {
             </div>
           )}
 
-          {/* Inspection Report Tab */}
-          {activeTab === 'inspection' && (
-            <div>
-              <h3 className="text-[15px] font-semibold text-[#1A1816] mb-2">Inspection Report</h3>
-              <p className="text-[13px] text-[#737370] mb-6">
-                Upload the inspection report for this property (PDF or DOC format)
-              </p>
-
-              {!inspectionReport.url ? (
-                <div className="border border-dashed border-[#E8E8E4] rounded p-8 text-center">
-                  <Upload className="w-12 h-12 text-[#A8A8A4] mx-auto mb-4" />
-                  <p className="text-[13px] text-[#737370] mb-4">
-                    Upload PDF or DOC file
-                  </p>
-                  <input
-                    type="file"
-                    id="inspection-upload"
-                    accept=".pdf,.doc,.docx"
-                    onChange={handleInspectionUpload}
-                    className="hidden"
-                    disabled={inspectionReport.uploading}
-                  />
-                  <label
-                    htmlFor="inspection-upload"
-                    className={`inline-flex items-center gap-2 px-4 py-2 bg-[#D03839] hover:bg-[#E0493B] text-white rounded text-[13px] font-medium transition-colors cursor-pointer ${
-                      inspectionReport.uploading ? 'opacity-50 cursor-not-allowed' : ''
-                    }`}
-                  >
-                    {inspectionReport.uploading ? 'Uploading...' : 'Choose File'}
-                  </label>
-                </div>
-              ) : (
-                <div className="bg-[#FAFAF8] border border-[#E8E8E4] rounded p-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-[#D03839]/10 rounded flex items-center justify-center">
-                        <Upload className="w-5 h-5 text-[#D03839]" />
-                      </div>
-                      <div>
-                        <p className="text-[13px] font-medium text-[#1A1816]">Inspection Report</p>
-                        <a
-                          href={inspectionReport.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-[12px] text-[#D03839] hover:underline"
-                        >
-                          View Document
-                        </a>
-                      </div>
-                    </div>
-                    <button
-                      onClick={handleRemoveInspection}
-                      className="p-2 rounded hover:bg-[#E8E8E4] text-[#737370] transition-colors"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
           {/* Content Tab */}
           {activeTab === 'content' && (
             <div className="space-y-6">
@@ -987,8 +1003,55 @@ export default function NewPropertyPage() {
                 />
               </div>
 
+              {/* Inspection Report (optional) */}
               <div>
-                <label className="block text-[13px] font-semibold text-[#1A1816] mb-2">Repairs & Renovation</label>
+                <label className="block text-[13px] font-semibold text-[#1A1816] mb-1">Inspection Report <span className="text-[#A8A8A4] font-normal">(optional)</span></label>
+                <p className="text-[12px] text-[#737370] mb-3">Upload the inspection report for this property (PDF or DOC)</p>
+                {!inspectionReport.url ? (
+                  <div className="border border-dashed border-[#E8E8E4] rounded p-6 text-center">
+                    <Upload className="w-8 h-8 text-[#A8A8A4] mx-auto mb-3" />
+                    <p className="text-[13px] text-[#737370] mb-3">PDF or DOC file</p>
+                    <input
+                      type="file"
+                      id="inspection-upload"
+                      accept=".pdf,.doc,.docx"
+                      onChange={handleInspectionUpload}
+                      className="hidden"
+                      disabled={inspectionReport.uploading}
+                    />
+                    <label
+                      htmlFor="inspection-upload"
+                      className={`inline-flex items-center gap-2 px-4 py-2 bg-[#D03839] hover:bg-[#E0493B] text-white rounded text-[13px] font-medium transition-colors cursor-pointer ${
+                        inspectionReport.uploading ? 'opacity-50 cursor-not-allowed' : ''
+                      }`}
+                    >
+                      {inspectionReport.uploading ? 'Uploading...' : 'Choose File'}
+                    </label>
+                  </div>
+                ) : (
+                  <div className="bg-[#FAFAF8] border border-[#E8E8E4] rounded p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 bg-[#D03839]/10 rounded flex items-center justify-center">
+                          <Upload className="w-4 h-4 text-[#D03839]" />
+                        </div>
+                        <div>
+                          <p className="text-[13px] font-medium text-[#1A1816]">Inspection Report</p>
+                          <a href={inspectionReport.url} target="_blank" rel="noopener noreferrer" className="text-[12px] text-[#D03839] hover:underline">
+                            View Document
+                          </a>
+                        </div>
+                      </div>
+                      <button onClick={handleRemoveInspection} className="p-2 rounded hover:bg-[#E8E8E4] text-[#737370] transition-colors">
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-[13px] font-semibold text-[#1A1816] mb-1">Repairs & Renovation <span className="text-[#A8A8A4] font-normal">(optional)</span></label>
                 <TextEditor
                   ref={repairsRef}
                   id="repairs-editor"

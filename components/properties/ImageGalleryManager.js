@@ -7,6 +7,9 @@ import imageCompression from 'browser-image-compression';
 
 const MAX_CONCURRENT_UPLOADS = 4;
 
+const checkHeic = f => f.type === 'image/heic' || f.type === 'image/heif' || /\.(heic|heif)$/i.test(f.name)
+const isImage = f => f.type.startsWith('image/') || checkHeic(f)
+
 export default function ImageGalleryManager({ images = [], onImagesChange, sellerId, storageBucket = 'sellerpropertyimages', uploadPathPrefix = null }) {
   const [localImages, setLocalImages] = useState(images);
   const [dragActive, setDragActive] = useState(false);
@@ -64,14 +67,25 @@ export default function ImageGalleryManager({ images = [], onImagesChange, selle
       // Wait a frame for state to update
       await new Promise(resolve => setTimeout(resolve, 10));
 
+      // Convert HEIC if needed
+      let uploadFile = image.file
+      if (checkHeic(image.file)) {
+        const fd = new FormData()
+        fd.append('file', image.file)
+        const heicRes = await fetch('/api/convert-heic', { method: 'POST', body: fd })
+        if (!heicRes.ok) throw new Error('HEIC conversion failed')
+        const blob = await heicRes.blob()
+        uploadFile = new File([blob], image.file.name.replace(/\.(heic|heif)$/i, '.jpg'), { type: 'image/jpeg' })
+      }
+
       // Compress image
       console.log('Compressing image...');
-      const compressedFile = await compressImage(image.file);
+      const compressedFile = await compressImage(uploadFile);
       console.log('Compression complete');
 
       // Generate unique filename (sellerId may be undefined for scraped until loaded; use fallback)
       const uploadDir = sellerId != null && String(sellerId).trim() ? String(sellerId) : 'deals';
-      const fileExt = (image.file.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, 'jpg');
+      const fileExt = (uploadFile.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, 'jpg');
       const pathSegment = uploadPathPrefix ? `${uploadPathPrefix}/${uploadDir}` : uploadDir;
       const fileName = `${pathSegment}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
 
@@ -79,7 +93,7 @@ export default function ImageGalleryManager({ images = [], onImagesChange, selle
       console.log('Uploading to Supabase:', storageBucket, fileName);
       const { data, error } = await supabase.storage
         .from(storageBucket)
-        .upload(fileName, compressedFile, {
+        .upload(fileName, compressedFile ?? uploadFile, {
           cacheControl: '3600',
           upsert: false
         });
@@ -162,10 +176,8 @@ export default function ImageGalleryManager({ images = [], onImagesChange, selle
   const handleFileSelect = async (files) => {
     const fileArray = Array.from(files);
 
-    // Filter only image files
-    const imageFiles = fileArray.filter(file =>
-      file.type.startsWith('image/')
-    );
+    // Filter only image files (including HEIC)
+    const imageFiles = fileArray.filter(file => isImage(file));
 
     if (imageFiles.length === 0) return;
 
@@ -173,10 +185,11 @@ export default function ImageGalleryManager({ images = [], onImagesChange, selle
     const newImages = imageFiles.map((file, index) => ({
       id: `temp-${Date.now()}-${Math.random()}-${index}`,
       file,
-      preview: URL.createObjectURL(file),
+      preview: checkHeic(file) ? null : URL.createObjectURL(file),
       status: 'queued',
       progress: 0,
-      originalSize: file.size
+      originalSize: file.size,
+      converting: checkHeic(file)
     }));
 
     setLocalImages(prev => [...prev, ...newImages]);
@@ -288,7 +301,7 @@ export default function ImageGalleryManager({ images = [], onImagesChange, selle
             type="file"
             id="image-upload"
             multiple
-            accept="image/*"
+            accept="image/*,.heic,.heif"
             onChange={(e) => handleFileSelect(e.target.files)}
             className="hidden"
             disabled={totalUploading > 0}
@@ -347,11 +360,11 @@ export default function ImageGalleryManager({ images = [], onImagesChange, selle
               {/* Image Preview */}
               {image.status === 'queued' || image.status === 'uploading' ? (
                 <div className="w-full h-full relative group">
-                  <img
+                  {image.preview && <img
                     src={image.preview}
                     alt={`Preview ${index + 1}`}
                     className="w-full h-full object-cover opacity-50"
-                  />
+                  />}
                   <div className="absolute inset-0 flex items-center justify-center bg-black/20">
                     <div className="text-center">
                       <Loader className="w-8 h-8 text-white animate-spin mx-auto mb-2" />
