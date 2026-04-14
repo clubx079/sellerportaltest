@@ -540,7 +540,7 @@ function OnboardingContent() {
 
   return (
     <div className="min-h-screen bg-[#FAFAF8] flex flex-col items-center justify-center px-4 py-12" style={{ fontFamily: 'var(--font-dm-sans), DM Sans, sans-serif' }}>
-      <div className={`w-full transition-all duration-300 ${step === 2 ? 'max-w-2xl' : 'max-w-md'}`}>
+      <div className={`w-full transition-all duration-300 ${step === 2 ? 'max-w-2xl' : 'max-w-xl'}`}>
 
         {/* Logo */}
         <div className="flex justify-center mb-8">
@@ -550,13 +550,13 @@ function OnboardingContent() {
         </div>
 
         {/* Card */}
-        <div className="bg-white border border-[#E8E8E4] rounded p-8 shadow-sm">
+        <div className="bg-white border border-[#E8E8E4] rounded p-10 shadow-sm">
 
           {/* Heading */}
           {step < 4 && (
-            <div className="mb-6">
-              <h1 className="text-[22px] font-bold text-[#1A1816] tracking-tight">{title}</h1>
-              <p className="text-[14px] text-[#737370] mt-0.5">{sub}</p>
+            <div className="mb-7">
+              <h1 className="text-[24px] font-bold text-[#1A1816] tracking-tight">{title}</h1>
+              <p className="text-[14px] text-[#737370] mt-1">{sub}</p>
             </div>
           )}
 
