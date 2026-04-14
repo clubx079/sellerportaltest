@@ -602,7 +602,18 @@ const PropertiesManagement = () => {
 
         {/* Desktop: Table */}
         <div className="hidden md:block overflow-x-auto scrollbar-thin">
-          <table className="w-full min-w-[900px]">
+          <table className="w-full min-w-[900px] table-fixed">
+            <colgroup>
+              <col className="w-[44px]" />
+              <col className="w-[200px]" />
+              <col className="w-[96px]" />
+              <col className="w-[150px]" />
+              <col className="w-[100px]" />
+              <col className="w-[110px]" />
+              <col className="w-[160px]" />
+              <col className="w-[130px]" />
+              <col className="w-[240px]" />
+            </colgroup>
             <thead className="bg-[#FAFAF8] border-b border-[#E8E8E4]">
               <tr>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-[#444441] uppercase tracking-wider whitespace-nowrap">#</th>
@@ -613,22 +624,36 @@ const PropertiesManagement = () => {
                 <th className="px-4 py-3 text-left text-xs font-semibold text-[#444441] uppercase tracking-wider whitespace-nowrap">Type</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-[#444441] uppercase tracking-wider whitespace-nowrap">Status</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-[#444441] uppercase tracking-wider whitespace-nowrap">Property Status</th>
-                <th className="px-4 py-3 text-right text-xs font-semibold text-[#444441] uppercase tracking-wider whitespace-nowrap min-w-[240px]">Actions</th>
+                <th className="px-4 py-3 text-right text-xs font-semibold text-[#444441] uppercase tracking-wider whitespace-nowrap">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#E8E8E4] bg-white">
               {loading ? (
                 [...Array(3)].map((_, i) => (
                   <tr key={i} className="animate-pulse">
-                    <td className="px-4 py-3"><div className="h-4 w-6 bg-[#E8E8E4] rounded"></div></td>
-                    <td className="px-4 py-3"><div className="h-4 w-32 bg-[#E8E8E4] rounded"></div></td>
-                    <td className="px-4 py-3"><div className="h-4 w-14 bg-[#E8E8E4] rounded"></div></td>
-                    <td className="px-4 py-3"><div className="h-4 w-24 bg-[#E8E8E4] rounded"></div></td>
-                    <td className="px-4 py-3"><div className="h-4 w-16 bg-[#E8E8E4] rounded"></div></td>
-                    <td className="px-4 py-3"><div className="h-4 w-20 bg-[#E8E8E4] rounded"></div></td>
-                    <td className="px-4 py-3"><div className="h-4 w-16 bg-[#E8E8E4] rounded"></div></td>
-                    <td className="px-4 py-3"><div className="h-4 w-16 bg-[#E8E8E4] rounded"></div></td>
-                    <td className="px-4 py-3"><div className="h-4 w-16 bg-[#E8E8E4] rounded ml-auto"></div></td>
+                    <td className="px-4 py-3"><div className="h-4 w-5 bg-[#E8E8E4] rounded" /></td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        <div className="w-10 h-10 rounded bg-[#E8E8E4] shrink-0" />
+                        <div className="space-y-1.5 flex-1">
+                          <div className="h-3 w-3/4 bg-[#E8E8E4] rounded" />
+                          <div className="h-2.5 w-1/2 bg-[#E8E8E4] rounded" />
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3"><div className="h-5 w-16 bg-[#E8E8E4] rounded" /></td>
+                    <td className="px-4 py-3"><div className="h-3 w-3/4 bg-[#E8E8E4] rounded" /></td>
+                    <td className="px-4 py-3"><div className="h-3 w-3/4 bg-[#E8E8E4] rounded" /></td>
+                    <td className="px-4 py-3"><div className="h-3 w-3/4 bg-[#E8E8E4] rounded" /></td>
+                    <td className="px-4 py-3"><div className="h-5 w-16 bg-[#E8E8E4] rounded" /></td>
+                    <td className="px-4 py-3"><div className="h-5 w-20 bg-[#E8E8E4] rounded" /></td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center justify-end gap-0.5">
+                        {[...Array(5)].map((_, j) => (
+                          <div key={j} className="w-8 h-8 rounded bg-[#E8E8E4]" />
+                        ))}
+                      </div>
+                    </td>
                   </tr>
                 ))
               ) : currentEntries.length === 0 ? (
@@ -760,7 +785,13 @@ const PropertiesManagement = () => {
                     <div className="h-4 w-3/4 bg-[#E8E8E4] rounded" />
                     <div className="h-3 w-1/2 bg-[#E8E8E4] rounded" />
                     <div className="h-4 w-16 bg-[#E8E8E4] rounded" />
+                    <div className="h-3 w-1/3 bg-[#E8E8E4] rounded" />
                   </div>
+                </div>
+                <div className="flex items-center justify-end gap-1 mt-3 pt-3 border-t border-[#E8E8E4]">
+                  {[...Array(5)].map((_, j) => (
+                    <div key={j} className="w-9 h-9 rounded bg-[#E8E8E4]" />
+                  ))}
                 </div>
               </div>
             ))
