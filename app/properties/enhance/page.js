@@ -11,10 +11,10 @@ const stripePromise = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
   : null
 
 const ADD_ONS = [
-  { id: 'highlight', label: 'Highlight Listing',   desc: 'Pin to top of search results and show a highlighted badge on your listing card.', price: 999,  icon: Star },
-  { id: 'boost',     label: 'Boost Listing',        desc: 'Promote your deal to more buyers across the platform for 30 days.',               price: 1499, icon: TrendingUp },
-  { id: 'homepage',  label: 'Feature on Homepage',  desc: 'Get your deal in the Featured Opportunities section on the Deelmap homepage.',    price: 2900, icon: Zap },
-  { id: 'bundle',    label: 'Visibility Bundle',    desc: 'Highlight + Boost together at a 20% discount. Best value for maximum exposure.',  price: 2200, icon: Package },
+  { id: 'highlight', label: 'Highlight Listing',   desc: 'Red-bordered card in search results for 30 days.',                               price: 999,  icon: Star },
+  { id: 'boost',     label: 'Boost Listing',        desc: 'Top of search results for 7 days.',                                             price: 1499, icon: TrendingUp },
+  { id: 'homepage',  label: 'Feature on Homepage',  desc: 'Shown to all visitors in the featured section for 7 days.',                     price: 2900, icon: Zap },
+  { id: 'bundle',    label: 'Visibility Bundle',    desc: 'Highlight (30 days) + Boost (7 days) at a discount. Best value.',               price: 2200, icon: Package },
 ]
 
 function CheckoutForm({ amount, addOns, propertyId, sellerId, onSuccess }) {
@@ -35,19 +35,20 @@ function CheckoutForm({ amount, addOns, propertyId, sellerId, onSuccess }) {
       setError(confirmErr.message)
       setProcessing(false)
     } else {
-      const thirtyDaysFromNow = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+      const in30Days = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+      const in7Days  = new Date(Date.now() +  7 * 24 * 60 * 60 * 1000).toISOString()
       const flags = {}
       if (addOns.includes('highlight') || addOns.includes('bundle')) {
         flags.is_highlighted = true
-        flags.highlight_ends_at = thirtyDaysFromNow
+        flags.highlight_ends_at = in30Days
       }
       if (addOns.includes('boost') || addOns.includes('bundle')) {
         flags.is_boosted = true
-        flags.boost_ends_at = thirtyDaysFromNow
+        flags.boost_ends_at = in7Days
       }
       if (addOns.includes('homepage')) {
         flags.is_homepage_featured = true
-        flags.homepage_feature_ends_at = thirtyDaysFromNow
+        flags.homepage_feature_ends_at = in7Days
       }
       await supabase.from('properties').update(flags).eq('id', propertyId)
       onSuccess()
