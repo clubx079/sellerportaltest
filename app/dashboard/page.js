@@ -102,8 +102,15 @@ export default function DashboardPage() {
       const currentUser = JSON.parse(userStr);
       const currentUserId = currentUser.id;
 
-      const { data: sellerData } = await supabase.from("seller_applications").select("temp_seller_id").eq("id", currentUserId).maybeSingle();
+      const { data: sellerData } = await supabase.from("seller_applications").select("temp_seller_id, contact_person_name").eq("id", currentUserId).maybeSingle();
       const tempSellerId = sellerData?.temp_seller_id ?? null;
+
+      // Backfill contactPersonName if missing (e.g. users who signed up via onboarding)
+      if (sellerData?.contact_person_name && !currentUser.contactPersonName) {
+        const updated = { ...currentUser, contactPersonName: sellerData.contact_person_name };
+        localStorage.setItem("seller_user", JSON.stringify(updated));
+        setUser(updated);
+      }
 
       // Manual properties
       const { data: manualList = [] } = await supabase.from("properties").select("*").eq("seller_id", currentUserId).order("created_at", { ascending: false });
