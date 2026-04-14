@@ -270,14 +270,14 @@ export default function ImageGalleryManager({ images = [], onImagesChange, selle
         onDragLeave={handleDrag}
         onDragOver={handleDrag}
         onDrop={handleDrop}
-        className={`border-2 border-dashed rounded-xl p-8 text-center transition-all ${
+        className={`border-2 border-dashed rounded p-8 text-center transition-all ${
           dragActive
-            ? 'border-[#472F97] bg-[#F5F3FF]'
+            ? 'border-[#D03839] bg-[#FEF0EF]'
             : 'border-neutral-300 hover:border-neutral-400'
         }`}
       >
         <div className="flex flex-col items-center">
-          <div className="w-16 h-16 rounded-xl flex items-center justify-center mb-4 bg-[#472F97]">
+          <div className="w-16 h-16 rounded flex items-center justify-center mb-4 bg-[#D03839]">
             {totalUploading > 0 ? (
               <Loader className="w-8 h-8 text-white animate-spin" />
             ) : (
@@ -308,7 +308,7 @@ export default function ImageGalleryManager({ images = [], onImagesChange, selle
           />
           <label
             htmlFor="image-upload"
-            className={`inline-flex items-center gap-2 px-4 py-2 bg-[#472F97] hover:bg-[#3a2578] text-white rounded-lg text-sm font-medium transition-colors cursor-pointer ${
+            className={`inline-flex items-center gap-2 px-4 py-2 bg-[#D03839] hover:bg-[#E0493B] text-white rounded text-sm font-medium transition-colors cursor-pointer ${
               totalUploading > 0 ? 'opacity-50 cursor-not-allowed' : ''
             }`}
           >
@@ -320,11 +320,11 @@ export default function ImageGalleryManager({ images = [], onImagesChange, selle
 
       {/* Stats Bar */}
       {localImages.length > 0 && (
-        <div className="flex items-center justify-between text-xs text-neutral-600 bg-neutral-50 border border-neutral-200 rounded-xl p-3">
+        <div className="flex items-center justify-between text-xs text-neutral-600 bg-neutral-50 border border-neutral-200 rounded p-3">
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
               {totalUploading > 0 ? (
-                <Loader size={14} className="text-[#472F97] animate-spin" />
+                <Loader size={14} className="text-[#D03839] animate-spin" />
               ) : (
                 <div className="w-2 h-2 bg-green-500 rounded-full"></div>
               )}
@@ -350,7 +350,7 @@ export default function ImageGalleryManager({ images = [], onImagesChange, selle
           {localImages.map((image, index) => (
             <div
               key={image.id}
-              className="relative group bg-neutral-100 rounded-xl overflow-hidden aspect-square transition-all duration-300"
+              className="relative group bg-neutral-100 rounded overflow-hidden aspect-square transition-all duration-300"
             >
               {/* Image Preview */}
               {image.status === 'queued' || image.status === 'uploading' ? (
@@ -372,7 +372,7 @@ export default function ImageGalleryManager({ images = [], onImagesChange, selle
                   <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button
                       onClick={() => handleRemove(image.id, null)}
-                      className="p-1.5 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors"
+                      className="p-1.5 bg-red-500 hover:bg-red-600 text-white rounded transition-colors"
                       title="Cancel upload"
                     >
                       <X size={14} />
@@ -391,7 +391,7 @@ export default function ImageGalleryManager({ images = [], onImagesChange, selle
                     <p className="text-xs text-red-600 mb-2">Upload failed</p>
                     <button
                       onClick={() => handleRetry(image.id)}
-                      className="px-3 py-1.5 bg-[#472F97] hover:bg-[#3a2578] text-white text-xs rounded-lg transition-colors"
+                      className="px-3 py-1.5 bg-[#D03839] hover:bg-[#E0493B] text-white text-xs rounded transition-colors"
                     >
                       Retry Upload
                     </button>
@@ -409,7 +409,7 @@ export default function ImageGalleryManager({ images = [], onImagesChange, selle
                   <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
                     <button
                       onClick={() => handleSetFeatured(image.id)}
-                      className={`p-2 rounded-lg transition-colors ${
+                      className={`p-2 rounded transition-colors ${
                         image.isFeatured
                           ? 'bg-yellow-500 text-white'
                           : 'bg-white text-neutral-700 hover:bg-yellow-500 hover:text-white'
@@ -420,7 +420,7 @@ export default function ImageGalleryManager({ images = [], onImagesChange, selle
                     </button>
                     <button
                       onClick={() => handleRemove(image.id, image.imageKey)}
-                      className="p-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors"
+                      className="p-2 bg-red-500 hover:bg-red-600 text-white rounded transition-colors"
                       title="Remove"
                     >
                       <X size={16} />
@@ -429,7 +429,7 @@ export default function ImageGalleryManager({ images = [], onImagesChange, selle
 
                   {/* Featured Badge */}
                   {image.isFeatured && (
-                    <div className="absolute top-2 left-2 px-2 py-1 bg-yellow-500 text-white text-xs font-medium rounded-lg flex items-center gap-1">
+                    <div className="absolute top-2 left-2 px-2 py-1 bg-yellow-500 text-white text-xs font-medium rounded flex items-center gap-1">
                       <Star size={12} fill="currentColor" />
                       Featured
                     </div>
