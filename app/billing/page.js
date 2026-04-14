@@ -407,16 +407,6 @@ export default function BillingPage() {
                 </div>
               ))}
 
-              {plan?.stripe_customer_id && (
-                <div className="px-5 py-3 border-t border-[#E8E8E4]">
-                  <button
-                    onClick={openPortal}
-                    className="flex items-center gap-1.5 text-[12px] font-semibold text-[#D03839] hover:text-[#E0493B] transition-colors"
-                  >
-                    View all in billing portal <ExternalLink className="w-3 h-3" />
-                  </button>
-                </div>
-              )}
             </div>
           ) : (
             <div className="flex flex-col items-center py-6 gap-2 text-center">
