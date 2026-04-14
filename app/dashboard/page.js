@@ -290,7 +290,9 @@ export default function DashboardPage() {
                     ) : (
                       notifications.map(n => {
                         const convNumeric = uuidToNumericConvId(n.related_conversation_id);
-                        const href = convNumeric ? `/messages?conversation=${convNumeric}` : '/messages';
+                        const href = (n.type === 'listing_approved' || n.type === 'listing_rejected')
+                          ? '/properties'
+                          : convNumeric ? `/messages?conversation=${convNumeric}` : '/messages';
                         return (
                           <Link
                             key={n.id}
