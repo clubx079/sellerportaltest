@@ -46,6 +46,7 @@ export default function NewPropertyPage() {
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
   const [activeTab, setActiveTab] = useState('basic');
+  const [continuedTabs, setContinuedTabs] = useState(new Set());
   const [showAllPreviewImages, setShowAllPreviewImages] = useState(false);
   const [userId, setUserId] = useState(null);
   const [trialPlan, setTrialPlan] = useState(null);
@@ -167,9 +168,9 @@ export default function NewPropertyPage() {
     if (tabId === 'basic') return isBasicComplete;
     if (tabId === 'images') return isImagesComplete;
     if (tabId === 'ownership') return isOwnershipComplete;
-    if (tabId === 'content') return isBasicComplete && isImagesComplete && isOwnershipComplete;
-    if (tabId === 'seo') return isBasicComplete && isImagesComplete && isOwnershipComplete;
-    if (tabId === 'addons') return isBasicComplete && isImagesComplete && isOwnershipComplete;
+    if (tabId === 'content') return continuedTabs.has('content');
+    if (tabId === 'seo') return continuedTabs.has('seo');
+    if (tabId === 'addons') return continuedTabs.has('addons');
     return false;
   };
 
@@ -201,6 +202,7 @@ export default function NewPropertyPage() {
   };
 
   const handleContinue = () => {
+    setContinuedTabs(prev => new Set([...prev, activeTab]));
     const nextTab = TAB_ORDER[TAB_ORDER.indexOf(activeTab) + 1];
     if (nextTab) handleTabChange(nextTab);
   };
