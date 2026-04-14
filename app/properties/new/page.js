@@ -127,6 +127,23 @@ export default function NewPropertyPage() {
     }));
   };
 
+  const buildSeoDefaults = (data) => {
+    const addr = data.location || '';
+    const beds = data.bedrooms ? `${data.bedrooms} bed` : '';
+    const baths = data.bathrooms ? `${data.bathrooms} bath` : '';
+    const type = data.property_type || '';
+    const price = data.price ? `$${Number(data.price).toLocaleString()}` : '';
+    const parts = [beds, baths, type].filter(Boolean).join(', ');
+    const title = addr ? addr.slice(0, 60) : '';
+    const desc = [
+      addr ? `${type || 'Property'} for sale at ${addr}.` : '',
+      parts ? `${parts}.` : '',
+      price ? `Asking ${price}.` : '',
+      'Contact seller for more details on this wholesale deal.'
+    ].filter(Boolean).join(' ').slice(0, 160);
+    return { title, desc };
+  };
+
   const TAB_ORDER = ['basic', 'images', 'ownership', 'content', 'seo', 'addons', 'preview'];
 
   // ── Step completion ──────────────────────────────────────────────────────────
@@ -163,6 +180,19 @@ export default function NewPropertyPage() {
       setFormData(prev => ({ ...prev, repairs: cleanRepairs }));
     }
     setError(null);
+    // Auto-fill SEO fields when entering the SEO tab for the first time
+    if (tabId === 'seo') {
+      setFormData(prev => {
+        const { title, desc } = buildSeoDefaults(prev);
+        return {
+          ...prev,
+          seo_title: prev.seo_title || title,
+          seo_description: prev.seo_description || desc,
+          social_title: prev.social_title || title,
+          social_description: prev.social_description || desc,
+        };
+      });
+    }
     setActiveTab(tabId);
   };
 
@@ -349,7 +379,7 @@ export default function NewPropertyPage() {
     if (formData.state) saveData.state = formData.state;
 
     // Add SEO fields (using correct column names from schema)
-    saveData.seo_title = formData.meta_title || formData.location || '';
+    saveData.seo_title = formData.seo_title || formData.meta_title || formData.location || '';
     if (formData.meta_description) saveData.seo_description = formData.meta_description;
     if (formData.social_share_image) saveData.social_image_url = formData.social_share_image;
 
