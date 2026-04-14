@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
-import { Loader2, AlertCircle, Check, Calendar } from 'lucide-react'
+import { Loader2, AlertCircle, Check, Calendar, Zap, Building2, ArrowRight } from 'lucide-react'
 
 const CheckIcon = ({ filled }) => (
   <span
@@ -19,6 +19,21 @@ const CheckIcon = ({ filled }) => (
 function formatDate(iso) {
   if (!iso) return '—'
   return new Date(iso).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+}
+
+function StatusBadge({ status }) {
+  const map = {
+    active:   { label: 'Active',   cls: 'bg-[#E4F5EC] text-[#0F6E56] border-[#9FDBB8]' },
+    trialing: { label: 'Trial',    cls: 'bg-[#FEF3E2] text-[#B5620A] border-[#F5D9A0]' },
+    past_due: { label: 'Past due', cls: 'bg-[#FEF0EF] text-[#D03839] border-[#F5C4C0]' },
+    canceled: { label: 'Canceled', cls: 'bg-[#F3F3F0] text-[#737370] border-[#E8E8E4]' },
+  }
+  const s = map[status] || { label: status || '—', cls: 'bg-[#F3F3F0] text-[#737370] border-[#E8E8E4]' }
+  return (
+    <span className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold border ${s.cls}`}>
+      {s.label}
+    </span>
+  )
 }
 
 const PRO_FEATURES = [
@@ -90,13 +105,9 @@ export default function PlansPage() {
         body: JSON.stringify({ seller_id: sellerId, new_plan_type: newPlanType }),
       })
       const data = await res.json()
-      if (!res.ok || data.error) {
-        setError(data.error || 'Failed to schedule plan change.')
-        return
-      }
+      if (!res.ok || data.error) { setError(data.error || 'Failed to schedule plan change.'); return }
       setPending({ plan_type: newPlanType, scheduled_for: data.scheduled_for })
-      const label = newPlanType === 'enterprise' ? 'Enterprise' : 'Pro Seller'
-      setSuccess(`Your plan will change to ${label} on ${formatDate(data.scheduled_for)}.`)
+      setSuccess(`Your plan will change to ${newPlanType === 'enterprise' ? 'Enterprise' : 'Pro Seller'} on ${formatDate(data.scheduled_for)}.`)
     } catch {
       setError('Something went wrong. Please try again.')
     } finally {
@@ -105,7 +116,10 @@ export default function PlansPage() {
   }
 
   const currentPlanType = plan?.plan_type
-  const isAnnual = plan?.billing_cycle === 'annual'
+  const isAnnual        = plan?.billing_cycle === 'annual'
+  const isPro           = currentPlanType === 'pro'
+  const isEnterprise    = currentPlanType === 'enterprise'
+  const isTrialing      = plan?.status === 'trialing'
 
   if (loading) {
     return (
@@ -116,12 +130,12 @@ export default function PlansPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5 max-w-3xl">
 
-      {/* Header */}
+      {/* Page header */}
       <div>
         <h1 className="text-lg md:text-xl font-semibold tracking-tight text-[#1A1816]">Plans</h1>
-        <p className="text-[13px] text-[#737370] mt-0.5">Upgrade or downgrade your subscription.</p>
+        <p className="text-[13px] text-[#737370] mt-0.5">Manage your subscription plan.</p>
       </div>
 
       {/* Alerts */}
@@ -137,192 +151,271 @@ export default function PlansPage() {
           <p className="text-[13px] font-medium">{success}</p>
         </div>
       )}
-      {pending && !success && (
-        <div className="flex items-start gap-3 p-3 bg-[#FEF3E2] border border-[#F3C97D] rounded text-[#B5620A]">
-          <Calendar className="w-4 h-4 flex-shrink-0 mt-0.5" />
-          <p className="text-[13px] font-medium">
-            Scheduled change to <strong>{pending.plan_type === 'enterprise' ? 'Enterprise' : 'Pro Seller'}</strong> on {formatDate(pending.scheduled_for)}.
-          </p>
-        </div>
-      )}
 
-      {/* Billing cycle info */}
-      {plan && (
-        <p className="text-[12px] text-[#737370]">
-          You&apos;re on a <span className="font-semibold text-[#1A1816]">{isAnnual ? 'annual' : 'monthly'}</span> billing cycle.
-          {plan.current_period_end && (
-            <> Current period ends <span className="font-semibold text-[#1A1816]">{formatDate(plan.current_period_end)}</span>. Plan changes take effect on that date.</>
+      {plan ? (
+        <>
+          {/* ── Current plan summary card ── */}
+          <div className="bg-white border border-[#E8E8E4] rounded overflow-hidden">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-[#E8E8E4]">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.09em] text-[#A8A8A4]">Current Plan</p>
+              <StatusBadge status={plan.status} />
+            </div>
+            <div className="p-5">
+              <div className="flex items-center gap-3 mb-5">
+                <div className={`w-10 h-10 rounded flex items-center justify-center flex-shrink-0 ${
+                  isEnterprise ? 'bg-[#1A1816] text-white' : 'bg-[#FEF0EF] text-[#D03839]'
+                }`}>
+                  {isEnterprise ? <Building2 className="w-5 h-5" /> : <Zap className="w-5 h-5" />}
+                </div>
+                <div>
+                  <p className="text-[17px] font-bold text-[#1A1816] leading-tight">
+                    {isPro ? 'Pro Seller' : isEnterprise ? 'Enterprise' : '—'}
+                  </p>
+                  <p className="text-[12px] text-[#737370] mt-0.5">
+                    {isAnnual ? 'Annual billing' : 'Monthly billing'}
+                    {' · '}
+                    {isPro ? (isAnnual ? '$948 / year' : '$99 / month') : (isAnnual ? '$2,868 / year' : '$299 / month')}
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-4 pt-4 border-t border-[#E8E8E4]">
+                {isTrialing && plan.trial_ends_at && (
+                  <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#A8A8A4] mb-1">Trial ends</p>
+                    <p className="text-[14px] font-semibold text-[#B5620A]">{formatDate(plan.trial_ends_at)}</p>
+                  </div>
+                )}
+                {plan.current_period_end && (
+                  <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#A8A8A4] mb-1">
+                      {isTrialing ? 'First billing' : 'Next renewal'}
+                    </p>
+                    <p className="text-[14px] font-semibold text-[#1A1816]">{formatDate(plan.current_period_end)}</p>
+                  </div>
+                )}
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#A8A8A4] mb-1">Listings used</p>
+                  <p className="text-[14px] font-semibold text-[#1A1816]">
+                    {plan.listings_used_this_period ?? 0}{isPro ? ' / 10' : isEnterprise ? ' / ∞' : ''}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#A8A8A4] mb-1">Billing cycle</p>
+                  <p className="text-[14px] font-semibold text-[#1A1816]">{isAnnual ? 'Annual' : 'Monthly'}</p>
+                </div>
+              </div>
+
+              {/* Usage bar for Pro */}
+              {isPro && (
+                <div className="mt-4 pt-4 border-t border-[#E8E8E4]">
+                  <div className="flex justify-between items-center mb-1.5">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#A8A8A4]">Monthly listings</p>
+                    <p className="text-[11px] text-[#737370]">{plan.listings_used_this_period ?? 0} of 10 used</p>
+                  </div>
+                  <div className="h-1.5 bg-[#F3F3F0] rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-[#D03839] rounded-full transition-all"
+                      style={{ width: `${Math.min(100, ((plan.listings_used_this_period ?? 0) / 10) * 100)}%` }}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* ── Pending change notice ── */}
+          {pending && !success && (
+            <div className="flex items-start gap-3 p-4 bg-[#FEF3E2] border border-[#F3C97D] rounded">
+              <Calendar className="w-4 h-4 flex-shrink-0 mt-0.5 text-[#B5620A]" />
+              <div>
+                <p className="text-[13px] font-semibold text-[#B5620A]">Plan change scheduled</p>
+                <p className="text-[12px] text-[#B5620A] mt-0.5">
+                  Switching to <strong>{pending.plan_type === 'enterprise' ? 'Enterprise' : 'Pro Seller'}</strong> on {formatDate(pending.scheduled_for)}.
+                  Your current plan remains active until then.
+                </p>
+              </div>
+            </div>
           )}
-        </p>
-      )}
 
-      {/* Plan cards — centered */}
-      <div className="flex justify-center">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-2xl">
+          {/* ── Section label ── */}
+          <div className="flex items-center gap-3 pt-1">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.09em] text-[#A8A8A4] whitespace-nowrap">
+              {isPro ? 'Upgrade your plan' : 'Change your plan'}
+            </p>
+            <div className="flex-1 h-px bg-[#E8E8E4]" />
+          </div>
 
-          {/* Pro Seller */}
-          {(() => {
-            const isCurrent = currentPlanType === 'pro'
-            const isPending = pending?.plan_type === 'pro'
-            const isUpgrade = false
-            const isDowngrade = currentPlanType === 'enterprise'
+          {/* ── Plan cards ── */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
 
-            return (
-              <div className={`bg-white rounded p-5 flex flex-col border-2 transition-all ${
-                isCurrent ? 'border-[#D03839]' : isPending ? 'border-[#D03839] opacity-80' : 'border-[#E8E8E4]'
-              }`}>
-                {/* Badge row */}
-                <div className="min-h-[24px] mb-2.5">
+            {/* Pro Seller */}
+            {(() => {
+              const isCurrent  = isPro
+              const isPendingThis = pending?.plan_type === 'pro'
+              const isAction   = isEnterprise && !isPendingThis
+
+              return (
+                <div className={`bg-white rounded p-5 flex flex-col border-2 ${
+                  isCurrent ? 'border-[#D03839]' : isPendingThis ? 'border-[#F3C97D]' : 'border-[#E8E8E4]'
+                }`}>
+                  <div className="min-h-[22px] mb-3">
+                    {isCurrent && (
+                      <span className="inline-block text-[11px] font-semibold bg-[#FEF0EF] text-[#D03839] px-2.5 py-0.5 rounded">
+                        Current plan
+                      </span>
+                    )}
+                    {isPendingThis && (
+                      <span className="inline-block text-[11px] font-semibold bg-[#FEF3E2] text-[#B5620A] px-2.5 py-0.5 rounded">
+                        Scheduled
+                      </span>
+                    )}
+                    {!isCurrent && !isPendingThis && (
+                      <span className="inline-block text-[11px] font-semibold bg-[#F3F3F0] text-[#A8A8A4] px-2.5 py-0.5 rounded">
+                        Most popular
+                      </span>
+                    )}
+                  </div>
+
+                  <p className="text-[11px] font-semibold tracking-[0.09em] uppercase text-[#A8A8A4] mb-1">Subscription</p>
+                  <h2 className="text-2xl font-bold text-[#1A1816] tracking-tight mb-1">Pro Seller</h2>
+                  <p className="text-xs text-[#737370] leading-relaxed mb-4">
+                    For active investors and wholesalers moving deals consistently.
+                  </p>
+
+                  <div className="text-[38px] font-bold text-[#1A1816] leading-none tracking-tight mb-1">
+                    <sup className="text-lg font-normal align-super">$</sup>{isAnnual ? '948' : '99'}
+                  </div>
+                  <p className="text-xs text-[#737370] mb-1">
+                    {isAnnual ? 'per year · billed annually' : 'per month'} · 10 listings included
+                  </p>
+                  <p className="text-[11px] text-[#A8A8A4] mb-5">
+                    {isAnnual ? 'Save $240 vs monthly · $79/mo' : '$19 per additional listing'}
+                  </p>
+
                   {isCurrent ? (
-                    <span className="inline-block text-[11px] font-semibold bg-[#FEF0EF] text-[#D03839] px-2.5 py-0.5 rounded">
-                      Current plan
-                    </span>
-                  ) : isPending ? (
-                    <span className="inline-block text-[11px] font-semibold bg-[#FEF3E2] text-[#B5620A] px-2.5 py-0.5 rounded">
-                      Scheduled
-                    </span>
-                  ) : (
-                    <span className="inline-block text-[11px] font-semibold bg-[#F3F3F0] text-[#A8A8A4] px-2.5 py-0.5 rounded">
-                      Most popular
-                    </span>
-                  )}
+                    <div className="w-full py-2.5 text-center text-xs font-semibold tracking-[0.05em] uppercase border border-[#E8E8E4] text-[#A8A8A4] rounded mb-5 cursor-default select-none">
+                      Your current plan
+                    </div>
+                  ) : isPendingThis ? (
+                    <div className="w-full py-2.5 text-center text-xs font-semibold tracking-[0.05em] uppercase border border-[#F3C97D] text-[#B5620A] rounded mb-5 cursor-default select-none">
+                      Switching on {formatDate(pending?.scheduled_for)}
+                    </div>
+                  ) : isAction ? (
+                    <button
+                      onClick={() => handleChangePlan('pro')}
+                      disabled={!!changing}
+                      className="w-full flex items-center justify-center gap-1.5 py-2.5 text-xs font-semibold tracking-[0.05em] uppercase border border-[#D4D4CF] text-[#1A1816] rounded hover:bg-[#F3F3F0] transition-colors mb-5 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {changing === 'pro'
+                        ? <Loader2 className="w-4 h-4 animate-spin" />
+                        : <><ArrowRight className="w-3.5 h-3.5 rotate-180" />Downgrade to Pro</>
+                      }
+                    </button>
+                  ) : null}
+
+                  <hr className="border-t border-[#E8E8E4] mb-4" />
+                  <p className="text-[11px] font-semibold tracking-[0.09em] uppercase text-[#A8A8A4] mb-3">Includes</p>
+                  <ul className="flex flex-col gap-1.5 flex-1">
+                    {PRO_FEATURES.map(([on, label], i) => (
+                      <li key={i} className={`flex items-start gap-2 text-xs leading-snug ${on ? 'text-[#1A1816]' : 'text-[#A8A8A4]'}`}>
+                        <CheckIcon filled={on} />{label}
+                      </li>
+                    ))}
+                  </ul>
                 </div>
+              )
+            })()}
 
-                <p className="text-[11px] font-semibold tracking-[0.09em] uppercase text-[#A8A8A4] mb-1">Subscription</p>
-                <h2 className="text-2xl font-bold text-[#1A1816] tracking-tight mb-1">Pro Seller</h2>
-                <p className="text-xs text-[#737370] leading-relaxed mb-4 min-h-[2.4rem]">
-                  For active investors and wholesalers moving deals consistently.
-                </p>
+            {/* Enterprise */}
+            {(() => {
+              const isCurrent     = isEnterprise
+              const isPendingThis = pending?.plan_type === 'enterprise'
+              const isAction      = isPro && !isPendingThis
 
-                {/* Price */}
-                <div className="text-[38px] font-bold text-[#1A1816] leading-none tracking-tight mb-1">
-                  <sup className="text-lg font-normal align-super">$</sup>
-                  {isAnnual ? '948' : '99'}
-                </div>
-                <p className="text-xs text-[#737370] mb-1">
-                  {isAnnual ? 'per year · billed annually' : 'per month'} · 10 listings included
-                </p>
-                <p className="text-[11px] text-[#A8A8A4] mb-5 min-h-[1rem]">
-                  {isAnnual ? 'Save $240 vs monthly · $79/mo' : '$19 per additional listing'}
-                </p>
-
-                {/* CTA */}
-                {isCurrent ? (
-                  <div className="w-full py-2.5 text-center text-xs font-semibold tracking-[0.05em] uppercase border border-[#E8E8E4] text-[#A8A8A4] rounded mb-5 cursor-default">
-                    Current plan
+              return (
+                <div className={`bg-white rounded p-5 flex flex-col border-2 ${
+                  isCurrent ? 'border-[#1A1816]' : isPendingThis ? 'border-[#F3C97D]' : 'border-[#E8E8E4]'
+                }`}>
+                  <div className="min-h-[22px] mb-3">
+                    {isCurrent && (
+                      <span className="inline-block text-[11px] font-semibold bg-[#1A1816] text-white px-2.5 py-0.5 rounded">
+                        Current plan
+                      </span>
+                    )}
+                    {isPendingThis && (
+                      <span className="inline-block text-[11px] font-semibold bg-[#FEF3E2] text-[#B5620A] px-2.5 py-0.5 rounded">
+                        Scheduled
+                      </span>
+                    )}
                   </div>
-                ) : isPending ? (
-                  <div className="w-full py-2.5 text-center text-xs font-semibold tracking-[0.05em] uppercase border border-[#F3C97D] text-[#B5620A] rounded mb-5 cursor-default">
-                    Taking effect {formatDate(pending.scheduled_for)}
+
+                  <p className="text-[11px] font-semibold tracking-[0.09em] uppercase text-[#A8A8A4] mb-1">Subscription</p>
+                  <h2 className="text-2xl font-bold text-[#1A1816] tracking-tight mb-1">Enterprise</h2>
+                  <p className="text-xs text-[#737370] leading-relaxed mb-4">
+                    For acquisition teams running high-volume pipelines.
+                  </p>
+
+                  <div className="text-[38px] font-bold text-[#1A1816] leading-none tracking-tight mb-1">
+                    <sup className="text-lg font-normal align-super">$</sup>{isAnnual ? '2,868' : '299'}
                   </div>
-                ) : isDowngrade ? (
-                  <button
-                    onClick={() => handleChangePlan('pro')}
-                    disabled={!!changing}
-                    className="w-full py-2.5 text-center text-xs font-semibold tracking-[0.05em] uppercase border border-[#D4D4CF] text-[#1A1816] rounded hover:bg-[#F3F3F0] transition-colors mb-5 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {changing === 'pro' ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : 'Downgrade to Pro'}
-                  </button>
-                ) : null}
+                  <p className="text-xs text-[#737370] mb-1">
+                    {isAnnual ? 'per year · billed annually' : 'per month'} · unlimited listings
+                  </p>
+                  <p className="text-[11px] text-[#A8A8A4] mb-5">
+                    {isAnnual ? 'Save $720 vs monthly · $239/mo' : <>&nbsp;</>}
+                  </p>
 
-                <hr className="border-t border-[#E8E8E4] mb-4" />
-                <p className="text-[11px] font-semibold tracking-[0.09em] uppercase text-[#A8A8A4] mb-2.5">Includes</p>
-                <ul className="flex flex-col gap-1.5 flex-1">
-                  {PRO_FEATURES.map(([on, label], i) => (
-                    <li key={i} className={`flex items-start gap-2 text-xs leading-snug ${on ? 'text-[#1A1816]' : 'text-[#A8A8A4]'}`}>
-                      <CheckIcon filled={on} />
-                      {label}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )
-          })()}
-
-          {/* Enterprise */}
-          {(() => {
-            const isCurrent = currentPlanType === 'enterprise'
-            const isPending = pending?.plan_type === 'enterprise'
-            const isUpgrade = currentPlanType === 'pro'
-
-            return (
-              <div className={`bg-white rounded p-5 flex flex-col border-2 transition-all ${
-                isCurrent ? 'border-[#1A1816]' : isPending ? 'border-[#D03839] opacity-80' : 'border-[#E8E8E4]'
-              }`}>
-                {/* Badge row */}
-                <div className="min-h-[24px] mb-2.5">
                   {isCurrent ? (
-                    <span className="inline-block text-[11px] font-semibold bg-[#1A1816] text-white px-2.5 py-0.5 rounded">
-                      Current plan
-                    </span>
-                  ) : isPending ? (
-                    <span className="inline-block text-[11px] font-semibold bg-[#FEF3E2] text-[#B5620A] px-2.5 py-0.5 rounded">
-                      Scheduled
-                    </span>
-                  ) : (
-                    <div className="min-h-[24px]" />
-                  )}
+                    <div className="w-full py-2.5 text-center text-xs font-semibold tracking-[0.05em] uppercase border border-[#E8E8E4] text-[#A8A8A4] rounded mb-5 cursor-default select-none">
+                      Your current plan
+                    </div>
+                  ) : isPendingThis ? (
+                    <div className="w-full py-2.5 text-center text-xs font-semibold tracking-[0.05em] uppercase border border-[#F3C97D] text-[#B5620A] rounded mb-5 cursor-default select-none">
+                      Switching on {formatDate(pending?.scheduled_for)}
+                    </div>
+                  ) : isAction ? (
+                    <button
+                      onClick={() => handleChangePlan('enterprise')}
+                      disabled={!!changing}
+                      className="w-full flex items-center justify-center gap-1.5 py-2.5 text-xs font-semibold tracking-[0.05em] uppercase bg-[#D03839] text-white rounded hover:bg-[#B82F30] transition-colors mb-5 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {changing === 'enterprise'
+                        ? <Loader2 className="w-4 h-4 animate-spin" />
+                        : <><ArrowRight className="w-3.5 h-3.5" />Upgrade to Enterprise</>
+                      }
+                    </button>
+                  ) : null}
+
+                  <hr className="border-t border-[#E8E8E4] mb-4" />
+                  <p className="text-[11px] font-semibold tracking-[0.09em] uppercase text-[#A8A8A4] mb-3">Includes</p>
+                  <ul className="flex flex-col gap-1.5 flex-1">
+                    {ENTERPRISE_FEATURES.map(([on, label], i) => (
+                      <li key={i} className={`flex items-start gap-2 text-xs leading-snug ${on ? 'text-[#1A1816]' : 'text-[#A8A8A4]'}`}>
+                        <CheckIcon filled={on} />{label}
+                      </li>
+                    ))}
+                  </ul>
                 </div>
+              )
+            })()}
 
-                <p className="text-[11px] font-semibold tracking-[0.09em] uppercase text-[#A8A8A4] mb-1">Subscription</p>
-                <h2 className="text-2xl font-bold text-[#1A1816] tracking-tight mb-1">Enterprise</h2>
-                <p className="text-xs text-[#737370] leading-relaxed mb-4 min-h-[2.4rem]">
-                  For acquisition teams running high-volume pipelines.
-                </p>
-
-                {/* Price */}
-                <div className="text-[38px] font-bold text-[#1A1816] leading-none tracking-tight mb-1">
-                  <sup className="text-lg font-normal align-super">$</sup>
-                  {isAnnual ? '2,868' : '299'}
-                </div>
-                <p className="text-xs text-[#737370] mb-1">
-                  {isAnnual ? 'per year · billed annually' : 'per month'} · unlimited listings
-                </p>
-                <p className="text-[11px] text-[#A8A8A4] mb-5 min-h-[1rem]">
-                  {isAnnual ? 'Save $720 vs monthly · $239/mo' : <>&nbsp;</>}
-                </p>
-
-                {/* CTA */}
-                {isCurrent ? (
-                  <div className="w-full py-2.5 text-center text-xs font-semibold tracking-[0.05em] uppercase border border-[#E8E8E4] text-[#A8A8A4] rounded mb-5 cursor-default">
-                    Current plan
-                  </div>
-                ) : isPending ? (
-                  <div className="w-full py-2.5 text-center text-xs font-semibold tracking-[0.05em] uppercase border border-[#F3C97D] text-[#B5620A] rounded mb-5 cursor-default">
-                    Taking effect {formatDate(pending.scheduled_for)}
-                  </div>
-                ) : isUpgrade ? (
-                  <button
-                    onClick={() => handleChangePlan('enterprise')}
-                    disabled={!!changing}
-                    className="w-full py-2.5 text-center text-xs font-semibold tracking-[0.05em] uppercase bg-[#D03839] text-white rounded hover:bg-[#B82F30] transition-colors mb-5 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {changing === 'enterprise' ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : 'Upgrade to Enterprise'}
-                  </button>
-                ) : null}
-
-                <hr className="border-t border-[#E8E8E4] mb-4" />
-                <p className="text-[11px] font-semibold tracking-[0.09em] uppercase text-[#A8A8A4] mb-2.5">Includes</p>
-                <ul className="flex flex-col gap-1.5 flex-1">
-                  {ENTERPRISE_FEATURES.map(([on, label], i) => (
-                    <li key={i} className={`flex items-start gap-2 text-xs leading-snug ${on ? 'text-[#1A1816]' : 'text-[#A8A8A4]'}`}>
-                      <CheckIcon filled={on} />
-                      {label}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )
-          })()}
-
-        </div>
-      </div>
-
-      {/* No plan */}
-      {!plan && (
-        <div className="max-w-2xl mx-auto bg-white border border-[#E8E8E4] rounded p-8 text-center">
+          </div>
+        </>
+      ) : (
+        /* No plan state */
+        <div className="bg-white border border-[#E8E8E4] rounded p-8 text-center">
+          <div className="w-12 h-12 rounded bg-[#F3F3F0] flex items-center justify-center mx-auto mb-3">
+            <Zap className="w-6 h-6 text-[#A8A8A4]" />
+          </div>
           <p className="text-[14px] font-semibold text-[#1A1816] mb-1">No active plan</p>
-          <p className="text-[13px] text-[#737370]">Complete onboarding to subscribe to a plan.</p>
+          <p className="text-[13px] text-[#737370] mb-4">Complete onboarding to subscribe to a plan.</p>
+          <a
+            href="/onboarding"
+            className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-[#D03839] hover:bg-[#B82F30] text-white text-[13px] font-semibold rounded transition-colors"
+          >
+            Choose a plan
+          </a>
         </div>
       )}
 
