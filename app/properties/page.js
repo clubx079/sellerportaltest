@@ -356,10 +356,10 @@ const PropertiesManagement = () => {
     }
   };
 
-  const handleToggleActive = async (property) => {
+  const handleToggleActive = async (property, forceStatus) => {
     if (!property) return;
     const current = (property.status || 'active').toLowerCase();
-    const nextStatus = current === 'inactive' ? 'active' : 'inactive';
+    const nextStatus = forceStatus || (current === 'inactive' ? 'active' : 'inactive');
     const isManual = property._source === 'manual';
     const nextPropertyStatus = nextStatus === 'inactive' ? 'unavailable' : 'available';
 
@@ -769,25 +769,25 @@ const PropertiesManagement = () => {
                       <span className="text-xs text-[#444441]">{property.property_type || 'N/A'}</span>
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
-                      <div className="flex items-center gap-2">
+                      {viewMode === 'active' && ['active', 'inactive'].includes((property.status || '').toLowerCase()) ? (
+                        <select
+                          value={(property.status || 'inactive').toLowerCase()}
+                          disabled={statusUpdatingId === `${property._source}-${property.id}`}
+                          onChange={(e) => handleToggleActive(property, e.target.value)}
+                          className={`text-[11px] font-medium px-2 py-1 rounded border cursor-pointer focus:outline-none focus:ring-1 focus:ring-[#D03839]/20 disabled:opacity-50 disabled:cursor-not-allowed ${
+                            (property.status || '').toLowerCase() === 'active'
+                              ? 'bg-green-50 text-green-700 border-green-200'
+                              : 'bg-amber-50 text-amber-700 border-amber-200'
+                          }`}
+                        >
+                          <option value="active">Active</option>
+                          <option value="inactive">Inactive</option>
+                        </select>
+                      ) : (
                         <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium border ${getStatusColor(property.status)}`}>
                           {property.status === 'under_review' ? 'Under Review' : (property.status || 'draft')?.charAt(0).toUpperCase() + (property.status || '').slice(1) || 'Draft'}
                         </span>
-                        {viewMode === 'active' && (property.status || '').toLowerCase() !== 'archived' && (
-                          <button
-                            type="button"
-                            disabled={statusUpdatingId === `${property._source}-${property.id}`}
-                            onClick={() => handleToggleActive(property)}
-                            className={`text-[10px] font-medium px-2 py-0.5 rounded border transition-colors ${
-                              (property.status || 'active').toLowerCase() === 'inactive'
-                                ? 'border-green-200 text-green-700 bg-green-50 hover:bg-green-100'
-                                : 'border-amber-200 text-amber-700 bg-amber-50 hover:bg-amber-100'
-                            } disabled:opacity-50 disabled:cursor-not-allowed`}
-                          >
-                            {statusUpdatingId === `${property._source}-${property.id}` ? 'Saving...' : (property.status || 'active').toLowerCase() === 'inactive' ? 'Activate' : 'Deactivate'}
-                          </button>
-                        )}
-                      </div>
+                      )}
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
                       <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium border ${getPropertyStatusColor(property.property_status)}`}>
@@ -891,9 +891,25 @@ const PropertiesManagement = () => {
                       <span className={`inline-flex px-2 py-0.5 rounded text-[10px] font-medium border ${property._source === 'manual' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-amber-50 text-amber-700 border-amber-200'}`}>
                         {property._source === 'manual' ? 'Manual' : 'DeelScout'}
                       </span>
-                      <span className={`inline-flex px-2 py-0.5 rounded text-[10px] font-medium border ${getStatusColor(property.status)}`}>
-                        {(property.status || 'draft')?.charAt(0).toUpperCase() + (property.status || '').slice(1) || 'Draft'}
-                      </span>
+                      {viewMode === 'active' && ['active', 'inactive'].includes((property.status || '').toLowerCase()) ? (
+                        <select
+                          value={(property.status || 'inactive').toLowerCase()}
+                          disabled={statusUpdatingId === `${property._source}-${property.id}`}
+                          onChange={(e) => handleToggleActive(property, e.target.value)}
+                          className={`text-[10px] font-medium px-2 py-0.5 rounded border cursor-pointer focus:outline-none disabled:opacity-50 ${
+                            (property.status || '').toLowerCase() === 'active'
+                              ? 'bg-green-50 text-green-700 border-green-200'
+                              : 'bg-amber-50 text-amber-700 border-amber-200'
+                          }`}
+                        >
+                          <option value="active">Active</option>
+                          <option value="inactive">Inactive</option>
+                        </select>
+                      ) : (
+                        <span className={`inline-flex px-2 py-0.5 rounded text-[10px] font-medium border ${getStatusColor(property.status)}`}>
+                          {property.status === 'under_review' ? 'Under Review' : (property.status || 'draft')?.charAt(0).toUpperCase() + (property.status || '').slice(1) || 'Draft'}
+                        </span>
+                      )}
                       <span className={`inline-flex px-2 py-0.5 rounded text-[10px] font-medium border ${getPropertyStatusColor(property.property_status)}`}>
                         {(property.property_status || 'available')?.replace('_', ' ').split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') || 'Available'}
                       </span>
