@@ -598,7 +598,6 @@ export default function EditPropertyPage() {
           </button>
           <div>
             <h1 className="text-lg md:text-xl font-semibold tracking-tight text-neutral-900">Edit Property</h1>
-            <p className="text-xs text-neutral-500 mt-0.5">Update your wholesale property listing</p>
           </div>
         </div>
         <div className="flex gap-2">
