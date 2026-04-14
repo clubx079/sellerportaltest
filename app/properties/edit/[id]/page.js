@@ -328,9 +328,12 @@ export default function EditPropertyPage() {
     };
     const slugToSave = shouldUpdateSlug ? newShortSlug() : existingSlugRef.current;
 
+    // If listing is active, send back to under_review for re-moderation
+    const effectiveStatus = publishStatus === 'active' ? 'under_review' : publishStatus;
+
     // Create save data object matching the actual database schema
     const saveData = {
-      status: publishStatus,
+      status: effectiveStatus,
       slug: slugToSave,
       address: formData.location || '',
       property_status: formData.property_status || 'available',
@@ -379,7 +382,7 @@ export default function EditPropertyPage() {
           bathrooms: formData.bathrooms ? parseFloat(formData.bathrooms) : null,
           sqft: formData.floor_area ? parseInt(formData.floor_area) : null,
           property_type: formData.property_type || null,
-          status: publishStatus,
+          status: effectiveStatus,
           description: formData.description || null,
           features: formData.repairs ? formData.repairs.split(/\n/).filter(Boolean) : null,
           inspection_report_url: inspectionReport.url || null,
@@ -427,9 +430,16 @@ export default function EditPropertyPage() {
           }
         }
 
+        if (publishStatus === 'active') {
+          fetch('/api/seller/moderate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ property_id: id }),
+          }).catch(() => {});
+        }
         setSuccess(
           publishStatus === 'active'
-            ? 'Property updated and published!'
+            ? 'Property updated and sent for review!'
             : 'Property updated successfully!'
         );
         setTimeout(() => router.push('/properties'), 1500);
@@ -479,9 +489,16 @@ export default function EditPropertyPage() {
         }
       }
 
+      if (publishStatus === 'active') {
+        fetch('/api/seller/moderate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ property_id: data.id }),
+        }).catch(() => {});
+      }
       setSuccess(
         publishStatus === 'active'
-          ? 'Property updated and published!'
+          ? 'Property updated and sent for review!'
           : 'Property updated successfully!'
       );
 
