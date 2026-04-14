@@ -158,8 +158,8 @@ export default function NewPropertyPage() {
       }
     }
 
-    if (!formData.title || !formData.location) {
-      setError('Please fill in Title and Address before saving.');
+    if (!formData.location) {
+      setError('Please fill in the Address before saving.');
       return;
     }
 
@@ -268,7 +268,7 @@ export default function NewPropertyPage() {
     if (formData.state) saveData.state = formData.state;
 
     // Add SEO fields (using correct column names from schema)
-    if (formData.meta_title) saveData.seo_title = formData.meta_title;
+    saveData.seo_title = formData.meta_title || formData.location || '';
     if (formData.meta_description) saveData.seo_description = formData.meta_description;
     if (formData.social_share_image) saveData.social_image_url = formData.social_share_image;
 
@@ -679,18 +679,6 @@ export default function NewPropertyPage() {
           {/* Basic Info Tab */}
           {activeTab === 'basic' && (
             <div className="space-y-6">
-              <div>
-                <label className="block text-[13px] font-semibold text-[#1A1816] mb-2">Property Title *</label>
-                <input
-                  type="text"
-                  value={formData.title || ''}
-                  onChange={(e) => handleInputChange('title', e.target.value)}
-                  className="w-full px-4 py-3 border border-[#E8E8E4] rounded focus:border-[#D03839] focus:outline-none transition-colors text-[13px] text-[#1A1816] placeholder:text-[#A8A8A4]"
-                  placeholder="Luxury Beachfront Hotel in Miami"
-                  required
-                />
-              </div>
-
               <div>
                 <label className="block text-[13px] font-semibold text-[#1A1816] mb-2">Location *</label>
                 <GooglePlacesAutocomplete
@@ -1121,7 +1109,7 @@ export default function NewPropertyPage() {
                 <div className="space-y-4">
                   <div>
                     <p className="text-[12px] text-[#737370] mb-1">Title</p>
-                    <p className="text-[15px] font-semibold text-[#1A1816]">{formData.title || 'No title'}</p>
+                    <p className="text-[15px] font-semibold text-[#1A1816]">{formData.location || 'No address yet'}</p>
                   </div>
                   <div>
                     <p className="text-[12px] text-[#737370] mb-1">Location</p>
