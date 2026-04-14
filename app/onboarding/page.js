@@ -536,6 +536,7 @@ function OnboardingContent() {
   }, [router])
 
   const next = () => setStep(s => s + 1)
+  const back = () => setStep(s => s - 1)
   const { title, sub } = STEP_TITLES[step] || STEP_TITLES[0]
 
   return (
@@ -555,6 +556,12 @@ function OnboardingContent() {
           {/* Heading */}
           {step < 4 && (
             <div className="mb-7">
+              {step === 3 && (
+                <button onClick={back} className="flex items-center gap-1.5 text-[13px] text-[#737370] hover:text-[#1A1816] transition-colors mb-4">
+                  <ChevronRight className="w-3.5 h-3.5 rotate-180" />
+                  Back to plans
+                </button>
+              )}
               <h1 className="text-[24px] font-bold text-[#1A1816] tracking-tight">{title}</h1>
               <p className="text-[14px] text-[#737370] mt-1">{sub}</p>
             </div>
