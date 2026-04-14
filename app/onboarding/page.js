@@ -322,15 +322,17 @@ function CheckoutForm({ session, intentType, onSuccess }) {
     if (submitErr) { setError(submitErr.message); setProcessing(false); return }
 
     const confirmFn = intentType === 'setup' ? stripe.confirmSetup : stripe.confirmPayment
-    const { error: confirmErr } = await confirmFn.call(stripe, {
+    const result = await confirmFn.call(stripe, {
       elements,
       redirect: 'if_required',
     })
 
-    if (confirmErr) {
-      setError(confirmErr.message)
+    if (result.error) {
+      setError(result.error.message)
     } else {
-      onSuccess()
+      const intent = result.setupIntent || result.paymentIntent
+      const pmId = typeof intent?.payment_method === 'string' ? intent.payment_method : intent?.payment_method?.id
+      onSuccess(pmId || null)
     }
     setProcessing(false)
   }
@@ -447,7 +449,13 @@ function StepPayment({ onSuccess }) {
 
   return stripePromise && clientSecret ? (
     <Elements stripe={stripePromise} options={{ clientSecret, terms: { card: 'never' } }}>
-      <CheckoutForm session={session} intentType={intentType} onSuccess={onSuccess} />
+      <CheckoutForm session={session} intentType={intentType} onSuccess={(pmId) => {
+        if (pmId) {
+          const s2 = JSON.parse(sessionStorage.getItem('onboarding') || '{}')
+          sessionStorage.setItem('onboarding', JSON.stringify({ ...s2, pm_id: pmId }))
+        }
+        onSuccess()
+      }} />
     </Elements>
   ) : (
     <div className="p-4 bg-[#FEF3E2] border border-[#F5D9A0] rounded text-[13px] text-[#B5620A] text-center">
@@ -470,6 +478,7 @@ function StepSuccess() {
         body: JSON.stringify({
           seller_id: session.seller_id,
           subscription_id: session.subscription_id,
+          pm_id: session.pm_id || null,
         }),
       }).catch(() => {}) // best-effort; webhook will also fire
     }

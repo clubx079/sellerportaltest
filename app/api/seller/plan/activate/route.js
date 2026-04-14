@@ -12,7 +12,7 @@ export async function POST(request) {
   const toISO = (ts) => (ts && ts > 0) ? new Date(ts * 1000).toISOString() : null
 
   try {
-    const { seller_id, subscription_id } = await request.json()
+    const { seller_id, subscription_id, pm_id } = await request.json()
     if (!seller_id || !subscription_id) {
       return NextResponse.json({ error: 'seller_id and subscription_id are required' }, { status: 400 })
     }
@@ -66,6 +66,14 @@ export async function POST(request) {
         console.error('[activate] insert error:', insertErr)
         return NextResponse.json({ error: insertErr.message }, { status: 500 })
       }
+    }
+
+    // Save payment method as customer-level default so billing page can display it
+    const resolvedPmId = pm_id || sub.default_payment_method || null
+    if (resolvedPmId && customerId) {
+      await stripe.customers.update(customerId, {
+        invoice_settings: { default_payment_method: resolvedPmId },
+      })
     }
 
     // Save stripe_customer_id to seller_applications as a reliable fallback
