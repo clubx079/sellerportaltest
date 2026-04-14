@@ -259,8 +259,8 @@ export default function DashboardPage() {
             <p className="text-[14px] text-[#737370] mt-0.5">{getCurrentDate()}</p>
           </div>
           <div className="flex items-center gap-3">
-            {/* Notification Bell */}
-            <div className="relative" ref={notifRef}>
+            {/* Notification Bell — desktop only (mobile bell is in DashboardLayout navbar) */}
+            <div className="relative hidden lg:block" ref={notifRef}>
               <button
                 onClick={() => setNotifOpen(prev => !prev)}
                 className="relative p-2.5 rounded border border-[#E8E8E4] hover:bg-[#FAFAF8] transition-colors duration-200"
@@ -331,7 +331,7 @@ export default function DashboardPage() {
                 </div>
               )}
             </div>
-            <Link href="/properties/new" className="flex items-center gap-2 px-4 py-2.5 bg-[#1A1816] text-white text-[14px] font-semibold rounded hover:bg-[#2a2826] transition-colors duration-200">
+            <Link href="/properties/new" className="hidden lg:flex items-center gap-2 px-4 py-2.5 bg-[#1A1816] text-white text-[14px] font-semibold rounded hover:bg-[#2a2826] transition-colors duration-200">
               <PlusCircle className="w-4 h-4" />
               Post a Deal
             </Link>
