@@ -50,6 +50,14 @@ export default function NewPropertyPage() {
   const [userId, setUserId] = useState(null);
   const [trialPlan, setTrialPlan] = useState(null);
   const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
+  const [upgradeStep, setUpgradeStep] = useState('plans'); // 'plans' | 'payment' | 'success'
+  const [upgradePlan, setUpgradePlan] = useState('pro');
+  const [upgradeCycle, setUpgradeCycle] = useState('monthly');
+  const [upgradeClientSecret, setUpgradeClientSecret] = useState(null);
+  const [upgradeSubId, setUpgradeSubId] = useState(null);
+  const [upgradeIntentType, setUpgradeIntentType] = useState(null);
+  const [upgradeLoading, setUpgradeLoading] = useState(false);
+  const [upgradeError, setUpgradeError] = useState(null);
   const [selectedAddOns, setSelectedAddOns] = useState([]);
   const [addOnClientSecret, setAddOnClientSecret] = useState(null);
   const [addOnLoading, setAddOnLoading] = useState(false);
@@ -170,22 +178,24 @@ export default function NewPropertyPage() {
   };
 
   const handleSave = async (publishStatus = 'draft', options = {}) => {
-    const { skipFeaturedPrompt = false, forceAutoSelectFeatured = false, addOnFlags = null } = options;
+    const { skipFeaturedPrompt = false, forceAutoSelectFeatured = false, addOnFlags = null, bypassLimit = false } = options;
     // Store add-on flags so the save logic can apply them after property creation
     if (addOnFlags) setPendingPublishData({ addOnFlags });
 
-    // Trial limit: only 1 published listing allowed during free trial
-    if (publishStatus === 'active' && trialPlan?.status === 'trialing') {
-      if ((trialPlan.listings_used_this_period ?? 0) >= 1) {
-        setShowUpgradePrompt(true);
-        return;
+    if (!bypassLimit) {
+      // Trial limit: only 1 published listing allowed during free trial
+      if (publishStatus === 'active' && trialPlan?.status === 'trialing') {
+        if ((trialPlan.listings_used_this_period ?? 0) >= 1) {
+          setShowUpgradePrompt(true);
+          return;
+        }
       }
-    }
-    // Pro plan: max 10 listings per billing period
-    if (publishStatus === 'active' && trialPlan?.plan_type === 'pro' && trialPlan?.status === 'active') {
-      if ((trialPlan.listings_used_this_period ?? 0) >= 10) {
-        setShowUpgradePrompt(true);
-        return;
+      // Pro plan: max 10 listings per billing period
+      if (publishStatus === 'active' && trialPlan?.plan_type === 'pro' && trialPlan?.status === 'active') {
+        if ((trialPlan.listings_used_this_period ?? 0) >= 10) {
+          setShowUpgradePrompt(true);
+          return;
+        }
       }
     }
 
@@ -575,32 +585,145 @@ export default function NewPropertyPage() {
         </div>
       )}
 
-      {/* Upgrade prompt modal */}
+      {/* Upgrade modal */}
       {showUpgradePrompt && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-sm p-6">
-            <h3 className="text-[16px] font-bold text-[#1A1816] mb-2">
-              {trialPlan?.plan_type === 'pro' && trialPlan?.status === 'active' ? 'Monthly limit reached' : 'Free trial limit reached'}
-            </h3>
-            <p className="text-[13px] text-[#737370] mb-5">
-              {trialPlan?.plan_type === 'pro' && trialPlan?.status === 'active'
-                ? 'You\'ve used all 10 listings for this billing period. Upgrade to Enterprise for unlimited listings.'
-                : 'You\'ve reached your free trial limit. Upgrade now to publish more listings.'}
-            </p>
-            <div className="flex gap-3">
-              <button
-                onClick={() => setShowUpgradePrompt(false)}
-                className="flex-1 h-[40px] border border-[#E8E8E4] rounded text-[13px] font-medium text-[#1A1816] hover:border-[#1A1816] transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => router.push('/billing')}
-                className="flex-1 h-[40px] bg-[#D03839] hover:bg-[#E0493B] rounded text-[13px] font-semibold text-white transition-colors"
-              >
-                Upgrade Now
-              </button>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-[#E8E8E4]">
+              <h3 className="text-[15px] font-bold text-[#1A1816]">
+                {upgradeStep === 'success' ? 'You\'re all set!' : upgradeStep === 'payment' ? 'Payment details' : trialPlan?.plan_type === 'pro' && trialPlan?.status === 'active' ? 'Upgrade to Enterprise' : 'Choose a plan'}
+              </h3>
+              {upgradeStep !== 'success' && (
+                <button onClick={() => { setShowUpgradePrompt(false); setUpgradeStep('plans'); setUpgradeClientSecret(null); setUpgradeError(null); }} className="p-1.5 rounded hover:bg-[#F0F0EE] transition-colors">
+                  <X size={16} className="text-[#737370]" />
+                </button>
+              )}
             </div>
+
+            {/* Step: Plan Selection */}
+            {upgradeStep === 'plans' && (
+              <div className="px-6 py-5 space-y-4">
+                {!(trialPlan?.plan_type === 'pro' && trialPlan?.status === 'active') && (
+                  <p className="text-[13px] text-[#737370]">You've reached your free trial limit. Pick a plan to keep publishing.</p>
+                )}
+                {trialPlan?.plan_type === 'pro' && trialPlan?.status === 'active' && (
+                  <p className="text-[13px] text-[#737370]">You've used all 10 listings this period. Upgrade to Enterprise for unlimited listings.</p>
+                )}
+
+                {/* Billing cycle toggle */}
+                {!(trialPlan?.plan_type === 'pro' && trialPlan?.status === 'active') && (
+                  <div className="flex rounded border border-[#E8E8E4] overflow-hidden text-[12px] font-medium">
+                    <button onClick={() => setUpgradeCycle('monthly')} className={`flex-1 py-2 transition-colors ${upgradeCycle === 'monthly' ? 'bg-[#1A1816] text-white' : 'text-[#737370] hover:bg-[#F0F0EE]'}`}>Monthly</button>
+                    <button onClick={() => setUpgradeCycle('annual')} className={`flex-1 py-2 transition-colors ${upgradeCycle === 'annual' ? 'bg-[#1A1816] text-white' : 'text-[#737370] hover:bg-[#F0F0EE]'}`}>Annual <span className="text-[10px] text-green-600 font-semibold">Save 20%</span></button>
+                  </div>
+                )}
+
+                {/* Plan cards */}
+                <div className="space-y-3">
+                  {!(trialPlan?.plan_type === 'pro' && trialPlan?.status === 'active') && (
+                    <button
+                      onClick={() => setUpgradePlan('pro')}
+                      className={`w-full text-left p-4 rounded-lg border-2 transition-colors ${upgradePlan === 'pro' ? 'border-[#D03839] bg-[#FEF2F2]' : 'border-[#E8E8E4] hover:border-[#D03839]/40'}`}
+                    >
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-[14px] font-semibold text-[#1A1816]">Pro Seller</span>
+                        <span className="text-[14px] font-bold text-[#1A1816]">${upgradeCycle === 'annual' ? 79 : 99}<span className="text-[11px] font-normal text-[#737370]">/mo</span></span>
+                      </div>
+                      <p className="text-[12px] text-[#737370]">10 listings/month · 7-day free trial · Verified badge</p>
+                      {upgradeCycle === 'annual' && <p className="text-[11px] text-green-600 font-medium mt-1">Billed $948/yr · save $240</p>}
+                    </button>
+                  )}
+                  <button
+                    onClick={() => setUpgradePlan('enterprise')}
+                    className={`w-full text-left p-4 rounded-lg border-2 transition-colors ${upgradePlan === 'enterprise' ? 'border-[#D03839] bg-[#FEF2F2]' : 'border-[#E8E8E4] hover:border-[#D03839]/40'}`}
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-[14px] font-semibold text-[#1A1816]">Enterprise</span>
+                      <span className="text-[14px] font-bold text-[#1A1816]">${upgradeCycle === 'annual' ? 239 : 299}<span className="text-[11px] font-normal text-[#737370]">/mo</span></span>
+                    </div>
+                    <p className="text-[12px] text-[#737370]">Unlimited listings · 7-day free trial · Priority support</p>
+                    {upgradeCycle === 'annual' && <p className="text-[11px] text-green-600 font-medium mt-1">Billed $2,868/yr · save $720</p>}
+                  </button>
+                </div>
+
+                {upgradeError && <p className="text-[12px] text-red-600">{upgradeError}</p>}
+
+                <div className="flex gap-3 pt-1">
+                  <button
+                    onClick={() => { setShowUpgradePrompt(false); setUpgradeStep('plans'); setUpgradeError(null); }}
+                    className="flex-1 h-[40px] border border-[#E8E8E4] rounded text-[13px] font-medium text-[#1A1816] hover:border-[#1A1816] transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    disabled={upgradeLoading}
+                    onClick={async () => {
+                      setUpgradeLoading(true);
+                      setUpgradeError(null);
+                      try {
+                        const res = await fetch('/api/seller/plan/create-intent', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ seller_id: userId, plan_type: upgradePlan, billing_cycle: upgradeCycle }),
+                        });
+                        const data = await res.json();
+                        if (!res.ok) throw new Error(data.error || 'Failed to create payment intent');
+                        setUpgradeClientSecret(data.clientSecret);
+                        setUpgradeSubId(data.subscription_id);
+                        setUpgradeIntentType(data.type);
+                        setUpgradeStep('payment');
+                      } catch (err) {
+                        setUpgradeError(err.message);
+                      } finally {
+                        setUpgradeLoading(false);
+                      }
+                    }}
+                    className="flex-1 h-[40px] bg-[#D03839] hover:bg-[#E0493B] rounded text-[13px] font-semibold text-white transition-colors disabled:opacity-50"
+                  >
+                    {upgradeLoading ? 'Loading…' : 'Continue'}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Step: Payment */}
+            {upgradeStep === 'payment' && upgradeClientSecret && stripePromise && (
+              <div className="px-6 py-5">
+                <p className="text-[13px] text-[#737370] mb-4">Enter your card details to start your 7-day free trial. You won't be charged until the trial ends.</p>
+                <Elements stripe={stripePromise} options={{ clientSecret: upgradeClientSecret, appearance: { theme: 'stripe', variables: { colorPrimary: '#D03839', borderRadius: '6px' } } }}>
+                  <UpgradePaymentForm
+                    intentType={upgradeIntentType}
+                    subId={upgradeSubId}
+                    sellerId={userId}
+                    onBack={() => { setUpgradeStep('plans'); setUpgradeClientSecret(null); }}
+                    onSuccess={async (newPlan) => {
+                      setTrialPlan(newPlan);
+                      setUpgradeStep('success');
+                    }}
+                  />
+                </Elements>
+              </div>
+            )}
+
+            {/* Step: Success */}
+            {upgradeStep === 'success' && (
+              <div className="px-6 py-8 text-center space-y-4">
+                <div className="w-14 h-14 rounded-full bg-green-100 flex items-center justify-center mx-auto">
+                  <Check className="w-7 h-7 text-green-600" />
+                </div>
+                <div>
+                  <p className="text-[15px] font-semibold text-[#1A1816] mb-1">Plan activated!</p>
+                  <p className="text-[13px] text-[#737370]">Your listing is being published now.</p>
+                </div>
+                <button
+                  onClick={() => { setShowUpgradePrompt(false); setUpgradeStep('plans'); handleSave('active', { bypassLimit: true }); }}
+                  className="w-full h-[42px] bg-[#D03839] hover:bg-[#E0493B] rounded text-[13px] font-semibold text-white transition-colors"
+                >
+                  Publish Listing
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -1490,5 +1613,70 @@ function AddOnsTab({
         </button>
       )}
     </div>
+  )
+}
+
+// ─── Upgrade Payment Form (Stripe) ───────────────────────────────────────────
+function UpgradePaymentForm({ intentType, subId, sellerId, onBack, onSuccess }) {
+  const stripe = useStripe()
+  const elements = useElements()
+  const [processing, setProcessing] = React.useState(false)
+  const [error, setError] = React.useState(null)
+
+  const handlePay = async (e) => {
+    e.preventDefault()
+    if (!stripe || !elements) return
+    setProcessing(true)
+    setError(null)
+    try {
+      let result
+      if (intentType === 'setup') {
+        result = await stripe.confirmSetup({ elements, redirect: 'if_required' })
+      } else {
+        result = await stripe.confirmPayment({ elements, redirect: 'if_required' })
+      }
+      if (result.error) {
+        setError(result.error.message)
+        setProcessing(false)
+        return
+      }
+      // Activate plan in DB
+      const activateRes = await fetch('/api/seller/plan/activate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ seller_id: sellerId, subscription_id: subId }),
+      })
+      const activateData = await activateRes.json()
+      if (!activateRes.ok) throw new Error(activateData.error || 'Failed to activate plan')
+      // Return a minimal plan object so the parent can update trialPlan state
+      onSuccess({ status: 'trialing', listings_used_this_period: 0 })
+    } catch (err) {
+      setError(err.message)
+      setProcessing(false)
+    }
+  }
+
+  return (
+    <form onSubmit={handlePay} className="space-y-4">
+      <PaymentElement />
+      {error && <p className="text-[12px] text-red-600">{error}</p>}
+      <div className="flex gap-3 pt-1">
+        <button
+          type="button"
+          onClick={onBack}
+          disabled={processing}
+          className="flex-1 h-[40px] border border-[#E8E8E4] rounded text-[13px] font-medium text-[#1A1816] hover:border-[#1A1816] transition-colors disabled:opacity-50"
+        >
+          Back
+        </button>
+        <button
+          type="submit"
+          disabled={processing || !stripe}
+          className="flex-1 h-[40px] bg-[#D03839] hover:bg-[#E0493B] rounded text-[13px] font-semibold text-white transition-colors disabled:opacity-50"
+        >
+          {processing ? 'Processing…' : 'Start Free Trial'}
+        </button>
+      </div>
+    </form>
   )
 }
