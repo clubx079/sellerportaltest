@@ -435,6 +435,29 @@ const PropertiesManagement = () => {
     return sorted[0]?.photo_url || null;
   };
 
+  const AddonTags = ({ property }) => {
+    if (property._source !== 'manual') return null
+    const isBundle = property.is_highlighted && property.is_boosted
+    const tags = []
+    if (isBundle) {
+      tags.push({ label: 'Bundle', cls: 'bg-purple-50 text-purple-700 border-purple-200' })
+    } else {
+      if (property.is_highlighted) tags.push({ label: 'Highlighted', cls: 'bg-[#FEF0EF] text-[#D03839] border-[#F5C0BF]' })
+      if (property.is_boosted)     tags.push({ label: 'Boosted',     cls: 'bg-[#EEF2FF] text-[#4F46E5] border-[#C7D2FE]' })
+    }
+    if (property.is_homepage_featured) tags.push({ label: 'Featured', cls: 'bg-[#E4F5EC] text-[#0F6E56] border-[#B6E4CE]' })
+    if (!tags.length) return <span className="text-[10px] text-[#A8A8A4]">—</span>
+    return (
+      <div className="flex flex-wrap gap-1">
+        {tags.map(t => (
+          <span key={t.label} className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium border ${t.cls}`}>
+            {t.label}
+          </span>
+        ))}
+      </div>
+    )
+  }
+
   // Calculate stats (active = active or published)
   const totalProperties = properties.length;
   const activeProperties = properties.filter(p => (p.status || '') === 'active' || (p.status || '') === 'published').length;
@@ -612,6 +635,7 @@ const PropertiesManagement = () => {
               <col className="w-[110px]" />
               <col className="w-[160px]" />
               <col className="w-[130px]" />
+              <col className="w-[120px]" />
               <col className="w-[240px]" />
             </colgroup>
             <thead className="bg-[#FAFAF8] border-b border-[#E8E8E4]">
@@ -624,6 +648,7 @@ const PropertiesManagement = () => {
                 <th className="px-4 py-3 text-left text-xs font-semibold text-[#444441] uppercase tracking-wider whitespace-nowrap">Type</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-[#444441] uppercase tracking-wider whitespace-nowrap">Status</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-[#444441] uppercase tracking-wider whitespace-nowrap">Property Status</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-[#444441] uppercase tracking-wider whitespace-nowrap">Addons</th>
                 <th className="px-4 py-3 text-right text-xs font-semibold text-[#444441] uppercase tracking-wider whitespace-nowrap">Actions</th>
               </tr>
             </thead>
@@ -658,7 +683,7 @@ const PropertiesManagement = () => {
                 ))
               ) : currentEntries.length === 0 ? (
                 <tr>
-                  <td colSpan="9" className="px-6 py-10 text-center">
+                  <td colSpan="10" className="px-6 py-10 text-center">
                     <Building2 className="w-10 h-10 text-[#D4D4CF] mx-auto mb-2" />
                     <p className="text-[#737370] text-sm font-medium">
                       {viewMode === 'active' ? 'No properties found' : 'No properties in trash'}
@@ -729,6 +754,9 @@ const PropertiesManagement = () => {
                       <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium border ${getPropertyStatusColor(property.property_status)}`}>
                         {(property.property_status || 'available')?.replace('_', ' ').split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') || 'Available'}
                       </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <AddonTags property={property} />
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap min-w-[240px]">
                       <div className="flex items-center justify-end gap-0.5">
@@ -830,6 +858,7 @@ const PropertiesManagement = () => {
                       <span className={`inline-flex px-2 py-0.5 rounded text-[10px] font-medium border ${getPropertyStatusColor(property.property_status)}`}>
                         {(property.property_status || 'available')?.replace('_', ' ').split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') || 'Available'}
                       </span>
+                      <AddonTags property={property} />
                     </div>
                     <p className="text-xs text-[#444441] mt-1 flex items-center gap-1">
                       <MapPin className="w-3 h-3 text-[#A8A8A4] shrink-0" />
