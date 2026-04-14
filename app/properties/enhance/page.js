@@ -35,12 +35,20 @@ function CheckoutForm({ amount, addOns, propertyId, sellerId, onSuccess }) {
       setError(confirmErr.message)
       setProcessing(false)
     } else {
-      // Apply add-on flags to property
+      const thirtyDaysFromNow = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
       const flags = {}
-      if (addOns.includes('highlight') || addOns.includes('bundle')) flags.is_highlighted = true
-      if (addOns.includes('boost') || addOns.includes('bundle')) flags.is_boosted = true
-      if (addOns.includes('homepage')) flags.is_homepage_featured = true
-
+      if (addOns.includes('highlight') || addOns.includes('bundle')) {
+        flags.is_highlighted = true
+        flags.highlight_ends_at = thirtyDaysFromNow
+      }
+      if (addOns.includes('boost') || addOns.includes('bundle')) {
+        flags.is_boosted = true
+        flags.boost_ends_at = thirtyDaysFromNow
+      }
+      if (addOns.includes('homepage')) {
+        flags.is_homepage_featured = true
+        flags.homepage_feature_ends_at = thirtyDaysFromNow
+      }
       await supabase.from('properties').update(flags).eq('id', propertyId)
       onSuccess()
     }
@@ -84,11 +92,31 @@ function EnhanceContent() {
     if (propertyId) {
       supabase
         .from('properties')
-        .select('id, seo_title, address, city, state, is_highlighted, is_boosted, is_homepage_featured')
+        .select('id, seo_title, address, city, state, is_highlighted, highlight_ends_at, is_boosted, boost_ends_at, is_homepage_featured, homepage_feature_ends_at')
         .eq('id', propertyId)
         .eq('seller_id', user.id)
         .single()
-        .then(({ data }) => setProperty(data))
+        .then(async ({ data }) => {
+          if (!data) return
+          // Clear any expired add-ons
+          const now = new Date()
+          const expiredClears = {}
+          if (data.is_highlighted && data.highlight_ends_at && new Date(data.highlight_ends_at) < now) {
+            expiredClears.is_highlighted = false; expiredClears.highlight_ends_at = null
+          }
+          if (data.is_boosted && data.boost_ends_at && new Date(data.boost_ends_at) < now) {
+            expiredClears.is_boosted = false; expiredClears.boost_ends_at = null
+          }
+          if (data.is_homepage_featured && data.homepage_feature_ends_at && new Date(data.homepage_feature_ends_at) < now) {
+            expiredClears.is_homepage_featured = false; expiredClears.homepage_feature_ends_at = null
+          }
+          if (Object.keys(expiredClears).length > 0) {
+            await supabase.from('properties').update(expiredClears).eq('id', propertyId)
+            setProperty({ ...data, ...expiredClears })
+          } else {
+            setProperty(data)
+          }
+        })
     }
   }, [propertyId, router])
 

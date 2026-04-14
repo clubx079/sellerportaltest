@@ -395,8 +395,8 @@ export default function SettingsPage() {
         </div>
       )}
 
-      {/* Logout */}
-      <div className="bg-white rounded border border-[#E8E8E4] p-5">
+      {/* Logout — profile tab only */}
+      {activeTab === 'profile' && <div className="bg-white rounded border border-[#E8E8E4] p-5">
         <div className="flex items-center justify-between">
           <div>
             <p className="text-[14px] font-medium text-[#1A1816]">Sign out</p>
@@ -411,7 +411,7 @@ export default function SettingsPage() {
             Sign out
           </button>
         </div>
-      </div>
+      </div>}
 
       {/* Blocked Tab */}
       {activeTab === 'blocked' && (

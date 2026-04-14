@@ -144,6 +144,25 @@ const PropertiesManagement = () => {
 
       // Sort by created_at descending
       filteredData.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+
+      // Auto-clear expired add-ons for manual properties
+      const now = new Date()
+      const expiredIds = filteredData
+        .filter(p => p._source === 'manual')
+        .filter(p =>
+          (p.is_highlighted && p.highlight_ends_at && new Date(p.highlight_ends_at) < now) ||
+          (p.is_boosted && p.boost_ends_at && new Date(p.boost_ends_at) < now) ||
+          (p.is_homepage_featured && p.homepage_feature_ends_at && new Date(p.homepage_feature_ends_at) < now)
+        )
+      for (const p of expiredIds) {
+        const clears = {}
+        if (p.is_highlighted && p.highlight_ends_at && new Date(p.highlight_ends_at) < now) { clears.is_highlighted = false; clears.highlight_ends_at = null }
+        if (p.is_boosted && p.boost_ends_at && new Date(p.boost_ends_at) < now) { clears.is_boosted = false; clears.boost_ends_at = null }
+        if (p.is_homepage_featured && p.homepage_feature_ends_at && new Date(p.homepage_feature_ends_at) < now) { clears.is_homepage_featured = false; clears.homepage_feature_ends_at = null }
+        supabase.from('properties').update(clears).eq('id', p.id).then(() => {})
+        Object.assign(p, clears)
+      }
+
       setProperties(filteredData);
     } catch (error) {
       console.error('Error fetching properties:', error);
@@ -395,9 +414,13 @@ const PropertiesManagement = () => {
       case 'draft':
       case 'pending':
         return 'bg-yellow-50 text-yellow-700 border-yellow-200';
+      case 'under_review':
+        return 'bg-orange-50 text-orange-700 border-orange-200';
+      case 'rejected':
+        return 'bg-red-50 text-red-700 border-red-200';
       case 'archived':
       case 'inactive':
-        return 'bg-red-50 text-red-700 border-red-200';
+        return 'bg-[#E8E8E4] text-[#737370] border-[#E8E8E4]';
       default:
         return 'bg-[#E8E8E4] text-[#444441] border-[#E8E8E4]';
     }
@@ -435,17 +458,33 @@ const PropertiesManagement = () => {
     return sorted[0]?.photo_url || null;
   };
 
+  const daysLeft = (endsAt) => {
+    if (!endsAt) return null
+    const diff = Math.ceil((new Date(endsAt) - new Date()) / (1000 * 60 * 60 * 24))
+    return diff > 0 ? diff : 0
+  }
+
   const AddonTags = ({ property }) => {
     if (property._source !== 'manual') return null
     const isBundle = property.is_highlighted && property.is_boosted
     const tags = []
     if (isBundle) {
-      tags.push({ label: 'Bundle', cls: 'bg-purple-50 text-purple-700 border-purple-200' })
+      const days = daysLeft(property.highlight_ends_at || property.boost_ends_at)
+      tags.push({ label: days != null ? `Bundle · ${days}d` : 'Bundle', cls: 'bg-purple-50 text-purple-700 border-purple-200' })
     } else {
-      if (property.is_highlighted) tags.push({ label: 'Highlighted', cls: 'bg-[#FEF0EF] text-[#D03839] border-[#F5C0BF]' })
-      if (property.is_boosted)     tags.push({ label: 'Boosted',     cls: 'bg-[#EEF2FF] text-[#4F46E5] border-[#C7D2FE]' })
+      if (property.is_highlighted) {
+        const days = daysLeft(property.highlight_ends_at)
+        tags.push({ label: days != null ? `Highlighted · ${days}d` : 'Highlighted', cls: 'bg-[#FEF0EF] text-[#D03839] border-[#F5C0BF]' })
+      }
+      if (property.is_boosted) {
+        const days = daysLeft(property.boost_ends_at)
+        tags.push({ label: days != null ? `Boosted · ${days}d` : 'Boosted', cls: 'bg-[#EEF2FF] text-[#4F46E5] border-[#C7D2FE]' })
+      }
     }
-    if (property.is_homepage_featured) tags.push({ label: 'Featured', cls: 'bg-[#E4F5EC] text-[#0F6E56] border-[#B6E4CE]' })
+    if (property.is_homepage_featured) {
+      const days = daysLeft(property.homepage_feature_ends_at)
+      tags.push({ label: days != null ? `Featured · ${days}d` : 'Featured', cls: 'bg-[#E4F5EC] text-[#0F6E56] border-[#B6E4CE]' })
+    }
     if (!tags.length) return <span className="text-[10px] text-[#A8A8A4]">—</span>
     return (
       <div className="flex flex-wrap gap-1">
@@ -585,10 +624,10 @@ const PropertiesManagement = () => {
             className="text-xs border border-[#E8E8E4] rounded px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-[#D03839]/20 focus:border-[#D03839] bg-white text-[#1A1816] shrink-0"
           >
             <option value="">Status</option>
-            <option value="draft">Draft</option>
             <option value="active">Active</option>
-            <option value="published">Published</option>
-            <option value="incomplete">Incomplete</option>
+            <option value="under_review">Under Review</option>
+            <option value="rejected">Rejected</option>
+            <option value="draft">Draft</option>
             <option value="inactive">Inactive</option>
           </select>
           <select
@@ -732,7 +771,7 @@ const PropertiesManagement = () => {
                     <td className="px-4 py-3 whitespace-nowrap">
                       <div className="flex items-center gap-2">
                         <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium border ${getStatusColor(property.status)}`}>
-                          {(property.status || 'draft')?.charAt(0).toUpperCase() + (property.status || '').slice(1) || 'Draft'}
+                          {property.status === 'under_review' ? 'Under Review' : (property.status || 'draft')?.charAt(0).toUpperCase() + (property.status || '').slice(1) || 'Draft'}
                         </span>
                         {viewMode === 'active' && (property.status || '').toLowerCase() !== 'archived' && (
                           <button
