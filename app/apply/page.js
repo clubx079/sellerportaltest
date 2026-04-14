@@ -90,7 +90,7 @@ export default function ApplyPage() {
   if (success) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#FAFAF8] p-6">
-        <div className="max-w-md w-full bg-white rounded-3xl shadow-xl border border-[#E8E8E4] p-8 text-center">
+        <div className="max-w-md w-full bg-white rounded shadow-xl border border-[#E8E8E4] p-8 text-center">
           <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
             <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -102,7 +102,7 @@ export default function ApplyPage() {
           </p>
           <button
             onClick={() => router.push('/login')}
-            className="w-full bg-[#D03839] hover:bg-[#E0493B] text-white py-3 rounded-xl font-semibold transition-all"
+            className="w-full bg-[#D03839] hover:bg-[#E0493B] text-white py-3 rounded font-semibold transition-all"
           >
             Back to Login
           </button>
@@ -139,10 +139,10 @@ export default function ApplyPage() {
         </div>
 
         {/* Form */}
-        <div className="bg-white rounded-3xl shadow-xl border border-[#E8E8E4] p-8 lg:p-10">
+        <div className="bg-white rounded shadow-xl border border-[#E8E8E4] p-8 lg:p-10">
           <form onSubmit={handleSubmit} className="space-y-6">
             {error && (
-              <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm">
+              <div className="p-4 bg-red-50 border border-red-200 rounded text-red-700 text-sm">
                 {error}
               </div>
             )}
@@ -161,7 +161,7 @@ export default function ApplyPage() {
                     name="businessName"
                     value={formData.businessName}
                     onChange={handleChange}
-                    className="w-full px-4 py-3 rounded-xl border-2 border-[#E8E8E4] focus:ring-2 focus:ring-[#D03839] focus:border-[#D03839] outline-none transition-all"
+                    className="w-full px-4 py-3 rounded border-2 border-[#E8E8E4] focus:ring-2 focus:ring-[#D03839] focus:border-[#D03839] outline-none transition-all"
                     required
                   />
                 </div>
@@ -174,7 +174,7 @@ export default function ApplyPage() {
                         key={type}
                         type="button"
                         onClick={() => setFormData(prev => ({ ...prev, businessType: type }))}
-                        className={`p-4 rounded-xl border-2 font-semibold transition-all ${
+                        className={`p-4 rounded border-2 font-semibold transition-all ${
                           formData.businessType === type
                             ? 'border-[#D03839] bg-[#FEF0EF] text-[#D03839]'
                             : 'border-[#E8E8E4] hover:border-[#D4D4CF]'
@@ -202,7 +202,7 @@ export default function ApplyPage() {
                     name="contactPersonName"
                     value={formData.contactPersonName}
                     onChange={handleChange}
-                    className="w-full px-4 py-3 rounded-xl border-2 border-[#E8E8E4] focus:ring-2 focus:ring-[#D03839] focus:border-[#D03839] outline-none transition-all"
+                    className="w-full px-4 py-3 rounded border-2 border-[#E8E8E4] focus:ring-2 focus:ring-[#D03839] focus:border-[#D03839] outline-none transition-all"
                     required
                   />
                 </div>
@@ -214,7 +214,7 @@ export default function ApplyPage() {
                     name="email"
                     value={formData.email}
                     onChange={handleChange}
-                    className="w-full px-4 py-3 rounded-xl border-2 border-[#E8E8E4] focus:ring-2 focus:ring-[#D03839] focus:border-[#D03839] outline-none transition-all"
+                    className="w-full px-4 py-3 rounded border-2 border-[#E8E8E4] focus:ring-2 focus:ring-[#D03839] focus:border-[#D03839] outline-none transition-all"
                     required
                   />
                 </div>
@@ -226,7 +226,7 @@ export default function ApplyPage() {
                     name="phone"
                     value={formData.phone}
                     onChange={handleChange}
-                    className="w-full px-4 py-3 rounded-xl border-2 border-[#E8E8E4] focus:ring-2 focus:ring-[#D03839] focus:border-[#D03839] outline-none transition-all"
+                    className="w-full px-4 py-3 rounded border-2 border-[#E8E8E4] focus:ring-2 focus:ring-[#D03839] focus:border-[#D03839] outline-none transition-all"
                     required
                   />
                 </div>
@@ -237,7 +237,7 @@ export default function ApplyPage() {
                     name="dealsPerMonth"
                     value={formData.dealsPerMonth}
                     onChange={handleChange}
-                    className="w-full px-4 py-3 rounded-xl border-2 border-[#E8E8E4] focus:ring-2 focus:ring-[#D03839] focus:border-[#D03839] outline-none transition-all"
+                    className="w-full px-4 py-3 rounded border-2 border-[#E8E8E4] focus:ring-2 focus:ring-[#D03839] focus:border-[#D03839] outline-none transition-all"
                     required
                   >
                     <option value="1-2">1-2</option>
@@ -264,7 +264,7 @@ export default function ApplyPage() {
                     value={formData.primaryMarkets}
                     onChange={handleChange}
                     placeholder="e.g., USA, Europe, Asia"
-                    className="w-full px-4 py-3 rounded-xl border-2 border-[#E8E8E4] focus:ring-2 focus:ring-[#D03839] focus:border-[#D03839] outline-none transition-all"
+                    className="w-full px-4 py-3 rounded border-2 border-[#E8E8E4] focus:ring-2 focus:ring-[#D03839] focus:border-[#D03839] outline-none transition-all"
                     required
                   />
                 </div>
@@ -277,7 +277,7 @@ export default function ApplyPage() {
                         key={type}
                         type="button"
                         onClick={() => handlePropertyTypeToggle(type)}
-                        className={`p-3 rounded-xl border-2 text-sm font-medium transition-all ${
+                        className={`p-3 rounded border-2 text-sm font-medium transition-all ${
                           formData.propertyTypes.includes(type)
                             ? 'border-[#D03839] bg-[#FEF0EF] text-[#D03839]'
                             : 'border-[#E8E8E4] hover:border-[#D4D4CF]'
@@ -299,7 +299,7 @@ export default function ApplyPage() {
                       value={formData.website}
                       onChange={handleChange}
                       placeholder="https://yourwebsite.com"
-                      className="w-full pl-12 pr-4 py-3 rounded-xl border-2 border-[#E8E8E4] focus:ring-2 focus:ring-[#D03839] focus:border-[#D03839] outline-none transition-all"
+                      className="w-full pl-12 pr-4 py-3 rounded border-2 border-[#E8E8E4] focus:ring-2 focus:ring-[#D03839] focus:border-[#D03839] outline-none transition-all"
                     />
                   </div>
                 </div>
@@ -314,7 +314,7 @@ export default function ApplyPage() {
                       value={formData.linkedin}
                       onChange={handleChange}
                       placeholder="https://linkedin.com/in/yourprofile"
-                      className="w-full pl-12 pr-4 py-3 rounded-xl border-2 border-[#E8E8E4] focus:ring-2 focus:ring-[#D03839] focus:border-[#D03839] outline-none transition-all"
+                      className="w-full pl-12 pr-4 py-3 rounded border-2 border-[#E8E8E4] focus:ring-2 focus:ring-[#D03839] focus:border-[#D03839] outline-none transition-all"
                     />
                   </div>
                 </div>
@@ -327,7 +327,7 @@ export default function ApplyPage() {
                     onChange={handleChange}
                     rows={4}
                     placeholder="Describe your business, experience, and why you'd like to join Deelmap..."
-                    className="w-full px-4 py-3 rounded-xl border-2 border-[#E8E8E4] focus:ring-2 focus:ring-[#D03839] focus:border-[#D03839] outline-none transition-all resize-none"
+                    className="w-full px-4 py-3 rounded border-2 border-[#E8E8E4] focus:ring-2 focus:ring-[#D03839] focus:border-[#D03839] outline-none transition-all resize-none"
                   />
                 </div>
               </div>
@@ -337,7 +337,7 @@ export default function ApplyPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-[#D03839] hover:bg-[#E0493B] text-white py-4 rounded-xl font-semibold flex items-center justify-center gap-2 transition-all disabled:opacity-60 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+              className="w-full bg-[#D03839] hover:bg-[#E0493B] text-white py-4 rounded font-semibold flex items-center justify-center gap-2 transition-all disabled:opacity-60 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
             >
               {loading ? (
                 <>

@@ -221,7 +221,7 @@ function LoginForm() {
 
               {/* Error Message */}
               {error && (
-                <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm">
+                <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded text-sm">
                   {error}
                 </div>
               )}

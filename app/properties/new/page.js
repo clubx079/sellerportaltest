@@ -623,7 +623,7 @@ export default function NewPropertyPage() {
           : (trialPlan?.billing_cycle === 'annual' ? '$79/mo' : '$99/mo');
         return (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-            <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm p-6 space-y-4">
+            <div className="bg-white rounded shadow-2xl w-full max-w-sm p-6 space-y-4">
               <div className="flex items-center justify-between">
                 <h3 className="text-[15px] font-bold text-[#1A1816]">Start your subscription</h3>
                 <button onClick={() => { setShowUpgradePrompt(false); setUpgradeError(null); }} className="p-1.5 rounded hover:bg-[#F0F0EE] transition-colors">
@@ -633,7 +633,7 @@ export default function NewPropertyPage() {
               <p className="text-[13px] text-[#737370]">
                 Your free trial allows 1 published listing. To publish more, your trial will end now and your <strong>{planLabel}</strong> subscription ({planPrice}) will begin immediately.{selectedAddOns.length > 0 ? ' You\'ll then be taken back to complete your add-on payment.' : ''}
               </p>
-              <div className="bg-[#FAFAF8] border border-[#E8E8E4] rounded-lg p-3 flex items-center justify-between">
+              <div className="bg-[#FAFAF8] border border-[#E8E8E4] rounded p-3 flex items-center justify-between">
                 <span className="text-[13px] font-medium text-[#1A1816]">{planLabel}</span>
                 <span className="text-[13px] font-bold text-[#1A1816]">{planPrice}</span>
               </div>
@@ -740,7 +740,7 @@ export default function NewPropertyPage() {
 
       {featuredImageModal.open && (
         <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-[1px] flex items-center justify-center p-4">
-          <div className="w-full max-w-md bg-white border border-[#E8E8E4] rounded-lg shadow-2xl overflow-hidden">
+          <div className="w-full max-w-md bg-white border border-[#E8E8E4] rounded shadow-2xl overflow-hidden">
             <div className="px-5 py-4 border-b border-[#E8E8E4] bg-[#FAFAF8]">
               <h3 className="text-[15px] font-semibold text-[#1A1816]">Select featured image</h3>
               <p className="text-[12px] text-[#737370] mt-1">

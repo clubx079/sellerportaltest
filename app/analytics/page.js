@@ -95,7 +95,7 @@ function BarChart({ data, valueKey = 'count', labelKey = 'date', height = 120 })
 
 function StatCard({ title, value, sub, subUp, icon, iconBg, loading }) {
   return (
-    <div className="bg-white border border-[#E8E8E4] rounded-lg px-4 py-5 flex flex-col">
+    <div className="bg-white border border-[#E8E8E4] rounded px-4 py-5 flex flex-col">
       <div className="flex items-start justify-between mb-5">
         <p className="text-[13px] font-medium text-[#737370]">{title}</p>
         <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0" style={{ backgroundColor: iconBg }}>
@@ -224,7 +224,7 @@ export default function SellerAnalyticsPage() {
               <ChevronDown className={`w-3.5 h-3.5 text-[#A8A8A4] shrink-0 transition-transform ${periodOpen ? 'rotate-180' : ''}`} />
             </button>
             {periodOpen && (
-              <div className="absolute right-0 top-full mt-1 bg-white border border-[#E8E8E4] rounded-lg shadow-lg z-20 overflow-hidden min-w-[180px]">
+              <div className="absolute right-0 top-full mt-1 bg-white border border-[#E8E8E4] rounded shadow-lg z-20 overflow-hidden min-w-[180px]">
                 {PERIOD_OPTIONS.map(o => {
                   const range = getPeriodDateRange(o.value);
                   return (
@@ -296,7 +296,7 @@ export default function SellerAnalyticsPage() {
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 mb-4">
 
         {/* Daily views chart */}
-        <div className="lg:col-span-3 bg-white border border-[#E8E8E4] rounded-lg overflow-hidden">
+        <div className="lg:col-span-3 bg-white border border-[#E8E8E4] rounded overflow-hidden">
           <div className="px-4 py-3 border-b border-[#E8E8E4] flex items-center justify-between">
             <div>
               <h2 className="text-[13px] font-semibold text-[#1A1816]">Views over time</h2>
@@ -334,7 +334,7 @@ export default function SellerAnalyticsPage() {
         </div>
 
         {/* Top properties */}
-        <div className="lg:col-span-2 bg-white border border-[#E8E8E4] rounded-lg overflow-hidden">
+        <div className="lg:col-span-2 bg-white border border-[#E8E8E4] rounded overflow-hidden">
           <div className="px-4 py-3 border-b border-[#E8E8E4]">
             <h2 className="text-[13px] font-semibold text-[#1A1816]">Top listings</h2>
             <p className="text-[11px] text-[#A8A8A4]">By views this period</p>
@@ -374,7 +374,7 @@ export default function SellerAnalyticsPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
 
         {/* Device breakdown */}
-        <div className="bg-white border border-[#E8E8E4] rounded-lg overflow-hidden">
+        <div className="bg-white border border-[#E8E8E4] rounded overflow-hidden">
           <div className="px-4 py-3 border-b border-[#E8E8E4]">
             <h2 className="text-[13px] font-semibold text-[#1A1816]">Devices</h2>
           </div>
@@ -409,7 +409,7 @@ export default function SellerAnalyticsPage() {
         </div>
 
         {/* UTM sources */}
-        <div className="bg-white border border-[#E8E8E4] rounded-lg overflow-hidden">
+        <div className="bg-white border border-[#E8E8E4] rounded overflow-hidden">
           <div className="px-4 py-3 border-b border-[#E8E8E4] flex items-center gap-2">
             <Link2 className="w-3.5 h-3.5 text-[#D03839]" />
             <h2 className="text-[13px] font-semibold text-[#1A1816]">Traffic sources</h2>
@@ -443,7 +443,7 @@ export default function SellerAnalyticsPage() {
         </div>
 
         {/* Buyer engagement */}
-        <div className="bg-white border border-[#E8E8E4] rounded-lg overflow-hidden">
+        <div className="bg-white border border-[#E8E8E4] rounded overflow-hidden">
           <div className="px-4 py-3 border-b border-[#E8E8E4]">
             <h2 className="text-[13px] font-semibold text-[#1A1816]">Buyer engagement</h2>
             <p className="text-[11px] text-[#A8A8A4]">% of sessions where buyers</p>
@@ -464,7 +464,7 @@ export default function SellerAnalyticsPage() {
       </div>
 
       {/* Recent viewers table */}
-      <div className="bg-white border border-[#E8E8E4] rounded-lg overflow-hidden">
+      <div className="bg-white border border-[#E8E8E4] rounded overflow-hidden">
         <div className="px-4 py-3 border-b border-[#E8E8E4]">
           <h2 className="text-[13px] font-semibold text-[#1A1816]">Recent buyer activity</h2>
           <p className="text-[11px] text-[#A8A8A4]">Most recent sessions across all listings</p>

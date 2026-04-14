@@ -273,7 +273,7 @@ export default function DashboardPage() {
                 )}
               </button>
               {notifOpen && (
-                <div className="fixed top-[70px] left-3 right-3 lg:absolute lg:top-full lg:left-auto lg:right-0 lg:mt-2 lg:w-[380px] bg-white border border-[#E8E8E4] rounded-lg shadow-xl z-[200] overflow-hidden">
+                <div className="fixed top-[70px] left-3 right-3 lg:absolute lg:top-full lg:left-auto lg:right-0 lg:mt-2 lg:w-[380px] bg-white border border-[#E8E8E4] rounded shadow-xl z-[200] overflow-hidden">
                   <div className="flex items-center justify-between px-4 py-3 border-b border-[#E8E8E4]">
                     <span className="text-[13px] font-semibold text-[#1A1816]">Notifications</span>
                     {notifUnread > 0 && (
