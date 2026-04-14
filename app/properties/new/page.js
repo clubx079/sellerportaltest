@@ -1234,32 +1234,23 @@ export default function NewPropertyPage() {
               userId={userId}
               onPublish={handleSave}
               saving={saving}
+              onBack={() => handleTabChange('seo')}
             />
           )}
 
           {/* ── Step footer ──────────────────────────────────────────────── */}
-          <div className="flex items-center justify-between pt-6 mt-6 border-t border-[#E8E8E4]">
-            <button
-              type="button"
-              onClick={() => {
-                const prevIdx = TAB_ORDER.indexOf(activeTab) - 1;
-                if (prevIdx >= 0) handleTabChange(TAB_ORDER[prevIdx]);
-              }}
-              className={`flex items-center gap-1.5 px-4 py-2 rounded border border-[#E8E8E4] text-[13px] font-medium text-[#737370] hover:border-[#1A1816] hover:text-[#1A1816] transition-colors ${activeTab === 'basic' ? 'invisible' : ''}`}
-            >
-              <ArrowLeft className="w-4 h-4" /> Back
-            </button>
-            {activeTab === 'addons' ? (
+          {activeTab !== 'addons' && (
+            <div className="flex items-center justify-between pt-6 mt-6 border-t border-[#E8E8E4]">
               <button
                 type="button"
-                onClick={() => handleSave('active')}
-                disabled={saving || imageUploadStatus.isUploading}
-                className="flex items-center gap-2 bg-[#D03839] hover:bg-[#E0493B] text-white px-6 py-2.5 rounded text-[13px] font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={() => {
+                  const prevIdx = TAB_ORDER.indexOf(activeTab) - 1;
+                  if (prevIdx >= 0) handleTabChange(TAB_ORDER[prevIdx]);
+                }}
+                className={`flex items-center gap-1.5 px-4 py-2 rounded border border-[#E8E8E4] text-[13px] font-medium text-[#737370] hover:border-[#1A1816] hover:text-[#1A1816] transition-colors ${activeTab === 'basic' ? 'invisible' : ''}`}
               >
-                <Eye size={15} />
-                {saving ? 'Publishing…' : imageUploadStatus.isUploading ? 'Please wait…' : 'Publish Listing'}
+                <ArrowLeft className="w-4 h-4" /> Back
               </button>
-            ) : (
               <button
                 type="button"
                 onClick={handleContinue}
@@ -1267,8 +1258,8 @@ export default function NewPropertyPage() {
               >
                 Continue <ChevronRight className="w-4 h-4" />
               </button>
-            )}
-          </div>
+            </div>
+          )}
 
         </div>
       </div>
@@ -1322,7 +1313,7 @@ function AddOnsTab({
   addOnClientSecret, setAddOnClientSecret,
   addOnLoading, setAddOnLoading,
   addOnError, setAddOnError,
-  userId, onPublish, saving,
+  userId, onPublish, saving, onBack,
 }) {
   const toggleAddOn = (id) => {
     setSelectedAddOns(prev => {
@@ -1464,6 +1455,16 @@ function AddOnsTab({
             : <>Publish for Free <Eye size={16} /></>}
         </button>
       )}
+
+      <div className="pt-4 border-t border-[#E8E8E4]">
+        <button
+          type="button"
+          onClick={onBack}
+          className="flex items-center gap-1.5 px-4 py-2 rounded border border-[#E8E8E4] text-[13px] font-medium text-[#737370] hover:border-[#1A1816] hover:text-[#1A1816] transition-colors"
+        >
+          <ArrowLeft className="w-4 h-4" /> Back
+        </button>
+      </div>
     </div>
   )
 }
