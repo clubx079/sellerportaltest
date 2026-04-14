@@ -203,18 +203,6 @@ export default function BillingPage() {
         {/* ── Current Plan ─────────────────────────────────────────────── */}
         <Section
           title="Current Plan"
-          action={
-            plan?.stripe_subscription_id && (
-              <button
-                onClick={openPortal}
-                disabled={portalLoading}
-                className="flex items-center gap-1.5 text-[12px] font-semibold text-[#D03839] hover:text-[#E0493B] transition-colors disabled:opacity-50"
-              >
-                {portalLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ExternalLink className="w-3.5 h-3.5" />}
-                Manage
-              </button>
-            )
-          }
         >
           {loading ? (
             <div className="flex items-center gap-2 text-[#737370] text-[13px]">
