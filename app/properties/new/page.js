@@ -595,7 +595,7 @@ export default function NewPropertyPage() {
                 </button>
               </div>
               <p className="text-[13px] text-[#737370]">
-                Your free trial allows 1 published listing. To publish more, your trial will end now and your <strong>{planLabel}</strong> subscription ({planPrice}) will begin immediately.
+                Your free trial allows 1 published listing. To publish more, your trial will end now and your <strong>{planLabel}</strong> subscription ({planPrice}) will begin immediately.{selectedAddOns.length > 0 ? ' You\'ll then be taken back to complete your add-on payment.' : ''}
               </p>
               <div className="bg-[#FAFAF8] border border-[#E8E8E4] rounded-lg p-3 flex items-center justify-between">
                 <span className="text-[13px] font-medium text-[#1A1816]">{planLabel}</span>
@@ -624,7 +624,13 @@ export default function NewPropertyPage() {
                       if (!res.ok) throw new Error(data.error || 'Failed to start subscription');
                       setTrialPlan(prev => ({ ...prev, status: 'active', listings_used_this_period: 0 }));
                       setShowUpgradePrompt(false);
-                      handleSave('active', { bypassLimit: true });
+                      if (selectedAddOns.length > 0) {
+                        // Add-ons were selected but not paid — go back to add-ons tab to complete payment.
+                        // trialPlan is now 'active' so the limit check won't fire when onPublish is called.
+                        setActiveTab('addons');
+                      } else {
+                        handleSave('active', { bypassLimit: true });
+                      }
                     } catch (err) {
                       setUpgradeError(err.message);
                     } finally {
