@@ -135,16 +135,17 @@ export default function NewPropertyPage() {
     const price = data.price ? `$${Number(data.price).toLocaleString()}` : '';
     const parts = [beds, baths, type].filter(Boolean).join(', ');
     const title = addr ? addr.slice(0, 60) : '';
-    const desc = [
+    const rawDesc = [
       addr ? `${type || 'Property'} for sale at ${addr}.` : '',
       parts ? `${parts}.` : '',
       price ? `Asking ${price}.` : '',
       'Contact seller for more details on this wholesale deal.'
-    ].filter(Boolean).join(' ').slice(0, 160);
+    ].filter(Boolean).join(' ');
+    const desc = rawDesc.length <= 160 ? rawDesc : rawDesc.slice(0, 160).replace(/\s+\S*$/, '');
     return { title, desc };
   };
 
-  const TAB_ORDER = ['basic', 'images', 'ownership', 'content', 'seo', 'addons', 'preview'];
+  const TAB_ORDER = ['basic', 'images', 'ownership', 'content', 'seo', 'addons'];
 
   // ── Step completion ──────────────────────────────────────────────────────────
   const isBasicComplete = !!(formData.location && formData.price && formData.property_type && formData.bedrooms && formData.bathrooms && formData.floor_area);
@@ -166,6 +167,9 @@ export default function NewPropertyPage() {
     if (tabId === 'basic') return isBasicComplete;
     if (tabId === 'images') return isImagesComplete;
     if (tabId === 'ownership') return isOwnershipComplete;
+    if (tabId === 'content') return isBasicComplete && isImagesComplete && isOwnershipComplete;
+    if (tabId === 'seo') return isBasicComplete && isImagesComplete && isOwnershipComplete;
+    if (tabId === 'addons') return isBasicComplete && isImagesComplete && isOwnershipComplete;
     return false;
   };
 
@@ -790,7 +794,6 @@ export default function NewPropertyPage() {
             { id: 'content',   label: 'Content' },
             { id: 'seo',       label: 'SEO & Social' },
             { id: 'addons',    label: 'Add-Ons' },
-            { id: 'preview',   label: 'Preview' },
           ].map((tab, idx) => {
             const accessible = isTabAccessible(tab.id);
             const complete   = isTabComplete(tab.id);
@@ -1233,128 +1236,18 @@ export default function NewPropertyPage() {
           )}
 
           {/* ── Step footer ──────────────────────────────────────────────── */}
-          {activeTab !== 'preview' && (
-            <div className="flex items-center justify-between pt-6 mt-6 border-t border-[#E8E8E4]">
-              <button
-                type="button"
-                onClick={() => {
-                  const prevIdx = TAB_ORDER.indexOf(activeTab) - 1;
-                  if (prevIdx >= 0) handleTabChange(TAB_ORDER[prevIdx]);
-                }}
-                className={`flex items-center gap-1.5 px-4 py-2 rounded border border-[#E8E8E4] text-[13px] font-medium text-[#737370] hover:border-[#1A1816] hover:text-[#1A1816] transition-colors ${activeTab === 'basic' ? 'invisible' : ''}`}
-              >
-                <ArrowLeft className="w-4 h-4" /> Back
-              </button>
-              <button
-                type="button"
-                onClick={handleContinue}
-                className="flex items-center gap-1.5 px-5 py-2 bg-[#D03839] hover:bg-[#E0493B] text-white text-[13px] font-semibold rounded transition-colors"
-              >
-                Continue <ChevronRight className="w-4 h-4" />
-              </button>
-            </div>
-          )}
-
-          {/* Preview Tab */}
-          {activeTab === 'preview' && (
-            <>
-            <div className="space-y-6">
-              <div className="bg-[#FAFAF8] border border-[#E8E8E4] rounded p-6">
-                <h3 className="text-[15px] font-semibold text-[#1A1816] mb-4">Property Preview</h3>
-                <div className="space-y-4">
-                  <div>
-                    <p className="text-[12px] text-[#737370] mb-1">Title</p>
-                    <p className="text-[15px] font-semibold text-[#1A1816]">{formData.location || 'No address yet'}</p>
-                  </div>
-                  <div>
-                    <p className="text-[12px] text-[#737370] mb-1">Location</p>
-                    <p className="text-[13px] text-[#1A1816]">{formData.location || 'No location'}</p>
-                  </div>
-                  <div className="grid grid-cols-3 gap-4">
-                    <div>
-                      <p className="text-[12px] text-[#737370] mb-1">Price</p>
-                      <p className="text-[13px] font-semibold text-[#1A1816]">${parseFloat(formData.price || 0).toLocaleString()}</p>
-                    </div>
-                    <div>
-                      <p className="text-[12px] text-[#737370] mb-1">Beds</p>
-                      <p className="text-[13px] text-[#1A1816]">{formData.bedrooms || 0}</p>
-                    </div>
-                    <div>
-                      <p className="text-[12px] text-[#737370] mb-1">Area</p>
-                      <p className="text-[13px] text-[#1A1816]">{formData.floor_area ? `${formData.floor_area} sqft` : 'N/A'}</p>
-                    </div>
-                  </div>
-                  {formData.description && (
-                    <div>
-                      <p className="text-[12px] text-[#737370] mb-2">Description</p>
-                      <div
-                        className="text-[13px] text-[#1A1816] prose prose-sm max-w-none"
-                        dangerouslySetInnerHTML={{ __html: formData.description }}
-                      />
-                    </div>
-                  )}
-                  {formData.repairs && (
-                    <div>
-                      <p className="text-[12px] text-[#737370] mb-2">Repairs & Renovation</p>
-                      <div
-                        className="text-[13px] text-[#1A1816] prose prose-sm max-w-none"
-                        dangerouslySetInnerHTML={{ __html: formData.repairs }}
-                      />
-                    </div>
-                  )}
-                  {imageUploadStatus.images.filter(img => img.status === 'completed').length > 0 && (
-                    <div>
-                      <p className="text-[12px] text-[#737370] mb-2">
-                        Images ({imageUploadStatus.images.filter(img => img.status === 'completed').length})
-                        {imageUploadStatus.images.filter(img => img.status === 'completed').length > 8 &&
-                          <span className="text-[#A8A8A4]">
-                            {showAllPreviewImages ? ' • Showing all' : ' • Showing first 8'}
-                          </span>
-                        }
-                      </p>
-                      {imageUploadStatus.images.filter(img => img.status === 'completed').length > 8 && (
-                        <button
-                          type="button"
-                          onClick={() => setShowAllPreviewImages(prev => !prev)}
-                          className="text-[12px] font-medium text-[#D03839] hover:text-[#E0493B] mb-3"
-                        >
-                          {showAllPreviewImages ? 'Show first 8' : 'Show all'}
-                        </button>
-                      )}
-                      <div className="grid grid-cols-4 gap-3">
-                        {imageUploadStatus.images
-                          .filter(img => img.status === 'completed')
-                          .slice(0, showAllPreviewImages ? undefined : 8)
-                          .map((img, idx) => (
-                            <div key={idx} className="relative group">
-                              <img
-                                src={img.imageUrl}
-                                alt={`Preview ${idx + 1}`}
-                                className="w-full h-32 object-cover rounded border border-[#E8E8E4]"
-                              />
-                              {img.isFeatured && (
-                                <div className="absolute top-1 left-1 px-1.5 py-0.5 bg-yellow-500 text-white text-[10px] font-medium rounded">
-                                  Featured
-                                </div>
-                              )}
-                            </div>
-                          ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Publish footer */}
-            <div className="flex items-center justify-between pt-6 mt-6 border-t border-[#E8E8E4]">
-              <button
-                type="button"
-                onClick={() => handleTabChange(TAB_ORDER[TAB_ORDER.indexOf('preview') - 1])}
-                className="flex items-center gap-1.5 px-4 py-2 rounded border border-[#E8E8E4] text-[13px] font-medium text-[#737370] hover:border-[#1A1816] hover:text-[#1A1816] transition-colors"
-              >
-                <ArrowLeft className="w-4 h-4" /> Back
-              </button>
+          <div className="flex items-center justify-between pt-6 mt-6 border-t border-[#E8E8E4]">
+            <button
+              type="button"
+              onClick={() => {
+                const prevIdx = TAB_ORDER.indexOf(activeTab) - 1;
+                if (prevIdx >= 0) handleTabChange(TAB_ORDER[prevIdx]);
+              }}
+              className={`flex items-center gap-1.5 px-4 py-2 rounded border border-[#E8E8E4] text-[13px] font-medium text-[#737370] hover:border-[#1A1816] hover:text-[#1A1816] transition-colors ${activeTab === 'basic' ? 'invisible' : ''}`}
+            >
+              <ArrowLeft className="w-4 h-4" /> Back
+            </button>
+            {activeTab === 'addons' ? (
               <button
                 type="button"
                 onClick={() => handleSave('active')}
@@ -1364,9 +1257,17 @@ export default function NewPropertyPage() {
                 <Eye size={15} />
                 {saving ? 'Publishing…' : imageUploadStatus.isUploading ? 'Please wait…' : 'Publish Listing'}
               </button>
-            </div>
-            </>
-          )}
+            ) : (
+              <button
+                type="button"
+                onClick={handleContinue}
+                className="flex items-center gap-1.5 px-5 py-2 bg-[#D03839] hover:bg-[#E0493B] text-white text-[13px] font-semibold rounded transition-colors"
+              >
+                Continue <ChevronRight className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+
         </div>
       </div>
     </div>
