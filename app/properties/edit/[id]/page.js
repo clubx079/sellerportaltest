@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import { Save, ArrowLeft, Upload, X, AlertCircle } from 'lucide-react';
+import { Save, ArrowLeft, Upload, X, AlertCircle, Home, FileText } from 'lucide-react';
 import ImageGalleryManager from '@/components/properties/ImageGalleryManager';
 import TextEditor from '@/components/forms/TextEditor';
 import GooglePlacesAutocomplete from '@/components/forms/GooglePlacesAutocomplete';
@@ -66,6 +66,14 @@ export default function EditPropertyPage() {
   const [inspectionReport, setInspectionReport] = useState({
     url: null,
     key: null,
+    uploading: false
+  });
+
+  const [sellerType, setSellerType] = useState('owner');
+  const [contractUpload, setContractUpload] = useState({
+    url: null,
+    key: null,
+    filename: null,
     uploading: false
   });
 
@@ -161,6 +169,13 @@ export default function EditPropertyPage() {
           key: data.inspection_report_key || null,
           uploading: false
         });
+        setSellerType(data.seller_type || 'owner');
+        setContractUpload({
+          url: data.contract_url || null,
+          key: data.contract_key || null,
+          filename: data.contract_url ? 'Contract' : null,
+          uploading: false
+        });
         return;
       }
 
@@ -246,6 +261,13 @@ export default function EditPropertyPage() {
       setInspectionReport({
         url: d.inspection_report_url || null,
         key: d.inspection_report_key || null,
+        uploading: false
+      });
+      setSellerType(d.seller_type || 'owner');
+      setContractUpload({
+        url: d.contract_url || null,
+        key: d.contract_key || null,
+        filename: d.contract_url ? 'Contract' : null,
         uploading: false
       });
     } catch (err) {
@@ -360,6 +382,11 @@ export default function EditPropertyPage() {
     // Add inspection report if provided
     if (inspectionReport.url) saveData.inspection_report_url = inspectionReport.url;
     if (inspectionReport.key) saveData.inspection_report_key = inspectionReport.key;
+
+    // Ownership
+    if (sellerType) saveData.seller_type = sellerType;
+    if (contractUpload.url) saveData.contract_url = contractUpload.url;
+    if (contractUpload.key) saveData.contract_key = contractUpload.key;
 
     try {
       if (sourceType === 'scraped') {
@@ -574,6 +601,42 @@ export default function EditPropertyPage() {
       }
     }
     setInspectionReport({ url: null, key: null, uploading: false });
+  };
+
+  const handleContractUpload = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+    const allowedTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+    if (!allowedTypes.includes(file.type)) {
+      setError('Please upload a PDF or DOC file');
+      return;
+    }
+    setContractUpload(prev => ({ ...prev, uploading: true }));
+    setError(null);
+    try {
+      const fileName = `contracts/${userId}/${Date.now()}-${file.name}`;
+      const { error: uploadError } = await supabase.storage
+        .from(storageBucket)
+        .upload(fileName, file, { cacheControl: '3600', upsert: false });
+      if (uploadError) throw uploadError;
+      const { data: { publicUrl } } = supabase.storage.from(storageBucket).getPublicUrl(fileName);
+      setContractUpload({ url: publicUrl, key: fileName, filename: file.name, uploading: false });
+    } catch (err) {
+      console.error('Contract upload failed:', err);
+      setError('Failed to upload contract');
+      setContractUpload(prev => ({ ...prev, uploading: false }));
+    }
+  };
+
+  const handleRemoveContract = async () => {
+    if (contractUpload.key) {
+      try {
+        await supabase.storage.from(storageBucket).remove([contractUpload.key]);
+      } catch (err) {
+        console.error('Failed to delete contract:', err);
+      }
+    }
+    setContractUpload({ url: null, key: null, filename: null, uploading: false });
   };
 
   if (loadingProperty) {
@@ -836,61 +899,87 @@ export default function EditPropertyPage() {
 
           {/* Ownership Tab */}
           {activeTab === 'ownership' && (
-            <div>
-              <h3 className="text-lg font-semibold text-[#1A1816] mb-2">Inspection Report</h3>
-              <p className="text-sm text-[#737370] mb-6">
-                Upload the inspection report for this property (PDF or DOC format)
-              </p>
-
-              {!inspectionReport.url ? (
-                <div className="border-2 border-dashed border-neutral-300 rounded p-8 text-center">
-                  <Upload className="w-12 h-12 text-neutral-400 mx-auto mb-4" />
-                  <p className="text-sm text-neutral-600 mb-4">
-                    Upload PDF or DOC file
-                  </p>
-                  <input
-                    type="file"
-                    id="inspection-upload"
-                    accept=".pdf,.doc,.docx"
-                    onChange={handleInspectionUpload}
-                    className="hidden"
-                    disabled={inspectionReport.uploading}
-                  />
-                  <label
-                    htmlFor="inspection-upload"
-                    className={`inline-flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary-700 text-white rounded text-sm font-medium transition-colors cursor-pointer ${
-                      inspectionReport.uploading ? 'opacity-50 cursor-not-allowed' : ''
+            <div className="space-y-6">
+              <div>
+                <h3 className="text-[15px] font-semibold text-[#1A1816] mb-1">Your relationship to this property</h3>
+                <p className="text-[13px] text-[#737370] mb-5">This helps buyers understand the deal structure.</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setSellerType('owner')}
+                    className={`flex flex-col items-center gap-3 p-5 rounded border-2 transition-all ${
+                      sellerType === 'owner'
+                        ? 'border-[#D03839] bg-[#FEF0EF]'
+                        : 'border-[#E8E8E4] bg-white hover:border-[#1A1816]'
                     }`}
                   >
-                    {inspectionReport.uploading ? 'Uploading...' : 'Choose File'}
-                  </label>
+                    <Home className={`w-7 h-7 ${sellerType === 'owner' ? 'text-[#D03839]' : 'text-[#737370]'}`} />
+                    <div className="text-center">
+                      <p className={`text-[13px] font-semibold ${sellerType === 'owner' ? 'text-[#D03839]' : 'text-[#1A1816]'}`}>I&apos;m the Owner</p>
+                      <p className="text-[11px] text-[#737370] mt-0.5">I own this property directly</p>
+                    </div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSellerType('wholesaler')}
+                    className={`flex flex-col items-center gap-3 p-5 rounded border-2 transition-all ${
+                      sellerType === 'wholesaler'
+                        ? 'border-[#D03839] bg-[#FEF0EF]'
+                        : 'border-[#E8E8E4] bg-white hover:border-[#1A1816]'
+                    }`}
+                  >
+                    <FileText className={`w-7 h-7 ${sellerType === 'wholesaler' ? 'text-[#D03839]' : 'text-[#737370]'}`} />
+                    <div className="text-center">
+                      <p className={`text-[13px] font-semibold ${sellerType === 'wholesaler' ? 'text-[#D03839]' : 'text-[#1A1816]'}`}>I&apos;m a Wholesaler</p>
+                      <p className="text-[11px] text-[#737370] mt-0.5">I have a contract to assign</p>
+                    </div>
+                  </button>
                 </div>
-              ) : (
-                <div className="bg-neutral-50 border border-neutral-200 rounded p-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-primary/10 rounded flex items-center justify-center">
-                        <Upload className="w-5 h-5 text-primary" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-neutral-900">Inspection Report</p>
-                        <a
-                          href={inspectionReport.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-xs text-primary hover:underline"
-                        >
-                          View Document
-                        </a>
+              </div>
+
+              {sellerType === 'wholesaler' && (
+                <div>
+                  <h3 className="text-[15px] font-semibold text-[#1A1816] mb-1">Assignment Contract</h3>
+                  <p className="text-[13px] text-[#737370] mb-4">Upload your signed assignment contract. (PDF or DOC)</p>
+                  {!contractUpload.url ? (
+                    <div className="border border-dashed border-[#E8E8E4] rounded p-8 text-center">
+                      <FileText className="w-12 h-12 text-[#A8A8A4] mx-auto mb-4" />
+                      <p className="text-[13px] text-[#737370] mb-4">Upload PDF or DOC file</p>
+                      <input
+                        type="file"
+                        id="contract-upload"
+                        accept=".pdf,.doc,.docx"
+                        onChange={handleContractUpload}
+                        className="hidden"
+                        disabled={contractUpload.uploading}
+                      />
+                      <label
+                        htmlFor="contract-upload"
+                        className={`inline-flex items-center gap-2 px-4 py-2 bg-[#D03839] hover:bg-[#B82F30] text-white rounded text-[13px] font-medium transition-colors cursor-pointer ${
+                          contractUpload.uploading ? 'opacity-50 cursor-not-allowed' : ''
+                        }`}
+                      >
+                        {contractUpload.uploading ? 'Uploading...' : 'Choose File'}
+                      </label>
+                    </div>
+                  ) : (
+                    <div className="bg-[#FAFAF8] border border-[#E8E8E4] rounded p-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-[#D03839]/10 rounded flex items-center justify-center">
+                            <FileText className="w-5 h-5 text-[#D03839]" />
+                          </div>
+                          <div>
+                            <p className="text-[13px] font-medium text-[#1A1816]">{contractUpload.filename || 'Contract'}</p>
+                            <a href={contractUpload.url} target="_blank" rel="noopener noreferrer" className="text-[12px] text-[#D03839] hover:underline">View Document</a>
+                          </div>
+                        </div>
+                        <button onClick={handleRemoveContract} className="p-2 rounded hover:bg-[#E8E8E4] text-[#737370] transition-colors">
+                          <X className="w-4 h-4" />
+                        </button>
                       </div>
                     </div>
-                    <button
-                      onClick={handleRemoveInspection}
-                      className="p-2 rounded hover:bg-neutral-200 text-neutral-500 transition-colors"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
+                  )}
                 </div>
               )}
             </div>
@@ -917,6 +1006,50 @@ export default function EditPropertyPage() {
                   content={formData.repairs || ''}
                   placeholder="Detail any repairs needed, recent renovations, or planned improvements..."
                 />
+              </div>
+
+              <div>
+                <label className="block text-[13px] font-semibold text-[#1A1816] mb-1">Inspection Report <span className="text-[#A8A8A4] font-normal">(optional)</span></label>
+                <p className="text-[12px] text-[#737370] mb-3">Upload the inspection report for this property (PDF or DOC)</p>
+                {!inspectionReport.url ? (
+                  <div className="border border-dashed border-[#E8E8E4] rounded p-6 text-center">
+                    <Upload className="w-8 h-8 text-[#A8A8A4] mx-auto mb-3" />
+                    <p className="text-[13px] text-[#737370] mb-3">PDF or DOC file</p>
+                    <input
+                      type="file"
+                      id="inspection-upload"
+                      accept=".pdf,.doc,.docx"
+                      onChange={handleInspectionUpload}
+                      className="hidden"
+                      disabled={inspectionReport.uploading}
+                    />
+                    <label
+                      htmlFor="inspection-upload"
+                      className={`inline-flex items-center gap-2 px-4 py-2 bg-[#D03839] hover:bg-[#B82F30] text-white rounded text-[13px] font-medium transition-colors cursor-pointer ${
+                        inspectionReport.uploading ? 'opacity-50 cursor-not-allowed' : ''
+                      }`}
+                    >
+                      {inspectionReport.uploading ? 'Uploading...' : 'Choose File'}
+                    </label>
+                  </div>
+                ) : (
+                  <div className="bg-[#FAFAF8] border border-[#E8E8E4] rounded p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 bg-[#D03839]/10 rounded flex items-center justify-center">
+                          <Upload className="w-4 h-4 text-[#D03839]" />
+                        </div>
+                        <div>
+                          <p className="text-[13px] font-medium text-[#1A1816]">Inspection Report</p>
+                          <a href={inspectionReport.url} target="_blank" rel="noopener noreferrer" className="text-[12px] text-[#D03839] hover:underline">View Document</a>
+                        </div>
+                      </div>
+                      <button onClick={handleRemoveInspection} className="p-2 rounded hover:bg-[#E8E8E4] text-[#737370] transition-colors">
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}
