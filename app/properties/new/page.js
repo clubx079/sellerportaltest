@@ -788,7 +788,7 @@ export default function NewPropertyPage() {
       {/* Tabs */}
       <div className="bg-white rounded border border-[#E8E8E4] overflow-hidden">
         {/* Step indicator */}
-        <div className="flex border-b border-[#E8E8E4] overflow-x-auto scrollbar-hide">
+        <div className="flex border-b border-[#E8E8E4]">
           {[
             { id: 'basic',     label: 'Basic Info' },
             { id: 'images',    label: 'Images' },
@@ -805,7 +805,7 @@ export default function NewPropertyPage() {
                 key={tab.id}
                 onClick={() => accessible && handleTabChange(tab.id)}
                 disabled={!accessible}
-                className={`flex items-center gap-1.5 px-3 md:px-5 py-3.5 whitespace-nowrap text-[12px] font-medium transition-colors border-b-2 flex-shrink-0
+                className={`flex-1 flex items-center justify-center gap-1.5 px-1 md:px-5 py-3.5 text-[12px] font-medium transition-colors border-b-2
                   ${active    ? 'border-[#D03839] text-[#D03839] bg-[#FEF0EF]/30'
                   : complete  ? 'border-transparent text-[#0F6E56] hover:bg-[#FAFAF8]'
                   : accessible ? 'border-transparent text-[#737370] hover:text-[#1A1816] hover:bg-[#FAFAF8]'

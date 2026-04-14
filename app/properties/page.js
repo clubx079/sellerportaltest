@@ -598,9 +598,10 @@ const PropertiesManagement = () => {
 
       {/* Table Card */}
       <div className="bg-white rounded border border-[#E8E8E4] overflow-hidden shadow-card">
-        {/* Controls — single row */}
-        <div className="px-4 py-3 border-b border-[#E8E8E4] flex items-center gap-2 flex-wrap">
-          <div className="relative flex-1 min-w-[160px]">
+        {/* Controls */}
+        <div className="px-4 py-3 border-b border-[#E8E8E4] flex flex-col md:flex-row md:items-center gap-2">
+          {/* Search — full width on mobile */}
+          <div className="relative w-full md:flex-1 md:min-w-[160px]">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#A8A8A4]" />
             <input
               type="text"
@@ -618,48 +619,38 @@ const PropertiesManagement = () => {
               </button>
             )}
           </div>
-          <select
-            value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value)}
-            className="text-xs border border-[#E8E8E4] rounded px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-[#D03839]/20 focus:border-[#D03839] bg-white text-[#1A1816] shrink-0"
-          >
-            <option value="">Status</option>
-            <option value="active">Active</option>
-            <option value="under_review">Under Review</option>
-            <option value="rejected">Rejected</option>
-            <option value="draft">Draft</option>
-            <option value="inactive">Inactive</option>
-          </select>
-          <select
-            value={filterPropertyStatus}
-            onChange={(e) => setFilterPropertyStatus(e.target.value)}
-            className="text-xs border border-[#E8E8E4] rounded px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-[#D03839]/20 focus:border-[#D03839] bg-white text-[#1A1816] shrink-0"
-          >
-            <option value="">Property Status</option>
-            <option value="available">Available</option>
-            <option value="pending">Pending</option>
-            <option value="sold">Sold</option>
-            <option value="under_contract">Under Contract</option>
-          </select>
-          <select
-            value={entriesPerPage}
-            onChange={(e) => {
-              setEntriesPerPage(Number(e.target.value));
-              setCurrentPage(1);
-            }}
-            className="text-xs border border-[#E8E8E4] rounded px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-[#D4D4CF] bg-white text-[#444441] shrink-0"
-          >
-            <option value={10}>10 rows</option>
-            <option value={25}>25 rows</option>
-            <option value={50}>50 rows</option>
-            <option value={100}>100 rows</option>
-          </select>
-          <button
-            onClick={clearFilters}
-            className="text-xs bg-[#FEF0EF] hover:bg-[#FEE4E3] text-[#D03839] rounded px-3 py-1.5 transition-colors font-medium shrink-0"
-          >
-            Clear
-          </button>
+          {/* Filters row */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <select
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+              className="text-xs border border-[#E8E8E4] rounded px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-[#D03839]/20 focus:border-[#D03839] bg-white text-[#1A1816] shrink-0"
+            >
+              <option value="">Status</option>
+              <option value="active">Active</option>
+              <option value="under_review">Under Review</option>
+              <option value="rejected">Rejected</option>
+              <option value="draft">Draft</option>
+              <option value="inactive">Inactive</option>
+            </select>
+            <select
+              value={filterPropertyStatus}
+              onChange={(e) => setFilterPropertyStatus(e.target.value)}
+              className="text-xs border border-[#E8E8E4] rounded px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-[#D03839]/20 focus:border-[#D03839] bg-white text-[#1A1816] shrink-0"
+            >
+              <option value="">Property Status</option>
+              <option value="available">Available</option>
+              <option value="pending">Pending</option>
+              <option value="sold">Sold</option>
+              <option value="under_contract">Under Contract</option>
+            </select>
+            <button
+              onClick={clearFilters}
+              className="text-xs bg-[#FEF0EF] hover:bg-[#FEE4E3] text-[#D03839] rounded px-3 py-1.5 transition-colors font-medium shrink-0"
+            >
+              Clear
+            </button>
+          </div>
         </div>
 
         {/* Desktop: Table */}
@@ -925,36 +916,36 @@ const PropertiesManagement = () => {
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center justify-end gap-1 mt-3 pt-3 border-t border-[#E8E8E4]">
+                <div className="flex items-center justify-around mt-3 pt-3 border-t border-[#E8E8E4]">
                   {viewMode === 'trash' ? (
                     <>
-                      <button onClick={() => handleRestore(property)} className="flex items-center justify-center w-9 h-9 rounded text-[#737370] hover:text-primary hover:bg-[#E8E8E4] transition-colors" title="Restore">
+                      <button onClick={() => handleRestore(property)} className="flex-1 flex items-center justify-center h-9 rounded text-[#737370] hover:text-primary hover:bg-[#E8E8E4] transition-colors" title="Restore">
                         <RotateCcw className="w-4 h-4" strokeWidth={2} />
                       </button>
-                      <button onClick={() => handleDeleteClick(property)} className="flex items-center justify-center w-9 h-9 rounded text-[#737370] hover:text-red-600 hover:bg-red-50 transition-colors" title="Delete Permanently">
+                      <button onClick={() => handleDeleteClick(property)} className="flex-1 flex items-center justify-center h-9 rounded text-[#737370] hover:text-red-600 hover:bg-red-50 transition-colors" title="Delete Permanently">
                         <Trash2 className="w-4 h-4" strokeWidth={2} />
                       </button>
                     </>
                   ) : (
                     <>
-                      <button onClick={() => router.push(`/properties/preview/${property.id}`)} className="flex items-center justify-center w-9 h-9 rounded text-[#737370] hover:text-primary hover:bg-[#E8E8E4] transition-colors" title="View">
+                      <button onClick={() => router.push(`/properties/preview/${property.id}`)} className="flex-1 flex items-center justify-center h-9 rounded text-[#737370] hover:text-primary hover:bg-[#E8E8E4] transition-colors" title="View">
                         <Eye className="w-4 h-4" strokeWidth={2} />
                       </button>
-                      <button onClick={() => { setPropertyForUTM({ ...property, slug: property.slug || property.id, id: property.id }); setShowUTMModal(true); }} className="flex items-center justify-center w-9 h-9 rounded text-[#737370] hover:text-primary hover:bg-[#E8E8E4] transition-colors" title="Share links">
+                      <button onClick={() => { setPropertyForUTM({ ...property, slug: property.slug || property.id, id: property.id }); setShowUTMModal(true); }} className="flex-1 flex items-center justify-center h-9 rounded text-[#737370] hover:text-primary hover:bg-[#E8E8E4] transition-colors" title="Share links">
                         <Link2 className="w-4 h-4" strokeWidth={2} />
                       </button>
-                      <button onClick={() => router.push(`/properties/edit/${property.id}`)} className="flex items-center justify-center w-9 h-9 rounded text-[#737370] hover:text-primary hover:bg-[#E8E8E4] transition-colors" title="Edit">
+                      <button onClick={() => router.push(`/properties/edit/${property.id}`)} className="flex-1 flex items-center justify-center h-9 rounded text-[#737370] hover:text-primary hover:bg-[#E8E8E4] transition-colors" title="Edit">
                         <Edit2 className="w-4 h-4" strokeWidth={2} />
                       </button>
                       {property._source === 'manual' && (
-                        <button onClick={() => router.push(`/properties/enhance?id=${property.id}`)} className="flex items-center justify-center w-9 h-9 rounded text-[#737370] hover:text-[#D03839] hover:bg-[#FEF0EF] transition-colors" title="Enhance listing">
+                        <button onClick={() => router.push(`/properties/enhance?id=${property.id}`)} className="flex-1 flex items-center justify-center h-9 rounded text-[#737370] hover:text-[#D03839] hover:bg-[#FEF0EF] transition-colors" title="Enhance listing">
                           <Zap className="w-4 h-4" strokeWidth={2} />
                         </button>
                       )}
-                      <button onClick={() => { setPropertyForAnalytics(property); setShowAnalyticsSidebar(true); }} className="flex items-center justify-center w-9 h-9 rounded text-[#737370] hover:text-primary hover:bg-[#E8E8E4] transition-colors" title="Analytics">
+                      <button onClick={() => { setPropertyForAnalytics(property); setShowAnalyticsSidebar(true); }} className="flex-1 flex items-center justify-center h-9 rounded text-[#737370] hover:text-primary hover:bg-[#E8E8E4] transition-colors" title="Analytics">
                         <BarChart2 className="w-4 h-4" strokeWidth={2} />
                       </button>
-                      <button onClick={() => handleArchiveClick(property)} className="flex items-center justify-center w-9 h-9 rounded text-[#737370] hover:text-red-600 hover:bg-red-50 transition-colors" title="Move to Trash">
+                      <button onClick={() => handleArchiveClick(property)} className="flex-1 flex items-center justify-center h-9 rounded text-[#737370] hover:text-red-600 hover:bg-red-50 transition-colors" title="Move to Trash">
                         <Trash2 className="w-4 h-4" strokeWidth={2} />
                       </button>
                     </>
