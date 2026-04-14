@@ -127,7 +127,7 @@ export default function GooglePlacesAutocomplete({ onAddressSelect, defaultValue
       value={value}
       onChange={(e) => setValue(e.target.value)}
       placeholder="Enter property address..."
-      className="w-full px-4 py-3 border-2 border-neutral-200 rounded-xl focus:ring-2 focus:ring-[#472F97] focus:border-[#472F97] outline-none transition-all text-sm"
+      className="w-full px-4 py-3 border border-[#E8E8E4] rounded focus:border-[#D03839] focus:outline-none transition-colors text-[13px] text-[#1A1816] placeholder:text-[#A8A8A4]"
     />
   );
 }
