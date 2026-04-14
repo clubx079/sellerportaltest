@@ -291,7 +291,7 @@ export default function ImageGalleryManager({ images = [], onImagesChange, selle
           </p>
           <p className="text-sm text-neutral-600 mb-1">
             {totalUploading > 0
-              ? `Processing ${uploadingCount} • ${queuedCount} in queue`
+              ? `Processing ${totalUploading} image${totalUploading > 1 ? 's' : ''}...`
               : 'Click to select or drag and drop multiple images'}
           </p>
           <p className="text-xs text-neutral-500 mb-4">
@@ -333,11 +333,6 @@ export default function ImageGalleryManager({ images = [], onImagesChange, selle
             {uploadingCount > 0 && (
               <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
                 Uploading: {uploadingCount}
-              </span>
-            )}
-            {queuedCount > 0 && (
-              <span className="px-2 py-1 bg-yellow-100 text-yellow-700 rounded-full text-xs font-medium">
-                Queue: {queuedCount}
               </span>
             )}
             {completedCount > 0 && (
