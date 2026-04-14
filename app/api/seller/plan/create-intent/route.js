@@ -105,6 +105,17 @@ export async function POST(request) {
       subscriptionParams.trial_period_days = 7
     }
 
+    // Cancel any existing incomplete/trialing subscriptions before creating a new one
+    // This prevents duplicate billing history entries when the user goes back and re-selects a plan
+    const existingSubs = await stripe.subscriptions.list({ customer: customerId, status: 'all', limit: 10 })
+    for (const sub of existingSubs.data) {
+      if (['incomplete', 'trialing'].includes(sub.status)) {
+        await stripe.subscriptions.cancel(sub.id)
+      }
+    }
+    // Clear the stale seller_plans row so it doesn't reference a cancelled subscription
+    await supabase.from('seller_plans').delete().eq('seller_id', seller_id)
+
     const subscription = await stripe.subscriptions.create(subscriptionParams)
 
     // For trial subscriptions the first invoice is $0 so payment_intent is null.
