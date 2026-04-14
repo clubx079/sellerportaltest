@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { Plus, Edit2, Trash2, Search, X, Building2, ChevronLeft, ChevronRight, MapPin, DollarSign, RotateCcw, BarChart2, Link2, Home, FileEdit, Eye } from 'lucide-react';
+import { Plus, Edit2, Trash2, Search, X, Building2, ChevronLeft, ChevronRight, MapPin, DollarSign, RotateCcw, BarChart2, Link2, Home, FileEdit, Eye, Zap } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import DeleteConfirmModal from '@/components/properties/DeleteConfirmModal';
 import PropertyViewModal from '@/components/properties/PropertyViewModal';
@@ -727,6 +727,11 @@ const PropertiesManagement = () => {
                             <button onClick={() => router.push(`/properties/edit/${property.id}`)} className="flex items-center justify-center w-8 h-8 rounded text-[#A8A8A4] hover:text-primary hover:bg-[#E8E8E4] transition-colors" title="Edit">
                               <Edit2 className="w-4 h-4" strokeWidth={2} />
                             </button>
+                            {property._source === 'manual' && (
+                              <button onClick={() => router.push(`/properties/enhance?id=${property.id}`)} className="flex items-center justify-center w-8 h-8 rounded text-[#A8A8A4] hover:text-[#D03839] hover:bg-[#FEF0EF] transition-colors" title="Enhance listing">
+                                <Zap className="w-4 h-4" strokeWidth={2} />
+                              </button>
+                            )}
                             <button onClick={() => { setPropertyForAnalytics(property); setShowAnalyticsSidebar(true); }} className="flex items-center justify-center w-8 h-8 rounded text-[#A8A8A4] hover:text-primary hover:bg-[#E8E8E4] transition-colors" title="Analytics">
                               <BarChart2 className="w-4 h-4" strokeWidth={2} />
                             </button>
@@ -826,6 +831,11 @@ const PropertiesManagement = () => {
                       <button onClick={() => router.push(`/properties/edit/${property.id}`)} className="flex items-center justify-center w-9 h-9 rounded text-[#737370] hover:text-primary hover:bg-[#E8E8E4] transition-colors" title="Edit">
                         <Edit2 className="w-4 h-4" strokeWidth={2} />
                       </button>
+                      {property._source === 'manual' && (
+                        <button onClick={() => router.push(`/properties/enhance?id=${property.id}`)} className="flex items-center justify-center w-9 h-9 rounded text-[#737370] hover:text-[#D03839] hover:bg-[#FEF0EF] transition-colors" title="Enhance listing">
+                          <Zap className="w-4 h-4" strokeWidth={2} />
+                        </button>
+                      )}
                       <button onClick={() => { setPropertyForAnalytics(property); setShowAnalyticsSidebar(true); }} className="flex items-center justify-center w-9 h-9 rounded text-[#737370] hover:text-primary hover:bg-[#E8E8E4] transition-colors" title="Analytics">
                         <BarChart2 className="w-4 h-4" strokeWidth={2} />
                       </button>

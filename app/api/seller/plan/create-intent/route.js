@@ -101,7 +101,7 @@ export async function POST(request) {
       metadata: { seller_id, plan_type, billing_cycle: billing_cycle || 'monthly' },
     }
 
-    if (plan_type === 'pro') {
+    if (plan_type === 'pro' || plan_type === 'enterprise') {
       subscriptionParams.trial_period_days = 7
     }
 

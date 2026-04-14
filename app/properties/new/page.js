@@ -3,10 +3,23 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import { Save, Eye, ArrowLeft, Upload, X, AlertCircle, Home, FileText } from 'lucide-react';
+import { Save, Eye, ArrowLeft, Upload, X, AlertCircle, Home, FileText, Zap, Star, TrendingUp, Package } from 'lucide-react';
 import ImageGalleryManager from '@/components/properties/ImageGalleryManager';
 import TextEditor from '@/components/forms/TextEditor';
 import GooglePlacesAutocomplete from '@/components/forms/GooglePlacesAutocomplete';
+import { loadStripe } from '@stripe/stripe-js';
+import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
+
+const stripePromise = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
+  ? loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY)
+  : null
+
+const ADD_ONS = [
+  { id: 'highlight', label: 'Highlight Listing', desc: 'Pin to top of search results and show a highlighted badge', price: 999, icon: Star },
+  { id: 'boost',     label: 'Boost Listing',     desc: 'Promote your deal to more buyers across the platform',    price: 1499, icon: TrendingUp },
+  { id: 'homepage',  label: 'Feature on Homepage', desc: 'Get your deal in the Featured section on the homepage', price: 2900, icon: Zap },
+  { id: 'bundle',    label: 'Visibility Bundle',  desc: 'Highlight + Boost together at a 20% discount',            price: 2200, icon: Package },
+]
 
 const PROPERTY_STATUSES = [
   { value: 'available', label: 'Available - Ready for sale' },
@@ -37,6 +50,11 @@ export default function NewPropertyPage() {
   const [userId, setUserId] = useState(null);
   const [trialPlan, setTrialPlan] = useState(null);
   const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
+  const [selectedAddOns, setSelectedAddOns] = useState([]);
+  const [addOnClientSecret, setAddOnClientSecret] = useState(null);
+  const [addOnLoading, setAddOnLoading] = useState(false);
+  const [addOnError, setAddOnError] = useState(null);
+  const [pendingPublishData, setPendingPublishData] = useState(null);
 
   const descRef = useRef(null);
   const repairsRef = useRef(null);
@@ -80,7 +98,7 @@ export default function NewPropertyPage() {
       // Fetch plan to check trial status
       supabase
         .from('seller_plans')
-        .select('status, listings_used_this_period, trial_ends_at')
+        .select('status, plan_type, listings_used_this_period, trial_ends_at')
         .eq('seller_id', user.id)
         .maybeSingle()
         .then(({ data }) => { if (data) setTrialPlan(data) });
@@ -121,11 +139,20 @@ export default function NewPropertyPage() {
   };
 
   const handleSave = async (publishStatus = 'draft', options = {}) => {
-    const { skipFeaturedPrompt = false, forceAutoSelectFeatured = false } = options;
+    const { skipFeaturedPrompt = false, forceAutoSelectFeatured = false, addOnFlags = null } = options;
+    // Store add-on flags so the save logic can apply them after property creation
+    if (addOnFlags) setPendingPublishData({ addOnFlags });
 
     // Trial limit: only 1 published listing allowed during free trial
     if (publishStatus === 'active' && trialPlan?.status === 'trialing') {
       if ((trialPlan.listings_used_this_period ?? 0) >= 1) {
+        setShowUpgradePrompt(true);
+        return;
+      }
+    }
+    // Pro plan: max 10 listings per billing period
+    if (publishStatus === 'active' && trialPlan?.plan_type === 'pro' && trialPlan?.status === 'active') {
+      if ((trialPlan.listings_used_this_period ?? 0) >= 10) {
         setShowUpgradePrompt(true);
         return;
       }
@@ -217,9 +244,11 @@ export default function NewPropertyPage() {
     const shortSlug = part1 + part2;
 
     // Create save data object matching the actual database schema
+    // When publishing, set under_review so AI moderation can run first
+    const actualStatus = publishStatus === 'active' ? 'under_review' : publishStatus;
     const saveData = {
       seller_id: sellerId,
-      status: publishStatus,
+      status: actualStatus,
       slug: shortSlug,
       address: formData.location || '', // 'location' in form maps to 'address' in DB
       property_status: formData.property_status || 'available',
@@ -289,8 +318,12 @@ export default function NewPropertyPage() {
         }
       }
 
-      // Increment trial listing counter on publish
-      if (publishStatus === 'active' && trialPlan?.status === 'trialing') {
+      // Increment listing counter on publish (trial OR active pro)
+      const shouldIncrementCounter = publishStatus === 'active' && (
+        trialPlan?.status === 'trialing' ||
+        (trialPlan?.plan_type === 'pro' && trialPlan?.status === 'active')
+      );
+      if (shouldIncrementCounter) {
         await supabase
           .from('seller_plans')
           .update({ listings_used_this_period: (trialPlan.listings_used_this_period ?? 0) + 1 })
@@ -298,9 +331,27 @@ export default function NewPropertyPage() {
         setTrialPlan(prev => prev ? { ...prev, listings_used_this_period: (prev.listings_used_this_period ?? 0) + 1 } : prev);
       }
 
+      // Apply add-on flags if paid
+      if (publishStatus === 'active' && pendingPublishData?.addOnFlags && Object.keys(pendingPublishData.addOnFlags).length > 0) {
+        await supabase
+          .from('properties')
+          .update(pendingPublishData.addOnFlags)
+          .eq('id', data.id)
+          .eq('seller_id', sellerId);
+      }
+
+      // Kick off AI moderation in background for published listings
+      if (publishStatus === 'active') {
+        fetch('/api/seller/moderate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ property_id: data.id }),
+        }).catch(() => {});
+      }
+
       setSuccess(
         publishStatus === 'active'
-          ? 'Property published successfully!'
+          ? 'Property submitted for review! You\'ll be notified when it\'s approved.'
           : 'Property saved as draft!'
       );
 
@@ -451,9 +502,13 @@ export default function NewPropertyPage() {
       {showUpgradePrompt && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
           <div className="bg-white rounded-lg shadow-xl w-full max-w-sm p-6">
-            <h3 className="text-[16px] font-bold text-[#1A1816] mb-2">Free trial limit reached</h3>
+            <h3 className="text-[16px] font-bold text-[#1A1816] mb-2">
+              {trialPlan?.plan_type === 'pro' && trialPlan?.status === 'active' ? 'Monthly limit reached' : 'Free trial limit reached'}
+            </h3>
             <p className="text-[13px] text-[#737370] mb-5">
-              You've reached your free trial limit. Upgrade now to publish unlimited listings.
+              {trialPlan?.plan_type === 'pro' && trialPlan?.status === 'active'
+                ? 'You\'ve used all 10 listings for this billing period. Upgrade to Enterprise for unlimited listings.'
+                : 'You\'ve reached your free trial limit. Upgrade now to publish more listings.'}
             </p>
             <div className="flex gap-3">
               <button
@@ -602,6 +657,7 @@ export default function NewPropertyPage() {
             { id: 'inspection', label: 'Inspection Report' },
             { id: 'content', label: 'Content' },
             { id: 'seo', label: 'SEO & Social' },
+            { id: 'addons', label: 'Add-Ons' },
             { id: 'preview', label: 'Preview' }
           ].map((tab) => (
             <button
@@ -1038,6 +1094,25 @@ export default function NewPropertyPage() {
             </div>
           )}
 
+          {/* Add-Ons Tab */}
+          {activeTab === 'addons' && (
+            <AddOnsTab
+              selectedAddOns={selectedAddOns}
+              setSelectedAddOns={setSelectedAddOns}
+              addOnClientSecret={addOnClientSecret}
+              setAddOnClientSecret={setAddOnClientSecret}
+              addOnLoading={addOnLoading}
+              setAddOnLoading={setAddOnLoading}
+              addOnError={addOnError}
+              setAddOnError={setAddOnError}
+              pendingPublishData={pendingPublishData}
+              setPendingPublishData={setPendingPublishData}
+              userId={userId}
+              onPublish={handleSave}
+              saving={saving}
+            />
+          )}
+
           {/* Preview Tab */}
           {activeTab === 'preview' && (
             <div className="space-y-6">
@@ -1132,4 +1207,196 @@ export default function NewPropertyPage() {
       </div>
     </div>
   );
+}
+
+// ─── Add-Ons Checkout Form (Stripe) ──────────────────────────────────────────
+function AddOnsCheckoutForm({ amount, onSuccess, onError }) {
+  const stripe = useStripe()
+  const elements = useElements()
+  const [processing, setProcessing] = React.useState(false)
+
+  const handlePay = async (e) => {
+    e.preventDefault()
+    if (!stripe || !elements) return
+    setProcessing(true)
+    const { error: submitErr } = await elements.submit()
+    if (submitErr) { onError(submitErr.message); setProcessing(false); return }
+    const { error: confirmErr } = await stripe.confirmPayment({
+      elements,
+      redirect: 'if_required',
+    })
+    if (confirmErr) {
+      onError(confirmErr.message)
+    } else {
+      onSuccess()
+    }
+    setProcessing(false)
+  }
+
+  return (
+    <form onSubmit={handlePay} className="space-y-4">
+      <PaymentElement />
+      <button
+        type="submit"
+        disabled={!stripe || processing}
+        className="w-full h-[46px] bg-[#D03839] hover:bg-[#E0493B] text-white text-[14px] font-semibold rounded transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+      >
+        {processing
+          ? <><span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" /> Processing…</>
+          : `Pay $${(amount / 100).toFixed(2)} & Publish`}
+      </button>
+    </form>
+  )
+}
+
+// ─── Add-Ons Tab ──────────────────────────────────────────────────────────────
+function AddOnsTab({
+  selectedAddOns, setSelectedAddOns,
+  addOnClientSecret, setAddOnClientSecret,
+  addOnLoading, setAddOnLoading,
+  addOnError, setAddOnError,
+  userId, onPublish, saving,
+}) {
+  const toggleAddOn = (id) => {
+    setSelectedAddOns(prev => {
+      if (prev.includes(id)) return prev.filter(a => a !== id)
+      let next = [...prev, id]
+      if (id === 'bundle') next = next.filter(a => a !== 'highlight' && a !== 'boost')
+      if (id === 'highlight' || id === 'boost') next = next.filter(a => a !== 'bundle')
+      return next
+    })
+    // Reset payment intent if add-ons change
+    setAddOnClientSecret(null)
+    setAddOnError(null)
+  }
+
+  const total = selectedAddOns.reduce((sum, id) => {
+    const ao = ADD_ONS.find(a => a.id === id)
+    return sum + (ao?.price || 0)
+  }, 0)
+
+  const handleInitPayment = async () => {
+    if (!userId || selectedAddOns.length === 0) return
+    setAddOnLoading(true)
+    setAddOnError(null)
+    try {
+      const res = await fetch('/api/seller/listing-addons', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ seller_id: userId, add_ons: selectedAddOns }),
+      })
+      const d = await res.json()
+      if (!res.ok) throw new Error(d.error || 'Failed to initialize payment')
+      setAddOnClientSecret(d.clientSecret)
+    } catch (err) {
+      setAddOnError(err.message)
+    } finally {
+      setAddOnLoading(false)
+    }
+  }
+
+  const addOnFlags = {}
+  if (selectedAddOns.includes('highlight') || selectedAddOns.includes('bundle')) addOnFlags.is_highlighted = true
+  if (selectedAddOns.includes('boost') || selectedAddOns.includes('bundle')) addOnFlags.is_boosted = true
+  if (selectedAddOns.includes('homepage')) addOnFlags.is_homepage_featured = true
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h3 className="text-[15px] font-semibold text-[#1A1816] mb-1">Boost your listing (optional)</h3>
+        <p className="text-[13px] text-[#737370] mb-5">Add-ons are optional. Your listing will be published free with your subscription — these just get it more visibility.</p>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {ADD_ONS.map((ao) => {
+          const selected = selectedAddOns.includes(ao.id)
+          const Icon = ao.icon
+          return (
+            <button
+              key={ao.id}
+              type="button"
+              onClick={() => toggleAddOn(ao.id)}
+              className={`text-left p-4 rounded border-2 transition-all ${selected ? 'border-[#D03839] bg-[#FEF0EF]' : 'border-[#E8E8E4] bg-white hover:border-[#1A1816]'}`}
+            >
+              <div className="flex items-start justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <Icon className={`w-4 h-4 flex-shrink-0 ${selected ? 'text-[#D03839]' : 'text-[#737370]'}`} />
+                  <p className={`text-[13px] font-semibold ${selected ? 'text-[#D03839]' : 'text-[#1A1816]'}`}>{ao.label}</p>
+                </div>
+                <p className="text-[13px] font-bold text-[#1A1816]">${(ao.price / 100).toFixed(2)}</p>
+              </div>
+              <p className="text-[12px] text-[#737370] leading-relaxed">{ao.desc}</p>
+            </button>
+          )
+        })}
+      </div>
+
+      {addOnError && (
+        <div className="p-3 bg-[#FEF0EF] border border-[#F5C4C0] rounded text-[13px] text-[#D03839]">{addOnError}</div>
+      )}
+
+      {/* Payment section (if add-ons selected) */}
+      {selectedAddOns.length > 0 && (
+        <div className="bg-[#FAFAF8] border border-[#E8E8E4] rounded p-5 space-y-4">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-[#A8A8A4] mb-3">Order Summary</p>
+            {selectedAddOns.map(id => {
+              const ao = ADD_ONS.find(a => a.id === id)
+              return ao ? (
+                <div key={id} className="flex justify-between items-center mb-2">
+                  <span className="text-[13px] text-[#1A1816]">{ao.label}</span>
+                  <span className="text-[13px] font-semibold text-[#1A1816]">${(ao.price / 100).toFixed(2)}</span>
+                </div>
+              ) : null
+            })}
+            <div className="border-t border-[#E8E8E4] pt-2 mt-2 flex justify-between items-center">
+              <span className="text-[13px] font-bold text-[#1A1816]">Total</span>
+              <span className="text-[14px] font-bold text-[#1A1816]">${(total / 100).toFixed(2)}</span>
+            </div>
+          </div>
+
+          {!addOnClientSecret ? (
+            <button
+              type="button"
+              onClick={handleInitPayment}
+              disabled={addOnLoading}
+              className="w-full h-[44px] bg-[#1A1816] hover:bg-[#2D2B28] text-white text-[13px] font-semibold rounded transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              {addOnLoading
+                ? <><span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" /> Loading payment…</>
+                : 'Enter Payment Details'}
+            </button>
+          ) : (
+            stripePromise && (
+              <Elements stripe={stripePromise} options={{ clientSecret: addOnClientSecret }}>
+                <AddOnsCheckoutForm
+                  amount={total}
+                  onSuccess={() => {
+                    // Payment confirmed — publish with add-on flags
+                    window.__addOnFlags = addOnFlags
+                    onPublish('active', { skipFeaturedPrompt: true, forceAutoSelectFeatured: true, addOnFlags })
+                  }}
+                  onError={(msg) => setAddOnError(msg)}
+                />
+              </Elements>
+            )
+          )}
+        </div>
+      )}
+
+      {/* Publish without add-ons */}
+      {selectedAddOns.length === 0 && (
+        <button
+          type="button"
+          onClick={() => onPublish('active', { skipFeaturedPrompt: true, forceAutoSelectFeatured: true })}
+          disabled={saving}
+          className="w-full h-[46px] bg-[#D03839] hover:bg-[#E0493B] text-white text-[14px] font-semibold rounded transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+        >
+          {saving
+            ? <><span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" /> Publishing…</>
+            : <>Publish for Free <Eye size={16} /></>}
+        </button>
+      )}
+    </div>
+  )
 }
