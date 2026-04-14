@@ -289,7 +289,7 @@ function StepPlan({ onNext }) {
       </div>
 
       {/* Plan cards */}
-      <div className="space-y-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {PLANS.map(p => (
           <PlanCard key={p.id} plan={p} selected={selected} annual={annual} onSelect={setSelected} />
         ))}

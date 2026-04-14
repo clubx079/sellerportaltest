@@ -35,6 +35,8 @@ export default function NewPropertyPage() {
   const [activeTab, setActiveTab] = useState('basic');
   const [showAllPreviewImages, setShowAllPreviewImages] = useState(false);
   const [userId, setUserId] = useState(null);
+  const [trialPlan, setTrialPlan] = useState(null);
+  const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
 
   const descRef = useRef(null);
   const repairsRef = useRef(null);
@@ -75,6 +77,13 @@ export default function NewPropertyPage() {
     if (userStr) {
       const user = JSON.parse(userStr);
       setUserId(user.id);
+      // Fetch plan to check trial status
+      supabase
+        .from('seller_plans')
+        .select('status, listings_used_this_period, trial_ends_at')
+        .eq('seller_id', user.id)
+        .maybeSingle()
+        .then(({ data }) => { if (data) setTrialPlan(data) });
     }
   }, []);
 
@@ -113,6 +122,15 @@ export default function NewPropertyPage() {
 
   const handleSave = async (publishStatus = 'draft', options = {}) => {
     const { skipFeaturedPrompt = false, forceAutoSelectFeatured = false } = options;
+
+    // Trial limit: only 1 published listing allowed during free trial
+    if (publishStatus === 'active' && trialPlan?.status === 'trialing') {
+      if ((trialPlan.listings_used_this_period ?? 0) >= 1) {
+        setShowUpgradePrompt(true);
+        return;
+      }
+    }
+
     if (!formData.title || !formData.location) {
       setError('Please fill in Title and Address before saving.');
       return;
@@ -271,6 +289,15 @@ export default function NewPropertyPage() {
         }
       }
 
+      // Increment trial listing counter on publish
+      if (publishStatus === 'active' && trialPlan?.status === 'trialing') {
+        await supabase
+          .from('seller_plans')
+          .update({ listings_used_this_period: (trialPlan.listings_used_this_period ?? 0) + 1 })
+          .eq('seller_id', sellerId);
+        setTrialPlan(prev => prev ? { ...prev, listings_used_this_period: (prev.listings_used_this_period ?? 0) + 1 } : prev);
+      }
+
       setSuccess(
         publishStatus === 'active'
           ? 'Property published successfully!'
@@ -411,6 +438,41 @@ export default function NewPropertyPage() {
 
   return (
     <div className="space-y-3 md:space-y-4" style={{ fontFamily: 'var(--font-dm-sans), sans-serif' }}>
+
+      {/* Trial banner */}
+      {trialPlan?.status === 'trialing' && (trialPlan.listings_used_this_period ?? 0) < 1 && (
+        <div className="flex items-start gap-3 px-4 py-3 bg-[#FEF3E2] border border-[#F3C97D] rounded text-[13px] text-[#B5620A]">
+          <AlertCircle size={16} className="flex-shrink-0 mt-0.5" />
+          <span>During your free trial, your listing will only be live for 7 days.</span>
+        </div>
+      )}
+
+      {/* Upgrade prompt modal */}
+      {showUpgradePrompt && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-sm p-6">
+            <h3 className="text-[16px] font-bold text-[#1A1816] mb-2">Free trial limit reached</h3>
+            <p className="text-[13px] text-[#737370] mb-5">
+              You've reached your free trial limit. Upgrade now to publish unlimited listings.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowUpgradePrompt(false)}
+                className="flex-1 h-[40px] border border-[#E8E8E4] rounded text-[13px] font-medium text-[#1A1816] hover:border-[#1A1816] transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => router.push('/billing')}
+                className="flex-1 h-[40px] bg-[#D03839] hover:bg-[#E0493B] rounded text-[13px] font-semibold text-white transition-colors"
+              >
+                Upgrade Now
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-3">
