@@ -703,18 +703,6 @@ export default function EditPropertyPage() {
           {activeTab === 'basic' && (
             <div className="space-y-6">
               <div>
-                <label className="block text-sm font-semibold text-neutral-700 mb-2">Property Title *</label>
-                <input
-                  type="text"
-                  value={formData.title || ''}
-                  onChange={(e) => handleInputChange('title', e.target.value)}
-                  className="w-full px-4 py-3 border-2 border-neutral-200 rounded focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all text-sm"
-                  placeholder="Luxury Beachfront Hotel in Miami"
-                  required
-                />
-              </div>
-
-              <div>
                 <label className="block text-sm font-semibold text-neutral-700 mb-2">Location *</label>
                 <GooglePlacesAutocomplete
                   onAddressSelect={handleAddressSelect}
