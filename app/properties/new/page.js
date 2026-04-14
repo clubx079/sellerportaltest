@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import { Save, Eye, ArrowLeft, Upload, X, AlertCircle, Home, FileText, Zap, Star, TrendingUp, Package } from 'lucide-react';
+import { Save, Eye, ArrowLeft, Upload, X, AlertCircle, Home, FileText, Zap, Star, TrendingUp, Package, Check, Lock, ChevronRight } from 'lucide-react';
 import ImageGalleryManager from '@/components/properties/ImageGalleryManager';
 import TextEditor from '@/components/forms/TextEditor';
 import GooglePlacesAutocomplete from '@/components/forms/GooglePlacesAutocomplete';
@@ -127,8 +127,31 @@ export default function NewPropertyPage() {
 
   const TAB_ORDER = ['basic', 'images', 'ownership', 'content', 'seo', 'addons', 'preview'];
 
+  // ── Step completion ──────────────────────────────────────────────────────────
+  const isBasicComplete = !!(formData.location && formData.price && formData.property_type && formData.bedrooms && formData.bathrooms && formData.floor_area);
+  const isImagesComplete = imageUploadStatus.images.filter(img => img.status === 'completed').length > 0 && !imageUploadStatus.isUploading;
+  const isOwnershipComplete = !!(sellerType && (sellerType !== 'wholesaler' || contractUpload.url));
+
+  const isTabAccessible = (tabId) => {
+    const idx = TAB_ORDER.indexOf(tabId);
+    if (idx <= 0) return true;
+    if (!isBasicComplete) return false;
+    if (idx <= 1) return true;
+    if (!isImagesComplete) return false;
+    if (idx <= 2) return true;
+    if (!isOwnershipComplete) return false;
+    return true;
+  };
+
+  const isTabComplete = (tabId) => {
+    if (tabId === 'basic') return isBasicComplete;
+    if (tabId === 'images') return isImagesComplete;
+    if (tabId === 'ownership') return isOwnershipComplete;
+    return false;
+  };
+
   const handleTabChange = (tabId) => {
-    // Save editor content before switching tabs
+    if (!isTabAccessible(tabId)) return;
     if (descRef.current) {
       const cleanDescription = descRef.current.getCleanHTML?.() || descRef.current.getHTML?.() || '';
       setFormData(prev => ({ ...prev, description: cleanDescription }));
@@ -137,71 +160,13 @@ export default function NewPropertyPage() {
       const cleanRepairs = repairsRef.current.getCleanHTML?.() || repairsRef.current.getHTML?.() || '';
       setFormData(prev => ({ ...prev, repairs: cleanRepairs }));
     }
-
-    const targetIdx = TAB_ORDER.indexOf(tabId);
-    const currentIdx = TAB_ORDER.indexOf(activeTab);
-
-    // Gate forward navigation — validate completed steps
-    if (targetIdx > currentIdx) {
-      // Basic info required
-      if (targetIdx > TAB_ORDER.indexOf('basic')) {
-        if (!formData.location) {
-          setError('Please enter the property address.');
-          setActiveTab('basic');
-          return;
-        }
-        if (!formData.price) {
-          setError('Please enter the asking price.');
-          setActiveTab('basic');
-          return;
-        }
-        if (!formData.property_type) {
-          setError('Please select a property type.');
-          setActiveTab('basic');
-          return;
-        }
-        if (!formData.bedrooms) {
-          setError('Please enter the number of beds.');
-          setActiveTab('basic');
-          return;
-        }
-        if (!formData.bathrooms) {
-          setError('Please enter the number of baths.');
-          setActiveTab('basic');
-          return;
-        }
-        if (!formData.floor_area) {
-          setError('Please enter the floor area.');
-          setActiveTab('basic');
-          return;
-        }
-      }
-      // At least 1 image required
-      if (targetIdx > TAB_ORDER.indexOf('images')) {
-        const completed = imageUploadStatus.images.filter(img => img.status === 'completed');
-        if (completed.length === 0) {
-          setError('Please upload at least one image.');
-          setActiveTab('images');
-          return;
-        }
-      }
-      // Ownership selection required
-      if (targetIdx > TAB_ORDER.indexOf('ownership')) {
-        if (!sellerType) {
-          setError('Please select your relationship to this property.');
-          setActiveTab('ownership');
-          return;
-        }
-        if (sellerType === 'wholesaler' && !contractUpload.url) {
-          setError('Please upload your assignment contract.');
-          setActiveTab('ownership');
-          return;
-        }
-      }
-    }
-
     setError(null);
     setActiveTab(tabId);
+  };
+
+  const handleContinue = () => {
+    const nextTab = TAB_ORDER[TAB_ORDER.indexOf(activeTab) + 1];
+    if (nextTab) handleTabChange(nextTab);
   };
 
   const handleSave = async (publishStatus = 'draft', options = {}) => {
@@ -654,37 +619,20 @@ export default function NewPropertyPage() {
             <p className="text-[12px] text-[#737370] mt-0.5">Create a new wholesale property listing</p>
           </div>
         </div>
-        <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={() => handleSave('draft')}
-            disabled={saving || imageUploadStatus.isUploading}
-            className="flex items-center justify-center gap-2 bg-[#FAFAF8] hover:bg-[#E8E8E4] text-[#1A1816] px-3 py-2 rounded text-[13px] font-medium border border-[#E8E8E4] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <Save size={16} />
-            <span>
-              {imageUploadStatus.isUploading
-                ? `Uploading ${imageUploadStatus.uploadingCount}...`
-                : saving ? 'Saving…' : 'Save Draft'
-              }
-            </span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => handleSave('active')}
-            disabled={saving || imageUploadStatus.isUploading}
-            className="flex items-center justify-center gap-2 bg-[#D03839] hover:bg-[#E0493B] text-white px-3 py-2 rounded text-[13px] font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <Eye size={16} />
-            <span>
-              {imageUploadStatus.isUploading
-                ? 'Please wait...'
-                : saving ? 'Publishing…' : 'Publish'
-              }
-            </span>
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={() => handleSave('draft')}
+          disabled={saving || imageUploadStatus.isUploading}
+          className="flex items-center justify-center gap-2 bg-[#FAFAF8] hover:bg-[#E8E8E4] text-[#1A1816] px-3 py-2 rounded text-[13px] font-medium border border-[#E8E8E4] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <Save size={16} />
+          <span>
+            {imageUploadStatus.isUploading
+              ? `Uploading ${imageUploadStatus.uploadingCount}...`
+              : saving ? 'Saving…' : 'Save Draft'
+            }
+          </span>
+        </button>
       </div>
 
       {/* Notifications */}
@@ -761,28 +709,43 @@ export default function NewPropertyPage() {
 
       {/* Tabs */}
       <div className="bg-white rounded border border-[#E8E8E4] overflow-hidden">
+        {/* Step indicator */}
         <div className="flex border-b border-[#E8E8E4] overflow-x-auto scrollbar-hide">
           {[
-            { id: 'basic', label: 'Basic Info' },
-            { id: 'images', label: 'Images' },
+            { id: 'basic',     label: 'Basic Info' },
+            { id: 'images',    label: 'Images' },
             { id: 'ownership', label: 'Ownership' },
-            { id: 'content', label: 'Content' },
-            { id: 'seo', label: 'SEO & Social (optional)' },
-            { id: 'addons', label: 'Add-Ons' },
-            { id: 'preview', label: 'Preview' }
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => handleTabChange(tab.id)}
-              className={`px-4 md:px-6 py-3 md:py-4 font-medium transition-colors whitespace-nowrap text-[12px] md:text-[13px] ${
-                activeTab === tab.id
-                  ? 'text-[#D03839] border-b-2 border-[#D03839] bg-[#FEF0EF]/30'
-                  : 'text-[#737370] hover:text-[#1A1816]'
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
+            { id: 'content',   label: 'Content' },
+            { id: 'seo',       label: 'SEO & Social' },
+            { id: 'addons',    label: 'Add-Ons' },
+            { id: 'preview',   label: 'Preview' },
+          ].map((tab, idx) => {
+            const accessible = isTabAccessible(tab.id);
+            const complete   = isTabComplete(tab.id);
+            const active     = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => accessible && handleTabChange(tab.id)}
+                disabled={!accessible}
+                className={`flex items-center gap-1.5 px-3 md:px-5 py-3.5 whitespace-nowrap text-[12px] font-medium transition-colors border-b-2 flex-shrink-0
+                  ${active    ? 'border-[#D03839] text-[#D03839] bg-[#FEF0EF]/30'
+                  : complete  ? 'border-transparent text-[#0F6E56] hover:bg-[#FAFAF8]'
+                  : accessible ? 'border-transparent text-[#737370] hover:text-[#1A1816] hover:bg-[#FAFAF8]'
+                  : 'border-transparent text-[#C4C4C0] cursor-not-allowed'}`}
+              >
+                <span className={`w-[18px] h-[18px] rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0
+                  ${active    ? 'bg-[#D03839] text-white'
+                  : complete  ? 'bg-[#0F6E56] text-white'
+                  : accessible ? 'bg-[#E8E8E4] text-[#737370]'
+                  : 'bg-[#F0F0EE] text-[#C4C4C0]'}`}
+                >
+                  {complete ? <Check className="w-2.5 h-2.5" /> : !accessible ? <Lock className="w-2.5 h-2.5" /> : idx + 1}
+                </span>
+                <span className="hidden sm:inline">{tab.label}</span>
+              </button>
+            );
+          })}
         </div>
 
         {/* Tab Content */}
@@ -1197,6 +1160,29 @@ export default function NewPropertyPage() {
             />
           )}
 
+          {/* ── Step footer ──────────────────────────────────────────────── */}
+          {activeTab !== 'preview' && (
+            <div className="flex items-center justify-between pt-6 mt-6 border-t border-[#E8E8E4]">
+              <button
+                type="button"
+                onClick={() => {
+                  const prevIdx = TAB_ORDER.indexOf(activeTab) - 1;
+                  if (prevIdx >= 0) handleTabChange(TAB_ORDER[prevIdx]);
+                }}
+                className={`flex items-center gap-1.5 px-4 py-2 rounded border border-[#E8E8E4] text-[13px] font-medium text-[#737370] hover:border-[#1A1816] hover:text-[#1A1816] transition-colors ${activeTab === 'basic' ? 'invisible' : ''}`}
+              >
+                <ArrowLeft className="w-4 h-4" /> Back
+              </button>
+              <button
+                type="button"
+                onClick={handleContinue}
+                className="flex items-center gap-1.5 px-5 py-2 bg-[#D03839] hover:bg-[#E0493B] text-white text-[13px] font-semibold rounded transition-colors"
+              >
+                Continue <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          )}
+
           {/* Preview Tab */}
           {activeTab === 'preview' && (
             <div className="space-y-6">
@@ -1285,6 +1271,26 @@ export default function NewPropertyPage() {
                   )}
                 </div>
               </div>
+            </div>
+
+            {/* Publish footer */}
+            <div className="flex items-center justify-between pt-6 mt-6 border-t border-[#E8E8E4]">
+              <button
+                type="button"
+                onClick={() => handleTabChange(TAB_ORDER[TAB_ORDER.indexOf('preview') - 1])}
+                className="flex items-center gap-1.5 px-4 py-2 rounded border border-[#E8E8E4] text-[13px] font-medium text-[#737370] hover:border-[#1A1816] hover:text-[#1A1816] transition-colors"
+              >
+                <ArrowLeft className="w-4 h-4" /> Back
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSave('active')}
+                disabled={saving || imageUploadStatus.isUploading}
+                className="flex items-center gap-2 bg-[#D03839] hover:bg-[#E0493B] text-white px-6 py-2.5 rounded text-[13px] font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Eye size={15} />
+                {saving ? 'Publishing…' : imageUploadStatus.isUploading ? 'Please wait…' : 'Publish Listing'}
+              </button>
             </div>
           )}
         </div>
