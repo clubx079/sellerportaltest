@@ -360,7 +360,7 @@ export default function PropertyPreviewPage() {
             className="flex items-center gap-1.5 text-[#737370] hover:text-[#1A1816] text-sm transition-colors relative z-[50]"
           >
             <ArrowLeft className="h-4 w-4" />
-            <span>Back to My Listings</span>
+            <span className="hidden sm:inline">Back to My Listings</span>
           </Link>
 
           {/* Center: Logo */}
@@ -391,11 +391,8 @@ export default function PropertyPreviewPage() {
       {/* Photo Grid */}
       <div className="bg-white border-b border-[#E8E8E4]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4">
-          <div
-            className="relative h-[340px] sm:h-[460px] rounded overflow-hidden"
-            style={{ display: 'grid', gridTemplateColumns: photos.length > 1 ? '1fr 1fr' : '1fr', gap: '6px' }}
-          >
-            {/* Main photo */}
+          <div className={`relative h-[260px] sm:h-[460px] rounded overflow-hidden grid gap-[6px] ${photos.length > 1 ? 'sm:grid-cols-2' : ''} grid-cols-1`}>
+            {/* Main photo — full width on mobile, left half on sm+ */}
             <div
               className="relative bg-[#E8E8E4] cursor-pointer overflow-hidden rounded"
               onClick={() => { if (photos.length > 0) { setImageModalIndex(0); setShowImageModal(true) } }}
@@ -412,11 +409,21 @@ export default function PropertyPreviewPage() {
                   <span className="text-sm text-[#A8A8A4]">Photos coming soon</span>
                 </div>
               )}
+              {/* Mobile-only: Show all photos button on main photo */}
+              {photos.length > 1 && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); setImageModalIndex(0); setShowImageModal(true) }}
+                  className="sm:hidden absolute bottom-3 right-3 flex items-center gap-1.5 bg-white/90 backdrop-blur-sm border border-[#E8E8E4] text-[#1A1816] text-[13px] font-semibold px-3 py-1.5 rounded shadow-sm"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1" strokeWidth="1.5"/><rect x="14" y="3" width="7" height="7" rx="1" strokeWidth="1.5"/><rect x="3" y="14" width="7" height="7" rx="1" strokeWidth="1.5"/><rect x="14" y="14" width="7" height="7" rx="1" strokeWidth="1.5"/></svg>
+                  Show all photos
+                </button>
+              )}
             </div>
 
-            {/* Right 2×2 grid */}
+            {/* Right 2×2 grid — hidden on mobile */}
             {photos.length > 1 && (
-              <div className="grid grid-cols-2 grid-rows-2 gap-[6px]">
+              <div className="hidden sm:grid grid-cols-2 grid-rows-2 gap-[6px]">
                 {[1, 2, 3, 4].map((offset) => {
                   const photo = photos[offset]
                   const isLast = offset === 4
