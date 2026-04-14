@@ -1036,6 +1036,16 @@ export default function NewPropertyPage() {
                 />
               </div>
 
+              <div>
+                <label className="block text-[13px] font-semibold text-[#1A1816] mb-1">Repairs & Renovation <span className="text-[#A8A8A4] font-normal">(optional)</span></label>
+                <TextEditor
+                  ref={repairsRef}
+                  id="repairs-editor"
+                  content={formData.repairs || ''}
+                  placeholder="Detail any repairs needed, recent renovations, or planned improvements..."
+                />
+              </div>
+
               {/* Inspection Report (optional) */}
               <div>
                 <label className="block text-[13px] font-semibold text-[#1A1816] mb-1">Inspection Report <span className="text-[#A8A8A4] font-normal">(optional)</span></label>
@@ -1081,16 +1091,6 @@ export default function NewPropertyPage() {
                     </div>
                   </div>
                 )}
-              </div>
-
-              <div>
-                <label className="block text-[13px] font-semibold text-[#1A1816] mb-1">Repairs & Renovation <span className="text-[#A8A8A4] font-normal">(optional)</span></label>
-                <TextEditor
-                  ref={repairsRef}
-                  id="repairs-editor"
-                  content={formData.repairs || ''}
-                  placeholder="Detail any repairs needed, recent renovations, or planned improvements..."
-                />
               </div>
             </div>
           )}
