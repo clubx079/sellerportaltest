@@ -661,8 +661,9 @@ export default function NewPropertyPage() {
                       setTrialPlan(prev => ({ ...prev, status: 'active', listings_used_this_period: 0 }));
                       setShowUpgradePrompt(false);
                       if (selectedAddOns.length > 0) {
-                        // Add-ons were selected but not paid — go back to add-ons tab to complete payment.
-                        // trialPlan is now 'active' so the limit check won't fire when onPublish is called.
+                        // Reset any stale PaymentIntent — a fresh one will be created on the add-ons tab
+                        setAddOnClientSecret(null);
+                        setAddOnError(null);
                         setActiveTab('addons');
                       } else {
                         handleSave('active', { bypassLimit: true });
