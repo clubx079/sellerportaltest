@@ -1185,6 +1185,7 @@ export default function NewPropertyPage() {
 
           {/* Preview Tab */}
           {activeTab === 'preview' && (
+            <>
             <div className="space-y-6">
               <div className="bg-[#FAFAF8] border border-[#E8E8E4] rounded p-6">
                 <h3 className="text-[15px] font-semibold text-[#1A1816] mb-4">Property Preview</h3>
@@ -1292,6 +1293,7 @@ export default function NewPropertyPage() {
                 {saving ? 'Publishing…' : imageUploadStatus.isUploading ? 'Please wait…' : 'Publish Listing'}
               </button>
             </div>
+            </>
           )}
         </div>
       </div>
