@@ -417,7 +417,7 @@ const PropertiesManagement = () => {
       case 'under_review':
         return 'bg-orange-50 text-orange-700 border-orange-200';
       case 'rejected':
-        return 'bg-red-50 text-red-700 border-red-200';
+        return 'bg-[#FEF3E2] text-[#B5620A] border-[#F3C97D]';
       case 'archived':
       case 'inactive':
         return 'bg-[#E8E8E4] text-[#737370] border-[#E8E8E4]';
@@ -629,7 +629,7 @@ const PropertiesManagement = () => {
               <option value="">Status</option>
               <option value="active">Active</option>
               <option value="under_review">Under Review</option>
-              <option value="rejected">Rejected</option>
+              <option value="rejected">Update Required</option>
               <option value="draft">Draft</option>
               <option value="inactive">Inactive</option>
             </select>
@@ -776,7 +776,7 @@ const PropertiesManagement = () => {
                         </select>
                       ) : (
                         <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium border ${getStatusColor(property.status)}`}>
-                          {property.status === 'under_review' ? 'Under Review' : (property.status || 'draft')?.charAt(0).toUpperCase() + (property.status || '').slice(1) || 'Draft'}
+                          {property.status === 'under_review' ? 'Under Review' : property.status === 'rejected' ? 'Update Required' : (property.status || 'draft')?.charAt(0).toUpperCase() + (property.status || '').slice(1) || 'Draft'}
                         </span>
                       )}
                     </td>
@@ -898,7 +898,7 @@ const PropertiesManagement = () => {
                         </select>
                       ) : (
                         <span className={`inline-flex px-2 py-0.5 rounded text-[10px] font-medium border ${getStatusColor(property.status)}`}>
-                          {property.status === 'under_review' ? 'Under Review' : (property.status || 'draft')?.charAt(0).toUpperCase() + (property.status || '').slice(1) || 'Draft'}
+                          {property.status === 'under_review' ? 'Under Review' : property.status === 'rejected' ? 'Update Required' : (property.status || 'draft')?.charAt(0).toUpperCase() + (property.status || '').slice(1) || 'Draft'}
                         </span>
                       )}
                       <span className={`inline-flex px-2 py-0.5 rounded text-[10px] font-medium border ${getPropertyStatusColor(property.property_status)}`}>
