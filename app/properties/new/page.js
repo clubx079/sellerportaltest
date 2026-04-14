@@ -160,6 +160,21 @@ export default function NewPropertyPage() {
           setActiveTab('basic');
           return;
         }
+        if (!formData.bedrooms) {
+          setError('Please enter the number of beds.');
+          setActiveTab('basic');
+          return;
+        }
+        if (!formData.bathrooms) {
+          setError('Please enter the number of baths.');
+          setActiveTab('basic');
+          return;
+        }
+        if (!formData.floor_area) {
+          setError('Please enter the floor area.');
+          setActiveTab('basic');
+          return;
+        }
       }
       // At least 1 image required
       if (targetIdx > TAB_ORDER.indexOf('images')) {
@@ -223,6 +238,24 @@ export default function NewPropertyPage() {
 
     if (publishStatus === 'active' && !formData.property_type) {
       setError('Please select a property type.');
+      setActiveTab('basic');
+      return;
+    }
+
+    if (publishStatus === 'active' && !formData.bedrooms) {
+      setError('Please enter the number of beds.');
+      setActiveTab('basic');
+      return;
+    }
+
+    if (publishStatus === 'active' && !formData.bathrooms) {
+      setError('Please enter the number of baths.');
+      setActiveTab('basic');
+      return;
+    }
+
+    if (publishStatus === 'active' && !formData.floor_area) {
+      setError('Please enter the floor area.');
       setActiveTab('basic');
       return;
     }
@@ -770,7 +803,7 @@ export default function NewPropertyPage() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-[13px] font-semibold text-[#1A1816] mb-2">Price ($)</label>
+                  <label className="block text-[13px] font-semibold text-[#1A1816] mb-2">Price ($) *</label>
                   <input
                     type="number"
                     value={formData.price || ''}
@@ -780,7 +813,7 @@ export default function NewPropertyPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-[13px] font-semibold text-[#1A1816] mb-2">Property Type</label>
+                  <label className="block text-[13px] font-semibold text-[#1A1816] mb-2">Property Type *</label>
                   <select
                     value={formData.property_type ?? ''}
                     onChange={(e) => handleInputChange('property_type', e.target.value)}
@@ -796,7 +829,7 @@ export default function NewPropertyPage() {
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-[13px] font-semibold text-[#1A1816] mb-2">Rooms/Units</label>
+                  <label className="block text-[13px] font-semibold text-[#1A1816] mb-2">Beds *</label>
                   <input
                     type="number"
                     value={formData.bedrooms || ''}
@@ -807,7 +840,7 @@ export default function NewPropertyPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-[13px] font-semibold text-[#1A1816] mb-2">Bathrooms</label>
+                  <label className="block text-[13px] font-semibold text-[#1A1816] mb-2">Baths *</label>
                   <input
                     type="number"
                     step="0.5"
@@ -819,7 +852,7 @@ export default function NewPropertyPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-[13px] font-semibold text-[#1A1816] mb-2">Floor Area (sqft)</label>
+                  <label className="block text-[13px] font-semibold text-[#1A1816] mb-2">Floor Area (sqft) *</label>
                   <input
                     type="number"
                     value={formData.floor_area || ''}
@@ -1184,7 +1217,7 @@ export default function NewPropertyPage() {
                       <p className="text-[13px] font-semibold text-[#1A1816]">${parseFloat(formData.price || 0).toLocaleString()}</p>
                     </div>
                     <div>
-                      <p className="text-[12px] text-[#737370] mb-1">Rooms</p>
+                      <p className="text-[12px] text-[#737370] mb-1">Beds</p>
                       <p className="text-[13px] text-[#1A1816]">{formData.bedrooms || 0}</p>
                     </div>
                     <div>
