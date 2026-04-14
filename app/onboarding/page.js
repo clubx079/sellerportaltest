@@ -229,20 +229,20 @@ function PlanCard({ plan, selected, annual, onSelect }) {
     <button
       type="button"
       onClick={() => onSelect(plan.id)}
-      className={`w-full text-left rounded border-2 p-5 transition-all ${
+      className={`w-full text-left rounded border-2 p-6 transition-all flex flex-col ${
         selected === plan.id ? 'border-[#D03839] bg-[#FEF0EF]' : 'border-[#E8E8E4] bg-white hover:border-[#1A1816]'
       }`}
     >
-      <div className="flex items-start justify-between mb-1.5">
-        <p className="text-[15px] font-bold text-[#1A1816]">{plan.name}</p>
+      <div className="flex items-start justify-between mb-2">
+        <p className="text-[17px] font-bold text-[#1A1816]">{plan.name}</p>
         {isPro && <span className="text-[10px] font-bold bg-[#D03839] text-white px-2 py-0.5 rounded">Popular</span>}
       </div>
-      <p className="text-[12px] text-[#737370] mb-3">{plan.desc}</p>
-      <div className="flex items-end gap-1">
-        <span className="text-[26px] font-bold text-[#1A1816] leading-none">${price}</span>
-        <span className="text-[12px] text-[#737370] mb-0.5">{period}</span>
+      <p className="text-[13px] text-[#737370] mb-5">{plan.desc}</p>
+      <div className="flex items-end gap-1 mt-auto">
+        <span className="text-[32px] font-bold text-[#1A1816] leading-none">${price}</span>
+        <span className="text-[13px] text-[#737370] mb-1">{period}</span>
       </div>
-      {sub && <p className="text-[11px] text-[#737370] mt-0.5">{sub}</p>}
+      {sub && <p className="text-[12px] text-[#737370] mt-1">{sub}</p>}
     </button>
   )
 }
@@ -289,7 +289,7 @@ function StepPlan({ onNext }) {
       </div>
 
       {/* Plan cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {PLANS.map(p => (
           <PlanCard key={p.id} plan={p} selected={selected} annual={annual} onSelect={setSelected} />
         ))}
@@ -540,7 +540,7 @@ function OnboardingContent() {
 
   return (
     <div className="min-h-screen bg-[#FAFAF8] flex flex-col items-center justify-center px-4 py-12" style={{ fontFamily: 'var(--font-dm-sans), DM Sans, sans-serif' }}>
-      <div className="w-full max-w-md">
+      <div className={`w-full transition-all duration-300 ${step === 2 ? 'max-w-2xl' : 'max-w-md'}`}>
 
         {/* Logo */}
         <div className="flex justify-center mb-8">
