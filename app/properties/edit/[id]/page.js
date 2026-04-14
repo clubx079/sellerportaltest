@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import { Save, Eye, ArrowLeft, Upload, X, AlertCircle } from 'lucide-react';
+import { Save, ArrowLeft, Upload, X, AlertCircle } from 'lucide-react';
 import ImageGalleryManager from '@/components/properties/ImageGalleryManager';
 import TextEditor from '@/components/forms/TextEditor';
 import GooglePlacesAutocomplete from '@/components/forms/GooglePlacesAutocomplete';
@@ -41,7 +41,6 @@ export default function EditPropertyPage() {
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
   const [activeTab, setActiveTab] = useState('basic');
-  const [showAllPreviewImages, setShowAllPreviewImages] = useState(false);
   const [userId, setUserId] = useState(null);
   const [sourceType, setSourceType] = useState(null); // 'manual' | 'scraped'
   const [tempSellerId, setTempSellerId] = useState(null); // for scraped fetch/save
@@ -597,7 +596,7 @@ export default function EditPropertyPage() {
             <ArrowLeft size={20} className="text-neutral-600" />
           </button>
           <div>
-            <h1 className="text-lg md:text-xl font-semibold tracking-tight text-neutral-900">Edit Property</h1>
+            <h1 className="text-lg md:text-xl font-semibold tracking-tight text-[#1A1816]">Edit Property</h1>
           </div>
         </div>
         <div className="flex gap-2">
@@ -620,13 +619,12 @@ export default function EditPropertyPage() {
             type="button"
             onClick={() => handleSave('active')}
             disabled={saving || imageUploadStatus.isUploading}
-            className="flex items-center justify-center gap-2 bg-primary hover:bg-primary-700 text-white px-3 py-2 rounded text-sm font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center justify-center gap-2 bg-[#D03839] hover:bg-[#B82F30] text-white px-3 py-2 rounded text-sm font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <Eye size={16} />
             <span>
               {imageUploadStatus.isUploading
                 ? 'Please wait...'
-                : saving ? 'Publishing…' : 'Publish'
+                : saving ? 'Sending…' : 'Send for Review'
               }
             </span>
           </button>
@@ -635,24 +633,24 @@ export default function EditPropertyPage() {
 
       {/* Notifications */}
       {error && (
-        <div className="flex items-start gap-3 p-3 bg-red-50 border border-red-200 rounded text-red-700">
+        <div className="flex items-start gap-3 p-3 bg-[#FEF0EF] border border-[#F5C4C0] rounded text-[#B82F30]">
           <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
           <div className="flex-1">
             <p className="text-sm font-medium">{error}</p>
           </div>
-          <button onClick={() => setError(null)} className="text-red-400 hover:text-red-600">
+          <button onClick={() => setError(null)} className="text-[#F5C4C0] hover:text-[#B82F30]">
             <X className="w-4 h-4" />
           </button>
         </div>
       )}
 
       {success && (
-        <div className="flex items-start gap-3 p-3 bg-green-50 border border-green-200 rounded text-green-700">
+        <div className="flex items-start gap-3 p-3 bg-[#E4F5EC] border border-[#9FDBB8] rounded text-[#0F6E56]">
           <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
           <div className="flex-1">
             <p className="text-sm font-medium">{success}</p>
           </div>
-          <button onClick={() => setSuccess(null)} className="text-green-400 hover:text-green-600">
+          <button onClick={() => setSuccess(null)} className="text-[#9FDBB8] hover:text-[#0F6E56]">
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -660,38 +658,41 @@ export default function EditPropertyPage() {
 
       {/* Upload Warning */}
       {imageUploadStatus.isUploading && (
-        <div className="flex items-start gap-3 p-4 bg-blue-50 border border-blue-200 rounded">
-          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
+        <div className="flex items-start gap-3 p-4 bg-[#FAFAF8] border border-[#E8E8E4] rounded">
+          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-[#1A1816]"></div>
           <div>
-            <h4 className="font-medium text-blue-900 mb-1">Uploading Images</h4>
-            <p className="text-sm text-blue-700">
-              Please wait for {imageUploadStatus.uploadingCount} image{imageUploadStatus.uploadingCount > 1 ? 's' : ''} to finish uploading before publishing.
+            <h4 className="font-medium text-[#1A1816] mb-1">Uploading Images</h4>
+            <p className="text-sm text-[#737370]">
+              Please wait for {imageUploadStatus.uploadingCount} image{imageUploadStatus.uploadingCount > 1 ? 's' : ''} to finish uploading before sending for review.
             </p>
           </div>
         </div>
       )}
 
       {/* Tabs */}
-      <div className="bg-white rounded border border-neutral-200 overflow-hidden">
-        <div className="flex border-b border-neutral-200 overflow-x-auto scrollbar-hide">
+      <div className="bg-white rounded border border-[#E8E8E4] overflow-hidden">
+        <div className="flex border-b border-[#E8E8E4]">
           {[
-            { id: 'basic', label: 'Basic Info' },
-            { id: 'images', label: 'Images' },
-            { id: 'inspection', label: 'Inspection Report' },
-            { id: 'content', label: 'Content' },
-            { id: 'seo', label: 'SEO & Social' },
-            { id: 'preview', label: 'Preview' }
-          ].map((tab) => (
+            { id: 'basic',     label: 'Basic Info' },
+            { id: 'images',    label: 'Images' },
+            { id: 'ownership', label: 'Ownership' },
+            { id: 'content',   label: 'Content' },
+            { id: 'seo',       label: 'SEO & Social' },
+          ].map((tab, idx) => (
             <button
               key={tab.id}
               onClick={() => handleTabChange(tab.id)}
-              className={`px-4 md:px-6 py-3 md:py-4 font-medium transition-colors whitespace-nowrap text-xs md:text-sm ${
-                activeTab === tab.id
-                  ? 'text-primary border-b-2 border-primary bg-primary/5'
-                  : 'text-neutral-600 hover:text-neutral-900'
-              }`}
+              className={`flex-1 flex items-center justify-center gap-1.5 px-1 md:px-5 py-3.5 text-[12px] font-medium transition-colors border-b-2
+                ${activeTab === tab.id
+                  ? 'border-[#D03839] text-[#D03839] bg-[#FEF0EF]/30'
+                  : 'border-transparent text-[#737370] hover:text-[#1A1816] hover:bg-[#FAFAF8]'}`}
             >
-              {tab.label}
+              <span className={`w-[18px] h-[18px] rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0
+                ${activeTab === tab.id ? 'bg-[#D03839] text-white' : 'bg-[#E8E8E4] text-[#737370]'}`}
+              >
+                {idx + 1}
+              </span>
+              <span className="hidden sm:inline">{tab.label}</span>
             </button>
           ))}
         </div>
@@ -845,11 +846,11 @@ export default function EditPropertyPage() {
             />
           </div>
 
-          {/* Inspection Report Tab */}
-          {activeTab === 'inspection' && (
+          {/* Ownership Tab */}
+          {activeTab === 'ownership' && (
             <div>
-              <h3 className="text-lg font-semibold text-neutral-900 mb-2">Inspection Report</h3>
-              <p className="text-sm text-neutral-600 mb-6">
+              <h3 className="text-lg font-semibold text-[#1A1816] mb-2">Inspection Report</h3>
+              <p className="text-sm text-[#737370] mb-6">
                 Upload the inspection report for this property (PDF or DOC format)
               </p>
 
@@ -1015,96 +1016,6 @@ export default function EditPropertyPage() {
             </div>
           )}
 
-          {/* Preview Tab */}
-          {activeTab === 'preview' && (
-            <div className="space-y-6">
-              <div className="bg-neutral-50 border border-neutral-200 rounded p-6">
-                <h3 className="text-lg font-semibold text-neutral-900 mb-4">Property Preview</h3>
-                <div className="space-y-4">
-                  <div>
-                    <p className="text-xs text-neutral-500 mb-1">Title</p>
-                    <p className="text-base font-semibold text-neutral-900">{formData.title || 'No title'}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-neutral-500 mb-1">Location</p>
-                    <p className="text-sm text-neutral-700">{formData.location || 'No location'}</p>
-                  </div>
-                  <div className="grid grid-cols-3 gap-4">
-                    <div>
-                      <p className="text-xs text-neutral-500 mb-1">Price</p>
-                      <p className="text-sm font-semibold text-neutral-900">${parseFloat(formData.price || 0).toLocaleString()}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-neutral-500 mb-1">Rooms</p>
-                      <p className="text-sm text-neutral-700">{formData.bedrooms || 0}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-neutral-500 mb-1">Area</p>
-                      <p className="text-sm text-neutral-700">{formData.floor_area ? `${formData.floor_area} sqft` : 'N/A'}</p>
-                    </div>
-                  </div>
-                  {formData.description && (
-                    <div>
-                      <p className="text-xs text-neutral-500 mb-2">Description</p>
-                      <div
-                        className="text-sm text-neutral-700 prose prose-sm max-w-none"
-                        dangerouslySetInnerHTML={{ __html: formData.description }}
-                      />
-                    </div>
-                  )}
-                  {formData.repairs && (
-                    <div>
-                      <p className="text-xs text-neutral-500 mb-2">Repairs & Renovation</p>
-                      <div
-                        className="text-sm text-neutral-700 prose prose-sm max-w-none"
-                        dangerouslySetInnerHTML={{ __html: formData.repairs }}
-                      />
-                    </div>
-                  )}
-                  {imageUploadStatus.images.filter(img => img.status === 'completed').length > 0 && (
-                    <div>
-                      <p className="text-xs text-neutral-500 mb-2">
-                        Images ({imageUploadStatus.images.filter(img => img.status === 'completed').length})
-                        {imageUploadStatus.images.filter(img => img.status === 'completed').length > 8 &&
-                          <span className="text-neutral-400">
-                            {showAllPreviewImages ? ' • Showing all' : ' • Showing first 8'}
-                          </span>
-                        }
-                      </p>
-                      {imageUploadStatus.images.filter(img => img.status === 'completed').length > 8 && (
-                        <button
-                          type="button"
-                          onClick={() => setShowAllPreviewImages(prev => !prev)}
-                          className="text-xs font-medium text-primary hover:text-primary-700 mb-3"
-                        >
-                          {showAllPreviewImages ? 'Show first 8' : 'Show all'}
-                        </button>
-                      )}
-                      <div className="grid grid-cols-4 gap-3">
-                        {imageUploadStatus.images
-                          .filter(img => img.status === 'completed')
-                          .slice(0, showAllPreviewImages ? undefined : 8)
-                          .map((img, idx) => (
-                            <div key={idx} className="relative group">
-                              <img
-                                src={img.imageUrl}
-                                alt={`Preview ${idx + 1}`}
-                                className="w-full h-32 object-cover rounded border-2 border-neutral-200"
-                              />
-                              {img.isFeatured && (
-                                <div className="absolute top-1 left-1 px-1.5 py-0.5 bg-yellow-500 text-white text-[10px] font-medium rounded">
-                                  Featured
-                                </div>
-                              )}
-                            </div>
-                          ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
         </div>
       </div>
     </div>
