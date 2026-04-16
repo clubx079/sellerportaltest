@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { Plus, Edit2, Trash2, Search, X, Building2, ChevronLeft, ChevronRight, MapPin, DollarSign, RotateCcw, BarChart2, Link2, Home, FileEdit, Eye, Zap } from 'lucide-react';
+import { Plus, Edit2, Trash2, Search, X, Building2, ChevronLeft, ChevronRight, ChevronDown, MapPin, DollarSign, RotateCcw, BarChart2, Link2, Home, FileEdit, Eye, Zap } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import DeleteConfirmModal from '@/components/properties/DeleteConfirmModal';
 import PropertyViewModal from '@/components/properties/PropertyViewModal';
@@ -700,10 +700,10 @@ const PropertiesManagement = () => {
               <tr>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-[#444441] uppercase tracking-wider whitespace-nowrap">#</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-[#444441] uppercase tracking-wider whitespace-nowrap">Property</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-[#444441] uppercase tracking-wider whitespace-nowrap">Source</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-[#444441] uppercase tracking-wider whitespace-nowrap">Price</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-[#444441] uppercase tracking-wider whitespace-nowrap">Type</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-[#444441] uppercase tracking-wider whitespace-nowrap">Status</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-[#444441] uppercase tracking-wider whitespace-nowrap">Source</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-[#444441] uppercase tracking-wider whitespace-nowrap w-full">Enhancements</th>
                 <th className="px-4 py-3 text-right text-xs font-semibold text-[#444441] uppercase tracking-wider whitespace-nowrap">Actions</th>
               </tr>
@@ -769,11 +769,6 @@ const PropertiesManagement = () => {
                       </div>
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium border ${property._source === 'manual' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-amber-50 text-amber-700 border-amber-200'}`}>
-                        {property._source === 'manual' ? 'Manual' : 'DeelScout'}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap">
                       <span className="text-xs font-semibold text-[#1A1816]">${parseFloat(property.price || 0).toLocaleString()}</span>
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
@@ -781,19 +776,19 @@ const PropertiesManagement = () => {
                     </td>
                     <td className={`px-4 py-3 ${property._source === 'manual' && property.status === 'rejected' ? '' : 'whitespace-nowrap'}`}>
                       {viewMode === 'active' && ['active', 'inactive'].includes((property.status || '').toLowerCase()) ? (
-                        <select
-                          value={(property.status || 'inactive').toLowerCase()}
-                          disabled={statusUpdatingId === `${property._source}-${property.id}`}
-                          onChange={(e) => handleToggleActive(property, e.target.value)}
-                          className={`text-[11px] font-medium px-2 py-1 rounded border cursor-pointer focus:outline-none focus:ring-1 focus:ring-[#D03839]/20 disabled:opacity-50 disabled:cursor-not-allowed ${
-                            (property.status || '').toLowerCase() === 'active'
-                              ? 'bg-green-50 text-green-700 border-green-200'
-                              : 'bg-amber-50 text-amber-700 border-amber-200'
-                          }`}
-                        >
-                          <option value="active">Active</option>
-                          <option value="inactive">Inactive</option>
-                        </select>
+                        <div className="relative inline-flex items-center">
+                          <span className={`absolute left-2.5 w-1.5 h-1.5 rounded-full pointer-events-none ${(property.status || '').toLowerCase() === 'active' ? 'bg-green-500' : 'bg-amber-400'}`} />
+                          <select
+                            value={(property.status || 'inactive').toLowerCase()}
+                            disabled={statusUpdatingId === `${property._source}-${property.id}`}
+                            onChange={(e) => handleToggleActive(property, e.target.value)}
+                            className="appearance-none bg-white border border-[#E8E8E4] rounded-md pl-6 pr-7 py-1.5 text-[12px] font-medium text-[#1A1816] cursor-pointer focus:outline-none focus:border-[#D03839]/40 focus:ring-1 focus:ring-[#D03839]/10 hover:border-[#D4D4CF] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                          >
+                            <option value="active">Active</option>
+                            <option value="inactive">Inactive</option>
+                          </select>
+                          <ChevronDown className="absolute right-2 w-3 h-3 text-[#A8A8A4] pointer-events-none" strokeWidth={2} />
+                        </div>
                       ) : (
                         <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium border ${getStatusColor(property.status)}`}>
                           {property.status === 'under_review' ? 'Under Review' : property.status === 'rejected' ? 'Update Required' : (property.status || 'draft')?.charAt(0).toUpperCase() + (property.status || '').slice(1) || 'Draft'}
@@ -804,6 +799,11 @@ const PropertiesManagement = () => {
                           {property.rejection_reason.length > 70 ? property.rejection_reason.slice(0, 70) + '…' : property.rejection_reason}
                         </p>
                       )}
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium border ${property._source === 'manual' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-amber-50 text-amber-700 border-amber-200'}`}>
+                        {property._source === 'manual' ? 'Manual' : 'DeelScout'}
+                      </span>
                     </td>
                     <td className="px-4 py-3 w-full">
                       <AddonTags property={property} />
