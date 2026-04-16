@@ -203,29 +203,11 @@ function MagicLinkRegisterContent() {
     }
   }
 
-  // ── Logo component ─────────────────────────────────────────────
-  const Logo = () => (
-    <div className="login-logo-enter absolute top-4 left-4 sm:left-8 z-20 flex items-center gap-2">
-      <div style={{ height: '56px', width: '160px', display: 'flex', alignItems: 'center' }}>
-        {!logoError ? (
-          <Image src="/logo.svg" alt="DeelMap" width={160} height={56} style={{ height: '56px', width: 'auto', objectFit: 'contain' }} priority onError={() => setLogoError(true)} />
-        ) : (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <div style={{ width: '36px', height: '36px', background: T.textPrimary, borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <MapPin style={{ width: '18px', height: '18px', color: '#fff' }} />
-            </div>
-            <span style={{ fontWeight: 600, fontSize: '16px', color: T.textPrimary }}>DeelMap</span>
-          </div>
-        )}
-      </div>
-    </div>
-  )
 
   // ── Loading state ──────────────────────────────────────────────
   if (loading) {
     return (
       <div style={{ minHeight: '100vh', background: T.bgWhite, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <Logo />
         <div style={{ textAlign: 'center' }}>
           <Loader2 style={{ width: '40px', height: '40px', color: T.primary, animation: 'spin 1s linear infinite', margin: '0 auto 12px' }} />
           <p style={{ fontSize: '14px', color: T.textSecondary }}>Validating your registration link...</p>
@@ -238,7 +220,6 @@ function MagicLinkRegisterContent() {
   if (!tokenValid) {
     return (
       <div style={{ minHeight: '100vh', background: T.bgWhite, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
-        <Logo />
         <div style={{ background: T.bgWhite, border: `1px solid ${T.borderLight}`, borderRadius: '4px', padding: '40px 32px', maxWidth: '420px', width: '100%', textAlign: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.04), 0 8px 24px rgba(0,0,0,0.06)' }}>
           <div style={{ width: '52px', height: '52px', background: T.primarySurface, borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
             <AlertCircle style={{ width: '24px', height: '24px', color: T.primary }} />
@@ -262,15 +243,22 @@ function MagicLinkRegisterContent() {
 
   // ── Main registration form ─────────────────────────────────────
   return (
-    <div style={{ minHeight: '100vh', background: T.bgWhite, paddingTop: '80px', paddingBottom: '40px' }}>
-      <Logo />
-
+    <div style={{ minHeight: '100vh', background: T.bgWhite, paddingTop: '48px', paddingBottom: '40px' }}>
       <div style={{ maxWidth: '680px', margin: '0 auto', padding: '0 16px' }}>
 
         {/* Header */}
         <div style={{ textAlign: 'center', marginBottom: '28px' }}>
-          <div style={{ width: '48px', height: '48px', background: T.primarySurface, borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
-            <CheckCircle style={{ width: '22px', height: '22px', color: T.primary }} />
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '20px' }}>
+            {!logoError ? (
+              <Image src="/logo.svg" alt="DeelMap" width={160} height={56} style={{ height: '48px', width: 'auto', objectFit: 'contain' }} priority onError={() => setLogoError(true)} />
+            ) : (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{ width: '36px', height: '36px', background: T.textPrimary, borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <MapPin style={{ width: '18px', height: '18px', color: '#fff' }} />
+                </div>
+                <span style={{ fontWeight: 700, fontSize: '20px', color: T.textPrimary }}>DeelMap</span>
+              </div>
+            )}
           </div>
           <h1 style={{ fontSize: '26px', fontWeight: 700, color: T.textPrimary, marginBottom: '6px' }}>
             Complete Your Registration
