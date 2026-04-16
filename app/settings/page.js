@@ -383,8 +383,8 @@ export default function SettingsPage() {
               onClick={() => setShowCancelSection(v => !v)}
               className="w-full flex items-center justify-between px-5 py-3 text-left hover:bg-[#FAFAF8] transition-colors"
             >
-              <span className="text-[12px] text-[#A8A8A4]">Subscription management</span>
-              {showCancelSection ? <ChevronUp className="w-3.5 h-3.5 text-[#A8A8A4]" /> : <ChevronDown className="w-3.5 h-3.5 text-[#A8A8A4]" />}
+              <span className="text-[14px] font-medium text-[#1A1816]">Subscription management</span>
+              {showCancelSection ? <ChevronUp className="w-4 h-4 text-[#737370]" /> : <ChevronDown className="w-4 h-4 text-[#737370]" />}
             </button>
 
             {showCancelSection && (
