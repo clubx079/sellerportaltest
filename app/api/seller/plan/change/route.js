@@ -39,57 +39,23 @@ export async function POST(request) {
       return NextResponse.json({ error: `Price not configured for ${new_plan_type}_${billingCycle}` }, { status: 400 })
     }
 
-    // Retrieve current subscription to get current price and period end
-    const sub = await stripe.subscriptions.retrieve(plan.stripe_subscription_id, {
-      expand: ['schedule'],
-    })
+    // Retrieve current subscription
+    const sub = await stripe.subscriptions.retrieve(plan.stripe_subscription_id)
 
     const currentItemId = sub.items.data[0]?.id
-    const currentPriceId = sub.items.data[0]?.price?.id
     const periodEnd = sub.current_period_end
 
-    if (!currentItemId || !currentPriceId) {
+    if (!currentItemId) {
       return NextResponse.json({ error: 'Could not read current subscription item' }, { status: 500 })
     }
 
-    // If subscription already has a schedule, update its phases
-    // Otherwise create a new schedule from the subscription
-    if (sub.schedule) {
-      await stripe.subscriptionSchedules.update(typeof sub.schedule === 'string' ? sub.schedule : sub.schedule.id, {
-        end_behavior: 'release',
-        phases: [
-          {
-            items: [{ price: currentPriceId, quantity: 1 }],
-            end_date: periodEnd,
-            proration_behavior: 'none',
-          },
-          {
-            items: [{ price: newPriceId, quantity: 1 }],
-            proration_behavior: 'none',
-            metadata: { seller_id, plan_type: new_plan_type, billing_cycle: billingCycle },
-          },
-        ],
-      })
-    } else {
-      const schedule = await stripe.subscriptionSchedules.create({
-        from_subscription: plan.stripe_subscription_id,
-      })
-      await stripe.subscriptionSchedules.update(schedule.id, {
-        end_behavior: 'release',
-        phases: [
-          {
-            items: [{ price: currentPriceId, quantity: 1 }],
-            end_date: periodEnd,
-            proration_behavior: 'none',
-          },
-          {
-            items: [{ price: newPriceId, quantity: 1 }],
-            proration_behavior: 'none',
-            metadata: { seller_id, plan_type: new_plan_type, billing_cycle: billingCycle },
-          },
-        ],
-      })
-    }
+    // Update the subscription item to the new price with no proration.
+    // Stripe applies the new price at the start of the next billing cycle.
+    await stripe.subscriptions.update(plan.stripe_subscription_id, {
+      items: [{ id: currentItemId, price: newPriceId }],
+      proration_behavior: 'none',
+      metadata: { seller_id, plan_type: new_plan_type, billing_cycle: billingCycle },
+    })
 
     const scheduledFor = new Date(periodEnd * 1000).toISOString()
 
