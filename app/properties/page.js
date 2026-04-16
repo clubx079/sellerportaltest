@@ -705,8 +705,8 @@ const PropertiesManagement = () => {
                 <th className="px-4 py-3 text-left text-xs font-semibold text-[#444441] uppercase tracking-wider whitespace-nowrap">Price</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-[#444441] uppercase tracking-wider whitespace-nowrap">Type</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-[#444441] uppercase tracking-wider whitespace-nowrap">Status</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-[#444441] uppercase tracking-wider whitespace-nowrap">Enhancements</th>
-                <th className="px-4 py-3 text-right text-xs font-semibold text-[#444441] uppercase tracking-wider whitespace-nowrap">Actions</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-[#444441] uppercase tracking-wider whitespace-nowrap w-[160px]">Enhancements</th>
+                <th className="px-4 py-3 text-right text-xs font-semibold text-[#444441] uppercase tracking-wider whitespace-nowrap min-w-[200px]">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#E8E8E4] bg-white">
@@ -815,8 +815,8 @@ const PropertiesManagement = () => {
                     <td className="px-4 py-3">
                       <AddonTags property={property} />
                     </td>
-                    <td className="px-4 py-3 whitespace-nowrap min-w-[240px]">
-                      <div className="flex items-center justify-end gap-0.5">
+                    <td className="px-4 py-3 whitespace-nowrap min-w-[200px]">
+                      <div className="flex items-center justify-end gap-2">
                         {viewMode === 'trash' ? (
                           <>
                             <button onClick={() => handleRestore(property)} className="flex items-center justify-center w-8 h-8 rounded text-[#A8A8A4] hover:text-primary hover:bg-[#E8E8E4] transition-colors" title="Restore">
@@ -831,7 +831,7 @@ const PropertiesManagement = () => {
                             {property._source === 'manual' && property.status === 'rejected' && (
                               <button
                                 onClick={() => router.push(`/properties/edit/${property.id}`)}
-                                className="h-7 px-3 text-[11px] font-semibold bg-[#D03839] hover:bg-[#E0493B] text-white rounded transition-colors mr-1"
+                                className="h-7 px-3 text-[11px] font-semibold bg-[#D03839] hover:bg-[#E0493B] text-white rounded transition-colors"
                               >
                                 Fix Issues
                               </button>
@@ -839,7 +839,7 @@ const PropertiesManagement = () => {
                             {property._source === 'manual' && ['active', 'published'].includes((property.status || '').toLowerCase()) && (
                               <button
                                 onClick={() => router.push(`/properties/enhance?id=${property.id}`)}
-                                className="h-7 px-3 text-[11px] font-semibold bg-[#D03839] hover:bg-[#E0493B] text-white rounded transition-colors mr-1"
+                                className="h-7 px-3 text-[11px] font-semibold bg-[#D03839] hover:bg-[#E0493B] text-white rounded transition-colors"
                               >
                                 Enhance
                               </button>
