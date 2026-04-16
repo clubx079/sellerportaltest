@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import Stripe from 'stripe'
 
+const toISO = (ts) => (ts && ts > 0) ? new Date(ts * 1000).toISOString() : null
+
 export async function POST(request) {
   const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY)
   const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
@@ -20,42 +22,38 @@ export async function POST(request) {
       return NextResponse.json({ plan, pending: null })
     }
 
-    // Check Stripe subscription for a schedule (pending plan change)
-    const sub = await stripe.subscriptions.retrieve(plan.stripe_subscription_id, {
-      expand: ['schedule'],
-    })
+    // Verify live subscription status against Stripe (catches any webhook delays)
+    const sub = await stripe.subscriptions.retrieve(plan.stripe_subscription_id)
 
-    let pending = null
-    if (sub.schedule && typeof sub.schedule !== 'string') {
-      // Schedule exists — look at the second phase for the new plan
-      const phases = sub.schedule.phases || []
-      if (phases.length >= 2) {
-        const nextPhase = phases[1]
-        const nextPriceId = nextPhase.items?.[0]?.price
-        const scheduledFor = nextPhase.start_date
-          ? new Date(nextPhase.start_date * 1000).toISOString()
-          : null
-
-        // Map price ID back to plan type
-        const priceMap = {
-          [process.env.STRIPE_PRICE_PRO_MONTHLY]:        { plan_type: 'pro',        billing_cycle: 'monthly' },
-          [process.env.STRIPE_PRICE_PRO_ANNUAL]:         { plan_type: 'pro',        billing_cycle: 'annual'  },
-          [process.env.STRIPE_PRICE_ENTERPRISE_MONTHLY]: { plan_type: 'enterprise', billing_cycle: 'monthly' },
-          [process.env.STRIPE_PRICE_ENTERPRISE_ANNUAL]:  { plan_type: 'enterprise', billing_cycle: 'annual'  },
-        }
-
-        const nextPlanInfo = priceMap[nextPriceId] || nextPhase.metadata || null
-        if (nextPlanInfo) {
-          pending = {
-            plan_type: nextPlanInfo.plan_type,
-            scheduled_for: scheduledFor,
-            schedule_id: sub.schedule.id,
-          }
-        }
-      }
+    const priceMap = {
+      [process.env.STRIPE_PRICE_PRO_MONTHLY]:        { plan_type: 'pro',        billing_cycle: 'monthly' },
+      [process.env.STRIPE_PRICE_PRO_ANNUAL]:         { plan_type: 'pro',        billing_cycle: 'annual'  },
+      [process.env.STRIPE_PRICE_ENTERPRISE_MONTHLY]: { plan_type: 'enterprise', billing_cycle: 'monthly' },
+      [process.env.STRIPE_PRICE_ENTERPRISE_ANNUAL]:  { plan_type: 'enterprise', billing_cycle: 'annual'  },
     }
 
-    return NextResponse.json({ plan, pending })
+    // If Stripe has a different plan_type than our DB (webhook not yet processed), patch it
+    const livePriceId = sub.items.data[0]?.price?.id
+    const liveInfo = priceMap[livePriceId]
+    if (liveInfo && liveInfo.plan_type !== plan.plan_type) {
+      await supabase
+        .from('seller_plans')
+        .update({
+          plan_type: liveInfo.plan_type,
+          billing_cycle: liveInfo.billing_cycle,
+          stripe_price_id: livePriceId,
+          current_period_start: toISO(sub.current_period_start),
+          current_period_end:   toISO(sub.current_period_end),
+          updated_at: new Date().toISOString(),
+        })
+        .eq('stripe_subscription_id', sub.id)
+
+      plan.plan_type = liveInfo.plan_type
+      plan.billing_cycle = liveInfo.billing_cycle
+      plan.current_period_end = toISO(sub.current_period_end)
+    }
+
+    return NextResponse.json({ plan, pending: null })
   } catch (err) {
     console.error('[plan/info]', err)
     return NextResponse.json({ error: err.message || 'Internal server error' }, { status: 500 })

@@ -100,17 +100,25 @@ export async function POST(request) {
       // ── Subscription updated (upgrade/downgrade/renewal) ──────────────
       case 'customer.subscription.updated': {
         const sub = event.data.object
+        const { plan_type, billing_cycle } = sub.metadata || {}
+
+        const updateData = {
+          status: sub.status === 'trialing' ? 'trialing'
+                : sub.status === 'past_due' ? 'past_due'
+                : 'active',
+          current_period_start: toISO(sub.current_period_start),
+          current_period_end:   toISO(sub.current_period_end),
+          stripe_price_id: sub.items.data[0]?.price?.id || null,
+          updated_at: new Date().toISOString(),
+        }
+
+        // Sync plan_type and billing_cycle from metadata when a plan change occurs
+        if (plan_type) updateData.plan_type = plan_type
+        if (billing_cycle) updateData.billing_cycle = billing_cycle
 
         await supabase
           .from('seller_plans')
-          .update({
-            status: sub.status === 'trialing' ? 'trialing'
-                  : sub.status === 'past_due' ? 'past_due'
-                  : 'active',
-            current_period_start: toISO(sub.current_period_start),
-            current_period_end:   toISO(sub.current_period_end),
-            updated_at: new Date().toISOString(),
-          })
+          .update(updateData)
           .eq('stripe_subscription_id', sub.id)
 
         break
