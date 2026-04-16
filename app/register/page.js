@@ -1,10 +1,64 @@
 "use client"
 
 import React, { useState, useEffect, Suspense } from 'react'
+import Image from 'next/image'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { motion } from 'framer-motion'
-import { User, Mail, Lock, Phone, CheckCircle, AlertCircle, Loader2, Building, FileText } from 'lucide-react'
+import { User, Mail, Lock, Phone, CheckCircle, AlertCircle, Loader2, Building, FileText, Eye, EyeOff, MapPin, TrendingUp } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
+
+// ─── Brand tokens ───────────────────────────────────────────────
+const T = {
+  primary:        '#D03839',
+  primaryHover:   '#E0493B',
+  primarySurface: '#FEF0EF',
+  primaryBorder:  '#F5C4C0',
+  textPrimary:    '#1A1816',
+  textBody:       '#444441',
+  textSecondary:  '#737370',
+  textMuted:      '#A8A8A4',
+  bgWhite:        '#FFFFFF',
+  bgSurface:      '#FAFAF8',
+  borderLight:    '#E8E8E4',
+  success:        '#0F6E56',
+  successSurface: '#E4F5EC',
+  successBorder:  '#B3DFC5',
+}
+
+const inputStyle = {
+  width: '100%',
+  height: '48px',
+  paddingLeft: '40px',
+  paddingRight: '16px',
+  border: `1px solid ${T.borderLight}`,
+  borderRadius: '4px',
+  background: T.bgWhite,
+  color: T.textPrimary,
+  fontSize: '14px',
+  outline: 'none',
+  transition: 'border-color 0.15s ease, box-shadow 0.15s ease',
+}
+
+const readonlyInputStyle = {
+  ...inputStyle,
+  background: T.bgSurface,
+  color: T.textSecondary,
+  cursor: 'default',
+}
+
+function InputField({ icon: Icon, label, required, hint, children, textarea }) {
+  return (
+    <div>
+      <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, color: T.textBody, marginBottom: '6px' }}>
+        {label}{required && <span style={{ color: T.primary, marginLeft: '3px' }}>*</span>}
+      </label>
+      <div style={{ position: 'relative' }}>
+        <Icon style={{ position: 'absolute', left: '12px', top: textarea ? '14px' : '50%', transform: textarea ? 'none' : 'translateY(-50%)', width: '16px', height: '16px', color: T.textMuted, pointerEvents: 'none' }} />
+        {children}
+      </div>
+      {hint && <p style={{ marginTop: '4px', fontSize: '11px', color: T.textSecondary }}>{hint}</p>}
+    </div>
+  )
+}
 
 function MagicLinkRegisterContent() {
   const router = useRouter()
@@ -16,6 +70,9 @@ function MagicLinkRegisterContent() {
   const [tokenValid, setTokenValid] = useState(false)
   const [tokenData, setTokenData] = useState(null)
   const [message, setMessage] = useState({ type: '', text: '' })
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirm, setShowConfirm] = useState(false)
+  const [logoError, setLogoError] = useState(false)
 
   const [formData, setFormData] = useState({
     contact_person_name: '',
@@ -26,7 +83,6 @@ function MagicLinkRegisterContent() {
     description: ''
   })
 
-  // Validate magic link token directly from Supabase
   useEffect(() => {
     const validateToken = async () => {
       if (!token) {
@@ -36,7 +92,6 @@ function MagicLinkRegisterContent() {
       }
 
       try {
-        // Query magic_link_tokens table directly
         const { data: tokenRecord, error } = await supabase
           .from('magic_link_tokens')
           .select('*')
@@ -49,14 +104,12 @@ function MagicLinkRegisterContent() {
           return
         }
 
-        // Check if token is already used
         if (tokenRecord.used) {
           setMessage({ type: 'error', text: 'This registration link has already been used' })
           setLoading(false)
           return
         }
 
-        // Check if token is expired
         const now = new Date()
         const expiresAt = new Date(tokenRecord.expires_at)
         if (now > expiresAt) {
@@ -65,7 +118,6 @@ function MagicLinkRegisterContent() {
           return
         }
 
-        // Token is valid
         setTokenValid(true)
         setTokenData({
           temp_seller_id: tokenRecord.temp_seller_id,
@@ -85,12 +137,25 @@ function MagicLinkRegisterContent() {
     validateToken()
   }, [token])
 
+  const handleChange = (field) => (e) => {
+    setFormData(prev => ({ ...prev, [field]: e.target.value }))
+    if (message.type === 'error') setMessage({ type: '', text: '' })
+  }
+
+  const handleFocus = (e) => {
+    e.target.style.borderColor = T.primary
+    e.target.style.boxShadow = `0 0 0 3px rgba(208, 56, 57, 0.12)`
+  }
+  const handleBlur = (e) => {
+    e.target.style.borderColor = T.borderLight
+    e.target.style.boxShadow = 'none'
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault()
     setSubmitting(true)
     setMessage({ type: '', text: '' })
 
-    // Validation
     if (formData.password !== formData.confirm_password) {
       setMessage({ type: 'error', text: 'Passwords do not match' })
       setSubmitting(false)
@@ -122,276 +187,308 @@ function MagicLinkRegisterContent() {
       const data = await response.json()
 
       if (data.success) {
-        setMessage({ type: 'success', text: 'Registration successful! Redirecting to login...' })
-
-        // Store user session
+        setMessage({ type: 'success', text: 'Account created! Taking you to your dashboard...' })
         if (typeof window !== 'undefined') {
           localStorage.setItem('seller_user', JSON.stringify(data.user))
         }
-
-        setTimeout(() => {
-          router.push('/dashboard')
-        }, 2000)
+        setTimeout(() => router.push('/dashboard'), 2000)
       } else {
-        setMessage({ type: 'error', text: data.error || 'Registration failed' })
+        setMessage({ type: 'error', text: data.error || 'Registration failed. Please try again.' })
       }
     } catch (error) {
       console.error('Registration error:', error)
-      setMessage({ type: 'error', text: 'An error occurred during registration' })
+      setMessage({ type: 'error', text: 'An error occurred. Please try again.' })
     } finally {
       setSubmitting(false)
     }
   }
 
+  // ── Logo component ─────────────────────────────────────────────
+  const Logo = () => (
+    <div className="login-logo-enter absolute top-4 left-4 sm:left-8 z-20 flex items-center gap-2">
+      <div style={{ height: '56px', width: '160px', display: 'flex', alignItems: 'center' }}>
+        {!logoError ? (
+          <Image src="/logo.svg" alt="DeelMap" width={160} height={56} style={{ height: '56px', width: 'auto', objectFit: 'contain' }} priority onError={() => setLogoError(true)} />
+        ) : (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div style={{ width: '36px', height: '36px', background: T.textPrimary, borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <MapPin style={{ width: '18px', height: '18px', color: '#fff' }} />
+            </div>
+            <span style={{ fontWeight: 600, fontSize: '16px', color: T.textPrimary }}>DeelMap</span>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+
+  // ── Loading state ──────────────────────────────────────────────
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#FAFAF8] flex items-center justify-center p-4">
-        <div className="text-center">
-          <Loader2 className="w-12 h-12 text-[#D03839] animate-spin mx-auto mb-4" />
-          <p className="text-[#444441]">Validating your registration link...</p>
+      <div style={{ minHeight: '100vh', background: T.bgWhite, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <Logo />
+        <div style={{ textAlign: 'center' }}>
+          <Loader2 style={{ width: '40px', height: '40px', color: T.primary, animation: 'spin 1s linear infinite', margin: '0 auto 12px' }} />
+          <p style={{ fontSize: '14px', color: T.textSecondary }}>Validating your registration link...</p>
         </div>
       </div>
     )
   }
 
+  // ── Invalid token state ────────────────────────────────────────
   if (!tokenValid) {
     return (
-      <div className="min-h-screen bg-[#FAFAF8] flex items-center justify-center p-4">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-white rounded shadow-xl p-8 max-w-md w-full text-center"
-        >
-          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <AlertCircle className="w-8 h-8 text-red-600" />
+      <div style={{ minHeight: '100vh', background: T.bgWhite, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
+        <Logo />
+        <div style={{ background: T.bgWhite, border: `1px solid ${T.borderLight}`, borderRadius: '4px', padding: '40px 32px', maxWidth: '420px', width: '100%', textAlign: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.04), 0 8px 24px rgba(0,0,0,0.06)' }}>
+          <div style={{ width: '52px', height: '52px', background: T.primarySurface, borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
+            <AlertCircle style={{ width: '24px', height: '24px', color: T.primary }} />
           </div>
-          <h2 className="text-2xl font-bold text-[#1A1816] mb-2">Invalid Link</h2>
-          <p className="text-[#444441] mb-6">{message.text || 'This registration link is invalid or has expired.'}</p>
+          <h2 style={{ fontSize: '20px', fontWeight: 700, color: T.textPrimary, marginBottom: '8px' }}>Link Invalid</h2>
+          <p style={{ fontSize: '14px', color: T.textBody, marginBottom: '24px', lineHeight: '1.5' }}>
+            {message.text || 'This registration link is invalid or has expired.'}
+          </p>
           <button
             onClick={() => router.push('/login')}
-            className="px-6 py-3 bg-[#D03839] text-white rounded hover:bg-[#E0493B] transition-colors"
+            style={{ width: '100%', height: '44px', background: T.primary, color: '#fff', border: 'none', borderRadius: '4px', fontSize: '14px', fontWeight: 600, cursor: 'pointer' }}
+            onMouseEnter={e => e.currentTarget.style.background = T.primaryHover}
+            onMouseLeave={e => e.currentTarget.style.background = T.primary}
           >
             Go to Login
           </button>
-        </motion.div>
+        </div>
       </div>
     )
   }
 
+  // ── Main registration form ─────────────────────────────────────
   return (
-    <div className="min-h-screen bg-[#FAFAF8] flex items-center justify-center p-4">
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="bg-white rounded shadow-xl p-8 max-w-2xl w-full"
-      >
+    <div style={{ minHeight: '100vh', background: T.bgWhite, paddingTop: '80px', paddingBottom: '40px' }}>
+      <Logo />
+
+      <div style={{ maxWidth: '680px', margin: '0 auto', padding: '0 16px' }}>
+
         {/* Header */}
-        <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-[#D03839] rounded-full flex items-center justify-center mx-auto mb-4">
-            <CheckCircle className="w-8 h-8 text-white" />
+        <div style={{ textAlign: 'center', marginBottom: '28px' }}>
+          <div style={{ width: '48px', height: '48px', background: T.primarySurface, borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+            <CheckCircle style={{ width: '22px', height: '22px', color: T.primary }} />
           </div>
-          <h1 className="text-3xl font-bold text-[#1A1816] mb-2">Complete Your Registration</h1>
-          <p className="text-[#444441]">
-            Your property at <span className="font-semibold">{tokenData?.property_address}</span> has received{' '}
-            <span className="font-semibold text-[#D03839]">{tokenData?.views_count} views</span>!
+          <h1 style={{ fontSize: '26px', fontWeight: 700, color: T.textPrimary, marginBottom: '6px' }}>
+            Complete Your Registration
+          </h1>
+          <p style={{ fontSize: '14px', color: T.textBody }}>
+            Create your DeelMap seller account to manage your listings
           </p>
         </div>
 
-        {/* Alert Message */}
+        {/* Property info banner */}
+        <div style={{ background: T.bgSurface, border: `1px solid ${T.borderLight}`, borderRadius: '4px', padding: '14px 16px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={{ width: '36px', height: '36px', background: T.primarySurface, borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <MapPin style={{ width: '16px', height: '16px', color: T.primary }} />
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={{ fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', color: T.textSecondary, marginBottom: '2px' }}>Your Property</p>
+            <p style={{ fontSize: '13px', fontWeight: 600, color: T.textPrimary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {tokenData?.property_address}
+            </p>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0, background: T.primarySurface, border: `1px solid ${T.primaryBorder}`, borderRadius: '100px', padding: '4px 10px' }}>
+            <TrendingUp style={{ width: '12px', height: '12px', color: T.primary }} />
+            <span style={{ fontSize: '12px', fontWeight: 700, color: T.primary }}>{tokenData?.views_count} views</span>
+          </div>
+        </div>
+
+        {/* Alert message */}
         {message.text && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className={`mb-6 p-4 rounded flex items-center gap-3 ${
-              message.type === 'success'
-                ? 'bg-green-50 text-green-800 border border-green-200'
-                : 'bg-red-50 text-red-800 border border-red-200'
-            }`}
-          >
-            {message.type === 'success' ? (
-              <CheckCircle className="w-5 h-5 flex-shrink-0" />
-            ) : (
-              <AlertCircle className="w-5 h-5 flex-shrink-0" />
-            )}
-            <span className="text-sm font-medium">{message.text}</span>
-          </motion.div>
+          <div style={{
+            marginBottom: '16px', padding: '12px 14px', borderRadius: '4px', display: 'flex', alignItems: 'flex-start', gap: '10px',
+            background: message.type === 'success' ? T.successSurface : T.primarySurface,
+            border: `1px solid ${message.type === 'success' ? T.successBorder : T.primaryBorder}`,
+          }}>
+            {message.type === 'success'
+              ? <CheckCircle style={{ width: '16px', height: '16px', color: T.success, flexShrink: 0, marginTop: '1px' }} />
+              : <AlertCircle style={{ width: '16px', height: '16px', color: T.primary, flexShrink: 0, marginTop: '1px' }} />}
+            <span style={{ fontSize: '13px', fontWeight: 500, color: message.type === 'success' ? T.success : T.primary, lineHeight: '1.4' }}>
+              {message.text}
+            </span>
+          </div>
         )}
 
-        {/* Registration Form */}
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            {/* Contact Person Name */}
-            <div>
-              <label className="block text-sm font-semibold text-[#444441] mb-2">
-                Your Name <span className="text-red-500">*</span>
-              </label>
-              <div className="relative">
-                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[#A8A8A4]" />
+        {/* Form card */}
+        <div style={{
+          background: T.bgWhite, border: `1px solid ${T.borderLight}`, borderRadius: '4px', padding: '28px',
+          boxShadow: '0 0 0 1px rgba(0,0,0,0.02), 0 2px 4px rgba(0,0,0,0.04), 0 8px 24px rgba(0,0,0,0.06)',
+          position: 'relative', overflow: 'hidden',
+        }}>
+          {/* Red top accent bar */}
+          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '3px', background: `linear-gradient(90deg, ${T.primary} 0%, ${T.primaryHover} 50%, ${T.primary} 100%)` }} />
+
+          <form onSubmit={handleSubmit}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '18px' }}>
+
+              {/* Name */}
+              <InputField icon={User} label="Your Name" required>
                 <input
                   type="text"
                   required
                   value={formData.contact_person_name}
-                  onChange={(e) => setFormData({ ...formData, contact_person_name: e.target.value })}
-                  className="w-full pl-10 pr-4 py-3 border border-[#D4D4CF] rounded focus:ring-2 focus:ring-[#D03839] focus:border-transparent"
+                  onChange={handleChange('contact_person_name')}
+                  onFocus={handleFocus}
+                  onBlur={handleBlur}
                   placeholder="John Smith"
+                  style={inputStyle}
                 />
-              </div>
-            </div>
+              </InputField>
 
-            {/* Email */}
-            <div>
-              <label className="block text-sm font-semibold text-[#444441] mb-2">
-                Email Address <span className="text-red-500">*</span>
-              </label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[#A8A8A4]" />
+              {/* Email */}
+              <InputField icon={Mail} label="Email Address" required>
                 <input
                   type="email"
                   required
                   value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="w-full pl-10 pr-4 py-3 border border-[#D4D4CF] rounded focus:ring-2 focus:ring-[#D03839] focus:border-transparent"
+                  onChange={handleChange('email')}
+                  onFocus={handleFocus}
+                  onBlur={handleBlur}
                   placeholder="john@example.com"
+                  style={inputStyle}
                 />
-              </div>
-            </div>
+              </InputField>
 
-            {/* Phone (Pre-filled, Read-only) */}
-            <div>
-              <label className="block text-sm font-semibold text-[#444441] mb-2">
-                Phone Number
-              </label>
-              <div className="relative">
-                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[#A8A8A4]" />
+              {/* Phone (read-only) */}
+              <InputField icon={Phone} label="Phone Number" hint="Associated with your property">
                 <input
                   type="tel"
                   readOnly
                   value={tokenData?.phone_number}
-                  className="w-full pl-10 pr-4 py-3 border border-[#D4D4CF] rounded bg-[#FAFAF8] text-[#444441]"
+                  style={readonlyInputStyle}
                 />
-              </div>
-              <p className="text-xs text-[#737370] mt-1">This is the phone number associated with your property</p>
-            </div>
+              </InputField>
 
-            {/* Business Name */}
-            <div>
-              <label className="block text-sm font-semibold text-[#444441] mb-2">
-                Business/Company Name
-              </label>
-              <div className="relative">
-                <Building className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[#A8A8A4]" />
+              {/* Business name */}
+              <InputField icon={Building} label="Business / Company Name">
                 <input
                   type="text"
                   value={formData.business_name}
-                  onChange={(e) => setFormData({ ...formData, business_name: e.target.value })}
-                  className="w-full pl-10 pr-4 py-3 border border-[#D4D4CF] rounded focus:ring-2 focus:ring-[#D03839] focus:border-transparent"
+                  onChange={handleChange('business_name')}
+                  onFocus={handleFocus}
+                  onBlur={handleBlur}
                   placeholder="ABC Real Estate"
+                  style={inputStyle}
                 />
-              </div>
-            </div>
+              </InputField>
 
-            {/* Password */}
-            <div>
-              <label className="block text-sm font-semibold text-[#444441] mb-2">
-                Password <span className="text-red-500">*</span>
-              </label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[#A8A8A4]" />
+              {/* Password */}
+              <InputField icon={Lock} label="Password" required hint="Minimum 6 characters">
                 <input
-                  type="password"
+                  type={showPassword ? 'text' : 'password'}
                   required
-                  value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  className="w-full pl-10 pr-4 py-3 border border-[#D4D4CF] rounded focus:ring-2 focus:ring-[#D03839] focus:border-transparent"
-                  placeholder="••••••••"
                   minLength={6}
+                  value={formData.password}
+                  onChange={handleChange('password')}
+                  onFocus={handleFocus}
+                  onBlur={handleBlur}
+                  placeholder="••••••••"
+                  style={{ ...inputStyle, paddingRight: '40px' }}
                 />
-              </div>
-              <p className="text-xs text-[#737370] mt-1">Minimum 6 characters</p>
-            </div>
+                <button type="button" onClick={() => setShowPassword(p => !p)} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: T.textMuted, padding: 0, display: 'flex' }}>
+                  {showPassword ? <EyeOff style={{ width: '16px', height: '16px' }} /> : <Eye style={{ width: '16px', height: '16px' }} />}
+                </button>
+              </InputField>
 
-            {/* Confirm Password */}
-            <div>
-              <label className="block text-sm font-semibold text-[#444441] mb-2">
-                Confirm Password <span className="text-red-500">*</span>
-              </label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[#A8A8A4]" />
+              {/* Confirm Password */}
+              <InputField icon={Lock} label="Confirm Password" required>
                 <input
-                  type="password"
+                  type={showConfirm ? 'text' : 'password'}
                   required
                   value={formData.confirm_password}
-                  onChange={(e) => setFormData({ ...formData, confirm_password: e.target.value })}
-                  className="w-full pl-10 pr-4 py-3 border border-[#D4D4CF] rounded focus:ring-2 focus:ring-[#D03839] focus:border-transparent"
+                  onChange={handleChange('confirm_password')}
+                  onFocus={handleFocus}
+                  onBlur={handleBlur}
                   placeholder="••••••••"
+                  style={{ ...inputStyle, paddingRight: '40px' }}
                 />
-              </div>
+                <button type="button" onClick={() => setShowConfirm(p => !p)} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: T.textMuted, padding: 0, display: 'flex' }}>
+                  {showConfirm ? <EyeOff style={{ width: '16px', height: '16px' }} /> : <Eye style={{ width: '16px', height: '16px' }} />}
+                </button>
+              </InputField>
             </div>
-          </div>
 
-          {/* Description */}
-          <div>
-            <label className="block text-sm font-semibold text-[#444441] mb-2">
-              About Your Business (Optional)
-            </label>
-            <div className="relative">
-              <FileText className="absolute left-3 top-3 w-5 h-5 text-[#A8A8A4]" />
-              <textarea
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                rows={3}
-                className="w-full pl-10 pr-4 py-3 border border-[#D4D4CF] rounded focus:ring-2 focus:ring-[#D03839] focus:border-transparent"
-                placeholder="Tell us about your real estate business..."
-              />
+            {/* Description – full width */}
+            <div style={{ marginTop: '18px' }}>
+              <InputField icon={FileText} label="About Your Business (Optional)" textarea>
+                <textarea
+                  value={formData.description}
+                  onChange={handleChange('description')}
+                  rows={3}
+                  placeholder="Tell us about your real estate business..."
+                  onFocus={handleFocus}
+                  onBlur={handleBlur}
+                  style={{
+                    ...inputStyle,
+                    height: 'auto',
+                    paddingTop: '12px',
+                    paddingBottom: '12px',
+                    resize: 'vertical',
+                    minHeight: '88px',
+                  }}
+                />
+              </InputField>
             </div>
-          </div>
 
-          {/* Submit Button */}
-          <button
-            type="submit"
-            disabled={submitting}
-            className={`w-full py-3.5 rounded font-semibold transition-colors flex items-center justify-center gap-2 ${
-              submitting
-                ? 'bg-[#E8E8E4] text-[#737370] cursor-not-allowed'
-                : 'bg-[#D03839] text-white hover:bg-[#E0493B]'
-            }`}
-          >
-            {submitting ? (
-              <>
-                <Loader2 className="w-5 h-5 animate-spin" />
-                <span>Creating Account...</span>
-              </>
-            ) : (
-              <span>Complete Registration</span>
-            )}
-          </button>
-
-          {/* Footer */}
-          <p className="text-center text-sm text-[#444441]">
-            Already have an account?{' '}
+            {/* Submit */}
             <button
-              type="button"
-              onClick={() => router.push('/login')}
-              className="text-[#D03839] hover:underline font-semibold"
+              type="submit"
+              disabled={submitting}
+              style={{
+                marginTop: '22px', width: '100%', height: '48px',
+                background: submitting ? T.borderLight : T.primary,
+                color: submitting ? T.textSecondary : '#FFFFFF',
+                border: 'none', borderRadius: '4px', fontSize: '14px', fontWeight: 600,
+                cursor: submitting ? 'not-allowed' : 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                transition: 'background 0.15s ease',
+              }}
+              onMouseEnter={e => { if (!submitting) e.currentTarget.style.background = T.primaryHover }}
+              onMouseLeave={e => { if (!submitting) e.currentTarget.style.background = T.primary }}
             >
-              Sign in here
+              {submitting ? (
+                <>
+                  <Loader2 style={{ width: '16px', height: '16px', animation: 'spin 1s linear infinite' }} />
+                  <span>Creating Account...</span>
+                </>
+              ) : (
+                <span>Complete Registration</span>
+              )}
             </button>
-          </p>
-        </form>
-      </motion.div>
+
+            {/* Footer */}
+            <p style={{ marginTop: '16px', textAlign: 'center', fontSize: '13px', color: T.textSecondary }}>
+              Already have an account?{' '}
+              <button
+                type="button"
+                onClick={() => router.push('/login')}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: T.primary, fontWeight: 600, fontSize: '13px', padding: 0 }}
+                onMouseEnter={e => e.currentTarget.style.textDecoration = 'underline'}
+                onMouseLeave={e => e.currentTarget.style.textDecoration = 'none'}
+              >
+                Sign in here
+              </button>
+            </p>
+          </form>
+        </div>
+
+        <p style={{ textAlign: 'center', fontSize: '11px', color: T.textMuted, marginTop: '20px' }}>
+          © {new Date().getFullYear()} DeelMap. All rights reserved.
+        </p>
+      </div>
     </div>
   )
 }
 
-// Wrapper component with Suspense boundary
 export default function MagicLinkRegisterPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-[#FAFAF8] flex items-center justify-center p-4">
-        <div className="text-center">
-          <Loader2 className="w-12 h-12 text-[#D03839] animate-spin mx-auto mb-4" />
-          <p className="text-[#444441]">Loading...</p>
-        </div>
+      <div style={{ minHeight: '100vh', background: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <Loader2 style={{ width: '40px', height: '40px', color: '#D03839', animation: 'spin 1s linear infinite' }} />
       </div>
     }>
       <MagicLinkRegisterContent />
