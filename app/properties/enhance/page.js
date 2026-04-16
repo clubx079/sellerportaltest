@@ -4,11 +4,37 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { loadStripe } from '@stripe/stripe-js'
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js'
 import { supabase } from '@/lib/supabase'
-import { ArrowLeft, Star, TrendingUp, Zap, Package, Check, Loader2 } from 'lucide-react'
+import { ArrowLeft, Star, TrendingUp, Zap, Package, Check, Loader2, Sparkles, CalendarDays } from 'lucide-react'
 
 const stripePromise = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
   ? loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY)
   : null
+
+const ACTIVE_ENHANCEMENT_META = {
+  highlight: { label: 'Highlight Listing',    icon: Sparkles,   totalDays: 30, color: '#D03839', bg: '#FEF0EF', border: '#F5C0BF' },
+  boost:     { label: 'Boost Listing',        icon: Zap,        totalDays: 7,  color: '#4F46E5', bg: '#EEF2FF', border: '#C7D2FE' },
+  homepage:  { label: 'Featured on Homepage', icon: TrendingUp, totalDays: 7,  color: '#0F6E56', bg: '#E4F5EC', border: '#B6E4CE' },
+}
+
+function getActiveEnhancements(property) {
+  const now = new Date()
+  const entries = []
+  if (property.is_highlighted && property.highlight_ends_at && new Date(property.highlight_ends_at) > now)
+    entries.push({ id: 'highlight', endsAt: property.highlight_ends_at })
+  if (property.is_boosted && property.boost_ends_at && new Date(property.boost_ends_at) > now)
+    entries.push({ id: 'boost', endsAt: property.boost_ends_at })
+  if (property.is_homepage_featured && property.homepage_feature_ends_at && new Date(property.homepage_feature_ends_at) > now)
+    entries.push({ id: 'homepage', endsAt: property.homepage_feature_ends_at })
+  return entries
+}
+
+function daysRemaining(endsAt) {
+  return Math.max(0, Math.ceil((new Date(endsAt) - new Date()) / (1000 * 60 * 60 * 24)))
+}
+
+function formatExpiry(dateStr) {
+  return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+}
 
 const ADD_ONS = [
   { id: 'highlight', label: 'Highlight Listing',   desc: 'Red-bordered card in search results for 30 days.',                               price: 999,  icon: Star },
@@ -180,6 +206,7 @@ function EnhanceContent() {
 
   const title = property?.seo_title || property?.address || 'Your listing'
   const location = [property?.city, property?.state].filter(Boolean).join(', ')
+  const activeEnhancements = property ? getActiveEnhancements(property) : []
 
   return (
     <div className="space-y-6" style={{ fontFamily: 'var(--font-dm-sans), sans-serif' }}>
@@ -193,6 +220,66 @@ function EnhanceContent() {
           {property && <p className="text-[13px] text-[#737370] mt-0.5">{title}{location ? ` · ${location}` : ''}</p>}
         </div>
       </div>
+
+      {/* Active Enhancements with timeline */}
+      {activeEnhancements.length > 0 && (
+        <div className="bg-white border border-[#E8E8E4] rounded p-6">
+          <div className="flex items-center justify-between mb-4">
+            <p className="text-[15px] font-semibold text-[#1A1816]">Active Enhancements</p>
+            <span className="flex items-center gap-1 text-[11px] font-semibold text-[#0F6E56] bg-[#E4F5EC] border border-[#B6E4CE] px-2.5 py-1 rounded-full">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#0F6E56] animate-pulse inline-block" />
+              {activeEnhancements.length} Live
+            </span>
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-3">
+            {activeEnhancements.map(({ id, endsAt }) => {
+              const meta = ACTIVE_ENHANCEMENT_META[id]
+              if (!meta) return null
+              const Icon = meta.icon
+              const days = daysRemaining(endsAt)
+              const elapsed = meta.totalDays - days
+              const pct = Math.min(97, Math.max(3, (elapsed / meta.totalDays) * 100))
+              const urgency = days <= 2
+              return (
+                <div key={id} className="border border-[#E8E8E4] rounded overflow-hidden bg-white">
+                  <div className="flex items-center gap-3 px-4 pt-4 pb-3">
+                    <div className="w-9 h-9 rounded flex items-center justify-center flex-shrink-0" style={{ background: meta.bg }}>
+                      <Icon className="w-[18px] h-[18px]" style={{ color: meta.color }} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-2 mb-0.5">
+                        <p className="text-[13px] font-semibold text-[#1A1816] truncate">{meta.label}</p>
+                        <span
+                          className="text-[11px] font-bold px-2 py-0.5 rounded-full border flex-shrink-0"
+                          style={{ color: urgency ? '#B5620A' : meta.color, background: urgency ? '#FEF3E2' : meta.bg, borderColor: urgency ? '#F3C97D' : meta.border }}
+                        >
+                          {days}d left
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1 text-[11px] text-[#A8A8A4]">
+                        <CalendarDays className="w-3 h-3 flex-shrink-0" />
+                        <span>Expires {formatExpiry(endsAt)}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="px-4 pb-4">
+                    <div className="w-full h-[5px] bg-[#F3F3F0] rounded-full overflow-hidden">
+                      <div
+                        className="h-full rounded-full"
+                        style={{ width: `${pct}%`, background: `linear-gradient(90deg, ${meta.color}60, ${meta.color})`, transition: 'width 0.6s ease' }}
+                      />
+                    </div>
+                    <div className="flex justify-between mt-1.5">
+                      <span className="text-[10px] text-[#A8A8A4]">Day 1</span>
+                      <span className="text-[10px] text-[#A8A8A4]">{Math.round(pct)}% elapsed · {meta.totalDays}d total</span>
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left: Add-on selection */}

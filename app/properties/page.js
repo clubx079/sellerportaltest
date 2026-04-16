@@ -678,7 +678,7 @@ const PropertiesManagement = () => {
                 <th className="px-4 py-3 text-left text-xs font-semibold text-[#444441] uppercase tracking-wider whitespace-nowrap">Type</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-[#444441] uppercase tracking-wider whitespace-nowrap">Status</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-[#444441] uppercase tracking-wider whitespace-nowrap">Property Status</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-[#444441] uppercase tracking-wider whitespace-nowrap">Addons</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-[#444441] uppercase tracking-wider whitespace-nowrap">Enhancements</th>
                 <th className="px-4 py-3 text-right text-xs font-semibold text-[#444441] uppercase tracking-wider whitespace-nowrap">Actions</th>
               </tr>
             </thead>
@@ -759,7 +759,7 @@ const PropertiesManagement = () => {
                     <td className="px-4 py-3 whitespace-nowrap">
                       <span className="text-xs text-[#444441]">{property.property_type || 'N/A'}</span>
                     </td>
-                    <td className="px-4 py-3 whitespace-nowrap">
+                    <td className={`px-4 py-3 ${property._source === 'manual' && property.status === 'rejected' ? '' : 'whitespace-nowrap'}`}>
                       {viewMode === 'active' && ['active', 'inactive'].includes((property.status || '').toLowerCase()) ? (
                         <select
                           value={(property.status || 'inactive').toLowerCase()}
@@ -778,6 +778,11 @@ const PropertiesManagement = () => {
                         <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium border ${getStatusColor(property.status)}`}>
                           {property.status === 'under_review' ? 'Under Review' : property.status === 'rejected' ? 'Update Required' : (property.status || 'draft')?.charAt(0).toUpperCase() + (property.status || '').slice(1) || 'Draft'}
                         </span>
+                      )}
+                      {property._source === 'manual' && property.status === 'rejected' && property.rejection_reason && (
+                        <p className="text-[10px] text-[#B5620A] mt-1 max-w-[140px] leading-tight line-clamp-2">
+                          {property.rejection_reason.length > 70 ? property.rejection_reason.slice(0, 70) + '…' : property.rejection_reason}
+                        </p>
                       )}
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
@@ -801,18 +806,31 @@ const PropertiesManagement = () => {
                           </>
                         ) : (
                           <>
+                            {property._source === 'manual' && property.status === 'rejected' && (
+                              <button
+                                onClick={() => router.push(`/properties/edit/${property.id}`)}
+                                className="h-7 px-3 text-[11px] font-semibold bg-[#D03839] hover:bg-[#E0493B] text-white rounded transition-colors mr-1"
+                              >
+                                Fix Issues
+                              </button>
+                            )}
+                            {property._source === 'manual' && ['active', 'published'].includes((property.status || '').toLowerCase()) && (
+                              <button
+                                onClick={() => router.push(`/properties/enhance?id=${property.id}`)}
+                                className="h-7 px-3 text-[11px] font-semibold bg-[#D03839] hover:bg-[#E0493B] text-white rounded transition-colors mr-1"
+                              >
+                                Enhance
+                              </button>
+                            )}
                             <button onClick={() => router.push(`/properties/preview/${property.id}`)} className="flex items-center justify-center w-8 h-8 rounded text-[#A8A8A4] hover:text-primary hover:bg-[#E8E8E4] transition-colors" title="View">
                               <Eye className="w-4 h-4" strokeWidth={2} />
                             </button>
                             <button onClick={() => { setPropertyForUTM({ ...property, slug: property.slug || property.id, id: property.id }); setShowUTMModal(true); }} className="flex items-center justify-center w-8 h-8 rounded text-[#A8A8A4] hover:text-primary hover:bg-[#E8E8E4] transition-colors" title="Share links (UTM)">
                               <Link2 className="w-4 h-4" strokeWidth={2} />
                             </button>
-                            <button onClick={() => router.push(`/properties/edit/${property.id}`)} className="flex items-center justify-center w-8 h-8 rounded text-[#A8A8A4] hover:text-primary hover:bg-[#E8E8E4] transition-colors" title="Edit">
-                              <Edit2 className="w-4 h-4" strokeWidth={2} />
-                            </button>
-                            {property._source === 'manual' && (
-                              <button onClick={() => router.push(`/properties/enhance?id=${property.id}`)} className="flex items-center justify-center w-8 h-8 rounded text-[#A8A8A4] hover:text-[#D03839] hover:bg-[#FEF0EF] transition-colors" title="Enhance listing">
-                                <Zap className="w-4 h-4" strokeWidth={2} />
+                            {property.status !== 'rejected' && (
+                              <button onClick={() => router.push(`/properties/edit/${property.id}`)} className="flex items-center justify-center w-8 h-8 rounded text-[#A8A8A4] hover:text-primary hover:bg-[#E8E8E4] transition-colors" title="Edit">
+                                <Edit2 className="w-4 h-4" strokeWidth={2} />
                               </button>
                             )}
                             <button onClick={() => { setPropertyForAnalytics(property); setShowAnalyticsSidebar(true); }} className="flex items-center justify-center w-8 h-8 rounded text-[#A8A8A4] hover:text-primary hover:bg-[#E8E8E4] transition-colors" title="Analytics">
@@ -916,6 +934,14 @@ const PropertiesManagement = () => {
                     </p>
                   </div>
                 </div>
+                {property._source === 'manual' && property.status === 'rejected' && property.rejection_reason && (
+                  <div className="mb-3 px-3 py-2.5 bg-[#FEF3E2] border border-[#F3C97D] rounded">
+                    <p className="text-[10px] font-semibold text-[#B5620A] uppercase tracking-wide mb-1">Issues to fix</p>
+                    <p className="text-[11px] text-[#B5620A] leading-relaxed">
+                      {property.rejection_reason.length > 140 ? property.rejection_reason.slice(0, 140) + '…' : property.rejection_reason}
+                    </p>
+                  </div>
+                )}
                 <div className="flex items-center justify-around mt-3 pt-3 border-t border-[#E8E8E4]">
                   {viewMode === 'trash' ? (
                     <>
@@ -928,18 +954,29 @@ const PropertiesManagement = () => {
                     </>
                   ) : (
                     <>
+                      {property._source === 'manual' && property.status === 'rejected' && (
+                        <button
+                          onClick={() => router.push(`/properties/edit/${property.id}`)}
+                          className="flex-1 flex flex-col items-center gap-1 py-1 text-[#D03839] bg-[#FEF0EF] hover:bg-[#FCDEDE] rounded transition-colors"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                          <span className="text-[10px] font-medium">Fix Issues</span>
+                        </button>
+                      )}
+                      {property._source === 'manual' && ['active', 'published'].includes((property.status || '').toLowerCase()) && (
+                        <button onClick={() => router.push(`/properties/enhance?id=${property.id}`)} className="flex-1 flex items-center justify-center h-9 rounded text-[#737370] hover:text-[#D03839] hover:bg-[#FEF0EF] transition-colors" title="Enhance listing">
+                          <Zap className="w-4 h-4" strokeWidth={2} />
+                        </button>
+                      )}
                       <button onClick={() => router.push(`/properties/preview/${property.id}`)} className="flex-1 flex items-center justify-center h-9 rounded text-[#737370] hover:text-primary hover:bg-[#E8E8E4] transition-colors" title="View">
                         <Eye className="w-4 h-4" strokeWidth={2} />
                       </button>
                       <button onClick={() => { setPropertyForUTM({ ...property, slug: property.slug || property.id, id: property.id }); setShowUTMModal(true); }} className="flex-1 flex items-center justify-center h-9 rounded text-[#737370] hover:text-primary hover:bg-[#E8E8E4] transition-colors" title="Share links">
                         <Link2 className="w-4 h-4" strokeWidth={2} />
                       </button>
-                      <button onClick={() => router.push(`/properties/edit/${property.id}`)} className="flex-1 flex items-center justify-center h-9 rounded text-[#737370] hover:text-primary hover:bg-[#E8E8E4] transition-colors" title="Edit">
-                        <Edit2 className="w-4 h-4" strokeWidth={2} />
-                      </button>
-                      {property._source === 'manual' && (
-                        <button onClick={() => router.push(`/properties/enhance?id=${property.id}`)} className="flex-1 flex items-center justify-center h-9 rounded text-[#737370] hover:text-[#D03839] hover:bg-[#FEF0EF] transition-colors" title="Enhance listing">
-                          <Zap className="w-4 h-4" strokeWidth={2} />
+                      {property.status !== 'rejected' && (
+                        <button onClick={() => router.push(`/properties/edit/${property.id}`)} className="flex-1 flex items-center justify-center h-9 rounded text-[#737370] hover:text-primary hover:bg-[#E8E8E4] transition-colors" title="Edit">
+                          <Edit2 className="w-4 h-4" strokeWidth={2} />
                         </button>
                       )}
                       <button onClick={() => { setPropertyForAnalytics(property); setShowAnalyticsSidebar(true); }} className="flex-1 flex items-center justify-center h-9 rounded text-[#737370] hover:text-primary hover:bg-[#E8E8E4] transition-colors" title="Analytics">
