@@ -23,7 +23,7 @@ export async function POST(request) {
 
     const { data: plan } = await supabase
       .from('seller_plans')
-      .select('stripe_subscription_id, plan_type, billing_cycle, current_period_end')
+      .select('stripe_subscription_id, plan_type, billing_cycle, status, current_period_end')
       .eq('seller_id', seller_id)
       .maybeSingle()
 
@@ -31,8 +31,35 @@ export async function POST(request) {
       return NextResponse.json({ error: 'No active subscription found' }, { status: 404 })
     }
 
+    if (['canceled', 'past_due'].includes(plan.status)) {
+      return NextResponse.json({ error: 'Your subscription must be active to change plans.' }, { status: 400 })
+    }
+
+    if (plan.status === 'canceling') {
+      return NextResponse.json({ error: 'Your subscription is set to cancel. Please remove the cancellation in Settings before changing plans.' }, { status: 400 })
+    }
+
     if (plan.plan_type === new_plan_type) {
       return NextResponse.json({ error: 'Already on this plan' }, { status: 400 })
+    }
+
+    const isDowngrade = (PLAN_RANK[new_plan_type] || 0) < (PLAN_RANK[plan.plan_type] || 0)
+
+    // Downgrade guard: check active manual property count
+    if (isDowngrade && new_plan_type === 'pro') {
+      const { count } = await supabase
+        .from('properties')
+        .select('id', { count: 'exact', head: true })
+        .eq('seller_id', seller_id)
+        .in('status', ['active', 'under_review'])
+
+      if ((count || 0) > 10) {
+        return NextResponse.json({
+          error: `You have ${count} active listings. Please deactivate down to 10 before switching to Pro.`,
+          active_count: count,
+          requires_deactivation: true,
+        }, { status: 422 })
+      }
     }
 
     const billingCycle = plan.billing_cycle || 'monthly'
@@ -43,23 +70,59 @@ export async function POST(request) {
 
     // Retrieve current subscription
     const sub = await stripe.subscriptions.retrieve(plan.stripe_subscription_id)
+    const currentPriceId = sub.items.data[0]?.price?.id
+    const periodEnd = sub.current_period_end // Unix timestamp
 
-    const currentItemId = sub.items.data[0]?.id
-    const periodEnd = sub.current_period_end
-
-    if (!currentItemId) {
-      return NextResponse.json({ error: 'Could not read current subscription item' }, { status: 500 })
+    if (!currentPriceId) {
+      return NextResponse.json({ error: 'Could not read current subscription price' }, { status: 500 })
     }
 
-    const isUpgrade = (PLAN_RANK[new_plan_type] || 0) > (PLAN_RANK[plan.plan_type] || 0)
+    // Schedule the plan change to take effect at the end of the current billing period
+    const existingScheduleId = sub.schedule
+      ? (typeof sub.schedule === 'string' ? sub.schedule : sub.schedule.id)
+      : null
 
-    // Upgrades: charge the prorated difference immediately via always_invoice
-    // Downgrades: apply at next renewal with no immediate charge
-    await stripe.subscriptions.update(plan.stripe_subscription_id, {
-      items: [{ id: currentItemId, price: newPriceId }],
-      proration_behavior: isUpgrade ? 'always_invoice' : 'none',
-      metadata: { seller_id, plan_type: new_plan_type, billing_cycle: billingCycle },
-    })
+    if (existingScheduleId) {
+      // Update the existing schedule: replace phase 2 with the new plan
+      const currentSchedule = await stripe.subscriptionSchedules.retrieve(existingScheduleId)
+      const phase1 = currentSchedule.phases[0]
+
+      await stripe.subscriptionSchedules.update(existingScheduleId, {
+        phases: [
+          {
+            items: phase1.items.map(i => ({
+              price: typeof i.price === 'string' ? i.price : i.price.id,
+              quantity: i.quantity || 1,
+            })),
+            end_date: periodEnd,
+            proration_behavior: 'none',
+          },
+          {
+            items: [{ price: newPriceId, quantity: 1 }],
+            proration_behavior: 'none',
+          },
+        ],
+      })
+    } else {
+      // Create a new schedule from the current subscription, then set phase 2
+      const schedule = await stripe.subscriptionSchedules.createFromSubscription(plan.stripe_subscription_id, {
+        end_behavior: 'release',
+      })
+
+      await stripe.subscriptionSchedules.update(schedule.id, {
+        phases: [
+          {
+            items: [{ price: currentPriceId, quantity: 1 }],
+            end_date: periodEnd,
+            proration_behavior: 'none',
+          },
+          {
+            items: [{ price: newPriceId, quantity: 1 }],
+            proration_behavior: 'none',
+          },
+        ],
+      })
+    }
 
     const scheduledFor = periodEnd ? new Date(periodEnd * 1000).toISOString() : null
 

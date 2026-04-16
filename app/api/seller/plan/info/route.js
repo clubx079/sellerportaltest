@@ -53,7 +53,36 @@ export async function POST(request) {
       plan.current_period_end = toISO(sub.current_period_end)
     }
 
-    return NextResponse.json({ plan, pending: null })
+    // Check for a pending scheduled plan change via Stripe Subscription Schedule
+    let pending = null
+    const scheduleId = sub.schedule
+      ? (typeof sub.schedule === 'string' ? sub.schedule : sub.schedule.id)
+      : null
+
+    if (scheduleId) {
+      try {
+        const schedule = await stripe.subscriptionSchedules.retrieve(scheduleId)
+        if (schedule.status === 'active' && schedule.phases.length > 1) {
+          const phase1 = schedule.phases[0]
+          const phase2 = schedule.phases[1]
+          const nextPriceId = phase2.items?.[0]?.price
+          const nextPriceIdStr = typeof nextPriceId === 'string' ? nextPriceId : nextPriceId?.id
+          const nextPlanInfo = priceMap[nextPriceIdStr]
+          if (nextPlanInfo && nextPlanInfo.plan_type !== plan.plan_type) {
+            pending = {
+              plan_type: nextPlanInfo.plan_type,
+              scheduled_for: phase1.end_date
+                ? new Date(phase1.end_date * 1000).toISOString()
+                : null,
+            }
+          }
+        }
+      } catch (schedErr) {
+        console.error('[plan/info] schedule fetch error:', schedErr.message)
+      }
+    }
+
+    return NextResponse.json({ plan, pending })
   } catch (err) {
     console.error('[plan/info]', err)
     return NextResponse.json({ error: err.message || 'Internal server error' }, { status: 500 })
