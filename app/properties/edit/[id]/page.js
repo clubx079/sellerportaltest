@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import { Save, ArrowLeft, Upload, X, AlertCircle, Home, FileText } from 'lucide-react';
+import { Save, ArrowLeft, Upload, X, AlertCircle, AlertTriangle, Home, FileText } from 'lucide-react';
 import ImageGalleryManager from '@/components/properties/ImageGalleryManager';
 import TextEditor from '@/components/forms/TextEditor';
 import GooglePlacesAutocomplete from '@/components/forms/GooglePlacesAutocomplete';
@@ -33,6 +33,27 @@ const slugToTitle = (slug) => (
     : ''
 );
 
+function parseRejectionReasons(raw) {
+  if (!raw) return {}
+  const map = {}
+  const prefixes = [
+    ['photo',       'Photo'],
+    ['description', 'Description'],
+    ['repairs',     'Repairs'],
+    ['inspection',  'Inspection report'],
+    ['contract',    'Contract'],
+  ]
+  for (const [key, prefix] of prefixes) {
+    const regex = new RegExp(`${prefix}:\\s*(.+?)(?=\\s*(?:Photo \\d+|Photo|Description|Repairs|Inspection report|Contract):|$)`, 'i')
+    const m = raw.match(regex)
+    if (m) map[key] = m[1].replace(/\.\s*$/, '').trim()
+  }
+  // Also catch "Photo 1:", "Photo 2:" etc.
+  const photoNumMatch = raw.match(/Photo \d+:\s*(.+?)(?=\s*(?:Photo \d+|Description|Repairs|Inspection report|Contract):|$)/i)
+  if (photoNumMatch && !map.photo) map.photo = photoNumMatch[1].replace(/\.\s*$/, '').trim()
+  return map
+}
+
 export default function EditPropertyPage() {
   const router = useRouter();
   const { id } = useParams();
@@ -41,6 +62,7 @@ export default function EditPropertyPage() {
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
   const [activeTab, setActiveTab] = useState('basic');
+  const [rejectionReason, setRejectionReason] = useState(null);
   const [userId, setUserId] = useState(null);
   const [sourceType, setSourceType] = useState(null); // 'manual' | 'scraped'
   const [tempSellerId, setTempSellerId] = useState(null); // for scraped fetch/save
@@ -152,6 +174,15 @@ export default function EditPropertyPage() {
           social_description: data.social_description || '',
           social_image_url: data.social_image_url || ''
         });
+
+        // Set rejection reason and auto-navigate to the first tab with issues
+        if (data.status === 'rejected' && data.rejection_reason) {
+          setRejectionReason(data.rejection_reason)
+          const rMap = parseRejectionReasons(data.rejection_reason)
+          if (rMap.photo) setActiveTab('images')
+          else if (rMap.description || rMap.repairs || rMap.inspection) setActiveTab('content')
+          else if (rMap.contract) setActiveTab('ownership')
+        }
 
         const sortedImages = (data.property_images || [])
           .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
@@ -735,7 +766,43 @@ export default function EditPropertyPage() {
         </div>
       )}
 
+      {/* Rejection Banner */}
+      {rejectionReason && (() => {
+        const rMap = parseRejectionReasons(rejectionReason)
+        return (
+          <div className="bg-[#FEF3F2] border border-[#FECDCA] rounded p-4">
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 rounded bg-[#FEE4E2] flex items-center justify-center flex-shrink-0">
+                <AlertTriangle className="w-4 h-4 text-[#B42318]" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[14px] font-semibold text-[#B42318] mb-1">Your listing wasn&apos;t approved</p>
+                <p className="text-[13px] text-[#B42318]/80 mb-3">Fix the issues below and click &quot;Send for Review&quot; — your listing will go back under review automatically.</p>
+                <div className="space-y-1.5">
+                  {Object.entries(rMap).map(([key, reason]) => (
+                    <div key={key} className="flex items-start gap-2">
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#B42318] flex-shrink-0 mt-1.5" />
+                      <p className="text-[12px] text-[#B42318]">
+                        <span className="font-semibold capitalize">{key === 'inspection' ? 'Inspection Report' : key}:</span> {reason}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
+
       {/* Tabs */}
+      {(() => {
+        const rMap = rejectionReason ? parseRejectionReasons(rejectionReason) : {}
+        const tabHasIssue = {
+          images:    !!rMap.photo,
+          content:   !!(rMap.description || rMap.repairs || rMap.inspection),
+          ownership: !!rMap.contract,
+        }
+        return (
       <div className="bg-white rounded border border-[#E8E8E4] overflow-hidden">
         <div className="flex border-b border-[#E8E8E4]">
           {[
@@ -759,6 +826,7 @@ export default function EditPropertyPage() {
                 {idx + 1}
               </span>
               <span className="hidden sm:inline">{tab.label}</span>
+              {tabHasIssue[tab.id] && <span className="w-1.5 h-1.5 rounded-full bg-[#B42318] flex-shrink-0" />}
             </button>
           ))}
         </div>
@@ -888,9 +956,15 @@ export default function EditPropertyPage() {
           {/* Images Tab */}
           <div className={activeTab === 'images' ? '' : 'hidden'}>
             <h3 className="text-lg font-semibold text-neutral-900 mb-2">Property Images</h3>
-            <p className="text-sm text-neutral-600 mb-6">
+            <p className="text-sm text-neutral-600 mb-4">
               Upload property images. They will be automatically compressed and uploaded immediately. The first image will be set as the featured image.
             </p>
+            {rejectionReason && parseRejectionReasons(rejectionReason).photo && (
+              <div className="flex items-start gap-2.5 bg-[#FEF3F2] border border-[#FECDCA] rounded px-3 py-2.5 mb-5">
+                <AlertTriangle className="w-3.5 h-3.5 text-[#B42318] flex-shrink-0 mt-0.5" />
+                <p className="text-[12px] text-[#B42318]"><span className="font-semibold">Issue:</span> {parseRejectionReasons(rejectionReason).photo}</p>
+              </div>
+            )}
             <ImageGalleryManager
               images={imageUploadStatus.images}
               onImagesChange={handleImagesChange}
@@ -943,7 +1017,13 @@ export default function EditPropertyPage() {
               {sellerType === 'wholesaler' && (
                 <div>
                   <h3 className="text-[15px] font-semibold text-[#1A1816] mb-1">Assignment Contract</h3>
-                  <p className="text-[13px] text-[#737370] mb-4">Upload your signed assignment contract. (PDF or DOC)</p>
+                  <p className="text-[13px] text-[#737370] mb-3">Upload your signed assignment contract. (PDF or DOC)</p>
+                  {rejectionReason && parseRejectionReasons(rejectionReason).contract && (
+                    <div className="flex items-start gap-2.5 bg-[#FEF3F2] border border-[#FECDCA] rounded px-3 py-2.5 mb-4">
+                      <AlertTriangle className="w-3.5 h-3.5 text-[#B42318] flex-shrink-0 mt-0.5" />
+                      <p className="text-[12px] text-[#B42318]"><span className="font-semibold">Issue:</span> {parseRejectionReasons(rejectionReason).contract}</p>
+                    </div>
+                  )}
                   {!contractUpload.url ? (
                     <div className="border border-dashed border-[#E8E8E4] rounded p-8 text-center">
                       <FileText className="w-12 h-12 text-[#A8A8A4] mx-auto mb-4" />
@@ -993,6 +1073,12 @@ export default function EditPropertyPage() {
             <div className="space-y-6">
               <div>
                 <label className="block text-sm font-semibold text-neutral-700 mb-2">Property Description</label>
+                {rejectionReason && parseRejectionReasons(rejectionReason).description && (
+                  <div className="flex items-start gap-2.5 bg-[#FEF3F2] border border-[#FECDCA] rounded px-3 py-2.5 mb-2">
+                    <AlertTriangle className="w-3.5 h-3.5 text-[#B42318] flex-shrink-0 mt-0.5" />
+                    <p className="text-[12px] text-[#B42318]"><span className="font-semibold">Issue:</span> {parseRejectionReasons(rejectionReason).description}</p>
+                  </div>
+                )}
                 <TextEditor
                   ref={descRef}
                   id="description-editor"
@@ -1003,6 +1089,12 @@ export default function EditPropertyPage() {
 
               <div>
                 <label className="block text-sm font-semibold text-neutral-700 mb-2">Repairs & Renovation</label>
+                {rejectionReason && parseRejectionReasons(rejectionReason).repairs && (
+                  <div className="flex items-start gap-2.5 bg-[#FEF3F2] border border-[#FECDCA] rounded px-3 py-2.5 mb-2">
+                    <AlertTriangle className="w-3.5 h-3.5 text-[#B42318] flex-shrink-0 mt-0.5" />
+                    <p className="text-[12px] text-[#B42318]"><span className="font-semibold">Issue:</span> {parseRejectionReasons(rejectionReason).repairs}</p>
+                  </div>
+                )}
                 <TextEditor
                   ref={repairsRef}
                   id="repairs-editor"
@@ -1013,6 +1105,12 @@ export default function EditPropertyPage() {
 
               <div>
                 <label className="block text-[13px] font-semibold text-[#1A1816] mb-1">Inspection Report <span className="text-[#A8A8A4] font-normal">(optional)</span></label>
+                {rejectionReason && parseRejectionReasons(rejectionReason).inspection && (
+                  <div className="flex items-start gap-2.5 bg-[#FEF3F2] border border-[#FECDCA] rounded px-3 py-2.5 mb-2">
+                    <AlertTriangle className="w-3.5 h-3.5 text-[#B42318] flex-shrink-0 mt-0.5" />
+                    <p className="text-[12px] text-[#B42318]"><span className="font-semibold">Issue:</span> {parseRejectionReasons(rejectionReason).inspection}</p>
+                  </div>
+                )}
                 <p className="text-[12px] text-[#737370] mb-3">Upload the inspection report for this property (PDF or DOC)</p>
                 {!inspectionReport.url ? (
                   <div className="border border-dashed border-[#E8E8E4] rounded p-6 text-center">
@@ -1142,6 +1240,8 @@ export default function EditPropertyPage() {
 
         </div>
       </div>
+        )
+      })()}
     </div>
   );
 }
