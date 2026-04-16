@@ -70,6 +70,7 @@ export default function BillingPage() {
   const [plan,          setPlan]          = useState(null)
   const [paymentMethod, setPaymentMethod] = useState(null)
   const [invoices,      setInvoices]      = useState([])
+  const [addons,        setAddons]        = useState([])
   const [loading,       setLoading]       = useState(true)
   const [pmLoading,     setPmLoading]     = useState(false)
   const [invLoading,    setInvLoading]    = useState(false)
@@ -116,6 +117,14 @@ export default function BillingPage() {
       }
 
       setPlan(planData)
+
+      // Load add-on purchases from listing_addons table
+      const { data: addonRows } = await supabase
+        .from('listing_addons')
+        .select('id, addon_type, amount_paid, days_purchased, starts_at, ends_at, status, property_id, properties(address)')
+        .eq('seller_id', sellerId)
+        .order('starts_at', { ascending: false })
+      setAddons(addonRows || [])
 
       // Resolve the Stripe customer ID — prefer seller_plans, fall back to seller_applications
       let stripeCustomerId = planData?.stripe_customer_id
@@ -405,17 +414,49 @@ export default function BillingPage() {
               <p className="text-[12px] text-[#737370]">
                 {plan ? 'Your invoices will appear here once billing begins.' : 'Invoices will appear here after you subscribe.'}
               </p>
-              {plan?.stripe_customer_id && (
-                <button
-                  onClick={openPortal}
-                  className="mt-2 flex items-center gap-1.5 text-[12px] font-semibold text-[#D03839] hover:text-[#E0493B] transition-colors"
-                >
-                  Open billing portal <ExternalLink className="w-3 h-3" />
-                </button>
-              )}
             </div>
           )}
         </Section>
+
+        {/* ── Add-on Purchases ─────────────────────────────────────── */}
+        {addons.length > 0 && (
+          <Section title="Add-on Purchases">
+            <div className="space-y-0 -mx-5 -mb-5">
+              {addons.map((addon, i) => {
+                const labelMap = { highlight: 'Highlight Listing', boost: 'Boost Listing', homepage: 'Feature on Homepage', bundle: 'Visibility Bundle' }
+                const label = labelMap[addon.addon_type] || addon.addon_type
+                const address = addon.properties?.address || '—'
+                const isActive = addon.status === 'active' && addon.ends_at && new Date(addon.ends_at) > new Date()
+                const daysLeft = addon.ends_at
+                  ? Math.max(0, Math.ceil((new Date(addon.ends_at) - new Date()) / (1000 * 60 * 60 * 24)))
+                  : null
+                return (
+                  <div
+                    key={addon.id}
+                    className={`flex items-center justify-between px-5 py-3.5 ${i !== addons.length - 1 ? 'border-b border-[#F3F3F0]' : ''} hover:bg-[#FAFAF8] transition-colors`}
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-8 h-8 rounded bg-[#FEF0EF] flex items-center justify-center flex-shrink-0">
+                        <Zap className="w-4 h-4 text-[#D03839]" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-[13px] font-semibold text-[#1A1816]">{label}</p>
+                        <p className="text-[11px] text-[#A8A8A4] truncate">{address} · {formatDate(addon.starts_at)}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-4 flex-shrink-0 ml-4">
+                      <p className="text-[13px] font-semibold text-[#1A1816]">{formatAmount(addon.amount_paid)}</p>
+                      {isActive
+                        ? <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold border bg-[#E4F5EC] text-[#0F6E56] border-[#9FDBB8]">Active · {daysLeft}d left</span>
+                        : <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold border bg-[#F3F3F0] text-[#737370] border-[#E8E8E4]">Expired</span>
+                      }
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </Section>
+        )}
 
     </div>
   )

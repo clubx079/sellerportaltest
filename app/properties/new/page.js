@@ -202,6 +202,16 @@ export default function NewPropertyPage() {
   };
 
   const handleContinue = () => {
+    // Validate required fields before advancing
+    if (activeTab === 'basic') {
+      if (!formData.location)      { setError('Please enter the property location.'); return; }
+      if (!formData.price)         { setError('Please enter the property price.'); return; }
+      if (!formData.property_type) { setError('Please select a property type.'); return; }
+      if (!formData.bedrooms)      { setError('Please enter the number of bedrooms.'); return; }
+      if (!formData.bathrooms)     { setError('Please enter the number of bathrooms.'); return; }
+      if (!formData.floor_area)    { setError('Please enter the floor area.'); return; }
+    }
+    setError(null);
     setContinuedTabs(prev => new Set([...prev, activeTab]));
     const nextTab = TAB_ORDER[TAB_ORDER.indexOf(activeTab) + 1];
     if (nextTab) handleTabChange(nextTab);
@@ -209,8 +219,6 @@ export default function NewPropertyPage() {
 
   const handleSave = async (publishStatus = 'draft', options = {}) => {
     const { skipFeaturedPrompt = false, forceAutoSelectFeatured = false, addOnFlags = null, bypassLimit = false } = options;
-    // Store add-on flags so the save logic can apply them after property creation
-    if (addOnFlags) setPendingPublishData({ addOnFlags });
 
     if (!bypassLimit) {
       // Block publishing if subscription has ended
@@ -460,35 +468,42 @@ export default function NewPropertyPage() {
         setTrialPlan(prev => prev ? { ...prev, listings_used_this_period: (prev.listings_used_this_period ?? 0) + 1 } : prev);
       }
 
-      // Apply add-on flags if paid
-      if (publishStatus === 'active' && pendingPublishData?.addOnFlags && Object.keys(pendingPublishData.addOnFlags).length > 0) {
+      // Apply add-on flags if paid — use addOnFlags from options directly (not state,
+      // which is async and would still be stale at this point in the same call)
+      if (publishStatus === 'active' && addOnFlags && Object.keys(addOnFlags).length > 0) {
+        const ADDON_DAYS   = { highlight: 30, boost: 7, homepage: 7, bundle: 30 }
+        const ADDON_PRICES = { highlight: 999, boost: 1499, homepage: 2900, bundle: 2200 }
+        const now = new Date()
+        const ms  = (d) => d * 24 * 60 * 60 * 1000
+
+        // Include expiry timestamps alongside the boolean flags
+        const flagsWithExpiry = { ...addOnFlags }
+        if (addOnFlags.is_highlighted)      flagsWithExpiry.highlight_ends_at          = new Date(now.getTime() + ms(30)).toISOString()
+        if (addOnFlags.is_boosted)          flagsWithExpiry.boost_ends_at              = new Date(now.getTime() + ms(7)).toISOString()
+        if (addOnFlags.is_homepage_featured) flagsWithExpiry.homepage_feature_ends_at  = new Date(now.getTime() + ms(7)).toISOString()
+
         await supabase
           .from('properties')
-          .update(pendingPublishData.addOnFlags)
+          .update(flagsWithExpiry)
           .eq('id', data.id)
           .eq('seller_id', sellerId);
 
         // Record each add-on in listing_addons for tracking (best-effort)
-        if (selectedAddOns.length > 0) {
-          try {
-            const ADDON_DAYS   = { highlight: 30, boost: 7, homepage: 7, bundle: 30 }
-            const ADDON_PRICES = { highlight: 999, boost: 1499, homepage: 2900, bundle: 2200 }
-            const now = new Date()
-            for (const addonId of selectedAddOns) {
-              const days = ADDON_DAYS[addonId] || 7
-              await supabase.from('listing_addons').insert({
-                property_id:    data.id,
-                seller_id:      sellerId,
-                addon_type:     addonId,
-                amount_paid:    ADDON_PRICES[addonId] || 0,
-                days_purchased: days,
-                starts_at:      now.toISOString(),
-                ends_at:        new Date(now.getTime() + days * 24 * 60 * 60 * 1000).toISOString(),
-                status:         'active',
-              })
-            }
-          } catch (_) { /* non-critical — webhook will back-fill */ }
-        }
+        try {
+          for (const addonId of selectedAddOns) {
+            const days = ADDON_DAYS[addonId] || 7
+            await supabase.from('listing_addons').insert({
+              property_id:    data.id,
+              seller_id:      sellerId,
+              addon_type:     addonId,
+              amount_paid:    ADDON_PRICES[addonId] || 0,
+              days_purchased: days,
+              starts_at:      now.toISOString(),
+              ends_at:        new Date(now.getTime() + ms(days)).toISOString(),
+              status:         'active',
+            })
+          }
+        } catch (_) { /* non-critical — webhook will back-fill */ }
       }
 
       // Kick off AI moderation in background for published listings
