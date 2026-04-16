@@ -31,6 +31,17 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Subscription cancellation is already pending' }, { status: 400 })
     }
 
+    // If the subscription is managed by a schedule, release it first —
+    // Stripe blocks cancel_at_period_end updates on schedule-managed subscriptions.
+    const sub = await stripe.subscriptions.retrieve(plan.stripe_subscription_id)
+    const scheduleId = sub.schedule
+      ? (typeof sub.schedule === 'string' ? sub.schedule : sub.schedule.id)
+      : null
+
+    if (scheduleId) {
+      await stripe.subscriptionSchedules.release(scheduleId)
+    }
+
     // Cancel at period end — subscription stays active until current_period_end
     await stripe.subscriptions.update(plan.stripe_subscription_id, {
       cancel_at_period_end: true,
