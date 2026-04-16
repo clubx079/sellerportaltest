@@ -107,7 +107,8 @@ export default function PlansPage() {
       const data = await res.json()
       if (!res.ok || data.error) { setError(data.error || 'Failed to change plan.'); return }
       // Plan is updated immediately — reload from DB to show the new plan
-      setSuccess(`Your plan has been updated to ${newPlanType === 'enterprise' ? 'Enterprise' : 'Pro Seller'}. Billing changes at your next renewal on ${formatDate(data.scheduled_for)}.`)
+      const renewalNote = data.scheduled_for ? ` Your next renewal is on ${formatDate(data.scheduled_for)}.` : ''
+      setSuccess(`Your plan has been updated to ${newPlanType === 'enterprise' ? 'Enterprise' : 'Pro Seller'}.${renewalNote}`)
       await loadPlanInfo()
     } catch {
       setError('Something went wrong. Please try again.')

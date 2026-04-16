@@ -9,6 +9,8 @@ const PRICE_IDS = {
   enterprise_annual:  process.env.STRIPE_PRICE_ENTERPRISE_ANNUAL,
 }
 
+const PLAN_RANK = { pro: 1, enterprise: 2 }
+
 export async function POST(request) {
   const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY)
   const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
@@ -49,15 +51,17 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Could not read current subscription item' }, { status: 500 })
     }
 
-    // Update the subscription item to the new price with no proration.
-    // Stripe applies the new price at the start of the next billing cycle.
+    const isUpgrade = (PLAN_RANK[new_plan_type] || 0) > (PLAN_RANK[plan.plan_type] || 0)
+
+    // Upgrades: charge the prorated difference immediately via always_invoice
+    // Downgrades: apply at next renewal with no immediate charge
     await stripe.subscriptions.update(plan.stripe_subscription_id, {
       items: [{ id: currentItemId, price: newPriceId }],
-      proration_behavior: 'none',
+      proration_behavior: isUpgrade ? 'always_invoice' : 'none',
       metadata: { seller_id, plan_type: new_plan_type, billing_cycle: billingCycle },
     })
 
-    const scheduledFor = new Date(periodEnd * 1000).toISOString()
+    const scheduledFor = periodEnd ? new Date(periodEnd * 1000).toISOString() : null
 
     return NextResponse.json({ success: true, scheduled_for: scheduledFor, new_plan_type })
   } catch (err) {
