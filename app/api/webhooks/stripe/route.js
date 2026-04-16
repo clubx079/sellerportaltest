@@ -21,37 +21,96 @@ export async function POST(request) {
   try {
     switch (event.type) {
 
-      // ── Standard plan: one-time payment succeeded ──────────────────────
+      // ── Standard plan OR add-on payment succeeded ──────────────────────
       case 'payment_intent.succeeded': {
         const pi = event.data.object
-        const { seller_id, plan_type, quantity } = pi.metadata
+        const { seller_id, plan_type, quantity, add_ons, property_id } = pi.metadata
 
-        if (!seller_id || plan_type !== 'standard') break
+        // ── Standard plan ──
+        if (seller_id && plan_type === 'standard') {
+          // Idempotency — skip if already processed
+          const { data: existing } = await supabase
+            .from('seller_plans')
+            .select('id')
+            .eq('stripe_customer_id', pi.customer)
+            .eq('plan_type', 'standard')
+            .maybeSingle()
 
-        // Idempotency — skip if already processed
-        const { data: existing } = await supabase
-          .from('seller_plans')
-          .select('id')
-          .eq('stripe_customer_id', pi.customer)
-          .eq('plan_type', 'standard')
-          .maybeSingle()
+          if (!existing) {
+            await supabase.from('seller_plans').insert({
+              seller_id,
+              plan_type: 'standard',
+              billing_cycle: 'one_time',
+              status: 'active',
+              stripe_customer_id: pi.customer,
+              quantity: parseInt(quantity || '1'),
+              listings_used_this_period: 0,
+            })
 
-        if (existing) break
+            await supabase
+              .from('seller_applications')
+              .update({ status: 'approved' })
+              .eq('id', seller_id)
+          }
+          break
+        }
 
-        await supabase.from('seller_plans').insert({
-          seller_id,
-          plan_type: 'standard',
-          billing_cycle: 'one_time',
-          status: 'active',
-          stripe_customer_id: pi.customer,
-          quantity: parseInt(quantity || '1'),
-          listings_used_this_period: 0,
-        })
+        // ── Listing add-ons (backup record — frontend may have already inserted) ──
+        if (seller_id && add_ons) {
+          const ADDON_DAYS   = { highlight: 30, boost: 7, homepage: 7, bundle: 30 }
+          const ADDON_PRICES = { highlight: 999, boost: 1499, homepage: 2900, bundle: 2200 }
+          const addonList = add_ons.split(',').filter(Boolean)
+          const now = new Date()
 
-        await supabase
-          .from('seller_applications')
-          .update({ status: 'approved' })
-          .eq('id', seller_id)
+          for (const addonId of addonList) {
+            // Idempotency: skip if already recorded for this PI + addon_type
+            const { data: existingAddon } = await supabase
+              .from('listing_addons')
+              .select('id')
+              .eq('stripe_payment_intent_id', pi.id)
+              .eq('addon_type', addonId)
+              .maybeSingle()
+
+            if (existingAddon) {
+              continue // already recorded by frontend
+            }
+
+            // Check if frontend recorded without PI ID (best-effort association)
+            const { data: frontendAddon } = await supabase
+              .from('listing_addons')
+              .select('id')
+              .eq('seller_id', seller_id)
+              .eq('addon_type', addonId)
+              .is('stripe_payment_intent_id', null)
+              .order('created_at', { ascending: false })
+              .limit(1)
+              .maybeSingle()
+
+            if (frontendAddon) {
+              // Associate the PI ID to the existing frontend record
+              await supabase
+                .from('listing_addons')
+                .update({ stripe_payment_intent_id: pi.id })
+                .eq('id', frontendAddon.id)
+              continue
+            }
+
+            // Neither frontend nor prior webhook recorded it — insert now
+            const days = ADDON_DAYS[addonId] || 7
+            const amount = ADDON_PRICES[addonId] || 0
+            await supabase.from('listing_addons').insert({
+              property_id:              property_id || null,
+              seller_id,
+              addon_type:               addonId,
+              stripe_payment_intent_id: pi.id,
+              amount_paid:              amount,
+              days_purchased:           days,
+              starts_at:                now.toISOString(),
+              ends_at:                  new Date(now.getTime() + days * 24 * 60 * 60 * 1000).toISOString(),
+              status:                   'active',
+            })
+          }
+        }
 
         break
       }
@@ -97,19 +156,29 @@ export async function POST(request) {
         break
       }
 
-      // ── Subscription updated (upgrade/downgrade/renewal) ──────────────
+      // ── Subscription updated (upgrade/downgrade/renewal/cancel-at-period-end) ──
       case 'customer.subscription.updated': {
         const sub = event.data.object
         const { plan_type, billing_cycle } = sub.metadata || {}
 
+        // Determine logical status
+        let newStatus
+        if (sub.cancel_at_period_end) {
+          newStatus = 'canceling'
+        } else if (sub.status === 'trialing') {
+          newStatus = 'trialing'
+        } else if (sub.status === 'past_due') {
+          newStatus = 'past_due'
+        } else {
+          newStatus = 'active'
+        }
+
         const updateData = {
-          status: sub.status === 'trialing' ? 'trialing'
-                : sub.status === 'past_due' ? 'past_due'
-                : 'active',
+          status:               newStatus,
           current_period_start: toISO(sub.current_period_start),
           current_period_end:   toISO(sub.current_period_end),
-          stripe_price_id: sub.items.data[0]?.price?.id || null,
-          updated_at: new Date().toISOString(),
+          stripe_price_id:      sub.items.data[0]?.price?.id || null,
+          updated_at:           new Date().toISOString(),
         }
 
         // Sync plan_type and billing_cycle from metadata when a plan change occurs
@@ -124,14 +193,47 @@ export async function POST(request) {
         break
       }
 
-      // ── Subscription cancelled ────────────────────────────────────────
+      // ── Subscription ended — mark canceled + deactivate all listings ──
       case 'customer.subscription.deleted': {
         const sub = event.data.object
+
+        // Look up the seller before updating (need seller_id for deactivation)
+        const { data: planRow } = await supabase
+          .from('seller_plans')
+          .select('seller_id')
+          .eq('stripe_subscription_id', sub.id)
+          .maybeSingle()
 
         await supabase
           .from('seller_plans')
           .update({ status: 'canceled', updated_at: new Date().toISOString() })
           .eq('stripe_subscription_id', sub.id)
+
+        if (planRow?.seller_id) {
+          const sellerId = planRow.seller_id
+
+          // Deactivate all active manual properties
+          await supabase
+            .from('properties')
+            .update({ status: 'inactive', property_status: 'unavailable', updated_at: new Date().toISOString() })
+            .eq('seller_id', sellerId)
+            .in('status', ['active', 'under_review'])
+
+          // Deactivate all active scraped listings (wholesale_deals)
+          const { data: appRow } = await supabase
+            .from('seller_applications')
+            .select('temp_seller_id')
+            .eq('id', sellerId)
+            .maybeSingle()
+
+          if (appRow?.temp_seller_id) {
+            await supabase
+              .from('wholesale_deals')
+              .update({ status: 'inactive' })
+              .eq('temp_seller_id', appRow.temp_seller_id)
+              .eq('status', 'active')
+          }
+        }
 
         break
       }

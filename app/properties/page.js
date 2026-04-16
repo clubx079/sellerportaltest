@@ -31,6 +31,7 @@ const PropertiesManagement = () => {
   const [showUTMModal, setShowUTMModal] = useState(false);
   const [propertyForUTM, setPropertyForUTM] = useState(null);
   const [selectedPropertyRaw, setSelectedPropertyRaw] = useState(null); // raw property for UTM (slug/id)
+  const [subBlockMsg, setSubBlockMsg] = useState('');
   const searchParams = useSearchParams();
   const viewFromUrl = searchParams.get('view') === 'trash' ? 'trash' : 'active';
   const [viewMode, setViewMode] = useState(viewFromUrl); // 'active' or 'trash'
@@ -363,6 +364,26 @@ const PropertiesManagement = () => {
     const isManual = property._source === 'manual';
     const nextPropertyStatus = nextStatus === 'inactive' ? 'unavailable' : 'available';
 
+    // Block activation if subscription has ended
+    if (nextStatus === 'active') {
+      const { data: plan } = await supabase
+        .from('seller_plans')
+        .select('status')
+        .eq('seller_id', userId)
+        .maybeSingle()
+
+      if (!plan || plan.status === 'canceled') {
+        setSubBlockMsg('Your subscription has ended. Renew your subscription to activate listings.')
+        setTimeout(() => setSubBlockMsg(''), 5000)
+        return
+      }
+      if (plan.status === 'past_due') {
+        setSubBlockMsg('Your payment is overdue. Update your payment method on the Billing page to activate listings.')
+        setTimeout(() => setSubBlockMsg(''), 5000)
+        return
+      }
+    }
+
     try {
       setStatusUpdatingId(`${property._source}-${property.id}`);
       if (isManual) {
@@ -593,6 +614,13 @@ const PropertiesManagement = () => {
       ) : (
         <div className="bg-white rounded border border-[#E8E8E4] px-4 py-3">
           <p className="text-sm text-[#444441]"><span className="font-semibold text-[#1A1816]">{totalProperties}</span> {totalProperties === 1 ? 'listing' : 'listings'} in trash</p>
+        </div>
+      )}
+
+      {/* Subscription block message */}
+      {subBlockMsg && (
+        <div className="p-3 bg-[#FEF3E2] border border-[#F3C97D] rounded text-[13px] text-[#B5620A]">
+          {subBlockMsg}
         </div>
       )}
 

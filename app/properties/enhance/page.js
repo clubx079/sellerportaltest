@@ -61,8 +61,9 @@ function CheckoutForm({ amount, addOns, propertyId, sellerId, onSuccess }) {
       setError(confirmErr.message)
       setProcessing(false)
     } else {
-      const in30Days = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
-      const in7Days  = new Date(Date.now() +  7 * 24 * 60 * 60 * 1000).toISOString()
+      const now = new Date()
+      const in30Days = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString()
+      const in7Days  = new Date(now.getTime() +  7 * 24 * 60 * 60 * 1000).toISOString()
       const flags = {}
       if (addOns.includes('highlight') || addOns.includes('bundle')) {
         flags.is_highlighted = true
@@ -77,6 +78,26 @@ function CheckoutForm({ amount, addOns, propertyId, sellerId, onSuccess }) {
         flags.homepage_feature_ends_at = in7Days
       }
       await supabase.from('properties').update(flags).eq('id', propertyId)
+
+      // Record each add-on in listing_addons for tracking/history (best-effort)
+      try {
+        const ADDON_DAYS   = { highlight: 30, boost: 7, homepage: 7, bundle: 30 }
+        const ADDON_PRICES = { highlight: 999, boost: 1499, homepage: 2900, bundle: 2200 }
+        for (const addonId of addOns) {
+          const days = ADDON_DAYS[addonId] || 7
+          await supabase.from('listing_addons').insert({
+            property_id:  propertyId,
+            seller_id:    sellerId,
+            addon_type:   addonId,
+            amount_paid:  ADDON_PRICES[addonId] || 0,
+            days_purchased: days,
+            starts_at:    now.toISOString(),
+            ends_at:      new Date(now.getTime() + days * 24 * 60 * 60 * 1000).toISOString(),
+            status:       'active',
+          })
+        }
+      } catch (_) { /* non-critical — webhook will back-fill */ }
+
       onSuccess()
     }
   }

@@ -98,10 +98,10 @@ export default function NewPropertyPage() {
     if (userStr) {
       const user = JSON.parse(userStr);
       setUserId(user.id);
-      // Fetch plan to check trial status
+      // Fetch plan to check trial/subscription status
       supabase
         .from('seller_plans')
-        .select('status, plan_type, listings_used_this_period, trial_ends_at')
+        .select('status, plan_type, billing_cycle, listings_used_this_period, trial_ends_at, current_period_end')
         .eq('seller_id', user.id)
         .maybeSingle()
         .then(({ data }) => { if (data) setTrialPlan(data) });
@@ -213,6 +213,18 @@ export default function NewPropertyPage() {
     if (addOnFlags) setPendingPublishData({ addOnFlags });
 
     if (!bypassLimit) {
+      // Block publishing if subscription has ended
+      if (publishStatus === 'active' && trialPlan?.status === 'canceled') {
+        setError('Your subscription has ended. Please renew your subscription on the Plans page to publish listings.');
+        return;
+      }
+
+      // Block publishing if payment is overdue
+      if (publishStatus === 'active' && trialPlan?.status === 'past_due') {
+        setError('Your payment is overdue. Please update your payment method on the Billing page to publish listings.');
+        return;
+      }
+
       // Trial limit: only 1 published listing allowed during free trial
       if (publishStatus === 'active' && trialPlan?.status === 'trialing') {
         if ((trialPlan.listings_used_this_period ?? 0) >= 1) {
@@ -455,6 +467,28 @@ export default function NewPropertyPage() {
           .update(pendingPublishData.addOnFlags)
           .eq('id', data.id)
           .eq('seller_id', sellerId);
+
+        // Record each add-on in listing_addons for tracking (best-effort)
+        if (selectedAddOns.length > 0) {
+          try {
+            const ADDON_DAYS   = { highlight: 30, boost: 7, homepage: 7, bundle: 30 }
+            const ADDON_PRICES = { highlight: 999, boost: 1499, homepage: 2900, bundle: 2200 }
+            const now = new Date()
+            for (const addonId of selectedAddOns) {
+              const days = ADDON_DAYS[addonId] || 7
+              await supabase.from('listing_addons').insert({
+                property_id:    data.id,
+                seller_id:      sellerId,
+                addon_type:     addonId,
+                amount_paid:    ADDON_PRICES[addonId] || 0,
+                days_purchased: days,
+                starts_at:      now.toISOString(),
+                ends_at:        new Date(now.getTime() + days * 24 * 60 * 60 * 1000).toISOString(),
+                status:         'active',
+              })
+            }
+          } catch (_) { /* non-critical — webhook will back-fill */ }
+        }
       }
 
       // Kick off AI moderation in background for published listings
