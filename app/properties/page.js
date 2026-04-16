@@ -701,7 +701,6 @@ const PropertiesManagement = () => {
                 <th className="px-4 py-3 text-left text-xs font-semibold text-[#444441] uppercase tracking-wider whitespace-nowrap">#</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-[#444441] uppercase tracking-wider whitespace-nowrap">Property</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-[#444441] uppercase tracking-wider whitespace-nowrap">Source</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-[#444441] uppercase tracking-wider whitespace-nowrap">Location</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-[#444441] uppercase tracking-wider whitespace-nowrap">Price</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-[#444441] uppercase tracking-wider whitespace-nowrap">Type</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-[#444441] uppercase tracking-wider whitespace-nowrap">Status</th>
@@ -773,12 +772,6 @@ const PropertiesManagement = () => {
                       <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium border ${property._source === 'manual' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-amber-50 text-amber-700 border-amber-200'}`}>
                         {property._source === 'manual' ? 'Manual' : 'DeelScout'}
                       </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-1.5">
-                        <MapPin className="w-3 h-3 text-[#A8A8A4]" />
-                        <span className="text-xs text-[#444441] line-clamp-1">{property.city && property.state ? `${property.city}, ${property.state}` : property.address || 'N/A'}</span>
-                      </div>
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
                       <span className="text-xs font-semibold text-[#1A1816]">${parseFloat(property.price || 0).toLocaleString()}</span>
