@@ -250,7 +250,7 @@ function MagicLinkRegisterContent() {
         <div style={{ textAlign: 'center', marginBottom: '28px' }}>
           <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '20px' }}>
             {!logoError ? (
-              <Image src="/assets/logo.svg" alt="DeelMap" width={160} height={56} style={{ height: '48px', width: 'auto', objectFit: 'contain' }} priority onError={() => setLogoError(true)} />
+              <Image src="/assets/logo.svg" alt="DeelMap" width={220} height={72} style={{ height: '72px', width: 'auto', objectFit: 'contain' }} priority onError={() => setLogoError(true)} />
             ) : (
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <div style={{ width: '36px', height: '36px', background: T.textPrimary, borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
