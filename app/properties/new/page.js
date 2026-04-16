@@ -389,6 +389,7 @@ export default function NewPropertyPage() {
       slug: shortSlug,
       address: formData.location || '', // 'location' in form maps to 'address' in DB
       property_status: formData.property_status || 'available',
+      property_type: formData.property_type || null,
       description: formData.description || '',
       repairs: formData.repairs || ''
     };
@@ -399,10 +400,12 @@ export default function NewPropertyPage() {
     if (formData.bathrooms) saveData.bathrooms = parseFloat(formData.bathrooms);
     if (formData.floor_area) saveData.floor_area = parseInt(formData.floor_area);
 
-    // Add location coordinates from Google Places
+    // Add location coordinates and parsed fields from Google Places
     if (formData.latitude) saveData.latitude = formData.latitude;
     if (formData.longitude) saveData.longitude = formData.longitude;
     if (formData.state) saveData.state = formData.state;
+    if (formData.city) saveData.city = formData.city;
+    if (formData.zipcode) saveData.zipcode = formData.zipcode;
 
     // Add SEO fields (using correct column names from schema)
     saveData.seo_title = formData.seo_title || formData.meta_title || formData.location || '';

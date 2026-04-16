@@ -349,12 +349,14 @@ export default function EditPropertyPage() {
     };
     const slugToSave = shouldUpdateSlug ? newShortSlug() : existingSlugRef.current;
 
-    // If listing is active, send back to under_review for re-moderation
+    // If listing is active/rejected, send back to under_review for re-moderation
     const effectiveStatus = publishStatus === 'active' ? 'under_review' : publishStatus;
 
     // Create save data object matching the actual database schema
     const saveData = {
       status: effectiveStatus,
+      // Clear rejection reason whenever resubmitting for review
+      ...(effectiveStatus === 'under_review' ? { rejection_reason: null } : {}),
       slug: slugToSave,
       address: formData.location || '',
       property_status: formData.property_status || 'available',
@@ -409,6 +411,7 @@ export default function EditPropertyPage() {
           sqft: formData.floor_area ? parseInt(formData.floor_area) : null,
           property_type: formData.property_type || null,
           status: effectiveStatus,
+          ...(effectiveStatus === 'under_review' ? { rejection_reason: null } : {}),
           description: formData.description || null,
           features: formData.repairs ? formData.repairs.split(/\n/).filter(Boolean) : null,
           inspection_report_url: inspectionReport.url || null,
