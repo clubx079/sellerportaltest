@@ -236,14 +236,23 @@ function LoginForm() {
               </button>
             </form>
 
-            {/* Forgot password only */}
-            <div className="mt-4 sm:mt-6 text-center">
+            {/* Forgot password + Create account */}
+            <div className="mt-4 sm:mt-6 flex flex-col items-center gap-3">
               <Link
                 href="/forgot-password"
                 className="text-sm font-medium text-[#444441] hover:text-[#1A1816] transition-colors inline-block"
               >
                 Forgot Password?
               </Link>
+              <p className="text-sm text-[#737370]">
+                Don&apos;t have an account?{' '}
+                <Link
+                  href="/onboarding"
+                  className="font-semibold text-[#D03839] hover:text-[#E0493B] transition-colors"
+                >
+                  Create Account
+                </Link>
+              </p>
             </div>
           </div>
         </div>
