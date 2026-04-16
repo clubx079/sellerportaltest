@@ -383,7 +383,7 @@ export default function SettingsPage() {
               onClick={() => setShowCancelSection(v => !v)}
               className="w-full flex items-center justify-between px-5 py-3 text-left hover:bg-[#FAFAF8] transition-colors"
             >
-              <span className="text-[14px] font-medium text-[#1A1816]">Subscription management</span>
+              <span className="text-[14px] font-normal text-[#1A1816]">Subscription management</span>
               {showCancelSection ? <ChevronUp className="w-4 h-4 text-[#737370]" /> : <ChevronDown className="w-4 h-4 text-[#737370]" />}
             </button>
 
@@ -397,7 +397,7 @@ export default function SettingsPage() {
                   </div>
                 ) : (
                   <>
-                    <p className="text-[12px] text-[#737370]">
+                    <p className="text-[13px] text-[#737370]">
                       Canceling will keep your account active until the end of the current billing period. After that, all listings will be deactivated and you won&apos;t be charged again.
                     </p>
                     {cancelDone ? (
@@ -409,7 +409,7 @@ export default function SettingsPage() {
                       <button
                         type="button"
                         onClick={() => { setShowCancelConfirm(true); setCancelError(''); }}
-                        className="text-[12px] text-[#A8A8A4] hover:text-[#737370] underline underline-offset-2 transition-colors"
+                        className="px-4 py-2 rounded border border-[#E8E8E4] text-[13px] font-medium text-[#D03839] hover:bg-[#FEF0EF] hover:border-[#F5C4C0] transition-colors duration-200"
                       >
                         Cancel subscription
                       </button>

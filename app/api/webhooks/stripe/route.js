@@ -159,7 +159,18 @@ export async function POST(request) {
       // ── Subscription updated (upgrade/downgrade/renewal/cancel-at-period-end) ──
       case 'customer.subscription.updated': {
         const sub = event.data.object
-        const { plan_type, billing_cycle } = sub.metadata || {}
+        const { plan_type: metaPlanType, billing_cycle: metaBillingCycle } = sub.metadata || {}
+
+        // Derive plan_type from the live price ID — this is the authoritative source
+        // when a subscription schedule transitions (metadata still has old plan type).
+        const PRICE_MAP = {
+          [process.env.STRIPE_PRICE_PRO_MONTHLY]:        { plan_type: 'pro',        billing_cycle: 'monthly' },
+          [process.env.STRIPE_PRICE_PRO_ANNUAL]:         { plan_type: 'pro',        billing_cycle: 'annual'  },
+          [process.env.STRIPE_PRICE_ENTERPRISE_MONTHLY]: { plan_type: 'enterprise', billing_cycle: 'monthly' },
+          [process.env.STRIPE_PRICE_ENTERPRISE_ANNUAL]:  { plan_type: 'enterprise', billing_cycle: 'annual'  },
+        }
+        const livePriceId = sub.items.data[0]?.price?.id
+        const liveInfo = livePriceId ? PRICE_MAP[livePriceId] : null
 
         // Determine logical status
         let newStatus
@@ -177,13 +188,18 @@ export async function POST(request) {
           status:               newStatus,
           current_period_start: toISO(sub.current_period_start),
           current_period_end:   toISO(sub.current_period_end),
-          stripe_price_id:      sub.items.data[0]?.price?.id || null,
+          stripe_price_id:      livePriceId || null,
           updated_at:           new Date().toISOString(),
         }
 
-        // Sync plan_type and billing_cycle from metadata when a plan change occurs
-        if (plan_type) updateData.plan_type = plan_type
-        if (billing_cycle) updateData.billing_cycle = billing_cycle
+        // Price ID is the authoritative source; fall back to metadata only if price is unknown
+        if (liveInfo?.plan_type) {
+          updateData.plan_type    = liveInfo.plan_type
+          updateData.billing_cycle = liveInfo.billing_cycle
+        } else {
+          if (metaPlanType)    updateData.plan_type    = metaPlanType
+          if (metaBillingCycle) updateData.billing_cycle = metaBillingCycle
+        }
 
         await supabase
           .from('seller_plans')
