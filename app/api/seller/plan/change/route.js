@@ -16,7 +16,7 @@ export async function POST(request) {
   const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
 
   try {
-    const { seller_id, new_plan_type } = await request.json()
+    const { seller_id, new_plan_type, billing_cycle: requested_cycle } = await request.json()
     if (!seller_id || !new_plan_type) {
       return NextResponse.json({ error: 'seller_id and new_plan_type are required' }, { status: 400 })
     }
@@ -36,7 +36,9 @@ export async function POST(request) {
     }
 
     if (plan.status === 'canceling') {
-      return NextResponse.json({ error: 'Your subscription is set to cancel. Please remove the cancellation in Settings before changing plans.' }, { status: 400 })
+      return NextResponse.json({
+        error: 'Your subscription is set to cancel. Please remove the cancellation in Settings before changing plans.',
+      }, { status: 400 })
     }
 
     if (plan.plan_type === new_plan_type) {
@@ -62,63 +64,67 @@ export async function POST(request) {
       }
     }
 
-    const billingCycle = plan.billing_cycle || 'monthly'
+    // Use the billing cycle from the request if provided (user toggled monthly/annual),
+    // otherwise fall back to the current plan's billing cycle.
+    const billingCycle = (['monthly', 'annual'].includes(requested_cycle) ? requested_cycle : null)
+      || plan.billing_cycle
+      || 'monthly'
     const newPriceId = PRICE_IDS[`${new_plan_type}_${billingCycle}`]
     if (!newPriceId) {
       return NextResponse.json({ error: `Price not configured for ${new_plan_type}_${billingCycle}` }, { status: 400 })
     }
 
-    // Retrieve current subscription
+    // Retrieve current subscription from Stripe
     const sub = await stripe.subscriptions.retrieve(plan.stripe_subscription_id)
     const currentPriceId = sub.items.data[0]?.price?.id
-    const periodEnd = sub.current_period_end // Unix timestamp
+    const periodEnd = sub.current_period_end // Unix timestamp (integer)
 
     if (!currentPriceId) {
       return NextResponse.json({ error: 'Could not read current subscription price' }, { status: 500 })
     }
+    if (!periodEnd) {
+      return NextResponse.json({ error: 'Could not determine billing period end' }, { status: 500 })
+    }
 
-    // Schedule the plan change to take effect at the end of the current billing period
+    // Release any existing schedule first — avoids stale phase data if the
+    // schedule has already transitioned (e.g. user changed plans once before).
     const existingScheduleId = sub.schedule
       ? (typeof sub.schedule === 'string' ? sub.schedule : sub.schedule.id)
       : null
 
     if (existingScheduleId) {
-      // Update the existing schedule: replace phase 2 with the new plan
-      const currentSchedule = await stripe.subscriptionSchedules.retrieve(existingScheduleId)
-      const phase1 = currentSchedule.phases[0]
+      await stripe.subscriptionSchedules.release(existingScheduleId)
+    }
 
-      await stripe.subscriptionSchedules.update(existingScheduleId, {
-        phases: [
-          {
-            items: phase1.items.map(i => ({
-              price: typeof i.price === 'string' ? i.price : i.price.id,
-              quantity: i.quantity || 1,
-            })),
-            end_date: periodEnd,
-            proration_behavior: 'none',
-          },
-          {
-            items: [{ price: newPriceId, quantity: 1 }],
-            proration_behavior: 'none',
-          },
-        ],
-      })
-    } else {
-      // Create a new schedule from the current subscription, then set phase 2
-      const schedule = await stripe.subscriptionSchedules.createFromSubscription(plan.stripe_subscription_id, {
-        end_behavior: 'release',
-      })
+    // Create a fresh schedule from the current subscription, then define the
+    // two phases: (1) keep current plan until period end, (2) new plan after.
+    const schedule = await stripe.subscriptionSchedules.createFromSubscription(plan.stripe_subscription_id, {
+      end_behavior: 'release',
+    })
 
-      await stripe.subscriptionSchedules.update(schedule.id, {
-        phases: [
-          {
-            items: [{ price: currentPriceId, quantity: 1 }],
-            end_date: periodEnd,
-            proration_behavior: 'none',
-          },
-          {
-            items: [{ price: newPriceId, quantity: 1 }],
-            proration_behavior: 'none',
+    await stripe.subscriptionSchedules.update(schedule.id, {
+      phases: [
+        {
+          items: [{ price: currentPriceId, quantity: 1 }],
+          end_date: periodEnd,
+          proration_behavior: 'none',
+        },
+        {
+          items: [{ price: newPriceId, quantity: 1 }],
+          proration_behavior: 'none',
+        },
+      ],
+    })
+
+    const scheduledFor = new Date(periodEnd * 1000).toISOString()
+
+    return NextResponse.json({ success: true, scheduled_for: scheduledFor, new_plan_type })
+  } catch (err) {
+    console.error('[plan/change]', err)
+    return NextResponse.json({ error: err.message || 'Internal server error' }, { status: 500 })
+  }
+}
+_behavior: 'none',
           },
         ],
       })

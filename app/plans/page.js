@@ -60,14 +60,13 @@ const ENTERPRISE_FEATURES = [
 ]
 
 // ── Confirmation modal ──────────────────────────────────────────────────────
-function ConfirmChangeModal({ plan, targetPlanType, onConfirm, onClose, loading }) {
-  const isAnnual    = plan?.billing_cycle === 'annual'
+function ConfirmChangeModal({ plan, targetPlanType, targetAnnual, onConfirm, onClose, loading }) {
   const isUpgrade   = targetPlanType === 'enterprise'
   const scheduledFor = plan?.current_period_end
 
   const newPriceLabel = isUpgrade
-    ? (isAnnual ? '$2,868 / year' : '$299 / month')
-    : (isAnnual ? '$948 / year'   : '$99 / month')
+    ? (targetAnnual ? '$2,868 / year' : '$299 / month')
+    : (targetAnnual ? '$948 / year'   : '$99 / month')
 
   const newPlanName = isUpgrade ? 'Enterprise' : 'Pro Seller'
 
@@ -201,8 +200,12 @@ export default function PlansPage() {
   const [error,       setError]       = useState(null)
   const [success,     setSuccess]     = useState(null)
 
+  // Billing cycle toggle (independent of current plan — controls what prices are shown
+  // and which billing cycle is used when changing plans)
+  const [viewAnnual,     setViewAnnual]     = useState(false)
+
   // Modal states
-  const [confirmModal,   setConfirmModal]   = useState(null) // { planType }
+  const [confirmModal,   setConfirmModal]   = useState(null) // { planType, viewAnnual }
   const [propBlockModal, setPropBlockModal] = useState(null) // { count }
   const [confirming,     setConfirming]     = useState(false)
   const [cancelingPend,  setCancelingPend]  = useState(false)
@@ -227,6 +230,8 @@ export default function PlansPage() {
       const data = await res.json()
       setPlan(data.plan || null)
       setPending(data.pending || null)
+      // Initialise toggle to current billing cycle on first load
+      if (data.plan?.billing_cycle) setViewAnnual(data.plan.billing_cycle === 'annual')
     } catch {
       setError('Failed to load plan information.')
     } finally {
@@ -238,12 +243,12 @@ export default function PlansPage() {
   const handleInitiateChange = (newPlanType) => {
     setError(null)
     setSuccess(null)
-    setConfirmModal({ planType: newPlanType })
+    setConfirmModal({ planType: newPlanType, viewAnnual })
   }
 
   // Step 2: user confirms in modal → call API
   const handleConfirmChange = async () => {
-    const newPlanType = confirmModal?.planType
+    const { planType: newPlanType, viewAnnual: targetAnnual } = confirmModal || {}
     if (!newPlanType) return
 
     setConfirming(true)
@@ -251,7 +256,11 @@ export default function PlansPage() {
       const res = await fetch('/api/seller/plan/change', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ seller_id: sellerId, new_plan_type: newPlanType }),
+        body: JSON.stringify({
+          seller_id: sellerId,
+          new_plan_type: newPlanType,
+          billing_cycle: targetAnnual ? 'annual' : 'monthly',
+        }),
       })
       const data = await res.json()
 
@@ -321,6 +330,7 @@ export default function PlansPage() {
         <ConfirmChangeModal
           plan={plan}
           targetPlanType={confirmModal.planType}
+          targetAnnual={confirmModal.viewAnnual}
           onConfirm={handleConfirmChange}
           onClose={() => setConfirmModal(null)}
           loading={confirming}
@@ -450,12 +460,26 @@ export default function PlansPage() {
               </div>
             )}
 
-            {/* ── Section label ── */}
+            {/* ── Section label + billing toggle ── */}
             <div className="flex items-center gap-3 pt-1">
               <p className="text-[11px] font-semibold uppercase tracking-[0.09em] text-[#A8A8A4] whitespace-nowrap">
                 {isPro ? 'Upgrade your plan' : 'Change your plan'}
               </p>
               <div className="flex-1 h-px bg-[#E8E8E4]" />
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <span className={`text-[12px] font-medium transition-colors ${!viewAnnual ? 'text-[#1A1816]' : 'text-[#A8A8A4]'}`}>Monthly</span>
+                <button
+                  type="button"
+                  onClick={() => setViewAnnual(v => !v)}
+                  className={`relative w-9 h-5 rounded-full flex-shrink-0 transition-colors ${viewAnnual ? 'bg-[#D03839]' : 'bg-[#D4D4CF]'}`}
+                >
+                  <span className={`absolute top-[3px] left-[3px] w-3.5 h-3.5 rounded-full bg-white shadow transition-transform ${viewAnnual ? 'translate-x-[16px]' : ''}`} />
+                </button>
+                <span className={`text-[12px] font-medium transition-colors ${viewAnnual ? 'text-[#1A1816]' : 'text-[#A8A8A4]'}`}>Annual</span>
+                {viewAnnual && (
+                  <span className="text-[10px] font-semibold bg-[#E4F5EC] text-[#0F6E56] border border-[#9FDBB8] px-1.5 py-0.5 rounded">Save 20%</span>
+                )}
+              </div>
             </div>
 
             {/* ── Plan cards ── */}
@@ -496,13 +520,13 @@ export default function PlansPage() {
                     </p>
 
                     <div className="text-[38px] font-bold text-[#1A1816] leading-none tracking-tight mb-1">
-                      <sup className="text-lg font-normal align-super">$</sup>{isAnnual ? '948' : '99'}
+                      <sup className="text-lg font-normal align-super">$</sup>{viewAnnual ? '948' : '99'}
                     </div>
                     <p className="text-xs text-[#737370] mb-1">
-                      {isAnnual ? 'per year · billed annually' : 'per month'} · 10 listings included
+                      {viewAnnual ? 'per year · billed annually' : 'per month'} · 10 listings included
                     </p>
                     <p className="text-[11px] text-[#A8A8A4] mb-5">
-                      {isAnnual ? 'Save $240 vs monthly · $79/mo' : '$19 per additional listing'}
+                      {viewAnnual ? 'Save $240 vs monthly · $79/mo' : '$19 per additional listing'}
                     </p>
 
                     {isCurrent ? (
@@ -565,13 +589,13 @@ export default function PlansPage() {
                     </p>
 
                     <div className="text-[38px] font-bold text-[#1A1816] leading-none tracking-tight mb-1">
-                      <sup className="text-lg font-normal align-super">$</sup>{isAnnual ? '2,868' : '299'}
+                      <sup className="text-lg font-normal align-super">$</sup>{viewAnnual ? '2,868' : '299'}
                     </div>
                     <p className="text-xs text-[#737370] mb-1">
-                      {isAnnual ? 'per year · billed annually' : 'per month'} · unlimited listings
+                      {viewAnnual ? 'per year · billed annually' : 'per month'} · unlimited listings
                     </p>
                     <p className="text-[11px] text-[#A8A8A4] mb-5">
-                      {isAnnual ? 'Save $720 vs monthly · $239/mo' : <>&nbsp;</>}
+                      {viewAnnual ? 'Save $720 vs monthly · $239/mo' : <>&nbsp;</>}
                     </p>
 
                     {isCurrent ? (
