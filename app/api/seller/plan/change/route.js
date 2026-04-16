@@ -124,17 +124,3 @@ export async function POST(request) {
     return NextResponse.json({ error: err.message || 'Internal server error' }, { status: 500 })
   }
 }
-_behavior: 'none',
-          },
-        ],
-      })
-    }
-
-    const scheduledFor = periodEnd ? new Date(periodEnd * 1000).toISOString() : null
-
-    return NextResponse.json({ success: true, scheduled_for: scheduledFor, new_plan_type })
-  } catch (err) {
-    console.error('[plan/change]', err)
-    return NextResponse.json({ error: err.message || 'Internal server error' }, { status: 500 })
-  }
-}
