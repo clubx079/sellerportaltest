@@ -49,8 +49,9 @@ export async function POST(request) {
     })
 
     if (!smsResponse.ok) {
-      const err = await smsResponse.json()
-      console.error('[seller send-otp] SMS error:', err)
+      const err = await smsResponse.json().catch(() => smsResponse.text())
+      console.error('[seller send-otp] SMS error:', JSON.stringify(err))
+      console.error('[seller send-otp] From:', process.env.AIROSOFTS_SMS_FROM, '| Key set:', !!process.env.AIROSOFTS_SMS_API_KEY)
       return NextResponse.json({ error: 'Failed to send verification code' }, { status: 500 })
     }
 
