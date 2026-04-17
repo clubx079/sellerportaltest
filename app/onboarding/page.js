@@ -219,38 +219,106 @@ function StepPhone({ onNext }) {
 }
 
 // ─── Step 2: Plan Selection ───────────────────────────────────────────────────
-function PlanCard({ plan, selected, annual, onSelect }) {
-  const isPro = plan.id === 'pro'
-  const price = isPro ? (annual ? 79 : 99) : (annual ? 239 : 299)
-  const period = annual ? '/mo · billed annually' : '/mo'
-  const sub = annual ? `Save 20%` : isPro ? '$19 per additional listing' : null
+const PRO_FEATURES = [
+  [true,  'Verified seller badge'],
+  [true,  'Advanced seller dashboard'],
+  [true,  'Advanced analytics'],
+  [true,  'Priority search placement'],
+  [true,  'Priority support'],
+  [true,  '10 listings / month'],
+  [false, 'CRM features'],
+  [false, 'Team accounts'],
+]
+
+const ENT_FEATURES = [
+  [true, 'Everything in Pro'],
+  [true, 'Unlimited listings'],
+  [true, 'Basic CRM features'],
+  [true, 'Lead management tools'],
+  [true, 'Team accounts'],
+  [true, 'Custom branding'],
+  [true, 'Dedicated account support'],
+  [true, 'API access · soon'],
+]
+
+function OnboardingPlanCard({ id, selected, annual, onSelect }) {
+  const isPro = id === 'pro'
+  const isSelected = selected === id
+  const price = isPro ? (annual ? '79' : '99') : (annual ? '239' : '299')
+  const billingNote = annual
+    ? (isPro ? 'Billed annually · $948/yr · 10 listings included' : 'Billed annually · $2,868/yr · unlimited listings')
+    : (isPro ? 'Billed monthly · 10 listings included' : 'Billed monthly · unlimited listings')
+  const savingsNote = annual
+    ? (isPro ? 'Save $240 vs monthly' : 'Save $720 vs monthly')
+    : (isPro ? '$19 per additional listing' : '\u00a0')
+  const features = isPro ? PRO_FEATURES : ENT_FEATURES
 
   return (
     <button
       type="button"
-      onClick={() => onSelect(plan.id)}
-      className={`w-full text-left rounded border-2 p-6 transition-all flex flex-col ${
-        selected === plan.id ? 'border-[#D03839] bg-[#FEF0EF]' : 'border-[#E8E8E4] bg-white hover:border-[#1A1816]'
-      }`}
+      onClick={() => onSelect(id)}
+      className={`w-full text-left rounded p-5 flex flex-col border-2 transition-all ${
+        isSelected
+          ? (isPro ? 'border-[#D03839]' : 'border-[#1A1816]')
+          : 'border-[#E8E8E4] hover:border-[#D4D4CF]'
+      } bg-white`}
     >
-      <div className="flex items-start justify-between mb-2">
-        <p className="text-[17px] font-bold text-[#1A1816]">{plan.name}</p>
-        {isPro && <span className="text-[10px] font-bold bg-[#D03839] text-white px-2 py-0.5 rounded">Popular</span>}
+      {/* Badge row */}
+      <div className="min-h-[22px] mb-3">
+        {isPro && !isSelected && (
+          <span className="inline-block text-[11px] font-semibold bg-[#FEF0EF] text-[#D03839] px-2.5 py-0.5 rounded">
+            Most popular
+          </span>
+        )}
+        {isSelected && (
+          <span className={`inline-block text-[11px] font-semibold px-2.5 py-0.5 rounded ${isPro ? 'bg-[#FEF0EF] text-[#D03839]' : 'bg-[#1A1816] text-white'}`}>
+            Selected
+          </span>
+        )}
       </div>
-      <p className="text-[13px] text-[#737370] mb-5">{plan.desc}</p>
-      <div className="flex items-end gap-1 mt-auto">
-        <span className="text-[32px] font-bold text-[#1A1816] leading-none">${price}</span>
-        <span className="text-[13px] text-[#737370] mb-1">{period}</span>
+
+      <p className="text-[11px] font-semibold tracking-[0.09em] uppercase text-[#A8A8A4] mb-1">Subscription</p>
+      <h2 className="text-2xl font-bold text-[#1A1816] tracking-tight mb-1">{isPro ? 'Pro Seller' : 'Enterprise'}</h2>
+      <p className="text-xs text-[#737370] leading-relaxed mb-4">
+        {isPro ? 'For active investors and wholesalers moving deals consistently.' : 'For acquisition teams running high-volume pipelines.'}
+      </p>
+
+      <div className="flex items-end gap-1.5 leading-none mb-1">
+        <span className="text-[38px] font-bold text-[#1A1816] tracking-tight leading-none">
+          <sup className="text-lg font-normal align-super">$</sup>{price}
+        </span>
+        <span className="text-sm font-normal text-[#737370] mb-1">/ per month</span>
       </div>
-      {sub && <p className="text-[12px] text-[#737370] mt-1">{sub}</p>}
+      <p className="text-xs text-[#737370] mb-1">{billingNote}</p>
+      <p className="text-[11px] text-[#A8A8A4] mb-4">{savingsNote}</p>
+
+      <div className={`w-full py-2 text-center text-xs font-semibold tracking-[0.05em] uppercase rounded mb-4 transition-colors ${
+        isSelected
+          ? (isPro ? 'bg-[#D03839] text-white' : 'bg-[#1A1816] text-white')
+          : 'border border-[#D4D4CF] text-[#1A1816]'
+      }`}>
+        {isSelected ? 'Selected' : 'Select plan'}
+      </div>
+
+      <hr className="border-t border-[#E8E8E4] mb-4" />
+      <p className="text-[11px] font-semibold tracking-[0.09em] uppercase text-[#A8A8A4] mb-3">Includes</p>
+      <ul className="flex flex-col gap-1.5">
+        {features.map(([on, label], i) => (
+          <li key={i} className={`flex items-start gap-2 text-xs leading-snug ${on ? 'text-[#1A1816]' : 'text-[#A8A8A4]'}`}>
+            <span className={`flex-shrink-0 mt-0.5 w-3.5 h-3.5 rounded-full flex items-center justify-center border ${on ? 'bg-[#1A1816] border-[#1A1816]' : 'border-[#E8E8E4]'}`}>
+              {on && (
+                <svg width="7" height="5" viewBox="0 0 7 5" fill="none">
+                  <path d="M1 2.5L2.8 4.2L6 1" stroke="#FAFAF8" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              )}
+            </span>
+            {label}
+          </li>
+        ))}
+      </ul>
     </button>
   )
 }
-
-const PLANS = [
-  { id: 'pro',        name: 'Pro Seller',  desc: '10 listings/month. Verified badge & advanced analytics.' },
-  { id: 'enterprise', name: 'Enterprise',  desc: 'Unlimited listings. For high-volume acquisition teams.' },
-]
 
 function StepPlan({ onNext }) {
   const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null
@@ -272,27 +340,28 @@ function StepPlan({ onNext }) {
   }
 
   return (
-    <div className="space-y-4">
-      {/* Annual toggle */}
-      <div className="flex items-center justify-between bg-[#FAFAF8] border border-[#E8E8E4] rounded px-4 py-3">
+    <div className="space-y-5">
+      {/* Billing toggle */}
+      <div className="flex flex-col items-center gap-2">
         <div className="flex items-center gap-3">
-          <span className={`text-[13px] font-medium transition-colors ${!annual ? 'text-[#1A1816]' : 'text-[#A8A8A4]'}`}>Monthly</span>
+          <span className={`text-sm transition-colors ${!annual ? 'text-[#1A1816] font-medium' : 'text-[#737370]'}`}>Monthly</span>
           <button
             onClick={() => setAnnual(v => !v)}
             className={`relative w-10 h-[22px] rounded-full flex-shrink-0 transition-colors ${annual ? 'bg-[#D03839]' : 'bg-[#1A1816]'}`}
           >
             <span className={`absolute top-[3px] left-[3px] w-4 h-4 rounded-full bg-white transition-transform ${annual ? 'translate-x-[18px]' : ''}`} />
           </button>
-          <span className={`text-[13px] font-medium transition-colors ${annual ? 'text-[#1A1816]' : 'text-[#A8A8A4]'}`}>Annual</span>
+          <span className={`text-sm transition-colors ${annual ? 'text-[#1A1816] font-medium' : 'text-[#737370]'}`}>Annual</span>
         </div>
-        <span className="text-[11px] font-semibold bg-[#E4F5EC] text-[#0F6E56] px-2.5 py-0.5 rounded-full">Save 20%</span>
+        <span className="text-[11px] font-semibold bg-[#E4F5EC] text-[#0F6E56] px-2.5 py-0.5 rounded-full">
+          Save 20% on annual subscription
+        </span>
       </div>
 
       {/* Plan cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {PLANS.map(p => (
-          <PlanCard key={p.id} plan={p} selected={selected} annual={annual} onSelect={setSelected} />
-        ))}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+        <OnboardingPlanCard id="pro"        selected={selected} annual={annual} onSelect={setSelected} />
+        <OnboardingPlanCard id="enterprise" selected={selected} annual={annual} onSelect={setSelected} />
       </div>
 
       <button
@@ -376,7 +445,7 @@ function CheckoutForm({ session, intentType, onSuccess }) {
         </div>
 
         <p className="text-[12px] text-[#0F6E56]">
-          7-day free trial · then {chargeLabel} {isAnnual ? '— billed as one payment' : 'each month'}
+          7-day free trial · then {chargeLabel}{isAnnual ? ' — billed as one payment' : ''}
         </p>
       </div>
 
@@ -541,7 +610,7 @@ function OnboardingContent() {
 
   return (
     <div className="min-h-screen bg-[#FAFAF8] flex flex-col items-center justify-center px-4 py-12" style={{ fontFamily: 'var(--font-dm-sans), DM Sans, sans-serif' }}>
-      <div className={`w-full transition-all duration-300 ${step === 2 ? 'max-w-2xl' : 'max-w-xl'}`}>
+      <div className={`w-full transition-all duration-300 ${step === 2 ? 'max-w-3xl' : 'max-w-xl'}`}>
 
         {/* Logo */}
         <div className="flex justify-center mb-8">
