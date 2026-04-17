@@ -7,10 +7,10 @@ export async function POST(request) {
     const { customer_id } = await request.json()
     if (!customer_id) return NextResponse.json({ invoices: [] })
 
-    // Fetch subscription invoices + one-time charges in parallel
-    const [invoiceList, chargeList] = await Promise.all([
+    // Fetch subscription invoices + addon PaymentIntents in parallel
+    const [invoiceList, piList] = await Promise.all([
       stripe.invoices.list({ customer: customer_id, limit: 24 }),
-      stripe.charges.list({ customer: customer_id, limit: 24 }),
+      stripe.paymentIntents.list({ customer: customer_id, limit: 24 }),
     ])
 
     // Subscription invoices
@@ -30,23 +30,21 @@ export async function POST(request) {
         type:               'invoice',
       }))
 
-    // One-time charges (add-ons) — any charge linked to an invoice is a subscription charge, skip it
-    const addonCharges = chargeList.data
-      .filter(ch => ch.paid && ch.amount > 0 && !ch.invoice)
-      .map(ch => ({
-        id:          ch.id,
-        number:      null,
-        created:     ch.created,
-        amount_paid: ch.amount,
-        amount_due:  ch.amount,
-        currency:    ch.currency,
-        status:      'paid',
-        hosted_invoice_url: ch.receipt_url,
-        invoice_pdf: null,
-        description: ch.metadata?.add_ons
-          ? `Add-ons: ${ch.metadata.add_ons.split(',').join(', ')}`
-          : (ch.description || 'Listing add-on'),
-        type: 'charge',
+    // Addon charges — only PaymentIntents that have add_ons in metadata (never subscription charges)
+    const addonCharges = piList.data
+      .filter(pi => pi.status === 'succeeded' && pi.metadata?.add_ons)
+      .map(pi => ({
+        id:                 pi.id,
+        number:             null,
+        created:            pi.created,
+        amount_paid:        pi.amount,
+        amount_due:         pi.amount,
+        currency:           pi.currency,
+        status:             'paid',
+        hosted_invoice_url: pi.charges?.data?.[0]?.receipt_url || null,
+        invoice_pdf:        null,
+        description:        `Add-ons: ${pi.metadata.add_ons.split(',').join(', ')}`,
+        type:               'charge',
       }))
 
     // Merge and sort by date descending

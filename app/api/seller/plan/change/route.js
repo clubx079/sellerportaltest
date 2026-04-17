@@ -136,6 +136,7 @@ export async function POST(request) {
       phases: [
         {
           items: [{ price: currentPriceId, quantity: 1 }],
+          start_date: 'now',
           end_date: periodEnd,
           proration_behavior: 'none',
         },
