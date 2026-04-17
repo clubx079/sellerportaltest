@@ -519,14 +519,17 @@ export default function PlansPage() {
                       For active investors and wholesalers moving deals consistently.
                     </p>
 
-                    <div className="text-[38px] font-bold text-[#1A1816] leading-none tracking-tight mb-1">
-                      <sup className="text-lg font-normal align-super">$</sup>{viewAnnual ? '948' : '99'}
+                    <div className="flex items-end gap-1.5 leading-none mb-1">
+                      <span className="text-[38px] font-bold text-[#1A1816] tracking-tight leading-none">
+                        <sup className="text-lg font-normal align-super">$</sup>{viewAnnual ? '79' : '99'}
+                      </span>
+                      <span className="text-sm font-normal text-[#737370] mb-1">/ per month</span>
                     </div>
                     <p className="text-xs text-[#737370] mb-1">
-                      {viewAnnual ? 'per year · billed annually' : 'per month'} · 10 listings included
+                      {viewAnnual ? 'Billed annually · $948/yr' : 'Billed monthly'} · 10 listings included
                     </p>
                     <p className="text-[11px] text-[#A8A8A4] mb-5">
-                      {viewAnnual ? 'Save $240 vs monthly · $79/mo' : '$19 per additional listing'}
+                      {viewAnnual ? 'Save $240 vs monthly' : '$19 per additional listing'}
                     </p>
 
                     {isCurrent ? (
@@ -588,14 +591,17 @@ export default function PlansPage() {
                       For acquisition teams running high-volume pipelines.
                     </p>
 
-                    <div className="text-[38px] font-bold text-[#1A1816] leading-none tracking-tight mb-1">
-                      <sup className="text-lg font-normal align-super">$</sup>{viewAnnual ? '2,868' : '299'}
+                    <div className="flex items-end gap-1.5 leading-none mb-1">
+                      <span className="text-[38px] font-bold text-[#1A1816] tracking-tight leading-none">
+                        <sup className="text-lg font-normal align-super">$</sup>{viewAnnual ? '239' : '299'}
+                      </span>
+                      <span className="text-sm font-normal text-[#737370] mb-1">/ per month</span>
                     </div>
                     <p className="text-xs text-[#737370] mb-1">
-                      {viewAnnual ? 'per year · billed annually' : 'per month'} · unlimited listings
+                      {viewAnnual ? 'Billed annually · $2,868/yr' : 'Billed monthly'} · unlimited listings
                     </p>
                     <p className="text-[11px] text-[#A8A8A4] mb-5">
-                      {viewAnnual ? 'Save $720 vs monthly · $239/mo' : <>&nbsp;</>}
+                      {viewAnnual ? 'Save $720 vs monthly' : <>&nbsp;</>}
                     </p>
 
                     {isCurrent ? (
