@@ -132,12 +132,16 @@ export async function POST(request) {
       from_subscription: plan.stripe_subscription_id,
     })
 
+    // Use the schedule's own phase[0] start_date as the anchor — this is guaranteed
+    // to match what Stripe expects. sub.current_period_start can differ after trial transitions.
+    const phase0StartDate = schedule.phases[0].start_date
+
     await stripe.subscriptionSchedules.update(schedule.id, {
       end_behavior: 'release',
       phases: [
         {
           items: [{ price: currentPriceId, quantity: 1 }],
-          start_date: periodStart,
+          start_date: phase0StartDate,
           end_date: periodEnd,
           proration_behavior: 'none',
         },
