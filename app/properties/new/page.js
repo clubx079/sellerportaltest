@@ -474,8 +474,6 @@ export default function NewPropertyPage() {
       // Apply add-on flags if paid — use addOnFlags from options directly (not state,
       // which is async and would still be stale at this point in the same call)
       if (publishStatus === 'active' && addOnFlags && Object.keys(addOnFlags).length > 0) {
-        const ADDON_DAYS   = { highlight: 30, boost: 7, homepage: 7, bundle: 30 }
-        const ADDON_PRICES = { highlight: 999, boost: 1499, homepage: 2900, bundle: 2200 }
         const now = new Date()
         const ms  = (d) => d * 24 * 60 * 60 * 1000
 
@@ -491,22 +489,12 @@ export default function NewPropertyPage() {
           .eq('id', data.id)
           .eq('seller_id', sellerId);
 
-        // Record each add-on in listing_addons for tracking (best-effort)
-        try {
-          for (const addonId of selectedAddOns) {
-            const days = ADDON_DAYS[addonId] || 7
-            await supabase.from('listing_addons').insert({
-              property_id:    data.id,
-              seller_id:      sellerId,
-              addon_type:     addonId,
-              amount_paid:    ADDON_PRICES[addonId] || 0,
-              days_purchased: days,
-              starts_at:      now.toISOString(),
-              ends_at:        new Date(now.getTime() + ms(days)).toISOString(),
-              status:         'active',
-            })
-          }
-        } catch (_) { /* non-critical — webhook will back-fill */ }
+        // Record each add-on in listing_addons via server route (uses service role key)
+        fetch('/api/seller/listing-addons/record', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ seller_id: sellerId, property_id: data.id, add_ons: selectedAddOns }),
+        }).catch(() => {})
       }
 
       // Kick off AI moderation in background for published listings
