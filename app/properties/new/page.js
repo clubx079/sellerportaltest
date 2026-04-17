@@ -52,6 +52,7 @@ export default function NewPropertyPage() {
   const [trialPlan, setTrialPlan] = useState(null);
   const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
   const [upgradeLoading, setUpgradeLoading] = useState(false);
+  const endTrialCalledRef = useRef(false);
   const [upgradeError, setUpgradeError] = useState(null);
   const [selectedAddOns, setSelectedAddOns] = useState([]);
   const [addOnClientSecret, setAddOnClientSecret] = useState(null);
@@ -666,7 +667,7 @@ export default function NewPropertyPage() {
             <div className="bg-white rounded shadow-2xl w-full max-w-sm p-6 space-y-4">
               <div className="flex items-center justify-between">
                 <h3 className="text-[15px] font-bold text-[#1A1816]">Start your subscription</h3>
-                <button onClick={() => { setShowUpgradePrompt(false); setUpgradeError(null); }} className="p-1.5 rounded hover:bg-[#F0F0EE] transition-colors">
+                <button onClick={() => { setShowUpgradePrompt(false); setUpgradeError(null); endTrialCalledRef.current = false; }} className="p-1.5 rounded hover:bg-[#F0F0EE] transition-colors">
                   <X size={16} className="text-[#737370]" />
                 </button>
               </div>
@@ -680,7 +681,7 @@ export default function NewPropertyPage() {
               {upgradeError && <p className="text-[12px] text-red-600">{upgradeError}</p>}
               <div className="flex gap-3">
                 <button
-                  onClick={() => { setShowUpgradePrompt(false); setUpgradeError(null); }}
+                  onClick={() => { setShowUpgradePrompt(false); setUpgradeError(null); endTrialCalledRef.current = false; }}
                   className="flex-1 h-[40px] border border-[#E8E8E4] rounded text-[13px] font-medium text-[#1A1816] hover:border-[#1A1816] transition-colors"
                 >
                   Cancel
@@ -688,6 +689,8 @@ export default function NewPropertyPage() {
                 <button
                   disabled={upgradeLoading}
                   onClick={async () => {
+                    if (endTrialCalledRef.current) return;
+                    endTrialCalledRef.current = true;
                     setUpgradeLoading(true);
                     setUpgradeError(null);
                     try {
@@ -698,10 +701,9 @@ export default function NewPropertyPage() {
                       });
                       const data = await res.json();
                       if (!res.ok) throw new Error(data.error || 'Failed to start subscription');
-                      setTrialPlan(prev => ({ ...prev, status: 'active', listings_used_this_period: 0 }));
+                      setTrialPlan(prev => prev ? { ...prev, status: 'active', listings_used_this_period: 0 } : prev);
                       setShowUpgradePrompt(false);
                       if (selectedAddOns.length > 0) {
-                        // Reset any stale PaymentIntent — a fresh one will be created on the add-ons tab
                         setAddOnClientSecret(null);
                         setAddOnError(null);
                         setActiveTab('addons');
@@ -709,6 +711,7 @@ export default function NewPropertyPage() {
                         handleSave('active', { bypassLimit: true });
                       }
                     } catch (err) {
+                      endTrialCalledRef.current = false;
                       setUpgradeError(err.message);
                     } finally {
                       setUpgradeLoading(false);
@@ -1473,7 +1476,6 @@ function AddOnsTab({
               <AddOnsCheckoutForm
                 amount={total}
                 onSuccess={(piId) => {
-                  window.__addOnFlags = addOnFlags
                   onPublish('active', { skipFeaturedPrompt: true, forceAutoSelectFeatured: true, addOnFlags, addonPaymentIntentId: piId })
                 }}
                 onError={(msg) => setAddOnError(msg)}
