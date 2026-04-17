@@ -79,9 +79,7 @@ export async function POST(request) {
     const sub = await stripe.subscriptions.retrieve(plan.stripe_subscription_id)
     const currentItem = sub.items.data[0]
     const currentPriceId = currentItem?.price?.id
-    // For trialing subs, Stripe may return current_period_end = 0; fall back to trial_end
     const periodEnd = sub.current_period_end || sub.trial_end
-    const periodStart = sub.current_period_start
 
     if (!currentPriceId) {
       return NextResponse.json({ error: 'Could not read current subscription price' }, { status: 500 })
@@ -91,23 +89,19 @@ export async function POST(request) {
     }
 
     // ── Trialing subscriptions: update price directly, trial continues unchanged ──
-    // Subscription schedules cannot cleanly override trial phases, so we update
-    // the subscription item directly. The trial end date stays the same and the
-    // seller will be billed at the new plan's rate when the trial ends.
     if (sub.status === 'trialing') {
       await stripe.subscriptions.update(plan.stripe_subscription_id, {
         items: [{ id: currentItem.id, price: newPriceId, quantity: 1 }],
         proration_behavior: 'none',
       })
 
-      // Sync the new plan to Supabase immediately so the UI reflects the change
       await supabase
         .from('seller_plans')
         .update({
-          plan_type:    new_plan_type,
-          billing_cycle: billingCycle,
+          plan_type:       new_plan_type,
+          billing_cycle:   billingCycle,
           stripe_price_id: newPriceId,
-          updated_at:   new Date().toISOString(),
+          updated_at:      new Date().toISOString(),
         })
         .eq('seller_id', seller_id)
 
@@ -115,9 +109,9 @@ export async function POST(request) {
       return NextResponse.json({ success: true, scheduled_for: scheduledFor, new_plan_type, immediate: true })
     }
 
-    // ── Active (non-trial) subscriptions: schedule the change at period end ────
+    // ── Active subscriptions ──────────────────────────────────────────────────
 
-    // Release any existing schedule first to avoid stale phase data
+    // Release any existing schedule so the subscription is unmanaged before we act on it
     const existingScheduleId = sub.schedule
       ? (typeof sub.schedule === 'string' ? sub.schedule : sub.schedule.id)
       : null
@@ -126,8 +120,30 @@ export async function POST(request) {
       await stripe.subscriptionSchedules.release(existingScheduleId)
     }
 
-    // Re-fetch the subscription after releasing the schedule — releasing can update
-    // the subscription's period dates, so we need fresh values to avoid start_date >= end_date.
+    // ── UPGRADE or billing-cycle change: switch immediately with proration ────
+    // Stripe charges/credits the prorated difference for the remaining days now.
+    // The new plan takes effect immediately — no scheduling needed.
+    if (!isDowngrade) {
+      await stripe.subscriptions.update(plan.stripe_subscription_id, {
+        items: [{ id: currentItem.id, price: newPriceId, quantity: 1 }],
+        proration_behavior: 'create_prorations',
+      })
+
+      await supabase
+        .from('seller_plans')
+        .update({
+          plan_type:       new_plan_type,
+          billing_cycle:   billingCycle,
+          stripe_price_id: newPriceId,
+          updated_at:      new Date().toISOString(),
+        })
+        .eq('seller_id', seller_id)
+
+      return NextResponse.json({ success: true, new_plan_type, immediate: true })
+    }
+
+    // ── DOWNGRADE: schedule the change at the end of the current billing period ──
+    // Re-fetch subscription after schedule release to get fresh period dates.
     const freshSub = await stripe.subscriptions.retrieve(plan.stripe_subscription_id)
     const freshPeriodEnd = freshSub.current_period_end || freshSub.trial_end
 
@@ -135,14 +151,10 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Could not determine billing period end' }, { status: 500 })
     }
 
-    // Create a fresh schedule from the current subscription, then define two phases:
-    // (1) keep current plan until period end, (2) new plan after.
     const schedule = await stripe.subscriptionSchedules.create({
       from_subscription: plan.stripe_subscription_id,
     })
 
-    // Use the schedule's own phase[0].start_date — it reflects the exact period start
-    // that Stripe set when creating the schedule, guaranteed to be before freshPeriodEnd.
     const phase0StartDate = schedule.phases[0].start_date
 
     await stripe.subscriptionSchedules.update(schedule.id, {
@@ -163,6 +175,7 @@ export async function POST(request) {
 
     const scheduledFor = new Date(freshPeriodEnd * 1000).toISOString()
     return NextResponse.json({ success: true, scheduled_for: scheduledFor, new_plan_type })
+
   } catch (err) {
     console.error('[plan/change]', err)
     return NextResponse.json({ error: err.message || 'Internal server error' }, { status: 500 })
