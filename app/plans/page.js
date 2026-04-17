@@ -202,7 +202,7 @@ export default function PlansPage() {
 
   // Billing cycle toggle (independent of current plan — controls what prices are shown
   // and which billing cycle is used when changing plans)
-  const [viewAnnual,     setViewAnnual]     = useState(false)
+  const [viewAnnual,     setViewAnnual]     = useState(true)
 
   // Modal states
   const [confirmModal,   setConfirmModal]   = useState(null) // { planType, viewAnnual }
@@ -460,26 +460,30 @@ export default function PlansPage() {
               </div>
             )}
 
-            {/* ── Section label + billing toggle ── */}
+            {/* ── Section label ── */}
             <div className="flex items-center gap-3 pt-1">
               <p className="text-[11px] font-semibold uppercase tracking-[0.09em] text-[#A8A8A4] whitespace-nowrap">
                 {isPro ? 'Upgrade your plan' : 'Change your plan'}
               </p>
               <div className="flex-1 h-px bg-[#E8E8E4]" />
-              <div className="flex items-center gap-2 flex-shrink-0">
-                <span className={`text-[12px] font-medium transition-colors ${!viewAnnual ? 'text-[#1A1816]' : 'text-[#A8A8A4]'}`}>Monthly</span>
+            </div>
+
+            {/* ── Billing toggle ── */}
+            <div className="flex flex-col items-center gap-2 py-2">
+              <div className="flex items-center gap-3 bg-[#F5F5F3] border border-[#E8E8E4] rounded-full px-5 py-2.5">
+                <span className={`text-[13px] font-semibold transition-colors ${!viewAnnual ? 'text-[#1A1816]' : 'text-[#A8A8A4]'}`}>Monthly</span>
                 <button
                   type="button"
                   onClick={() => setViewAnnual(v => !v)}
-                  className={`relative w-9 h-5 rounded-full flex-shrink-0 transition-colors ${viewAnnual ? 'bg-[#D03839]' : 'bg-[#D4D4CF]'}`}
+                  className={`relative w-11 h-6 rounded-full flex-shrink-0 transition-colors ${viewAnnual ? 'bg-[#D03839]' : 'bg-[#D4D4CF]'}`}
                 >
-                  <span className={`absolute top-[3px] left-[3px] w-3.5 h-3.5 rounded-full bg-white shadow transition-transform ${viewAnnual ? 'translate-x-[16px]' : ''}`} />
+                  <span className={`absolute top-[4px] left-[4px] w-4 h-4 rounded-full bg-white shadow transition-transform duration-200 ${viewAnnual ? 'translate-x-[20px]' : ''}`} />
                 </button>
-                <span className={`text-[12px] font-medium transition-colors ${viewAnnual ? 'text-[#1A1816]' : 'text-[#A8A8A4]'}`}>Annual</span>
-                {viewAnnual && (
-                  <span className="text-[10px] font-semibold bg-[#E4F5EC] text-[#0F6E56] border border-[#9FDBB8] px-1.5 py-0.5 rounded">Save 20%</span>
-                )}
+                <span className={`text-[13px] font-semibold transition-colors ${viewAnnual ? 'text-[#1A1816]' : 'text-[#A8A8A4]'}`}>Annual</span>
               </div>
+              <span className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full transition-opacity ${viewAnnual ? 'bg-[#E4F5EC] text-[#0F6E56] border border-[#9FDBB8] opacity-100' : 'opacity-0'}`}>
+                Save 20% on annual billing
+              </span>
             </div>
 
             {/* ── Plan cards ── */}
