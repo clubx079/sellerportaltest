@@ -127,7 +127,8 @@ export async function POST(request) {
 
     // Create a fresh schedule from the current subscription, then define two phases:
     // (1) keep current plan until period end, (2) new plan after.
-    const schedule = await stripe.subscriptionSchedules.createFromSubscription(plan.stripe_subscription_id, {
+    const schedule = await stripe.subscriptionSchedules.create({
+      from_subscription: plan.stripe_subscription_id,
       end_behavior: 'release',
     })
 
