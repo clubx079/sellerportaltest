@@ -1278,6 +1278,8 @@ export default function NewPropertyPage() {
               onBack={() => handleTabChange('seo')}
               formData={formData}
               images={imageUploadStatus.images}
+              trialPlan={trialPlan}
+              onShowUpgradePrompt={() => setShowUpgradePrompt(true)}
             />
           )}
 
@@ -1362,7 +1364,7 @@ function AddOnsTab({
   addOnLoading, setAddOnLoading,
   addOnError, setAddOnError,
   userId, onPublish, saving, onBack,
-  formData, images,
+  formData, images, trialPlan, onShowUpgradePrompt,
 }) {
   const toggleAddOn = (id) => {
     setSelectedAddOns(prev => {
@@ -1387,7 +1389,7 @@ function AddOnsTab({
     // If trial limit exceeded, show upgrade prompt BEFORE taking any payment.
     // After the trial ends the user comes back here with status='active' and pays once.
     if (trialPlan?.status === 'trialing' && (trialPlan.listings_used_this_period ?? 0) >= 1) {
-      setShowUpgradePrompt(true)
+      onShowUpgradePrompt()
       return
     }
 
