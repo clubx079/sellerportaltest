@@ -79,7 +79,8 @@ export async function POST(request) {
     const sub = await stripe.subscriptions.retrieve(plan.stripe_subscription_id)
     const currentItem = sub.items.data[0]
     const currentPriceId = currentItem?.price?.id
-    const periodEnd = sub.current_period_end // Unix timestamp
+    // For trialing subs, Stripe may return current_period_end = 0; fall back to trial_end
+    const periodEnd = sub.current_period_end || sub.trial_end
 
     if (!currentPriceId) {
       return NextResponse.json({ error: 'Could not read current subscription price' }, { status: 500 })
