@@ -133,7 +133,19 @@ export async function POST(request) {
       from_subscription: plan.stripe_subscription_id,
     })
 
+    // Use dates directly from the schedule object — both values come from the same
+    // Stripe response so they are guaranteed to be consistent with each other.
     const phase0StartDate = schedule.phases[0].start_date
+    const phase0EndDate   = schedule.current_phase?.end_date || freshPeriodEnd
+
+    console.log('[plan/change] schedule dates', { phase0StartDate, phase0EndDate, freshPeriodEnd })
+
+    if (!phase0StartDate || !phase0EndDate || phase0StartDate >= phase0EndDate) {
+      await stripe.subscriptionSchedules.release(schedule.id).catch(() => {})
+      return NextResponse.json({
+        error: `Invalid billing period dates (start=${phase0StartDate}, end=${phase0EndDate}). Please contact support.`,
+      }, { status: 500 })
+    }
 
     await stripe.subscriptionSchedules.update(schedule.id, {
       end_behavior: 'release',
@@ -141,7 +153,7 @@ export async function POST(request) {
         {
           items: [{ price: currentPriceId, quantity: 1 }],
           start_date: phase0StartDate,
-          end_date: freshPeriodEnd,
+          end_date: phase0EndDate,
           proration_behavior: 'none',
         },
         {
@@ -151,7 +163,7 @@ export async function POST(request) {
       ],
     })
 
-    const scheduledFor = new Date(freshPeriodEnd * 1000).toISOString()
+    const scheduledFor = new Date(phase0EndDate * 1000).toISOString()
     return NextResponse.json({ success: true, scheduled_for: scheduledFor, new_plan_type })
 
   } catch (err) {

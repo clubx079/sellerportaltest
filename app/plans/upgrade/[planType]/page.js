@@ -222,7 +222,7 @@ function UpgradeContent() {
       )}
 
       {/* Two-column layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-5 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_420px] gap-5 items-start">
 
         {/* ── Left ── */}
         <div className="space-y-5">
