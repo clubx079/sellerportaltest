@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
-import { Loader2, AlertCircle, Check, Calendar, Zap, Building2, ArrowRight, X, AlertTriangle } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { Loader2, AlertCircle, Check, Calendar, Zap, Building2, ArrowRight, X } from 'lucide-react'
 
 const CheckIcon = ({ filled }) => (
   <span
@@ -59,168 +60,25 @@ const ENTERPRISE_FEATURES = [
   [true, <>API access <span className="text-[10px] text-[#A8A8A4] ml-0.5">· soon</span></>],
 ]
 
-// ── Confirmation modal ──────────────────────────────────────────────────────
-function ConfirmChangeModal({ plan, targetPlanType, targetAnnual, onConfirm, onClose, loading, error }) {
-  const isUpgrade   = targetPlanType === 'enterprise'
-  const scheduledFor = plan?.current_period_end
-
-  const newPriceLabel = isUpgrade
-    ? (targetAnnual ? '$2,868 / year' : '$299 / month')
-    : (targetAnnual ? '$948 / year'   : '$99 / month')
-
-  const newPlanName = isUpgrade ? 'Enterprise' : 'Pro Seller'
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-sm">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-[#E8E8E4]">
-          <p className="text-[14px] font-semibold text-[#1A1816]">
-            {isUpgrade ? 'Upgrade to Enterprise' : 'Downgrade to Pro Seller'}
-          </p>
-          <button onClick={onClose} disabled={loading} className="text-[#A8A8A4] hover:text-[#737370]">
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-
-        <div className="p-5 space-y-4">
-          {/* What's changing */}
-          <div className="bg-[#F3F3F0] rounded p-3.5 space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-[12px] text-[#737370]">Switching to</span>
-              <span className="text-[13px] font-semibold text-[#1A1816]">{newPlanName}</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-[12px] text-[#737370]">New price</span>
-              <span className="text-[13px] font-semibold text-[#1A1816]">{newPriceLabel}</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-[12px] text-[#737370]">Takes effect</span>
-              <span className="text-[13px] font-semibold text-[#1A1816]">{formatDate(scheduledFor)}</span>
-            </div>
-          </div>
-
-          {/* Info note */}
-          <div className="flex items-start gap-2.5 p-3 bg-[#FEF3E2] border border-[#F3C97D] rounded">
-            <Calendar className="w-4 h-4 flex-shrink-0 mt-0.5 text-[#B5620A]" />
-            <p className="text-[12px] text-[#B5620A] leading-relaxed">
-              Your current plan stays active until <strong>{formatDate(scheduledFor)}</strong>.
-              No charge today — your card will be billed at the new rate on your next renewal.
-            </p>
-          </div>
-
-          {!isUpgrade && (
-            <p className="text-[12px] text-[#737370] leading-relaxed">
-              Pro includes up to 10 listings per month. Make sure you have 10 or fewer active listings before your plan switches.
-            </p>
-          )}
-
-          {error && (
-            <div className="flex items-start gap-2 p-3 bg-[#FEF0EF] border border-[#F5C4C0] rounded">
-              <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5 text-[#D03839]" />
-              <p className="text-[12px] text-[#B82F30] leading-relaxed">{error}</p>
-            </div>
-          )}
-        </div>
-
-        <div className="flex gap-3 px-5 pb-5">
-          <button
-            onClick={onClose}
-            disabled={loading}
-            className="flex-1 py-2.5 text-[13px] font-semibold border border-[#E8E8E4] text-[#1A1816] rounded hover:bg-[#F3F3F0] transition-colors disabled:opacity-50"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={onConfirm}
-            disabled={loading}
-            className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-[13px] font-semibold rounded transition-colors disabled:opacity-50 ${
-              isUpgrade
-                ? 'bg-[#D03839] text-white hover:bg-[#B82F30]'
-                : 'bg-[#1A1816] text-white hover:bg-[#2A2A26]'
-            }`}
-          >
-            {loading
-              ? <Loader2 className="w-4 h-4 animate-spin" />
-              : `Confirm ${isUpgrade ? 'Upgrade' : 'Downgrade'}`
-            }
-          </button>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// ── Property block modal (too many listings to downgrade) ───────────────────
-function PropertyBlockModal({ activeCount, onClose }) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-sm">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-[#E8E8E4]">
-          <p className="text-[14px] font-semibold text-[#1A1816]">Too many active listings</p>
-          <button onClick={onClose} className="text-[#A8A8A4] hover:text-[#737370]">
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-
-        <div className="p-5 space-y-4">
-          <div className="flex items-start gap-3 p-3.5 bg-[#FEF0EF] border border-[#F5C4C0] rounded">
-            <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5 text-[#D03839]" />
-            <div>
-              <p className="text-[13px] font-semibold text-[#B82F30] mb-1">
-                {activeCount} active listings detected
-              </p>
-              <p className="text-[12px] text-[#B82F30] leading-relaxed">
-                Pro Seller allows a maximum of 10 listings per month. Please deactivate {activeCount - 10} listing{activeCount - 10 > 1 ? 's' : ''} before switching.
-              </p>
-            </div>
-          </div>
-
-          <p className="text-[12px] text-[#737370] leading-relaxed">
-            Go to your Properties page, deactivate listings you're not actively selling, then return here to complete the downgrade.
-          </p>
-        </div>
-
-        <div className="flex gap-3 px-5 pb-5">
-          <button
-            onClick={onClose}
-            className="flex-1 py-2.5 text-[13px] font-semibold border border-[#E8E8E4] text-[#1A1816] rounded hover:bg-[#F3F3F0] transition-colors"
-          >
-            Close
-          </button>
-          <a
-            href="/properties"
-            className="flex-1 flex items-center justify-center py-2.5 text-[13px] font-semibold bg-[#D03839] text-white rounded hover:bg-[#B82F30] transition-colors"
-          >
-            Manage listings
-          </a>
-        </div>
-      </div>
-    </div>
-  )
-}
 
 export default function PlansPage() {
-  const [sellerId,    setSellerId]    = useState(null)
-  const [plan,        setPlan]        = useState(null)
-  const [pending,     setPending]     = useState(null)
-  const [loading,     setLoading]     = useState(true)
-  const [error,       setError]       = useState(null)
-  const [success,     setSuccess]     = useState(null)
+  const router = useRouter()
 
-  // Billing cycle toggle (independent of current plan — controls what prices are shown
-  // and which billing cycle is used when changing plans)
-  const [viewAnnual,     setViewAnnual]     = useState(true)
-
-  // Modal states
-  const [confirmModal,   setConfirmModal]   = useState(null) // { planType, viewAnnual }
-  const [modalError,     setModalError]     = useState(null)
-  const [propBlockModal, setPropBlockModal] = useState(null) // { count }
-  const [confirming,     setConfirming]     = useState(false)
-  const [cancelingPend,  setCancelingPend]  = useState(false)
+  const [sellerId,      setSellerId]      = useState(null)
+  const [plan,          setPlan]          = useState(null)
+  const [pending,       setPending]       = useState(null)
+  const [loading,       setLoading]       = useState(true)
+  const [error,         setError]         = useState(null)
+  const [success,       setSuccess]       = useState(null)
+  const [viewAnnual,    setViewAnnual]    = useState(true)
+  const [cancelingPend, setCancelingPend] = useState(false)
 
   useEffect(() => {
     const userStr = localStorage.getItem('seller_user')
     if (userStr) setSellerId(JSON.parse(userStr).id)
+    // Pick up success message passed back from the upgrade page
+    const msg = sessionStorage.getItem('planChangeSuccess')
+    if (msg) { setSuccess(msg); sessionStorage.removeItem('planChangeSuccess') }
   }, [])
 
   useEffect(() => {
@@ -247,60 +105,10 @@ export default function PlansPage() {
     }
   }
 
-  // Step 1: user clicks upgrade/downgrade → show confirmation modal
+  // Navigate to the dedicated upgrade/change page
   const handleInitiateChange = (newPlanType) => {
-    setError(null)
-    setSuccess(null)
-    setModalError(null)
-    setConfirmModal({ planType: newPlanType, viewAnnual })
-  }
-
-  // Step 2: user confirms in modal → call API
-  const handleConfirmChange = async () => {
-    const { planType: newPlanType, viewAnnual: targetAnnual } = confirmModal || {}
-    if (!newPlanType) return
-
-    setConfirming(true)
-    setModalError(null)
-    try {
-      const res = await fetch('/api/seller/plan/change', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          seller_id: sellerId,
-          new_plan_type: newPlanType,
-          billing_cycle: targetAnnual ? 'annual' : 'monthly',
-        }),
-      })
-      const data = await res.json()
-
-      if (res.status === 422 && data.requires_deactivation) {
-        setConfirmModal(null)
-        setModalError(null)
-        setPropBlockModal({ count: data.active_count })
-        return
-      }
-
-      if (!res.ok || data.error) {
-        setModalError(data.error || 'Failed to change plan.')
-        return
-      }
-
-      const planLabel = newPlanType === 'enterprise' ? 'Enterprise' : 'Pro Seller'
-      const note = data.immediate
-        ? `Switched to ${planLabel}. Your trial continues at the new rate.`
-        : data.scheduled_for
-          ? `Scheduled: switching to ${planLabel} on ${formatDate(data.scheduled_for)}.`
-          : `Switched to ${planLabel}.`
-      setSuccess(note)
-      setConfirmModal(null)
-      setModalError(null)
-      await loadPlanInfo()
-    } catch (err) {
-      setModalError(err.message || 'Something went wrong. Please try again.')
-    } finally {
-      setConfirming(false)
-    }
+    const cycle = viewAnnual ? 'annual' : 'monthly'
+    router.push(`/plans/upgrade/${newPlanType}?cycle=${cycle}`)
   }
 
   const handleCancelPending = async () => {
@@ -340,27 +148,6 @@ export default function PlansPage() {
 
   return (
     <>
-      {/* Confirmation modal */}
-      {confirmModal && (
-        <ConfirmChangeModal
-          plan={plan}
-          targetPlanType={confirmModal.planType}
-          targetAnnual={confirmModal.viewAnnual}
-          onConfirm={handleConfirmChange}
-          onClose={() => { setConfirmModal(null); setModalError(null) }}
-          loading={confirming}
-          error={modalError}
-        />
-      )}
-
-      {/* Property block modal */}
-      {propBlockModal && (
-        <PropertyBlockModal
-          activeCount={propBlockModal.count}
-          onClose={() => setPropBlockModal(null)}
-        />
-      )}
-
       <div className="space-y-5 max-w-3xl mx-auto">
 
         {/* Page header */}
