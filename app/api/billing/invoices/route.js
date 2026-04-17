@@ -30,17 +30,9 @@ export async function POST(request) {
         type:               'invoice',
       }))
 
-    // One-time charges (add-ons) — exclude charges already covered by an invoice
-    // Deduplicate by both charge ID and payment_intent ID (Stripe uses py_ in newer API versions)
-    const invoiceChargeIds = new Set(invoiceList.data.map(inv => inv.charge).filter(Boolean))
-    const invoicePaymentIntentIds = new Set(invoiceList.data.map(inv => inv.payment_intent).filter(Boolean))
+    // One-time charges (add-ons) — any charge linked to an invoice is a subscription charge, skip it
     const addonCharges = chargeList.data
-      .filter(ch => {
-        if (!ch.paid || ch.amount <= 0) return false
-        if (invoiceChargeIds.has(ch.id)) return false
-        if (ch.payment_intent && invoicePaymentIntentIds.has(ch.payment_intent)) return false
-        return true
-      })
+      .filter(ch => ch.paid && ch.amount > 0 && !ch.invoice)
       .map(ch => ({
         id:          ch.id,
         number:      null,
