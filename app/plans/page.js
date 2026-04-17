@@ -148,7 +148,7 @@ export default function PlansPage() {
 
   return (
     <>
-      <div className="space-y-5 max-w-3xl mx-auto">
+      <div className="space-y-5">
 
         {/* Page header */}
         <div>
