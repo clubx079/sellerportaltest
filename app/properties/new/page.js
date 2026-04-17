@@ -1383,6 +1383,14 @@ function AddOnsTab({
 
   const handleInitPayment = async () => {
     if (!userId || selectedAddOns.length === 0) return
+
+    // If trial limit exceeded, show upgrade prompt BEFORE taking any payment.
+    // After the trial ends the user comes back here with status='active' and pays once.
+    if (trialPlan?.status === 'trialing' && (trialPlan.listings_used_this_period ?? 0) >= 1) {
+      setShowUpgradePrompt(true)
+      return
+    }
+
     setAddOnLoading(true)
     setAddOnError(null)
     try {
