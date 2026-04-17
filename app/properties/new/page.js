@@ -1288,6 +1288,8 @@ export default function NewPropertyPage() {
               onPublish={handleSave}
               saving={saving}
               onBack={() => handleTabChange('seo')}
+              formData={formData}
+              images={imageUploadStatus.images}
             />
           )}
 
@@ -1321,7 +1323,7 @@ export default function NewPropertyPage() {
 }
 
 // ─── Add-Ons Checkout Form (Stripe) ──────────────────────────────────────────
-function AddOnsCheckoutForm({ amount, onSuccess, onError }) {
+function AddOnsCheckoutForm({ amount, onSuccess, onError, onBack }) {
   const stripe = useStripe()
   const elements = useElements()
   const [processing, setProcessing] = React.useState(false)
@@ -1350,12 +1352,17 @@ function AddOnsCheckoutForm({ amount, onSuccess, onError }) {
       <button
         type="submit"
         disabled={!stripe || processing}
-        className="w-full h-[46px] bg-[#D03839] hover:bg-[#E0493B] text-white text-[14px] font-semibold rounded transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+        className="w-full h-[46px] bg-[#D03839] hover:bg-[#E0493B] active:scale-[0.98] text-white text-[14px] font-semibold rounded transition-all disabled:opacity-50 flex items-center justify-center gap-2"
       >
         {processing
           ? <><span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" /> Processing…</>
           : `Pay $${(amount / 100).toFixed(2)} & Publish`}
       </button>
+      {onBack && (
+        <button type="button" onClick={onBack} className="w-full text-[12px] text-[#737370] hover:text-[#1A1816] transition-colors text-center">
+          ← Change add-ons
+        </button>
+      )}
     </form>
   )
 }
@@ -1367,6 +1374,7 @@ function AddOnsTab({
   addOnLoading, setAddOnLoading,
   addOnError, setAddOnError,
   userId, onPublish, saving, onBack,
+  formData, images,
 }) {
   const toggleAddOn = (id) => {
     setSelectedAddOns(prev => {
@@ -1376,7 +1384,6 @@ function AddOnsTab({
       if (id === 'highlight' || id === 'boost') next = next.filter(a => a !== 'bundle')
       return next
     })
-    // Reset payment intent if add-ons change
     setAddOnClientSecret(null)
     setAddOnError(null)
   }
@@ -1411,113 +1418,175 @@ function AddOnsTab({
   if (selectedAddOns.includes('boost') || selectedAddOns.includes('bundle')) addOnFlags.is_boosted = true
   if (selectedAddOns.includes('homepage')) addOnFlags.is_homepage_featured = true
 
+  const featuredImage = (images || []).find(img => img.isFeatured && img.status === 'completed')
+    || (images || []).find(img => img.status === 'completed')
+
   return (
-    <div className="space-y-6">
-      <div>
-        <h3 className="text-[15px] font-semibold text-[#1A1816] mb-1">Boost your listing (optional)</h3>
-        <p className="text-[13px] text-[#737370] mb-5">Add-ons are optional. Your listing will be published free with your subscription — these just get it more visibility.</p>
+    <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6 items-start">
+
+      {/* ── Left: add-on cards + payment form ── */}
+      <div className="space-y-5">
+        <div>
+          <h3 className="text-[15px] font-semibold text-[#1A1816] mb-1">Boost your listing <span className="text-[13px] font-normal text-[#737370]">(optional)</span></h3>
+          <p className="text-[13px] text-[#737370]">Add-ons are optional. Your listing will be published free with your subscription — these just get it more visibility.</p>
+        </div>
+
+        <div className="space-y-2.5">
+          {ADD_ONS.map((ao) => {
+            const selected = selectedAddOns.includes(ao.id)
+            const Icon = ao.icon
+            return (
+              <button
+                key={ao.id}
+                type="button"
+                onClick={() => toggleAddOn(ao.id)}
+                className={`w-full flex items-center gap-3 p-4 border rounded text-left transition-all ${selected ? 'border-[#D03839] bg-[#FEF0EF]' : 'border-[#E8E8E4] hover:border-[#D4D4CF] bg-white'}`}
+              >
+                <div className={`w-9 h-9 rounded flex items-center justify-center flex-shrink-0 ${selected ? 'bg-[#D03839]' : 'bg-[#F3F3F0]'}`}>
+                  <Icon className={`w-4 h-4 ${selected ? 'text-white' : 'text-[#737370]'}`} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[13px] font-semibold text-[#1A1816] leading-tight">{ao.label}</p>
+                  <p className="text-[12px] text-[#737370]">{ao.desc}</p>
+                </div>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <span className="text-[13px] font-bold text-[#1A1816]">+${(ao.price / 100).toFixed(2)}</span>
+                  <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${selected ? 'border-[#D03839] bg-[#D03839]' : 'border-[#D4D4CF]'}`}>
+                    {selected && <Check className="w-3 h-3 text-white" />}
+                  </div>
+                </div>
+              </button>
+            )
+          })}
+        </div>
+
+        {addOnError && (
+          <div className="p-3 bg-[#FEF0EF] border border-[#F5C4C0] rounded text-[13px] text-[#D03839]">{addOnError}</div>
+        )}
+
+        {/* Payment form when client secret is ready */}
+        {addOnClientSecret && stripePromise && (
+          <div className="border border-[#E8E8E4] rounded p-5 bg-white">
+            <p className="text-[14px] font-semibold text-[#1A1816] mb-1">Payment Details</p>
+            <p className="text-[13px] text-[#737370] mb-5">
+              Your card will be charged <span className="font-semibold text-[#1A1816]">${(total / 100).toFixed(2)}</span> upon publishing.
+            </p>
+            <Elements stripe={stripePromise} options={{ clientSecret: addOnClientSecret }}>
+              <AddOnsCheckoutForm
+                amount={total}
+                onSuccess={() => {
+                  window.__addOnFlags = addOnFlags
+                  onPublish('active', { skipFeaturedPrompt: true, forceAutoSelectFeatured: true, addOnFlags })
+                }}
+                onError={(msg) => setAddOnError(msg)}
+                onBack={() => { setAddOnClientSecret(null); setAddOnError(null) }}
+              />
+            </Elements>
+          </div>
+        )}
+
+        <div className="pt-2">
+          <button
+            type="button"
+            onClick={onBack}
+            className="flex items-center gap-1.5 px-4 py-2 rounded border border-[#E8E8E4] text-[13px] font-medium text-[#737370] hover:border-[#1A1816] hover:text-[#1A1816] transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4" /> Back
+          </button>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {ADD_ONS.map((ao) => {
-          const selected = selectedAddOns.includes(ao.id)
-          const Icon = ao.icon
-          return (
-            <button
-              key={ao.id}
-              type="button"
-              onClick={() => toggleAddOn(ao.id)}
-              className={`text-left p-4 rounded border-2 transition-all ${selected ? 'border-[#D03839] bg-[#FEF0EF]' : 'border-[#E8E8E4] bg-white hover:border-[#1A1816]'}`}
-            >
-              <div className="flex items-start justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <Icon className={`w-4 h-4 flex-shrink-0 ${selected ? 'text-[#D03839]' : 'text-[#737370]'}`} />
-                  <p className={`text-[13px] font-semibold ${selected ? 'text-[#D03839]' : 'text-[#1A1816]'}`}>{ao.label}</p>
-                </div>
-                <p className="text-[13px] font-bold text-[#1A1816]">${(ao.price / 100).toFixed(2)}</p>
+      {/* ── Right: order summary ── */}
+      <div className="border border-[#E8E8E4] rounded overflow-hidden bg-white flex flex-col">
+
+        {/* Property preview */}
+        <div className="p-4 bg-[#FAFAF8] border-b border-[#E8E8E4]">
+          <p className="text-[10px] font-semibold text-[#A8A8A4] uppercase tracking-widest mb-3">Your Listing</p>
+          <div className="flex items-center gap-3">
+            {featuredImage?.imageUrl ? (
+              <img src={featuredImage.imageUrl} alt="" className="w-14 h-14 rounded object-cover flex-shrink-0 border border-[#E8E8E4]" />
+            ) : (
+              <div className="w-14 h-14 rounded bg-[#F3F3F0] flex-shrink-0 flex items-center justify-center border border-[#E8E8E4]">
+                <Home className="w-6 h-6 text-[#A8A8A4]" />
               </div>
-              <p className="text-[12px] text-[#737370] leading-relaxed">{ao.desc}</p>
-            </button>
-          )
-        })}
-      </div>
-
-      {addOnError && (
-        <div className="p-3 bg-[#FEF0EF] border border-[#F5C4C0] rounded text-[13px] text-[#D03839]">{addOnError}</div>
-      )}
-
-      {/* Payment section (if add-ons selected) */}
-      {selectedAddOns.length > 0 && (
-        <div className="bg-[#FAFAF8] border border-[#E8E8E4] rounded p-5 space-y-4">
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-[#A8A8A4] mb-3">Order Summary</p>
-            {selectedAddOns.map(id => {
-              const ao = ADD_ONS.find(a => a.id === id)
-              return ao ? (
-                <div key={id} className="flex justify-between items-center mb-2">
-                  <span className="text-[13px] text-[#1A1816]">{ao.label}</span>
-                  <span className="text-[13px] font-semibold text-[#1A1816]">${(ao.price / 100).toFixed(2)}</span>
-                </div>
-              ) : null
-            })}
-            <div className="border-t border-[#E8E8E4] pt-2 mt-2 flex justify-between items-center">
-              <span className="text-[13px] font-bold text-[#1A1816]">Total</span>
-              <span className="text-[14px] font-bold text-[#1A1816]">${(total / 100).toFixed(2)}</span>
+            )}
+            <div className="min-w-0">
+              <p className="text-[13px] font-semibold text-[#1A1816] truncate leading-tight">{formData?.location || 'Untitled'}</p>
+              {formData?.property_type && (
+                <p className="text-[11px] text-[#737370] truncate mt-0.5">{formData.property_type}</p>
+              )}
             </div>
           </div>
+        </div>
 
-          {!addOnClientSecret ? (
-            <button
-              type="button"
-              onClick={handleInitPayment}
-              disabled={addOnLoading}
-              className="w-full h-[44px] bg-[#1A1816] hover:bg-[#2D2B28] text-white text-[13px] font-semibold rounded transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-            >
-              {addOnLoading
-                ? <><span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" /> Loading payment…</>
-                : 'Enter Payment Details'}
-            </button>
+        {/* Order lines */}
+        <div className="p-4 flex-1">
+          <p className="text-[10px] font-semibold text-[#A8A8A4] uppercase tracking-widest mb-3">Order Summary</p>
+          {selectedAddOns.length === 0 ? (
+            <p className="text-[12px] text-[#A8A8A4] italic">No add-ons selected — listing is free</p>
           ) : (
-            stripePromise && (
-              <Elements stripe={stripePromise} options={{ clientSecret: addOnClientSecret }}>
-                <AddOnsCheckoutForm
-                  amount={total}
-                  onSuccess={() => {
-                    // Payment confirmed — publish with add-on flags
-                    window.__addOnFlags = addOnFlags
-                    onPublish('active', { skipFeaturedPrompt: true, forceAutoSelectFeatured: true, addOnFlags })
-                  }}
-                  onError={(msg) => setAddOnError(msg)}
-                />
-              </Elements>
-            )
+            <div className="space-y-2.5">
+              {selectedAddOns.map(id => {
+                const ao = ADD_ONS.find(a => a.id === id)
+                if (!ao) return null
+                return (
+                  <div key={id} className="flex justify-between items-center">
+                    <span className="text-[12px] text-[#444441]">{ao.label}</span>
+                    <span className="text-[12px] font-medium text-[#1A1816]">+${(ao.price / 100).toFixed(2)}</span>
+                  </div>
+                )
+              })}
+            </div>
           )}
         </div>
-      )}
 
-      {/* Publish without add-ons */}
-      {selectedAddOns.length === 0 && (
-        <button
-          type="button"
-          onClick={() => onPublish('active', { skipFeaturedPrompt: true, forceAutoSelectFeatured: true })}
-          disabled={saving}
-          className="w-full h-[46px] bg-[#D03839] hover:bg-[#E0493B] text-white text-[14px] font-semibold rounded transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-        >
-          {saving
-            ? <><span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" /> Publishing…</>
-            : <>Publish for Free <Eye size={16} /></>}
-        </button>
-      )}
+        {/* Total */}
+        <div className="px-4 py-3 border-t border-[#E8E8E4]">
+          <div className="flex justify-between items-baseline">
+            <span className="text-[13px] font-semibold text-[#1A1816]">Total due today</span>
+            <span className="text-[20px] font-bold text-[#1A1816]">${(total / 100).toFixed(2)}</span>
+          </div>
+          {total === 0 && (
+            <p className="text-[11px] text-[#A8A8A4] mt-0.5">Included in your subscription</p>
+          )}
+        </div>
 
-      <div className="pt-4 border-t border-[#E8E8E4]">
-        <button
-          type="button"
-          onClick={onBack}
-          className="flex items-center gap-1.5 px-4 py-2 rounded border border-[#E8E8E4] text-[13px] font-medium text-[#737370] hover:border-[#1A1816] hover:text-[#1A1816] transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4" /> Back
-        </button>
+        {/* CTA — shown when no payment form open yet */}
+        {!addOnClientSecret && (
+          <div className="px-4 pb-4 space-y-3">
+            {selectedAddOns.length > 0 ? (
+              <button
+                type="button"
+                onClick={handleInitPayment}
+                disabled={addOnLoading}
+                className="w-full h-[44px] bg-[#D03839] hover:bg-[#E0493B] active:scale-[0.98] text-white text-[13px] font-semibold rounded transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {addOnLoading
+                  ? <><span className="animate-spin w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full" />Preparing…</>
+                  : 'Proceed to Payment'}
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => onPublish('active', { skipFeaturedPrompt: true, forceAutoSelectFeatured: true })}
+                disabled={saving}
+                className="w-full h-[44px] bg-[#D03839] hover:bg-[#E0493B] active:scale-[0.98] text-white text-[13px] font-semibold rounded transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {saving
+                  ? <><span className="animate-spin w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full" />Publishing…</>
+                  : <>Publish for Free <Eye className="w-4 h-4" /></>}
+              </button>
+            )}
+            <div className="flex items-center justify-center gap-1.5">
+              <svg className="w-3 h-3 text-[#A8A8A4]" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+              </svg>
+              <span className="text-[11px] text-[#A8A8A4]">Secured by Stripe</span>
+            </div>
+          </div>
+        )}
       </div>
+
     </div>
   )
 }
