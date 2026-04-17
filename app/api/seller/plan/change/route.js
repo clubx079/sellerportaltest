@@ -129,10 +129,10 @@ export async function POST(request) {
     // (1) keep current plan until period end, (2) new plan after.
     const schedule = await stripe.subscriptionSchedules.create({
       from_subscription: plan.stripe_subscription_id,
-      end_behavior: 'release',
     })
 
     await stripe.subscriptionSchedules.update(schedule.id, {
+      end_behavior: 'release',
       phases: [
         {
           items: [{ price: currentPriceId, quantity: 1 }],
