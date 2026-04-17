@@ -218,7 +218,7 @@ export default function NewPropertyPage() {
   };
 
   const handleSave = async (publishStatus = 'draft', options = {}) => {
-    const { skipFeaturedPrompt = false, forceAutoSelectFeatured = false, addOnFlags = null, bypassLimit = false } = options;
+    const { skipFeaturedPrompt = false, forceAutoSelectFeatured = false, addOnFlags = null, bypassLimit = false, addonPaymentIntentId = null } = options;
 
     if (!bypassLimit) {
       // Block publishing if subscription has ended
@@ -493,7 +493,7 @@ export default function NewPropertyPage() {
         fetch('/api/seller/listing-addons/record', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ seller_id: sellerId, property_id: data.id, add_ons: selectedAddOns }),
+          body: JSON.stringify({ seller_id: sellerId, property_id: data.id, add_ons: selectedAddOns, stripe_payment_intent_id: addonPaymentIntentId }),
         }).catch(() => {})
       }
 
@@ -1322,14 +1322,14 @@ function AddOnsCheckoutForm({ amount, onSuccess, onError, onBack }) {
     setProcessing(true)
     const { error: submitErr } = await elements.submit()
     if (submitErr) { onError(submitErr.message); setProcessing(false); return }
-    const { error: confirmErr } = await stripe.confirmPayment({
+    const { error: confirmErr, paymentIntent } = await stripe.confirmPayment({
       elements,
       redirect: 'if_required',
     })
     if (confirmErr) {
       onError(confirmErr.message)
     } else {
-      onSuccess()
+      onSuccess(paymentIntent?.id || null)
     }
     setProcessing(false)
   }
@@ -1462,9 +1462,9 @@ function AddOnsTab({
             <Elements stripe={stripePromise} options={{ clientSecret: addOnClientSecret }}>
               <AddOnsCheckoutForm
                 amount={total}
-                onSuccess={() => {
+                onSuccess={(piId) => {
                   window.__addOnFlags = addOnFlags
-                  onPublish('active', { skipFeaturedPrompt: true, forceAutoSelectFeatured: true, addOnFlags })
+                  onPublish('active', { skipFeaturedPrompt: true, forceAutoSelectFeatured: true, addOnFlags, addonPaymentIntentId: piId })
                 }}
                 onError={(msg) => setAddOnError(msg)}
                 onBack={() => { setAddOnClientSecret(null); setAddOnError(null) }}
