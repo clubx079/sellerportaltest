@@ -32,25 +32,37 @@ export async function POST(request) {
       [process.env.STRIPE_PRICE_ENTERPRISE_ANNUAL]:  { plan_type: 'enterprise', billing_cycle: 'annual'  },
     }
 
-    // If Stripe has a different plan_type than our DB (webhook not yet processed), patch it
+    // Sync live Stripe data to DB (catches webhook delays and missing period dates)
     const livePriceId = sub.items.data[0]?.price?.id
     const liveInfo = priceMap[livePriceId]
-    if (liveInfo && liveInfo.plan_type !== plan.plan_type) {
+    const livePeriodEnd = toISO(sub.current_period_end)
+    const livePeriodStart = toISO(sub.current_period_start)
+
+    const needsSync = (liveInfo && liveInfo.plan_type !== plan.plan_type)
+      || (livePeriodEnd && livePeriodEnd !== plan.current_period_end)
+
+    if (needsSync) {
+      const update = {
+        current_period_start: livePeriodStart,
+        current_period_end:   livePeriodEnd,
+        updated_at:           new Date().toISOString(),
+      }
+      if (liveInfo) {
+        update.plan_type     = liveInfo.plan_type
+        update.billing_cycle = liveInfo.billing_cycle
+        update.stripe_price_id = livePriceId
+      }
       await supabase
         .from('seller_plans')
-        .update({
-          plan_type: liveInfo.plan_type,
-          billing_cycle: liveInfo.billing_cycle,
-          stripe_price_id: livePriceId,
-          current_period_start: toISO(sub.current_period_start),
-          current_period_end:   toISO(sub.current_period_end),
-          updated_at: new Date().toISOString(),
-        })
+        .update(update)
         .eq('stripe_subscription_id', sub.id)
 
-      plan.plan_type = liveInfo.plan_type
-      plan.billing_cycle = liveInfo.billing_cycle
-      plan.current_period_end = toISO(sub.current_period_end)
+      if (liveInfo) {
+        plan.plan_type    = liveInfo.plan_type
+        plan.billing_cycle = liveInfo.billing_cycle
+      }
+      plan.current_period_end   = livePeriodEnd
+      plan.current_period_start = livePeriodStart
     }
 
     // Check for a pending scheduled plan change via Stripe Subscription Schedule

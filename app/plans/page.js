@@ -60,7 +60,7 @@ const ENTERPRISE_FEATURES = [
 ]
 
 // ── Confirmation modal ──────────────────────────────────────────────────────
-function ConfirmChangeModal({ plan, targetPlanType, targetAnnual, onConfirm, onClose, loading }) {
+function ConfirmChangeModal({ plan, targetPlanType, targetAnnual, onConfirm, onClose, loading, error }) {
   const isUpgrade   = targetPlanType === 'enterprise'
   const scheduledFor = plan?.current_period_end
 
@@ -112,6 +112,13 @@ function ConfirmChangeModal({ plan, targetPlanType, targetAnnual, onConfirm, onC
             <p className="text-[12px] text-[#737370] leading-relaxed">
               Pro includes up to 10 listings per month. Make sure you have 10 or fewer active listings before your plan switches.
             </p>
+          )}
+
+          {error && (
+            <div className="flex items-start gap-2 p-3 bg-[#FEF0EF] border border-[#F5C4C0] rounded">
+              <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5 text-[#D03839]" />
+              <p className="text-[12px] text-[#B82F30] leading-relaxed">{error}</p>
+            </div>
           )}
         </div>
 
@@ -206,6 +213,7 @@ export default function PlansPage() {
 
   // Modal states
   const [confirmModal,   setConfirmModal]   = useState(null) // { planType, viewAnnual }
+  const [modalError,     setModalError]     = useState(null)
   const [propBlockModal, setPropBlockModal] = useState(null) // { count }
   const [confirming,     setConfirming]     = useState(false)
   const [cancelingPend,  setCancelingPend]  = useState(false)
@@ -243,6 +251,7 @@ export default function PlansPage() {
   const handleInitiateChange = (newPlanType) => {
     setError(null)
     setSuccess(null)
+    setModalError(null)
     setConfirmModal({ planType: newPlanType, viewAnnual })
   }
 
@@ -252,6 +261,7 @@ export default function PlansPage() {
     if (!newPlanType) return
 
     setConfirming(true)
+    setModalError(null)
     try {
       const res = await fetch('/api/seller/plan/change', {
         method: 'POST',
@@ -266,23 +276,28 @@ export default function PlansPage() {
 
       if (res.status === 422 && data.requires_deactivation) {
         setConfirmModal(null)
+        setModalError(null)
         setPropBlockModal({ count: data.active_count })
         return
       }
 
       if (!res.ok || data.error) {
-        setError(data.error || 'Failed to change plan.')
-        setConfirmModal(null)
+        setModalError(data.error || 'Failed to change plan.')
         return
       }
 
-      const renewalNote = data.scheduled_for ? ` on ${formatDate(data.scheduled_for)}` : ''
-      setSuccess(`Scheduled: switching to ${newPlanType === 'enterprise' ? 'Enterprise' : 'Pro Seller'}${renewalNote}.`)
+      const planLabel = newPlanType === 'enterprise' ? 'Enterprise' : 'Pro Seller'
+      const note = data.immediate
+        ? `Switched to ${planLabel}. Your trial continues at the new rate.`
+        : data.scheduled_for
+          ? `Scheduled: switching to ${planLabel} on ${formatDate(data.scheduled_for)}.`
+          : `Switched to ${planLabel}.`
+      setSuccess(note)
       setConfirmModal(null)
+      setModalError(null)
       await loadPlanInfo()
-    } catch {
-      setError('Something went wrong. Please try again.')
-      setConfirmModal(null)
+    } catch (err) {
+      setModalError(err.message || 'Something went wrong. Please try again.')
     } finally {
       setConfirming(false)
     }
@@ -332,8 +347,9 @@ export default function PlansPage() {
           targetPlanType={confirmModal.planType}
           targetAnnual={confirmModal.viewAnnual}
           onConfirm={handleConfirmChange}
-          onClose={() => setConfirmModal(null)}
+          onClose={() => { setConfirmModal(null); setModalError(null) }}
           loading={confirming}
+          error={modalError}
         />
       )}
 
