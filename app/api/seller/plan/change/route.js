@@ -121,12 +121,13 @@ export async function POST(request) {
     }
 
     // ── UPGRADE or billing-cycle change: switch immediately with proration ────
-    // Stripe charges/credits the prorated difference for the remaining days now.
-    // The new plan takes effect immediately — no scheduling needed.
+    // always_invoice charges the prorated difference immediately (creates + pays invoice now).
+    // create_prorations only defers the charge to the next renewal invoice — wrong for upgrades.
     if (!isDowngrade) {
       await stripe.subscriptions.update(plan.stripe_subscription_id, {
         items: [{ id: currentItem.id, price: newPriceId, quantity: 1 }],
-        proration_behavior: 'create_prorations',
+        proration_behavior: 'always_invoice',
+        metadata: { plan_type: new_plan_type, billing_cycle: billingCycle },
       })
 
       await supabase
