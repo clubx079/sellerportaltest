@@ -109,7 +109,8 @@ export async function POST(request) {
       return NextResponse.json({ success: true, scheduled_for: scheduledFor, new_plan_type, immediate: true })
     }
 
-    // ── Active subscriptions ──────────────────────────────────────────────────
+    // ── Active subscriptions: all changes scheduled at period end ────────────
+    // No immediate charges or prorations — the new plan starts on the next renewal.
 
     // Release any existing schedule so the subscription is unmanaged before we act on it
     const existingScheduleId = sub.schedule
@@ -120,31 +121,7 @@ export async function POST(request) {
       await stripe.subscriptionSchedules.release(existingScheduleId)
     }
 
-    // ── UPGRADE or billing-cycle change: switch immediately with proration ────
-    // always_invoice charges the prorated difference immediately (creates + pays invoice now).
-    // create_prorations only defers the charge to the next renewal invoice — wrong for upgrades.
-    if (!isDowngrade) {
-      await stripe.subscriptions.update(plan.stripe_subscription_id, {
-        items: [{ id: currentItem.id, price: newPriceId, quantity: 1 }],
-        proration_behavior: 'always_invoice',
-        metadata: { plan_type: new_plan_type, billing_cycle: billingCycle },
-      })
-
-      await supabase
-        .from('seller_plans')
-        .update({
-          plan_type:       new_plan_type,
-          billing_cycle:   billingCycle,
-          stripe_price_id: newPriceId,
-          updated_at:      new Date().toISOString(),
-        })
-        .eq('seller_id', seller_id)
-
-      return NextResponse.json({ success: true, new_plan_type, immediate: true })
-    }
-
-    // ── DOWNGRADE: schedule the change at the end of the current billing period ──
-    // Re-fetch subscription after schedule release to get fresh period dates.
+    // Re-fetch subscription after schedule release to get fresh period dates
     const freshSub = await stripe.subscriptions.retrieve(plan.stripe_subscription_id)
     const freshPeriodEnd = freshSub.current_period_end || freshSub.trial_end
 

@@ -127,13 +127,11 @@ function UpgradeContent() {
       }
 
       const label = targetType === 'enterprise' ? 'Enterprise' : 'Pro Seller'
-      const msg   = data.immediate && data.scheduled_for
+      const msg   = data.immediate
         ? `You're now on ${label}. Your trial continues — billing starts ${fmtDate(data.scheduled_for)}.`
-        : data.immediate
-          ? `You're now on ${label}.`
-          : data.scheduled_for
-            ? `Switching to ${label} on ${fmtDate(data.scheduled_for)}.`
-            : `Switched to ${label}.`
+        : data.scheduled_for
+          ? `Switching to ${label} on ${fmtDate(data.scheduled_for)}.`
+          : `Switched to ${label}.`
 
       sessionStorage.setItem('planChangeSuccess', msg)
       router.push('/plans')
@@ -172,9 +170,7 @@ function UpgradeContent() {
 
   const effectNote = isTrialing
     ? `Your trial continues unchanged. You'll be billed $${price}/mo starting ${fmtDate(effectiveDate)}.`
-    : isDowngrade
-      ? `Switch takes effect ${fmtDate(effectiveDate)}. No charge today — billed at the new rate on renewal.`
-      : `Your plan switches immediately. You'll be charged the prorated difference for the remaining days in your billing period.`
+    : `Switch takes effect ${fmtDate(effectiveDate)}. No charge today — you'll be billed at the new rate on renewal.`
 
   const TargetIcon = targetCfg.Icon
 
