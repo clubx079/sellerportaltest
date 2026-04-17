@@ -81,6 +81,7 @@ export async function POST(request) {
     const currentPriceId = currentItem?.price?.id
     // For trialing subs, Stripe may return current_period_end = 0; fall back to trial_end
     const periodEnd = sub.current_period_end || sub.trial_end
+    const periodStart = sub.current_period_start
 
     if (!currentPriceId) {
       return NextResponse.json({ error: 'Could not read current subscription price' }, { status: 500 })
@@ -136,7 +137,7 @@ export async function POST(request) {
       phases: [
         {
           items: [{ price: currentPriceId, quantity: 1 }],
-          start_date: 'now',
+          start_date: periodStart,
           end_date: periodEnd,
           proration_behavior: 'none',
         },
