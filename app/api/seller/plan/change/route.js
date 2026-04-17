@@ -126,14 +126,23 @@ export async function POST(request) {
       await stripe.subscriptionSchedules.release(existingScheduleId)
     }
 
+    // Re-fetch the subscription after releasing the schedule — releasing can update
+    // the subscription's period dates, so we need fresh values to avoid start_date >= end_date.
+    const freshSub = await stripe.subscriptions.retrieve(plan.stripe_subscription_id)
+    const freshPeriodEnd = freshSub.current_period_end || freshSub.trial_end
+
+    if (!freshPeriodEnd) {
+      return NextResponse.json({ error: 'Could not determine billing period end' }, { status: 500 })
+    }
+
     // Create a fresh schedule from the current subscription, then define two phases:
     // (1) keep current plan until period end, (2) new plan after.
     const schedule = await stripe.subscriptionSchedules.create({
       from_subscription: plan.stripe_subscription_id,
     })
 
-    // Use the schedule's own phase[0] start_date as the anchor — this is guaranteed
-    // to match what Stripe expects. sub.current_period_start can differ after trial transitions.
+    // Use the schedule's own phase[0].start_date — it reflects the exact period start
+    // that Stripe set when creating the schedule, guaranteed to be before freshPeriodEnd.
     const phase0StartDate = schedule.phases[0].start_date
 
     await stripe.subscriptionSchedules.update(schedule.id, {
@@ -142,7 +151,7 @@ export async function POST(request) {
         {
           items: [{ price: currentPriceId, quantity: 1 }],
           start_date: phase0StartDate,
-          end_date: periodEnd,
+          end_date: freshPeriodEnd,
           proration_behavior: 'none',
         },
         {
@@ -152,7 +161,7 @@ export async function POST(request) {
       ],
     })
 
-    const scheduledFor = new Date(periodEnd * 1000).toISOString()
+    const scheduledFor = new Date(freshPeriodEnd * 1000).toISOString()
     return NextResponse.json({ success: true, scheduled_for: scheduledFor, new_plan_type })
   } catch (err) {
     console.error('[plan/change]', err)
