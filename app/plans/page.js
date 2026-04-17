@@ -491,9 +491,10 @@ export default function PlansPage() {
 
               {/* Pro Seller */}
               {(() => {
-                const isCurrent     = isPro
+                const isCurrent     = isPro && (isAnnual === viewAnnual)
                 const isPendingThis = pending?.plan_type === 'pro'
-                const isAction      = isEnterprise && !isPendingThis && canChange
+                const isCycleSwitch = isPro && (isAnnual !== viewAnnual)
+                const isAction      = (isEnterprise || isCycleSwitch) && !isPendingThis && canChange
 
                 return (
                   <div className={`bg-white rounded p-5 flex flex-col border-2 ${
@@ -503,6 +504,11 @@ export default function PlansPage() {
                       {isCurrent && (
                         <span className="inline-block text-[11px] font-semibold bg-[#FEF0EF] text-[#D03839] px-2.5 py-0.5 rounded">
                           Current plan
+                        </span>
+                      )}
+                      {isPro && !isCurrent && !isPendingThis && (
+                        <span className="inline-block text-[11px] font-semibold bg-[#F3F3F0] text-[#737370] px-2.5 py-0.5 rounded">
+                          Your plan · {isAnnual ? 'annual' : 'monthly'}
                         </span>
                       )}
                       {isPendingThis && (
@@ -549,7 +555,8 @@ export default function PlansPage() {
                         onClick={() => handleInitiateChange('pro')}
                         className="w-full flex items-center justify-center gap-1.5 py-2.5 text-xs font-semibold tracking-[0.05em] uppercase border border-[#D4D4CF] text-[#1A1816] rounded hover:bg-[#F3F3F0] transition-colors mb-5"
                       >
-                        <ArrowRight className="w-3.5 h-3.5 rotate-180" />Downgrade to Pro
+                        <ArrowRight className={`w-3.5 h-3.5 ${isEnterprise ? 'rotate-180' : ''}`} />
+                        {isEnterprise ? 'Downgrade to Pro' : viewAnnual ? 'Switch to Annual' : 'Switch to Monthly'}
                       </button>
                     ) : null}
 
@@ -568,15 +575,21 @@ export default function PlansPage() {
 
               {/* Enterprise */}
               {(() => {
-                const isCurrent     = isEnterprise
+                const isCurrent     = isEnterprise && (isAnnual === viewAnnual)
                 const isPendingThis = pending?.plan_type === 'enterprise'
-                const isAction      = isPro && !isPendingThis && canChange
+                const isCycleSwitch = isEnterprise && (isAnnual !== viewAnnual)
+                const isAction      = (isPro || isCycleSwitch) && !isPendingThis && canChange
 
                 return (
                   <div className={`bg-white rounded p-5 flex flex-col border-2 ${
                     isCurrent ? 'border-[#1A1816]' : isPendingThis ? 'border-[#F3C97D]' : 'border-[#E8E8E4]'
                   }`}>
                     <div className="min-h-[22px] mb-3">
+                      {isEnterprise && !isCurrent && !isPendingThis && (
+                        <span className="inline-block text-[11px] font-semibold bg-[#F3F3F0] text-[#737370] px-2.5 py-0.5 rounded">
+                          Your plan · {isAnnual ? 'annual' : 'monthly'}
+                        </span>
+                      )}
                       {isCurrent && (
                         <span className="inline-block text-[11px] font-semibold bg-[#1A1816] text-white px-2.5 py-0.5 rounded">
                           Current plan
@@ -621,7 +634,8 @@ export default function PlansPage() {
                         onClick={() => handleInitiateChange('enterprise')}
                         className="w-full flex items-center justify-center gap-1.5 py-2.5 text-xs font-semibold tracking-[0.05em] uppercase bg-[#D03839] text-white rounded hover:bg-[#B82F30] transition-colors mb-5"
                       >
-                        <ArrowRight className="w-3.5 h-3.5" />Upgrade to Enterprise
+                        <ArrowRight className="w-3.5 h-3.5" />
+                        {isPro ? 'Upgrade to Enterprise' : viewAnnual ? 'Switch to Annual' : 'Switch to Monthly'}
                       </button>
                     ) : null}
 

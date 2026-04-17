@@ -41,9 +41,6 @@ export async function POST(request) {
       }, { status: 400 })
     }
 
-    if (plan.plan_type === new_plan_type) {
-      return NextResponse.json({ error: 'Already on this plan' }, { status: 400 })
-    }
 
     const isDowngrade = (PLAN_RANK[new_plan_type] || 0) < (PLAN_RANK[plan.plan_type] || 0)
 
@@ -69,6 +66,12 @@ export async function POST(request) {
     const billingCycle = (['monthly', 'annual'].includes(requested_cycle) ? requested_cycle : null)
       || plan.billing_cycle
       || 'monthly'
+
+    // Block only if both plan type AND billing cycle are unchanged
+    if (plan.plan_type === new_plan_type && plan.billing_cycle === billingCycle) {
+      return NextResponse.json({ error: 'Already on this plan and billing cycle' }, { status: 400 })
+    }
+
     const newPriceId = PRICE_IDS[`${new_plan_type}_${billingCycle}`]
     if (!newPriceId) {
       return NextResponse.json({ error: `Price not configured for ${new_plan_type}_${billingCycle}` }, { status: 400 })
