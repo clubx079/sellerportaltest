@@ -47,25 +47,25 @@ function fmtDate(iso) {
   return new Date(iso).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
 }
 
-// ─── Inner page (needs Suspense because useSearchParams is used) ──────────────
+// ─── Inner page ───────────────────────────────────────────────────────────────
 function UpgradeContent() {
-  const params      = useParams()
+  const params       = useParams()
   const searchParams = useSearchParams()
-  const router      = useRouter()
+  const router       = useRouter()
 
-  const targetType  = params.planType            // 'enterprise' | 'pro'
-  const cycle       = searchParams.get('cycle') || 'annual'
-  const isAnnual    = cycle === 'annual'
+  const targetType = params.planType
+  const cycle      = searchParams.get('cycle') || 'annual'
+  const isAnnual   = cycle === 'annual'
 
-  const [sellerId,       setSellerId]       = useState(null)
-  const [plan,           setPlan]           = useState(null)
-  const [paymentMethod,  setPaymentMethod]  = useState(null)
-  const [loading,        setLoading]        = useState(true)
-  const [confirming,     setConfirming]     = useState(false)
-  const [error,          setError]          = useState(null)
-  const [propBlock,      setPropBlock]      = useState(null)
+  const [sellerId,      setSellerId]      = useState(null)
+  const [plan,          setPlan]          = useState(null)
+  const [paymentMethod, setPaymentMethod] = useState(null)
+  const [loading,       setLoading]       = useState(true)
+  const [confirming,    setConfirming]    = useState(false)
+  const [error,         setError]         = useState(null)
+  const [propBlock,     setPropBlock]     = useState(null)
 
-  const targetCfg  = PLAN_CONFIG[targetType]
+  const targetCfg = PLAN_CONFIG[targetType]
 
   useEffect(() => {
     const userStr = localStorage.getItem('seller_user')
@@ -142,11 +142,10 @@ function UpgradeContent() {
     }
   }
 
-  // ── Guard: invalid plan type ──
   if (!targetCfg) {
     return (
       <div className="min-h-[50vh] flex items-center justify-center">
-        <p className="text-[13px] text-[#737370]">Invalid plan type.</p>
+        <p className="text-base text-[#737370]">Invalid plan type.</p>
       </div>
     )
   }
@@ -154,7 +153,7 @@ function UpgradeContent() {
   if (loading) {
     return (
       <div className="min-h-[50vh] flex items-center justify-center">
-        <Loader2 className="w-6 h-6 animate-spin text-[#737370]" />
+        <Loader2 className="w-7 h-7 animate-spin text-[#737370]" />
       </div>
     )
   }
@@ -165,8 +164,8 @@ function UpgradeContent() {
   const isCycleSwitch = targetType === currentType
   const isTrialing    = plan?.status === 'trialing'
 
-  const price         = isAnnual ? targetCfg.prices.annual : targetCfg.prices.monthly
-  const annualTotal   = targetCfg.prices.annualTotal
+  const price       = isAnnual ? targetCfg.prices.annual : targetCfg.prices.monthly
+  const annualTotal = targetCfg.prices.annualTotal
   const effectiveDate = plan?.current_period_end
 
   const effectNote = isTrialing
@@ -175,7 +174,6 @@ function UpgradeContent() {
 
   const TargetIcon = targetCfg.Icon
 
-  // ── Heading copy ──
   let pageTitle = `Upgrade to ${targetCfg.name}`
   if (isDowngrade)   pageTitle = 'Downgrade to Pro Seller'
   if (isCycleSwitch) pageTitle = `Switch to ${isAnnual ? 'Annual' : 'Monthly'} Billing`
@@ -185,12 +183,12 @@ function UpgradeContent() {
   if (isCycleSwitch) ctaLabel = `Switch to ${isAnnual ? 'Annual' : 'Monthly'}`
 
   return (
-    <div className="max-w-3xl mx-auto space-y-5" style={{ fontFamily: 'var(--font-dm-sans), sans-serif' }}>
+    <div className="space-y-7" style={{ fontFamily: 'var(--font-dm-sans), sans-serif' }}>
 
       {/* Back */}
       <button
         onClick={() => router.push('/plans')}
-        className="flex items-center gap-1.5 text-[13px] text-[#737370] hover:text-[#1A1816] transition-colors"
+        className="flex items-center gap-2 text-[14px] text-[#737370] hover:text-[#1A1816] transition-colors"
       >
         <ArrowLeft className="w-4 h-4" />
         Back to Plans
@@ -198,25 +196,25 @@ function UpgradeContent() {
 
       {/* Header */}
       <div>
-        <h1 className="text-[20px] font-bold text-[#1A1816] tracking-tight">{pageTitle}</h1>
-        <p className="text-[13px] text-[#737370] mt-0.5">Review your plan change before confirming.</p>
+        <h1 className="text-[28px] font-bold text-[#1A1816] tracking-tight">{pageTitle}</h1>
+        <p className="text-[15px] text-[#737370] mt-1">Review your plan change before confirming.</p>
       </div>
 
       {/* Property block warning */}
       {propBlock && (
-        <div className="flex items-start gap-3 p-4 bg-[#FEF0EF] border border-[#F5C4C0] rounded">
-          <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5 text-[#D03839]" />
+        <div className="flex items-start gap-3 p-5 bg-[#FEF0EF] border border-[#F5C4C0] rounded-lg">
+          <AlertTriangle className="w-5 h-5 flex-shrink-0 mt-0.5 text-[#D03839]" />
           <div className="flex-1">
-            <p className="text-[13px] font-semibold text-[#B82F30] mb-1">
+            <p className="text-[15px] font-semibold text-[#B82F30] mb-1">
               {propBlock.count} active listings detected
             </p>
-            <p className="text-[12px] text-[#B82F30] leading-relaxed">
+            <p className="text-[13px] text-[#B82F30] leading-relaxed">
               Pro allows a maximum of 10 listings. Please deactivate {propBlock.count - 10} listing{propBlock.count - 10 > 1 ? 's' : ''} before switching.
             </p>
           </div>
           <a
             href="/properties"
-            className="flex-shrink-0 text-[12px] font-semibold text-[#D03839] underline underline-offset-2 hover:no-underline whitespace-nowrap"
+            className="flex-shrink-0 text-[13px] font-semibold text-[#D03839] underline underline-offset-2 hover:no-underline whitespace-nowrap"
           >
             Manage listings
           </a>
@@ -224,27 +222,27 @@ function UpgradeContent() {
       )}
 
       {/* Two-column layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_304px] gap-6 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-7 items-start">
 
-        {/* ── Left: plan details ── */}
-        <div className="space-y-5">
+        {/* ── Left ── */}
+        <div className="space-y-6">
 
-          {/* Plan transition */}
-          <div className="bg-white border border-[#E8E8E4] rounded p-5">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.09em] text-[#A8A8A4] mb-4">Plan change</p>
-            <div className="flex items-center gap-3">
+          {/* Plan transition card */}
+          <div className="bg-white border border-[#E8E8E4] rounded-lg p-7">
+            <p className="text-[12px] font-semibold uppercase tracking-[0.09em] text-[#A8A8A4] mb-6">Plan change</p>
+            <div className="flex items-center gap-4">
 
-              {/* Current */}
+              {/* Current plan */}
               {currentCfg && (() => {
                 const CurrIcon = currentCfg.Icon
                 return (
-                  <div className="flex items-center gap-2.5 flex-1 min-w-0">
-                    <div className={`w-10 h-10 rounded flex items-center justify-center flex-shrink-0 ${currentCfg.iconBg}`}>
-                      <CurrIcon className={`w-5 h-5 ${currentCfg.iconColor}`} />
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <div className={`w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0 ${currentCfg.iconBg}`}>
+                      <CurrIcon className={`w-6 h-6 ${currentCfg.iconColor}`} />
                     </div>
                     <div className="min-w-0">
-                      <p className="text-[13px] font-semibold text-[#1A1816] leading-tight">{currentCfg.name}</p>
-                      <p className="text-[11px] text-[#A8A8A4]">
+                      <p className="text-[16px] font-bold text-[#1A1816] leading-tight">{currentCfg.name}</p>
+                      <p className="text-[13px] text-[#A8A8A4] mt-0.5">
                         {plan?.billing_cycle === 'annual' ? 'Annual' : 'Monthly'}
                         {isTrialing && ' · Trial'}
                       </p>
@@ -254,36 +252,36 @@ function UpgradeContent() {
               })()}
 
               {/* Arrow */}
-              <div className="w-8 h-8 rounded-full bg-[#F3F3F0] flex items-center justify-center flex-shrink-0">
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                  <path d="M3 7h8M7 3l4 4-4 4" stroke="#737370" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              <div className="w-10 h-10 rounded-full bg-[#F3F3F0] flex items-center justify-center flex-shrink-0">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                  <path d="M3 8h10M9 4l4 4-4 4" stroke="#737370" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               </div>
 
-              {/* Target */}
-              <div className="flex items-center gap-2.5 flex-1 min-w-0">
-                <div className={`w-10 h-10 rounded flex items-center justify-center flex-shrink-0 ${targetCfg.iconBg}`}>
-                  <TargetIcon className={`w-5 h-5 ${targetCfg.iconColor}`} />
+              {/* Target plan */}
+              <div className="flex items-center gap-3 flex-1 min-w-0">
+                <div className={`w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0 ${targetCfg.iconBg}`}>
+                  <TargetIcon className={`w-6 h-6 ${targetCfg.iconColor}`} />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-[13px] font-semibold text-[#1A1816] leading-tight">{targetCfg.name}</p>
-                  <p className="text-[11px] text-[#A8A8A4]">{isAnnual ? 'Annual' : 'Monthly'}</p>
+                  <p className="text-[16px] font-bold text-[#1A1816] leading-tight">{targetCfg.name}</p>
+                  <p className="text-[13px] text-[#A8A8A4] mt-0.5">{isAnnual ? 'Annual' : 'Monthly'}</p>
                 </div>
               </div>
 
             </div>
           </div>
 
-          {/* Features */}
-          <div className="bg-white border border-[#E8E8E4] rounded p-5">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.09em] text-[#A8A8A4] mb-4">
+          {/* Features card */}
+          <div className="bg-white border border-[#E8E8E4] rounded-lg p-7">
+            <p className="text-[12px] font-semibold uppercase tracking-[0.09em] text-[#A8A8A4] mb-6">
               {isCycleSwitch ? `What's included in ${targetCfg.name}` : `What you're getting`}
             </p>
-            <ul className="space-y-3">
+            <ul className="space-y-4">
               {targetCfg.features.map((feat, i) => (
-                <li key={i} className="flex items-center gap-2.5 text-[13px] text-[#1A1816]">
-                  <span className="w-4 h-4 rounded-full bg-[#E4F5EC] border border-[#9FDBB8] flex items-center justify-center flex-shrink-0">
-                    <Check className="w-2.5 h-2.5 text-[#0F6E56]" />
+                <li key={i} className="flex items-center gap-3 text-[15px] text-[#1A1816]">
+                  <span className="w-5 h-5 rounded-full bg-[#E4F5EC] border border-[#9FDBB8] flex items-center justify-center flex-shrink-0">
+                    <Check className="w-3 h-3 text-[#0F6E56]" />
                   </span>
                   {feat}
                 </li>
@@ -294,75 +292,75 @@ function UpgradeContent() {
         </div>
 
         {/* ── Right: order summary ── */}
-        <div className="bg-white border border-[#E8E8E4] rounded overflow-hidden sticky top-6">
+        <div className="bg-white border border-[#E8E8E4] rounded-lg overflow-hidden sticky top-6">
 
-          <div className="px-5 py-4 border-b border-[#E8E8E4]">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.09em] text-[#A8A8A4]">Order Summary</p>
+          <div className="px-6 py-5 border-b border-[#E8E8E4]">
+            <p className="text-[12px] font-semibold uppercase tracking-[0.09em] text-[#A8A8A4]">Order Summary</p>
           </div>
 
-          <div className="p-5 space-y-4">
+          <div className="p-6 space-y-5">
 
             {/* Plan + price */}
-            <div className="flex items-start justify-between gap-3">
+            <div className="flex items-start justify-between gap-4">
               <div>
-                <p className="text-[14px] font-semibold text-[#1A1816]">{targetCfg.name}</p>
-                <p className="text-[11px] text-[#737370] mt-0.5">{isAnnual ? 'Annual billing' : 'Monthly billing'}</p>
+                <p className="text-[17px] font-bold text-[#1A1816]">{targetCfg.name}</p>
+                <p className="text-[13px] text-[#737370] mt-0.5">{isAnnual ? 'Annual billing' : 'Monthly billing'}</p>
               </div>
               <div className="text-right flex-shrink-0">
-                <p className="text-[18px] font-bold text-[#1A1816] leading-none">
-                  ${price}<span className="text-[11px] font-normal text-[#737370]">/mo</span>
+                <p className="text-[26px] font-bold text-[#1A1816] leading-none">
+                  ${price}<span className="text-[13px] font-normal text-[#737370]">/mo</span>
                 </p>
                 {isAnnual && (
-                  <p className="text-[10px] text-[#A8A8A4] mt-0.5">${annualTotal}/yr</p>
+                  <p className="text-[12px] text-[#A8A8A4] mt-1">${annualTotal}/yr</p>
                 )}
               </div>
             </div>
 
             {isAnnual && (
-              <div className="flex items-center justify-between py-2 px-3 bg-[#E4F5EC] border border-[#9FDBB8] rounded">
-                <p className="text-[11px] font-semibold text-[#0F6E56]">Annual discount</p>
-                <p className="text-[11px] font-semibold text-[#0F6E56]">Save 20%</p>
+              <div className="flex items-center justify-between py-2.5 px-4 bg-[#E4F5EC] border border-[#9FDBB8] rounded-lg">
+                <p className="text-[13px] font-semibold text-[#0F6E56]">Annual discount</p>
+                <p className="text-[13px] font-semibold text-[#0F6E56]">Save 20%</p>
               </div>
             )}
 
             <hr className="border-[#F3F3F0]" />
 
             {/* When it takes effect */}
-            <div className="flex items-start gap-2.5 p-3 bg-[#FAFAF8] border border-[#E8E8E4] rounded">
-              <Calendar className="w-3.5 h-3.5 flex-shrink-0 mt-0.5 text-[#737370]" />
-              <p className="text-[11px] text-[#737370] leading-relaxed">{effectNote}</p>
+            <div className="flex items-start gap-3 p-4 bg-[#FAFAF8] border border-[#E8E8E4] rounded-lg">
+              <Calendar className="w-4 h-4 flex-shrink-0 mt-0.5 text-[#737370]" />
+              <p className="text-[13px] text-[#737370] leading-relaxed">{effectNote}</p>
             </div>
 
             {/* Payment method */}
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#A8A8A4] mb-2">Payment method</p>
+              <p className="text-[12px] font-semibold uppercase tracking-[0.08em] text-[#A8A8A4] mb-3">Payment method</p>
               {paymentMethod ? (
-                <div className="flex items-center gap-2.5 p-3 bg-[#FAFAF8] border border-[#E8E8E4] rounded">
-                  <div className="w-10 h-7 bg-[#1A1816] rounded text-white text-[8px] font-bold flex items-center justify-center tracking-wider uppercase flex-shrink-0">
+                <div className="flex items-center gap-3 p-4 bg-[#FAFAF8] border border-[#E8E8E4] rounded-lg">
+                  <div className="w-12 h-8 bg-[#1A1816] rounded text-white text-[9px] font-bold flex items-center justify-center tracking-wider uppercase flex-shrink-0">
                     {(paymentMethod.brand || 'Card').slice(0, 4)}
                   </div>
                   <div>
-                    <p className="text-[12px] font-semibold text-[#1A1816] capitalize">
+                    <p className="text-[14px] font-semibold text-[#1A1816] capitalize">
                       {paymentMethod.brand} •••• {paymentMethod.last4}
                     </p>
-                    <p className="text-[10px] text-[#A8A8A4]">
+                    <p className="text-[12px] text-[#A8A8A4] mt-0.5">
                       Expires {String(paymentMethod.exp_month).padStart(2, '0')} / {paymentMethod.exp_year}
                     </p>
                   </div>
                 </div>
               ) : (
-                <div className="flex items-center gap-2.5 p-3 bg-[#FAFAF8] border border-[#E8E8E4] rounded">
-                  <CreditCard className="w-4 h-4 text-[#A8A8A4] flex-shrink-0" />
-                  <p className="text-[12px] text-[#A8A8A4]">No card on file</p>
+                <div className="flex items-center gap-3 p-4 bg-[#FAFAF8] border border-[#E8E8E4] rounded-lg">
+                  <CreditCard className="w-5 h-5 text-[#A8A8A4] flex-shrink-0" />
+                  <p className="text-[14px] text-[#A8A8A4]">No card on file</p>
                 </div>
               )}
             </div>
 
             {/* Error */}
             {error && (
-              <div className="flex items-start gap-2 p-3 bg-[#FEF0EF] border border-[#F5C4C0] rounded">
-                <AlertCircle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5 text-[#D03839]" />
-                <p className="text-[12px] text-[#B82F30] leading-relaxed">{error}</p>
+              <div className="flex items-start gap-2.5 p-4 bg-[#FEF0EF] border border-[#F5C4C0] rounded-lg">
+                <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5 text-[#D03839]" />
+                <p className="text-[13px] text-[#B82F30] leading-relaxed">{error}</p>
               </div>
             )}
 
@@ -370,7 +368,7 @@ function UpgradeContent() {
             <button
               onClick={handleConfirm}
               disabled={confirming}
-              className={`w-full flex items-center justify-center gap-2 py-3 text-[13px] font-semibold rounded transition-colors disabled:opacity-50 ${
+              className={`w-full flex items-center justify-center gap-2 py-3.5 text-[15px] font-semibold rounded-lg transition-colors disabled:opacity-50 ${
                 isDowngrade
                   ? 'bg-[#1A1816] text-white hover:bg-[#2A2A26]'
                   : 'bg-[#D03839] text-white hover:bg-[#B82F30]'
@@ -385,15 +383,15 @@ function UpgradeContent() {
             <button
               onClick={() => router.push('/plans')}
               disabled={confirming}
-              className="w-full text-[12px] text-[#737370] hover:text-[#1A1816] transition-colors text-center disabled:opacity-50"
+              className="w-full text-[13px] text-[#737370] hover:text-[#1A1816] transition-colors text-center disabled:opacity-50"
             >
               Cancel — go back to Plans
             </button>
 
             {/* Security badge */}
-            <div className="flex items-center justify-center gap-1.5 pt-1">
-              <Lock className="w-3 h-3 text-[#A8A8A4]" />
-              <p className="text-[10px] text-[#A8A8A4]">Secured by Stripe</p>
+            <div className="flex items-center justify-center gap-2 pt-1">
+              <Lock className="w-3.5 h-3.5 text-[#A8A8A4]" />
+              <p className="text-[12px] text-[#A8A8A4]">Secured by Stripe</p>
             </div>
 
           </div>
@@ -404,12 +402,12 @@ function UpgradeContent() {
   )
 }
 
-// ─── Default export with Suspense (required for useSearchParams in Next.js) ───
+// ─── Default export with Suspense ─────────────────────────────────────────────
 export default function UpgradePage() {
   return (
     <Suspense fallback={
       <div className="min-h-[50vh] flex items-center justify-center">
-        <Loader2 className="w-6 h-6 animate-spin text-[#737370]" />
+        <Loader2 className="w-7 h-7 animate-spin text-[#737370]" />
       </div>
     }>
       <UpgradeContent />
