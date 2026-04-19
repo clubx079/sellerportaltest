@@ -22,6 +22,18 @@ export async function POST(request) {
     const meta = sub.metadata || {}
     const customerId = typeof sub.customer === 'string' ? sub.customer : sub.customer?.id
 
+    // Check if a plan row already exists for this seller
+    const { data: existing, error: selectErr } = await supabase
+      .from('seller_plans')
+      .select('id, listings_used_this_period')
+      .eq('seller_id', seller_id)
+      .maybeSingle()
+
+    if (selectErr) {
+      console.error('[activate] select error:', selectErr)
+      return NextResponse.json({ error: selectErr.message }, { status: 500 })
+    }
+
     const planRow = {
       seller_id,
       plan_type:              meta.plan_type     || 'pro',
@@ -33,20 +45,8 @@ export async function POST(request) {
       trial_ends_at:          toISO(sub.trial_end),
       current_period_start:   toISO(sub.current_period_start ?? sub.items?.data?.[0]?.current_period_start) || new Date().toISOString(),
       current_period_end:     toISO(sub.current_period_end ?? sub.items?.data?.[0]?.current_period_end ?? sub.trial_end),
-      listings_used_this_period: 0,
+      listings_used_this_period: existing?.listings_used_this_period ?? 0,
       updated_at:             new Date().toISOString(),
-    }
-
-    // Check if a plan row already exists for this seller
-    const { data: existing, error: selectErr } = await supabase
-      .from('seller_plans')
-      .select('id')
-      .eq('seller_id', seller_id)
-      .maybeSingle()
-
-    if (selectErr) {
-      console.error('[activate] select error:', selectErr)
-      return NextResponse.json({ error: selectErr.message }, { status: 500 })
     }
 
     if (existing) {

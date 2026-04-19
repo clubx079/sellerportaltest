@@ -60,6 +60,13 @@ export async function POST(request) {
       return NextResponse.json({ synced: false, reason: 'No subscription found' })
     }
 
+    // Check if row already exists
+    const { data: existing } = await supabase
+      .from('seller_plans')
+      .select('id, listings_used_this_period')
+      .eq('seller_id', seller_id)
+      .maybeSingle()
+
     const meta = sub.metadata || {}
     const planRow = {
       seller_id,
@@ -75,16 +82,9 @@ export async function POST(request) {
       trial_ends_at:          toISO(sub.trial_end),
       current_period_start:   toISO(sub.current_period_start),
       current_period_end:     toISO(sub.current_period_end),
-      listings_used_this_period: 0,
+      listings_used_this_period: existing?.listings_used_this_period ?? 0,
       updated_at:             new Date().toISOString(),
     }
-
-    // Check if row already exists
-    const { data: existing } = await supabase
-      .from('seller_plans')
-      .select('id')
-      .eq('seller_id', seller_id)
-      .maybeSingle()
 
     if (existing) {
       await supabase.from('seller_plans').update(planRow).eq('id', existing.id)
