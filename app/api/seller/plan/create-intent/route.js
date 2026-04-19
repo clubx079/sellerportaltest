@@ -17,7 +17,7 @@ export async function POST(request) {
     enterprise_annual:    process.env.STRIPE_PRICE_ENTERPRISE_ANNUAL,
   }
   try {
-    const { seller_id, plan_type, billing_cycle, quantity = 1 } = await request.json()
+    const { seller_id, plan_type, billing_cycle, quantity = 1, no_trial = false } = await request.json()
 
     if (!seller_id || !plan_type) {
       return NextResponse.json({ error: 'seller_id and plan_type are required' }, { status: 400 })
@@ -101,7 +101,7 @@ export async function POST(request) {
       metadata: { seller_id, plan_type, billing_cycle: billing_cycle || 'monthly' },
     }
 
-    if (plan_type === 'pro' || plan_type === 'enterprise') {
+    if ((plan_type === 'pro' || plan_type === 'enterprise') && !no_trial) {
       subscriptionParams.trial_period_days = 7
     }
 
