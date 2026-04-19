@@ -137,8 +137,8 @@ export async function POST(request) {
           stripe_subscription_id: sub.id,
           stripe_price_id: sub.items.data[0]?.price?.id || null,
           trial_ends_at:        toISO(sub.trial_end),
-          current_period_start: toISO(sub.current_period_start),
-          current_period_end:   toISO(sub.current_period_end || sub.trial_end),
+          current_period_start: toISO(sub.current_period_start ?? sub.items?.data?.[0]?.current_period_start),
+          current_period_end:   toISO(sub.current_period_end ?? sub.items?.data?.[0]?.current_period_end ?? sub.trial_end),
           updated_at: new Date().toISOString(),
         }
 
@@ -186,8 +186,8 @@ export async function POST(request) {
 
         const updateData = {
           status:               newStatus,
-          current_period_start: toISO(sub.current_period_start),
-          current_period_end:   toISO(sub.current_period_end),
+          current_period_start: toISO(sub.current_period_start ?? sub.items?.data?.[0]?.current_period_start),
+          current_period_end:   toISO(sub.current_period_end ?? sub.items?.data?.[0]?.current_period_end),
           stripe_price_id:      livePriceId || null,
           updated_at:           new Date().toISOString(),
         }
