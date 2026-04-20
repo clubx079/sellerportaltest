@@ -295,7 +295,7 @@ export default function PlansPage() {
               {/* Pro Seller */}
               {(() => {
                 const isCurrent     = isPro && (isAnnual === viewAnnual)
-                const isPendingThis = pending?.plan_type === 'pro'
+                const isPendingThis = pending?.plan_type === 'pro' && pending?.billing_cycle === (viewAnnual ? 'annual' : 'monthly')
                 const isCycleSwitch = isPro && (isAnnual !== viewAnnual)
                 const isAction      = (isEnterprise || isCycleSwitch) && !isPendingThis && canChange
 
@@ -379,7 +379,7 @@ export default function PlansPage() {
               {/* Enterprise */}
               {(() => {
                 const isCurrent     = isEnterprise && (isAnnual === viewAnnual)
-                const isPendingThis = pending?.plan_type === 'enterprise'
+                const isPendingThis = pending?.plan_type === 'enterprise' && pending?.billing_cycle === (viewAnnual ? 'annual' : 'monthly')
                 const isCycleSwitch = isEnterprise && (isAnnual !== viewAnnual)
                 const isAction      = (isPro || isCycleSwitch) && !isPendingThis && canChange
 
