@@ -254,16 +254,8 @@ export async function POST(request) {
         break
       }
 
-      // ── Invoice paid: reset monthly listing counter ───────────────────
+      // ── Invoice paid: no counter reset — listings stay active across renewals ──
       case 'invoice.payment_succeeded': {
-        const invoice = event.data.object
-        if (invoice.billing_reason !== 'subscription_cycle') break
-
-        await supabase
-          .from('seller_plans')
-          .update({ listings_used_this_period: 0, updated_at: new Date().toISOString() })
-          .eq('stripe_subscription_id', invoice.subscription)
-
         break
       }
 
