@@ -120,9 +120,20 @@ export async function POST(request) {
 
     // For trial subscriptions the first invoice is $0 so payment_intent is null.
     // Fall back to pending_setup_intent which Stripe creates to collect the card.
-    const paymentClientSecret = subscription.latest_invoice?.payment_intent?.client_secret
-    const setupClientSecret   = subscription.pending_setup_intent?.client_secret
-    const clientSecret        = paymentClientSecret || setupClientSecret
+    let paymentClientSecret = subscription.latest_invoice?.payment_intent?.client_secret
+    const setupClientSecret = subscription.pending_setup_intent?.client_secret
+
+    // If latest_invoice came back as a string (not expanded), fetch it directly
+    if (!paymentClientSecret && typeof subscription.latest_invoice === 'string') {
+      const invoice = await stripe.invoices.retrieve(subscription.latest_invoice, {
+        expand: ['payment_intent']
+      })
+      paymentClientSecret = invoice.payment_intent?.client_secret
+    }
+
+    const clientSecret = paymentClientSecret || setupClientSecret
+
+    console.log('[create-intent] subscription.id:', subscription.id, '| latest_invoice type:', typeof subscription.latest_invoice, '| paymentClientSecret:', !!paymentClientSecret, '| setupClientSecret:', !!setupClientSecret)
 
     if (!clientSecret) {
       return NextResponse.json({ error: 'Could not initialize subscription payment' }, { status: 500 })
