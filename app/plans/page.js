@@ -249,7 +249,7 @@ export default function PlansPage() {
                 <div className="flex-1 min-w-0">
                   <p className="text-[13px] font-semibold text-[#B5620A]">Plan change scheduled</p>
                   <p className="text-[12px] text-[#B5620A] mt-0.5">
-                    Switching to <strong>{pending.plan_type === 'enterprise' ? 'Enterprise' : 'Pro Seller'}</strong> on {formatDate(pending.scheduled_for)}.
+                    Switching to <strong>{pending.plan_type === 'enterprise' ? 'Enterprise' : 'Pro Seller'} ({pending.billing_cycle === 'annual' ? 'Annual' : 'Monthly'})</strong> on {formatDate(pending.scheduled_for)}.
                     Your current plan remains active until then.
                   </p>
                 </div>
