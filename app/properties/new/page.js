@@ -701,7 +701,7 @@ export default function NewPropertyPage() {
                       });
                       const data = await res.json();
                       if (!res.ok) throw new Error(data.error || 'Failed to start subscription');
-                      setTrialPlan(prev => prev ? { ...prev, status: 'active', listings_used_this_period: 0 } : prev);
+                      setTrialPlan(prev => prev ? { ...prev, status: 'active' } : prev);
                       setShowUpgradePrompt(false);
                       if (selectedAddOns.length > 0) {
                         setAddOnClientSecret(null);
