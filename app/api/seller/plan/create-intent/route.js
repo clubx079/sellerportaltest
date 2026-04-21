@@ -123,21 +123,28 @@ export async function POST(request) {
     let paymentClientSecret = subscription.latest_invoice?.payment_intent?.client_secret
     const setupClientSecret = subscription.pending_setup_intent?.client_secret
 
+    // Log what Stripe actually returned for debugging
+    const liType = typeof subscription.latest_invoice
+    const liPaymentIntent = liType === 'object' ? subscription.latest_invoice?.payment_intent : 'n/a'
+    console.log('[create-intent] latest_invoice type:', liType, '| payment_intent type:', typeof liPaymentIntent, '| payment_intent value:', JSON.stringify(liPaymentIntent)?.slice(0, 200))
+
     // If payment_intent is missing — either latest_invoice is a string ID (not expanded)
-    // or it's an object but payment_intent is still null — fetch the invoice directly
+    // or it's an object but payment_intent is still null or a string — fetch the invoice directly
     if (!paymentClientSecret && subscription.latest_invoice) {
       const invoiceId = typeof subscription.latest_invoice === 'string'
         ? subscription.latest_invoice
         : subscription.latest_invoice.id
+      console.log('[create-intent] fetching invoice directly:', invoiceId)
       if (invoiceId) {
         const invoice = await stripe.invoices.retrieve(invoiceId, { expand: ['payment_intent'] })
+        console.log('[create-intent] invoice.payment_intent type:', typeof invoice.payment_intent, '| has client_secret:', !!invoice.payment_intent?.client_secret)
         paymentClientSecret = invoice.payment_intent?.client_secret
       }
     }
 
     const clientSecret = paymentClientSecret || setupClientSecret
 
-    console.log('[create-intent] subscription.id:', subscription.id, '| latest_invoice type:', typeof subscription.latest_invoice, '| paymentClientSecret:', !!paymentClientSecret, '| setupClientSecret:', !!setupClientSecret)
+    console.log('[create-intent] subscription.id:', subscription.id, '| paymentClientSecret:', !!paymentClientSecret, '| setupClientSecret:', !!setupClientSecret, '| clientSecret:', !!clientSecret)
 
     if (!clientSecret) {
       return NextResponse.json({ error: 'Could not initialize subscription payment' }, { status: 500 })
