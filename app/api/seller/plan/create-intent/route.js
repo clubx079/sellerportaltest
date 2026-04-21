@@ -123,12 +123,16 @@ export async function POST(request) {
     let paymentClientSecret = subscription.latest_invoice?.payment_intent?.client_secret
     const setupClientSecret = subscription.pending_setup_intent?.client_secret
 
-    // If latest_invoice came back as a string (not expanded), fetch it directly
-    if (!paymentClientSecret && typeof subscription.latest_invoice === 'string') {
-      const invoice = await stripe.invoices.retrieve(subscription.latest_invoice, {
-        expand: ['payment_intent']
-      })
-      paymentClientSecret = invoice.payment_intent?.client_secret
+    // If payment_intent is missing — either latest_invoice is a string ID (not expanded)
+    // or it's an object but payment_intent is still null — fetch the invoice directly
+    if (!paymentClientSecret && subscription.latest_invoice) {
+      const invoiceId = typeof subscription.latest_invoice === 'string'
+        ? subscription.latest_invoice
+        : subscription.latest_invoice.id
+      if (invoiceId) {
+        const invoice = await stripe.invoices.retrieve(invoiceId, { expand: ['payment_intent'] })
+        paymentClientSecret = invoice.payment_intent?.client_secret
+      }
     }
 
     const clientSecret = paymentClientSecret || setupClientSecret
