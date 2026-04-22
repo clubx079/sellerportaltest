@@ -148,8 +148,16 @@ export async function POST(request) {
           : subscription.latest_invoice?.id
         console.log('[create-intent] incomplete — fetching invoice directly:', invoiceId)
         if (invoiceId) {
-          const invoice = await stripe.invoices.retrieve(invoiceId, { expand: ['payment_intent'] })
-          console.log('[create-intent] invoice.payment_intent has client_secret:', !!invoice.payment_intent?.client_secret)
+          let invoice = await stripe.invoices.retrieve(invoiceId, { expand: ['payment_intent'] })
+          console.log('[create-intent] invoice status:', invoice.status, '| has payment_intent:', !!invoice.payment_intent)
+
+          // If invoice is still in draft, finalize it so Stripe creates the PaymentIntent
+          if (invoice.status === 'draft') {
+            console.log('[create-intent] invoice is draft — finalizing to create PaymentIntent')
+            invoice = await stripe.invoices.finalizeInvoice(invoiceId, { expand: ['payment_intent'] })
+            console.log('[create-intent] after finalize — status:', invoice.status, '| has payment_intent:', !!invoice.payment_intent)
+          }
+
           paymentClientSecret = invoice.payment_intent?.client_secret
         }
       }
