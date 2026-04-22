@@ -147,7 +147,19 @@ export async function POST(request) {
     console.log('[create-intent] subscription.id:', subscription.id, '| paymentClientSecret:', !!paymentClientSecret, '| setupClientSecret:', !!setupClientSecret, '| clientSecret:', !!clientSecret)
 
     if (!clientSecret) {
-      return NextResponse.json({ error: 'Could not initialize subscription payment' }, { status: 500 })
+      // Stripe didn't create a pending_setup_intent (common with trials when no card exists yet).
+      // Create a SetupIntent manually to collect the card.
+      console.log('[create-intent] no clientSecret — creating SetupIntent manually for customer', customerId)
+      const setupIntent = await stripe.setupIntents.create({
+        customer: customerId,
+        automatic_payment_methods: { enabled: true },
+        metadata: { seller_id, subscription_id: subscription.id },
+      })
+      return NextResponse.json({
+        type: 'setup',
+        clientSecret: setupIntent.client_secret,
+        subscription_id: subscription.id,
+      })
     }
 
     return NextResponse.json({
