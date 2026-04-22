@@ -79,7 +79,7 @@ export async function POST(request) {
     const sub = await stripe.subscriptions.retrieve(plan.stripe_subscription_id)
     const currentItem = sub.items.data[0]
     const currentPriceId = currentItem?.price?.id
-    const periodEnd = sub.current_period_end || sub.trial_end
+    const periodEnd = sub.current_period_end || sub.items?.data?.[0]?.current_period_end || sub.trial_end
 
     if (!currentPriceId) {
       return NextResponse.json({ error: 'Could not read current subscription price' }, { status: 500 })
@@ -123,7 +123,7 @@ export async function POST(request) {
 
     // Re-fetch subscription after schedule release to get fresh period dates
     const freshSub = await stripe.subscriptions.retrieve(plan.stripe_subscription_id)
-    const freshPeriodEnd = freshSub.current_period_end || freshSub.trial_end
+    const freshPeriodEnd = freshSub.current_period_end || freshSub.items?.data?.[0]?.current_period_end || freshSub.trial_end
 
     if (!freshPeriodEnd) {
       return NextResponse.json({ error: 'Could not determine billing period end' }, { status: 500 })
