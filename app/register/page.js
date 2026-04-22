@@ -122,14 +122,29 @@ function PlanCard({ id, selected, annual, onSelect }) {
       <p className="text-xs text-[#737370] leading-relaxed mb-4">
         {isPro ? 'For active investors and wholesalers moving deals consistently.' : 'For acquisition teams running high-volume pipelines.'}
       </p>
-      <div className="flex items-end gap-1.5 leading-none mb-1">
-        <span className="text-[38px] font-bold text-[#1A1816] tracking-tight leading-none">
-          <sup className="text-lg font-normal align-super">$</sup>{price}
-        </span>
-        <span className="text-sm font-normal text-[#737370] mb-1">/ per month</span>
-      </div>
-      <p className="text-xs text-[#737370] mb-1">{billingNote}</p>
-      <p className="text-[11px] text-[#A8A8A4] mb-4">{savingsNote}</p>
+      {annual ? (
+        <>
+          <div className="flex items-end gap-1.5 leading-none mb-1">
+            <span className="text-[38px] font-bold text-[#1A1816] tracking-tight leading-none">
+              <sup className="text-lg font-normal align-super">$</sup>{isPro ? '948' : '2,868'}
+            </span>
+            <span className="text-sm font-normal text-[#737370] mb-1">/ year</span>
+          </div>
+          <p className="text-xs text-[#737370] mb-1">{isPro ? '$79/mo · billed as $948 upfront' : '$239/mo · billed as $2,868 upfront'}</p>
+          <p className="text-[11px] font-semibold text-[#0F6E56] mb-4">{isPro ? 'Save $240 vs monthly' : 'Save $720 vs monthly'}</p>
+        </>
+      ) : (
+        <>
+          <div className="flex items-end gap-1.5 leading-none mb-1">
+            <span className="text-[38px] font-bold text-[#1A1816] tracking-tight leading-none">
+              <sup className="text-lg font-normal align-super">$</sup>{price}
+            </span>
+            <span className="text-sm font-normal text-[#737370] mb-1">/ per month</span>
+          </div>
+          <p className="text-xs text-[#737370] mb-1">{billingNote}</p>
+          <p className="text-[11px] text-[#A8A8A4] mb-4">{savingsNote}</p>
+        </>
+      )}
       <div className={`w-full py-2 text-center text-xs font-semibold tracking-[0.05em] uppercase rounded mb-4 transition-colors ${
         isSelected ? (isPro ? 'bg-[#D03839] text-white' : 'bg-[#1A1816] text-white') : 'border border-[#D4D4CF] text-[#1A1816]'
       }`}>
@@ -185,24 +200,31 @@ function CheckoutForm({ planType, billingCycle, intentType, onSuccess }) {
   const chargeLabel = isAnnual ? `$${annualTotal.toLocaleString()} / year` : `$${monthlyPrice} / month`
 
   return (
-    <form onSubmit={handlePay} className="space-y-5">
-      <div className="bg-[#FAFAF8] border border-[#E8E8E4] rounded p-4 space-y-3">
-        <p className="text-[11px] font-semibold uppercase tracking-wider text-[#A8A8A4]">Order Summary</p>
-        <div className="flex justify-between items-start">
-          <div>
-            <p className="text-[14px] font-semibold text-[#1A1816]">{planName}</p>
-            <p className="text-[12px] text-[#737370]">{isAnnual ? 'Billed annually' : 'Billed monthly'}</p>
+    <form onSubmit={handlePay} className="space-y-4">
+      {/* Order Summary */}
+      <div className="rounded border border-[#E8E8E4] overflow-hidden">
+        <div className="bg-[#FAFAF8] px-4 py-2.5 border-b border-[#E8E8E4]">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-[#A8A8A4]">Order Summary</p>
+        </div>
+        <div className="bg-white px-4 py-4 space-y-3">
+          <div className="flex justify-between items-start">
+            <div>
+              <p className="text-[13px] font-semibold text-[#1A1816]">{planName}</p>
+              <p className="text-[11px] text-[#737370] mt-0.5">{isAnnual ? 'Annual billing · billed as one payment' : 'Monthly billing · cancel anytime'}</p>
+            </div>
+            <p className="text-[13px] font-semibold text-[#1A1816]">{chargeLabel}</p>
           </div>
-          <p className="text-[14px] font-bold text-[#1A1816]">{chargeLabel}</p>
+          <div className="border-t border-[#E8E8E4] pt-3 flex justify-between items-center">
+            <p className="text-[13px] font-bold text-[#1A1816]">Due today</p>
+            <p className="text-[22px] font-bold text-[#D03839]">{chargeLabel}</p>
+          </div>
         </div>
-        <div className="border-t border-[#E8E8E4] pt-3 flex justify-between items-center">
-          <p className="text-[13px] font-semibold text-[#1A1816]">Due today</p>
-          <p className="text-[15px] font-bold text-[#1A1816]">{chargeLabel}</p>
-        </div>
-        <p className="text-[12px] text-[#737370]">{isAnnual ? 'Billed as one annual payment' : 'Billed monthly · cancel anytime'}</p>
       </div>
+
       <PaymentElement />
+
       {error && <div className="p-3 bg-[#FEF0EF] border border-[#F5C0BF] rounded text-[13px] text-[#D03839]">{error}</div>}
+
       <button
         type="submit"
         disabled={!stripe || processing}
@@ -210,7 +232,11 @@ function CheckoutForm({ planType, billingCycle, intentType, onSuccess }) {
       >
         {processing ? <><Loader2 className="w-4 h-4 animate-spin" /> Processing…</> : 'Start Subscription'}
       </button>
-      <p className="text-center text-[12px] text-[#A8A8A4]">Secured by Stripe · Cancel anytime in settings</p>
+
+      <div className="flex items-center justify-center gap-1.5">
+        <svg className="w-3 h-3 text-[#A8A8A4]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        <p className="text-[12px] text-[#A8A8A4]">Secured by Stripe · Cancel anytime in settings</p>
+      </div>
     </form>
   )
 }
@@ -305,13 +331,17 @@ function MagicLinkRegisterContent() {
   const [planType, setPlanType] = useState('pro')
   const [billingCycle, setBillingCycle] = useState('monthly')
 
-  // Form state
+  // Form state — restore from sessionStorage on mount to survive browser back
   const [submitting, setSubmitting] = useState(false)
   const [formError, setFormError] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
-  const [formData, setFormData] = useState({
-    contact_person_name: '', email: '', password: '', confirm_password: '', business_name: '', description: ''
+  const [formData, setFormData] = useState(() => {
+    if (typeof window === 'undefined') return { contact_person_name: '', email: '', password: '', confirm_password: '', business_name: '', description: '' }
+    try {
+      const saved = sessionStorage.getItem('register_form_data')
+      return saved ? JSON.parse(saved) : { contact_person_name: '', email: '', password: '', confirm_password: '', business_name: '', description: '' }
+    } catch { return { contact_person_name: '', email: '', password: '', confirm_password: '', business_name: '', description: '' } }
   })
 
   // Validate token on mount
@@ -339,7 +369,11 @@ function MagicLinkRegisterContent() {
   }, [token])
 
   const handleChange = (field) => (e) => {
-    setFormData(prev => ({ ...prev, [field]: e.target.value }))
+    setFormData(prev => {
+      const next = { ...prev, [field]: e.target.value }
+      try { sessionStorage.setItem('register_form_data', JSON.stringify(next)) } catch {}
+      return next
+    })
     if (formError) setFormError('')
   }
   const handleFocus = (e) => { e.target.style.borderColor = T.primary; e.target.style.boxShadow = `0 0 0 3px rgba(208, 56, 57, 0.12)` }
@@ -392,9 +426,10 @@ function MagicLinkRegisterContent() {
         .from('magic_link_tokens')
         .update({ used: true, used_at: new Date().toISOString() })
         .eq('token', token)
-      // Save user to localStorage
+      // Save user to localStorage and clear form cache
       if (typeof window !== 'undefined') {
         localStorage.setItem('seller_user', JSON.stringify({ id: sellerId, email: sellerEmail, plan: planType }))
+        sessionStorage.removeItem('register_form_data')
       }
     } catch {
       // best-effort — webhook will also fire activate
@@ -548,6 +583,9 @@ function MagicLinkRegisterContent() {
         {/* ── Step 1: Plan selection ── */}
         {step === 1 && (
           <div className="space-y-5">
+            <button type="button" onClick={() => setStep(0)} className="flex items-center gap-1.5 text-[13px] text-[#737370] hover:text-[#1A1816] transition-colors">
+              <ArrowLeft className="w-4 h-4" /> Back to account
+            </button>
             <div className="flex flex-col items-center gap-2">
               <div className="flex items-center gap-3">
                 <span className={`text-sm transition-colors ${billingCycle === 'monthly' ? 'text-[#1A1816] font-medium' : 'text-[#737370]'}`}>Monthly</span>
