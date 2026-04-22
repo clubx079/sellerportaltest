@@ -140,25 +140,52 @@ export async function POST(request) {
       }
     } else {
       // Non-trial (incomplete): invoice has a real charge — must use PaymentIntent
-      let paymentClientSecret = subscription.latest_invoice?.payment_intent?.client_secret
+      let paymentClientSecret = null
 
-      if (!paymentClientSecret) {
-        const invoiceId = typeof subscription.latest_invoice === 'string'
-          ? subscription.latest_invoice
-          : subscription.latest_invoice?.id
+      // latest_invoice may be a string ID or expanded object depending on Stripe API version
+      const invoiceId = typeof subscription.latest_invoice === 'string'
+        ? subscription.latest_invoice
+        : subscription.latest_invoice?.id
+
+      // Try the expanded object first (older API behavior)
+      if (subscription.latest_invoice?.payment_intent?.client_secret) {
+        paymentClientSecret = subscription.latest_invoice.payment_intent.client_secret
+      }
+
+      if (!paymentClientSecret && invoiceId) {
         console.log('[create-intent] incomplete — fetching invoice directly:', invoiceId)
-        if (invoiceId) {
-          let invoice = await stripe.invoices.retrieve(invoiceId, { expand: ['payment_intent'] })
-          console.log('[create-intent] invoice status:', invoice.status, '| has payment_intent:', !!invoice.payment_intent)
+        let invoice = await stripe.invoices.retrieve(invoiceId, { expand: ['payment_intent'] })
+        console.log('[create-intent] invoice status:', invoice.status, '| payment_intent type:', typeof invoice.payment_intent)
 
-          // If invoice is still in draft, finalize it so Stripe creates the PaymentIntent
-          if (invoice.status === 'draft') {
-            console.log('[create-intent] invoice is draft — finalizing to create PaymentIntent')
-            invoice = await stripe.invoices.finalizeInvoice(invoiceId, { expand: ['payment_intent'] })
-            console.log('[create-intent] after finalize — status:', invoice.status, '| has payment_intent:', !!invoice.payment_intent)
+        // Finalize if still draft
+        if (invoice.status === 'draft') {
+          console.log('[create-intent] invoice is draft — finalizing')
+          invoice = await stripe.invoices.finalizeInvoice(invoiceId, { expand: ['payment_intent'] })
+          console.log('[create-intent] after finalize — status:', invoice.status)
+        }
+
+        // payment_intent may be a string ID (new Stripe API) or an expanded object
+        if (invoice.payment_intent) {
+          if (typeof invoice.payment_intent === 'string') {
+            const pi = await stripe.paymentIntents.retrieve(invoice.payment_intent)
+            paymentClientSecret = pi.client_secret
+          } else {
+            paymentClientSecret = invoice.payment_intent.client_secret
           }
+        }
 
-          paymentClientSecret = invoice.payment_intent?.client_secret
+        // Fallback: list recent PaymentIntents for this customer and find the matching one
+        if (!paymentClientSecret) {
+          console.log('[create-intent] payment_intent still null — listing customer PaymentIntents')
+          const piList = await stripe.paymentIntents.list({ customer: customerId, limit: 10 })
+          const match = piList.data.find(pi =>
+            pi.invoice === invoiceId ||
+            (pi.status === 'requires_payment_method' && pi.currency === 'usd')
+          )
+          if (match) {
+            console.log('[create-intent] found matching PaymentIntent via list:', match.id)
+            paymentClientSecret = match.client_secret
+          }
         }
       }
 
