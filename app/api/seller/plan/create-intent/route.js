@@ -118,52 +118,53 @@ export async function POST(request) {
 
     const subscription = await stripe.subscriptions.create(subscriptionParams)
 
-    // For trial subscriptions the first invoice is $0 so payment_intent is null.
-    // Fall back to pending_setup_intent which Stripe creates to collect the card.
-    let paymentClientSecret = subscription.latest_invoice?.payment_intent?.client_secret
-    const setupClientSecret = subscription.pending_setup_intent?.client_secret
+    console.log('[create-intent] subscription.id:', subscription.id, '| status:', subscription.status)
 
-    // Log what Stripe actually returned for debugging
-    const liType = typeof subscription.latest_invoice
-    const liPaymentIntent = liType === 'object' ? subscription.latest_invoice?.payment_intent : 'n/a'
-    console.log('[create-intent] latest_invoice type:', liType, '| payment_intent type:', typeof liPaymentIntent, '| payment_intent value:', JSON.stringify(liPaymentIntent)?.slice(0, 200))
+    let clientSecret = null
+    let responseType = 'subscription'
 
-    // If payment_intent is missing — either latest_invoice is a string ID (not expanded)
-    // or it's an object but payment_intent is still null or a string — fetch the invoice directly
-    if (!paymentClientSecret && subscription.latest_invoice) {
-      const invoiceId = typeof subscription.latest_invoice === 'string'
-        ? subscription.latest_invoice
-        : subscription.latest_invoice.id
-      console.log('[create-intent] fetching invoice directly:', invoiceId)
-      if (invoiceId) {
-        const invoice = await stripe.invoices.retrieve(invoiceId, { expand: ['payment_intent'] })
-        console.log('[create-intent] invoice.payment_intent type:', typeof invoice.payment_intent, '| has client_secret:', !!invoice.payment_intent?.client_secret)
-        paymentClientSecret = invoice.payment_intent?.client_secret
+    if (subscription.status === 'trialing') {
+      // Trial: $0 invoice — use pending_setup_intent to collect card for future billing
+      clientSecret = subscription.pending_setup_intent?.client_secret
+      responseType = 'setup'
+
+      if (!clientSecret) {
+        // Stripe didn't auto-create a pending_setup_intent — create one manually
+        console.log('[create-intent] trialing — no pending_setup_intent, creating SetupIntent manually')
+        const setupIntent = await stripe.setupIntents.create({
+          customer: customerId,
+          automatic_payment_methods: { enabled: true },
+          metadata: { seller_id, subscription_id: subscription.id },
+        })
+        clientSecret = setupIntent.client_secret
       }
+    } else {
+      // Non-trial (incomplete): invoice has a real charge — must use PaymentIntent
+      let paymentClientSecret = subscription.latest_invoice?.payment_intent?.client_secret
+
+      if (!paymentClientSecret) {
+        const invoiceId = typeof subscription.latest_invoice === 'string'
+          ? subscription.latest_invoice
+          : subscription.latest_invoice?.id
+        console.log('[create-intent] incomplete — fetching invoice directly:', invoiceId)
+        if (invoiceId) {
+          const invoice = await stripe.invoices.retrieve(invoiceId, { expand: ['payment_intent'] })
+          console.log('[create-intent] invoice.payment_intent has client_secret:', !!invoice.payment_intent?.client_secret)
+          paymentClientSecret = invoice.payment_intent?.client_secret
+        }
+      }
+
+      clientSecret = paymentClientSecret
     }
 
-    const clientSecret = paymentClientSecret || setupClientSecret
-
-    console.log('[create-intent] subscription.id:', subscription.id, '| paymentClientSecret:', !!paymentClientSecret, '| setupClientSecret:', !!setupClientSecret, '| clientSecret:', !!clientSecret)
+    console.log('[create-intent] type:', responseType, '| has clientSecret:', !!clientSecret)
 
     if (!clientSecret) {
-      // Stripe didn't create a pending_setup_intent (common with trials when no card exists yet).
-      // Create a SetupIntent manually to collect the card.
-      console.log('[create-intent] no clientSecret — creating SetupIntent manually for customer', customerId)
-      const setupIntent = await stripe.setupIntents.create({
-        customer: customerId,
-        automatic_payment_methods: { enabled: true },
-        metadata: { seller_id, subscription_id: subscription.id },
-      })
-      return NextResponse.json({
-        type: 'setup',
-        clientSecret: setupIntent.client_secret,
-        subscription_id: subscription.id,
-      })
+      return NextResponse.json({ error: 'Could not initialize subscription payment' }, { status: 500 })
     }
 
     return NextResponse.json({
-      type: paymentClientSecret ? 'subscription' : 'setup',
+      type: responseType,
       clientSecret,
       subscription_id: subscription.id,
     })

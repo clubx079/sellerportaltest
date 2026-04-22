@@ -132,7 +132,7 @@ export async function POST(request) {
           seller_id,
           plan_type,
           billing_cycle: billing_cycle || 'monthly',
-          status: sub.status === 'trialing' ? 'trialing' : 'active',
+          status: sub.status === 'trialing' ? 'trialing' : sub.status === 'incomplete' ? 'incomplete' : 'active',
           stripe_customer_id: typeof sub.customer === 'string' ? sub.customer : sub.customer?.id,
           stripe_subscription_id: sub.id,
           stripe_price_id: sub.items.data[0]?.price?.id || null,
