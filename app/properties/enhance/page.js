@@ -37,10 +37,10 @@ function formatExpiry(dateStr) {
 }
 
 const ADD_ONS = [
-  { id: 'highlight', label: 'Highlight Listing',   desc: 'Red-bordered card in search results for 30 days.',                               price: 999,  icon: Star },
-  { id: 'boost',     label: 'Boost Listing',        desc: 'Top of search results for 7 days.',                                             price: 1499, icon: TrendingUp },
-  { id: 'homepage',  label: 'Feature on Homepage',  desc: 'Shown to all visitors in the featured section for 7 days.',                     price: 2900, icon: Zap },
-  { id: 'bundle',    label: 'Visibility Bundle',    desc: 'Highlight (30 days) + Boost (7 days) at a discount. Best value.',               price: 2200, icon: Package },
+  { id: 'highlight', label: 'Highlight Listing',        desc: 'Red-bordered card in search results.',                                        price: 999,  duration: '30 Days', icon: Star },
+  { id: 'boost',     label: 'Boost Listing',             desc: 'Top of search results.',                                                     price: 1499, duration: '7 Days',  icon: TrendingUp },
+  { id: 'homepage',  label: 'Feature on Homepage',       desc: 'Shown to all visitors in the featured section.',                            price: 2900, duration: '7 Days',  icon: Zap },
+  { id: 'bundle',    label: 'Search Visibility Bundle',  desc: 'Highlight Listing and Boost Listing together at a discount.',                price: 2200, duration: 'Highlight 30d + Boost 7d', strikePrice: 2498, savings: 298, icon: Package },
 ]
 
 function CheckoutForm({ amount, addOns, propertyId, sellerId, onSuccess }) {
@@ -302,9 +302,9 @@ function EnhanceContent() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-8 items-start">
         {/* Left: Add-on selection */}
-        <div className="lg:col-span-2 space-y-3">
+        <div className="space-y-3">
           <p className="text-[13px] text-[#737370]">Select the add-ons you want to apply to this listing. One-time payments per listing.</p>
           {ADD_ONS.map((ao) => {
             const Icon = ao.icon
@@ -313,87 +313,146 @@ function EnhanceContent() {
               || (ao.id === 'boost' && property?.is_boosted)
               || (ao.id === 'homepage' && property?.is_homepage_featured)
               || (ao.id === 'bundle' && property?.is_highlighted && property?.is_boosted)
+            const isDisabled = alreadyActive
+              || (ao.id === 'bundle' && (selectedAddOns.includes('highlight') || selectedAddOns.includes('boost')))
+              || ((ao.id === 'highlight' || ao.id === 'boost') && selectedAddOns.includes('bundle'))
 
             return (
               <button
                 key={ao.id}
                 type="button"
-                onClick={() => !alreadyActive && toggleAddOn(ao.id)}
-                disabled={alreadyActive}
-                className={`w-full text-left p-5 rounded border-2 transition-all ${
-                  alreadyActive ? 'border-[#9FDBB8] bg-[#E4F5EC] opacity-70 cursor-default'
-                  : selected ? 'border-[#D03839] bg-[#FEF0EF]'
-                  : 'border-[#E8E8E4] bg-white hover:border-[#1A1816]'
-                }`}
+                onClick={() => !isDisabled && toggleAddOn(ao.id)}
+                disabled={isDisabled}
+                className={`w-full grid grid-cols-[44px_1fr_auto_22px] gap-4 items-center p-[18px_20px] border rounded-xl text-left transition-all
+                  ${alreadyActive ? 'border-[#9FDBB8] bg-[#E4F5EC] opacity-70 cursor-default'
+                  : selected ? 'border-[#D03839] bg-gradient-to-b from-[#FEF8F9] to-white shadow-[0_0_0_1px_#D03839]'
+                  : isDisabled ? 'border-[#E8E8E4] bg-white opacity-40 cursor-not-allowed'
+                  : 'border-[#E8E8E4] bg-white hover:border-[#C8C8C4] hover:-translate-y-px hover:shadow-sm'}`}
               >
-                <div className="flex items-start justify-between mb-2">
-                  <div className="flex items-center gap-2.5">
-                    <Icon className={`w-4 h-4 flex-shrink-0 ${alreadyActive ? 'text-[#0F6E56]' : selected ? 'text-[#D03839]' : 'text-[#737370]'}`} />
-                    <p className={`text-[14px] font-semibold ${alreadyActive ? 'text-[#0F6E56]' : selected ? 'text-[#D03839]' : 'text-[#1A1816]'}`}>
-                      {ao.label}
-                      {alreadyActive && <span className="ml-2 text-[11px] font-bold bg-[#0F6E56] text-white px-1.5 py-0.5 rounded">Active</span>}
-                    </p>
-                  </div>
-                  <p className="text-[14px] font-bold text-[#1A1816]">${(ao.price / 100).toFixed(2)}</p>
+                {/* Icon */}
+                <div className={`w-11 h-11 rounded-lg flex items-center justify-center flex-shrink-0
+                  ${alreadyActive ? 'bg-[#E4F5EC] text-[#0F6E56]' : selected ? 'bg-[#FEF0EF] text-[#D03839]' : 'bg-[#F5F3EE] text-[#444441]'}`}>
+                  <Icon className="w-5 h-5" />
                 </div>
-                <p className="text-[12px] text-[#737370] leading-relaxed">{ao.desc}</p>
+                {/* Text */}
+                <div className="min-w-0">
+                  <div className="flex items-center flex-wrap gap-2 mb-0.5">
+                    <span className={`text-[14px] font-semibold ${alreadyActive ? 'text-[#0F6E56]' : selected ? 'text-[#D03839]' : 'text-[#1A1816]'}`}>
+                      {ao.label}
+                    </span>
+                    {alreadyActive ? (
+                      <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-[#0F6E56] bg-[#E4F5EC] border border-[#9FDBB8] px-1.5 py-0.5 rounded">Active</span>
+                    ) : (
+                      <span className="font-mono text-[10px] font-medium tracking-[0.08em] uppercase text-[#737370] bg-[#F5F3EE] border border-[#E8E8E4] px-1.5 py-0.5 rounded">
+                        {ao.duration}
+                      </span>
+                    )}
+                    {ao.savings && !alreadyActive && (
+                      <span className="font-mono text-[10px] font-semibold tracking-[0.06em] uppercase text-[#0F6E56] bg-[#E8F1EC] px-1.5 py-0.5 rounded">
+                        Save ${(ao.savings / 100).toFixed(2)}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-[13px] text-[#737370]">{ao.desc}</p>
+                </div>
+                {/* Price */}
+                <div className="text-right flex-shrink-0">
+                  {ao.strikePrice && !alreadyActive && (
+                    <p className="text-[12px] text-[#A8A8A4] line-through">${(ao.strikePrice / 100).toFixed(2)}</p>
+                  )}
+                  <p className={`text-[16px] font-bold ${alreadyActive ? 'text-[#0F6E56]' : selected ? 'text-[#D03839]' : 'text-[#1A1816]'}`}>
+                    {alreadyActive ? 'Active' : `+$${(ao.price / 100).toFixed(2)}`}
+                  </p>
+                </div>
+                {/* Checkbox */}
+                <div className={`w-[22px] h-[22px] rounded-full border flex items-center justify-center flex-shrink-0 transition-all
+                  ${alreadyActive ? 'bg-[#0F6E56] border-[#0F6E56]' : selected ? 'bg-[#D03839] border-[#D03839]' : 'border-[#C8C8C4]'}`}>
+                  {(selected || alreadyActive) && <Check className="w-3 h-3 text-white" />}
+                </div>
               </button>
             )
           })}
         </div>
 
-        {/* Right: Order summary + payment */}
-        <div className="space-y-4">
-          <div className="bg-white border border-[#E8E8E4] rounded p-5">
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-[#A8A8A4] mb-4">Order Summary</p>
+        {/* Right: Sticky order summary + payment */}
+        <div className="lg:sticky lg:top-6 border border-[#E8E8E4] rounded-xl overflow-hidden bg-white flex flex-col shadow-sm">
+
+          {/* Order lines */}
+          <div className="p-5 flex-1 border-b border-[#E8E8E4]">
+            <div className="flex justify-between items-baseline mb-3.5">
+              <p className="font-mono text-[10px] font-medium tracking-[0.12em] uppercase text-[#737370]">Order Summary</p>
+              <p className="text-[11px] text-[#737370] font-medium">{selectedAddOns.length} item{selectedAddOns.length !== 1 ? 's' : ''}</p>
+            </div>
             {selectedAddOns.length === 0 ? (
-              <p className="text-[13px] text-[#A8A8A4] text-center py-4">Select add-ons to see pricing</p>
+              <p className="text-[13px] text-[#A8A8A4] italic py-2">No add-ons selected</p>
             ) : (
-              <div className="space-y-2">
+              <div className="divide-y divide-[#F0F0EE]">
                 {selectedAddOns.map(id => {
                   const ao = ADD_ONS.find(a => a.id === id)
                   return ao ? (
-                    <div key={id} className="flex justify-between items-center">
-                      <span className="text-[13px] text-[#1A1816]">{ao.label}</span>
-                      <span className="text-[13px] font-semibold text-[#1A1816]">${(ao.price / 100).toFixed(2)}</span>
+                    <div key={id} className="flex justify-between items-baseline py-2">
+                      <span className="text-[13px] text-[#444441]">
+                        <span className="font-mono text-[11px] text-[#A8A8A4] mr-1">+</span>
+                        {ao.label}
+                      </span>
+                      <span className="font-mono text-[13px] font-bold text-[#1A1816]">+${(ao.price / 100).toFixed(2)}</span>
                     </div>
                   ) : null
                 })}
-                <div className="border-t border-[#E8E8E4] pt-2 mt-2 flex justify-between items-center">
-                  <span className="text-[13px] font-bold text-[#1A1816]">Total</span>
-                  <span className="text-[15px] font-bold text-[#1A1816]">${(total / 100).toFixed(2)}</span>
-                </div>
               </div>
             )}
           </div>
 
-          {error && <div className="p-3 bg-[#FEF0EF] border border-[#F5C4C0] rounded text-[13px] text-[#D03839]">{error}</div>}
-
-          {selectedAddOns.length > 0 && (
-            <div className="bg-white border border-[#E8E8E4] rounded p-5">
-              {!clientSecret ? (
-                <button
-                  onClick={handleInitPayment}
-                  disabled={loading}
-                  className="w-full h-[44px] bg-[#D03839] hover:bg-[#E0493B] text-white text-[14px] font-semibold rounded transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-                >
-                  {loading ? <><Loader2 className="w-4 h-4 animate-spin" /> Loading…</> : 'Continue to Payment'}
-                </button>
-              ) : (
-                stripePromise && (
-                  <Elements stripe={stripePromise} options={{ clientSecret }}>
-                    <CheckoutForm
-                      amount={total}
-                      addOns={selectedAddOns}
-                      propertyId={propertyId}
-                      sellerId={userId}
-                      onSuccess={() => setSuccess(true)}
-                    />
-                  </Elements>
-                )
-              )}
+          {/* Total */}
+          <div className="px-5 py-4 flex justify-between items-baseline border-b border-[#E8E8E4]">
+            <div>
+              <p className="text-[15px] font-bold text-[#1A1816]">Total</p>
+              <p className="text-[11px] text-[#737370] mt-0.5">One-time charge</p>
             </div>
-          )}
+            <span className="text-[28px] font-bold text-[#1A1816] tracking-tight">${(total / 100).toFixed(2)}</span>
+          </div>
+
+          {error && <div className="mx-5 mt-4 p-3 bg-[#FEF0EF] border border-[#F5C4C0] rounded-lg text-[13px] text-[#D03839]">{error}</div>}
+
+          {/* CTA / Payment form */}
+          <div className="p-5">
+            {selectedAddOns.length === 0 ? (
+              <button disabled className="w-full h-[48px] bg-[#E8E8E4] text-[#A8A8A4] text-[14px] font-semibold rounded-lg cursor-not-allowed">
+                Select Add-Ons to Continue
+              </button>
+            ) : !clientSecret ? (
+              <button
+                onClick={handleInitPayment}
+                disabled={loading}
+                className="w-full h-[48px] bg-[#D03839] hover:bg-[#B8102A] active:scale-[0.98] text-white text-[14px] font-semibold rounded-lg transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-[0_4px_12px_rgba(208,56,57,0.25)]"
+              >
+                {loading ? <><Loader2 className="w-4 h-4 animate-spin" /> Loading…</> : 'Proceed to Payment'}
+              </button>
+            ) : (
+              stripePromise && (
+                <Elements stripe={stripePromise} options={{ clientSecret }}>
+                  <CheckoutForm
+                    amount={total}
+                    addOns={selectedAddOns}
+                    propertyId={propertyId}
+                    sellerId={userId}
+                    onSuccess={() => setSuccess(true)}
+                  />
+                </Elements>
+              )
+            )}
+          </div>
+
+          {/* Footer */}
+          <div className="px-5 py-3.5 bg-[#FAFAF6] border-t border-[#E8E8E4] text-center">
+            <div className="flex items-center justify-center gap-1.5 mb-1">
+              <svg className="w-3 h-3 text-[#737370]" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+              </svg>
+              <span className="text-[12px] text-[#737370]">Secured by Stripe</span>
+            </div>
+            <p className="text-[11px] text-[#A8A8A4]">No subscription · No auto-renewal</p>
+          </div>
         </div>
       </div>
     </div>
