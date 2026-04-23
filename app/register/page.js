@@ -167,7 +167,7 @@ function PlanCard({ id, selected, annual, onSelect }) {
 }
 
 // ─── Checkout form (no trial) ─────────────────────────────────────────────────
-function CheckoutForm({ planType, billingCycle, intentType, onSuccess }) {
+function CheckoutForm({ planType, billingCycle, intentType, discount, onSuccess }) {
   const stripe = useStripe()
   const elements = useElements()
   const [processing, setProcessing] = useState(false)
@@ -197,7 +197,15 @@ function CheckoutForm({ planType, billingCycle, intentType, onSuccess }) {
   const monthlyPrice = isPro ? 99 : 299
   const annualTotal = isPro ? 948 : 2868
   const planName = isPro ? 'Pro Seller' : 'Enterprise'
-  const chargeLabel = isAnnual ? `$${annualTotal.toLocaleString()} / year` : `$${monthlyPrice} / month`
+  const baseAmount = isAnnual ? annualTotal : monthlyPrice
+
+  const discountAmount = discount
+    ? discount.type === 'percent'
+      ? (baseAmount * discount.value / 100)
+      : Math.min(discount.value, baseAmount)
+    : 0
+  const finalAmount = baseAmount - discountAmount
+  const chargeLabel = isAnnual ? `$${finalAmount.toLocaleString()} / year` : `$${finalAmount} / month`
 
   return (
     <form onSubmit={handlePay} className="space-y-4">
@@ -212,8 +220,16 @@ function CheckoutForm({ planType, billingCycle, intentType, onSuccess }) {
               <p className="text-[13px] font-semibold text-[#1A1816]">{planName}</p>
               <p className="text-[11px] text-[#737370] mt-0.5">{isAnnual ? 'Annual billing · billed as one payment' : 'Monthly billing · cancel anytime'}</p>
             </div>
-            <p className="text-[13px] font-semibold text-[#1A1816]">{chargeLabel}</p>
+            <p className="text-[13px] font-semibold text-[#1A1816]">{isAnnual ? `$${annualTotal.toLocaleString()}` : `$${monthlyPrice}`}</p>
           </div>
+          {discount && (
+            <div className="flex justify-between items-center">
+              <p className="text-[12px] text-[#0F6E56]">
+                Promo: {discount.name} ({discount.type === 'percent' ? `${discount.value}% off` : `$${discount.value} off`})
+              </p>
+              <p className="text-[12px] font-semibold text-[#0F6E56]">−${discountAmount % 1 === 0 ? discountAmount : discountAmount.toFixed(2)}</p>
+            </div>
+          )}
           <div className="border-t border-[#E8E8E4] pt-3 flex justify-between items-center">
             <p className="text-[13px] font-bold text-[#1A1816]">Due today</p>
             <p className="text-[22px] font-bold text-[#D03839]">{chargeLabel}</p>
@@ -246,43 +262,129 @@ function PaymentStep({ sellerId, planType, billingCycle, onSuccess, onBack }) {
   const [clientSecret, setClientSecret] = useState(null)
   const [intentType, setIntentType] = useState('subscription')
   const [subscriptionId, setSubscriptionId] = useState(null)
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
+  const [promoCode, setPromoCode] = useState('')
+  const [promoValidating, setPromoValidating] = useState(false)
+  const [promoError, setPromoError] = useState(null)
+  const [appliedPromo, setAppliedPromo] = useState(null)
 
-  useEffect(() => {
-    fetch('/api/seller/plan/create-intent', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ seller_id: sellerId, plan_type: planType, billing_cycle: billingCycle, no_trial: true }),
-    })
-      .then(r => r.json())
-      .then(d => {
-        if (d.clientSecret) {
-          setClientSecret(d.clientSecret)
-          setIntentType(d.type || 'subscription')
-          if (d.subscription_id) setSubscriptionId(d.subscription_id)
-        } else {
-          setError(d.error || 'Failed to initialize payment')
-        }
+  const validatePromo = async () => {
+    if (!promoCode.trim()) return
+    setPromoValidating(true)
+    setPromoError(null)
+    try {
+      const res = await fetch(`/api/coupons/validate?code=${encodeURIComponent(promoCode.trim())}`)
+      const data = await res.json()
+      if (data.valid) {
+        setAppliedPromo(data)
+        setPromoCode('')
+      } else {
+        setPromoError(data.error || 'Invalid promo code')
+      }
+    } catch {
+      setPromoError('Failed to validate code')
+    }
+    setPromoValidating(false)
+  }
+
+  const createIntent = async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const res = await fetch('/api/seller/plan/create-intent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          seller_id: sellerId,
+          plan_type: planType,
+          billing_cycle: billingCycle,
+          no_trial: true,
+          promo_code_id: appliedPromo?.promo_code_id || null,
+        }),
       })
-      .catch(() => setError('Failed to initialize payment'))
-      .finally(() => setLoading(false))
-  }, [sellerId, planType, billingCycle])
-
-  if (loading) return <div className="flex justify-center py-12"><Loader2 className="w-7 h-7 animate-spin text-[#D03839]" /></div>
-  if (error) return <div className="p-4 bg-[#FEF0EF] border border-[#F5C0BF] rounded text-[13px] text-[#D03839] text-center">{error}</div>
+      const d = await res.json()
+      if (d.clientSecret) {
+        setClientSecret(d.clientSecret)
+        setIntentType(d.type || 'subscription')
+        if (d.subscription_id) setSubscriptionId(d.subscription_id)
+      } else {
+        setError(d.error || 'Failed to initialize payment')
+      }
+    } catch {
+      setError('Failed to initialize payment')
+    }
+    setLoading(false)
+  }
 
   return (
     <div className="space-y-4">
       <button type="button" onClick={onBack} className="flex items-center gap-1.5 text-[13px] text-[#737370] hover:text-[#1A1816] transition-colors">
         <ArrowLeft className="w-4 h-4" /> Back to plans
       </button>
-      {stripePromise && clientSecret ? (
+
+      {!clientSecret ? (
+        <div className="space-y-4">
+          {/* Promo code input */}
+          <div className="rounded border border-[#E8E8E4] overflow-hidden">
+            <div className="bg-[#FAFAF8] px-4 py-2.5 border-b border-[#E8E8E4]">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-[#A8A8A4]">Promo Code</p>
+            </div>
+            <div className="bg-white px-4 py-4">
+              {appliedPromo ? (
+                <div className="flex items-center justify-between p-3 rounded" style={{ background: '#E4F5EC', border: '1px solid #B3DFC5' }}>
+                  <div>
+                    <p className="text-[13px] font-semibold text-[#0F6E56]">{appliedPromo.name}</p>
+                    <p className="text-[11px] text-[#0F6E56] mt-0.5">
+                      {appliedPromo.discount.type === 'percent' ? `${appliedPromo.discount.value}% off` : `$${appliedPromo.discount.value} off`}
+                      {appliedPromo.duration === 'once' ? ' · first payment' : appliedPromo.duration === 'repeating' ? ` · ${appliedPromo.duration_in_months} months` : ' · forever'}
+                    </p>
+                  </div>
+                  <button onClick={() => setAppliedPromo(null)} className="text-[12px] text-[#0F6E56] font-medium hover:underline">Remove</button>
+                </div>
+              ) : (
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={promoCode}
+                    onChange={e => { setPromoCode(e.target.value.toUpperCase()); setPromoError(null) }}
+                    onKeyDown={e => e.key === 'Enter' && validatePromo()}
+                    placeholder="Enter promo code"
+                    className="flex-1 h-[40px] px-3 rounded border border-[#E8E8E4] text-[13px] text-[#1A1816] bg-white outline-none focus:border-[#D03839]"
+                  />
+                  <button
+                    type="button"
+                    onClick={validatePromo}
+                    disabled={promoValidating || !promoCode.trim()}
+                    className="px-4 h-[40px] rounded text-[13px] font-semibold border border-[#E8E8E4] text-[#444441] bg-white hover:bg-[#FAFAF8] disabled:opacity-50 transition-colors flex items-center gap-1.5"
+                  >
+                    {promoValidating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
+                    Apply
+                  </button>
+                </div>
+              )}
+              {promoError && <p className="text-[12px] text-[#D03839] mt-2">{promoError}</p>}
+            </div>
+          </div>
+
+          {error && <div className="p-3 bg-[#FEF0EF] border border-[#F5C0BF] rounded text-[13px] text-[#D03839]">{error}</div>}
+
+          <button
+            type="button"
+            onClick={createIntent}
+            disabled={loading}
+            className="w-full h-[46px] bg-[#D03839] hover:bg-[#E0493B] text-white text-[14px] font-semibold rounded transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+          >
+            {loading ? <><Loader2 className="w-4 h-4 animate-spin" /> Loading…</> : 'Continue to Payment'}
+          </button>
+        </div>
+      ) : stripePromise ? (
         <Elements stripe={stripePromise} options={{ clientSecret, terms: { card: 'never' } }}>
           <CheckoutForm
             planType={planType}
             billingCycle={billingCycle}
             intentType={intentType}
+            discount={appliedPromo?.discount ? { ...appliedPromo.discount, name: appliedPromo.name } : null}
             onSuccess={(pmId) => onSuccess(subscriptionId, pmId)}
           />
         </Elements>

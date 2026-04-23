@@ -17,7 +17,7 @@ export async function POST(request) {
     enterprise_annual:    process.env.STRIPE_PRICE_ENTERPRISE_ANNUAL,
   }
   try {
-    const { seller_id, plan_type, billing_cycle, quantity = 1, no_trial = false } = await request.json()
+    const { seller_id, plan_type, billing_cycle, quantity = 1, no_trial = false, promo_code_id } = await request.json()
 
     if (!seller_id || !plan_type) {
       return NextResponse.json({ error: 'seller_id and plan_type are required' }, { status: 400 })
@@ -73,13 +73,25 @@ export async function POST(request) {
 
     // --- STANDARD: one-time PaymentIntent ($29 × quantity) ---
     if (plan_type === 'standard') {
-      const amount = 2900 * quantity
+      let amount = 2900 * quantity
+      // Apply fixed/percent discount from promo code
+      if (promo_code_id) {
+        try {
+          const promoCode = await stripe.promotionCodes.retrieve(promo_code_id)
+          const coupon = promoCode.coupon
+          if (coupon.percent_off) {
+            amount = Math.round(amount * (1 - coupon.percent_off / 100))
+          } else if (coupon.amount_off) {
+            amount = Math.max(0, amount - coupon.amount_off)
+          }
+        } catch {}
+      }
       const paymentIntent = await stripe.paymentIntents.create({
         amount,
         currency: 'usd',
         customer: customerId,
         automatic_payment_methods: { enabled: true },
-        metadata: { seller_id, plan_type: 'standard', quantity: String(quantity) },
+        metadata: { seller_id, plan_type: 'standard', quantity: String(quantity), promo_code_id: promo_code_id || '' },
       })
       return NextResponse.json({ type: 'payment_intent', clientSecret: paymentIntent.client_secret })
     }
@@ -99,6 +111,7 @@ export async function POST(request) {
       payment_settings: { save_default_payment_method: 'on_subscription' },
       expand: ['latest_invoice.payment_intent', 'pending_setup_intent'],
       metadata: { seller_id, plan_type, billing_cycle: billing_cycle || 'monthly' },
+      ...(promo_code_id ? { discounts: [{ promotion_code: promo_code_id }] } : {}),
     }
 
     if ((plan_type === 'pro' || plan_type === 'enterprise') && !no_trial) {

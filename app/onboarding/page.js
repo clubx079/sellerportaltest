@@ -390,7 +390,7 @@ function StepPlan({ onNext }) {
 }
 
 // ─── Step 3: Payment ──────────────────────────────────────────────────────────
-function CheckoutForm({ session, intentType, onSuccess }) {
+function CheckoutForm({ session, intentType, appliedPromo, onSuccess }) {
   const stripe = useStripe()
   const elements = useElements()
   const [processing, setProcessing] = useState(false)
@@ -463,6 +463,14 @@ function CheckoutForm({ session, intentType, onSuccess }) {
             </div>
             <p className="text-[13px] font-semibold text-[#1A1816]">{chargeLabel}</p>
           </div>
+          {appliedPromo && (
+            <div className="flex justify-between items-center">
+              <p className="text-[12px] text-[#0F6E56]">
+                Promo: {appliedPromo.name} ({appliedPromo.discount.type === 'percent' ? `${appliedPromo.discount.value}% off` : `$${appliedPromo.discount.value} off`})
+              </p>
+              <p className="text-[12px] font-semibold text-[#0F6E56]">Applied after trial</p>
+            </div>
+          )}
           <div className="border-t border-[#E8E8E4] pt-3 flex justify-between items-center">
             <p className="text-[13px] font-bold text-[#1A1816]">Due today</p>
             <p className="text-[22px] font-bold text-[#0F6E56]">$0</p>
@@ -494,55 +502,131 @@ function CheckoutForm({ session, intentType, onSuccess }) {
 function StepPayment({ onSuccess }) {
   const [clientSecret, setClientSecret] = useState(null)
   const [intentType, setIntentType] = useState('subscription')
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [session, setSession] = useState({})
+  const [promoCode, setPromoCode] = useState('')
+  const [promoValidating, setPromoValidating] = useState(false)
+  const [promoError, setPromoError] = useState(null)
+  const [appliedPromo, setAppliedPromo] = useState(null)
 
   useEffect(() => {
     const s = JSON.parse(sessionStorage.getItem('onboarding') || '{}')
     setSession(s)
-
-    fetch('/api/seller/plan/create-intent', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        seller_id: s.seller_id,
-        plan_type: s.plan_type,
-        billing_cycle: s.billing_cycle,
-        quantity: s.quantity || 1,
-      }),
-    })
-      .then(r => r.json())
-      .then(d => {
-        if (d.clientSecret) {
-          setClientSecret(d.clientSecret)
-          setIntentType(d.type || 'subscription')
-          // Store subscription_id so StepSuccess can activate the plan
-          if (d.subscription_id) {
-            const s2 = JSON.parse(sessionStorage.getItem('onboarding') || '{}')
-            sessionStorage.setItem('onboarding', JSON.stringify({ ...s2, subscription_id: d.subscription_id }))
-          }
-        } else {
-          setError(d.error || 'Failed to initialize payment')
-        }
-      })
-      .catch(() => setError('Failed to initialize payment'))
-      .finally(() => setLoading(false))
   }, [])
 
-  if (loading) return (
-    <div className="flex justify-center py-12">
-      <Loader2 className="w-7 h-7 animate-spin text-[#D03839]" />
-    </div>
-  )
+  const validatePromo = async () => {
+    if (!promoCode.trim()) return
+    setPromoValidating(true)
+    setPromoError(null)
+    try {
+      const res = await fetch(`/api/coupons/validate?code=${encodeURIComponent(promoCode.trim())}`)
+      const data = await res.json()
+      if (data.valid) {
+        setAppliedPromo(data)
+        setPromoCode('')
+      } else {
+        setPromoError(data.error || 'Invalid promo code')
+      }
+    } catch {
+      setPromoError('Failed to validate code')
+    }
+    setPromoValidating(false)
+  }
 
-  if (error) return (
-    <div className="p-4 bg-[#FEF0EF] border border-[#F5C0BF] rounded text-[13px] text-[#D03839] text-center">{error}</div>
+  const createIntent = async () => {
+    setLoading(true)
+    setError(null)
+    const s = JSON.parse(sessionStorage.getItem('onboarding') || '{}')
+    try {
+      const res = await fetch('/api/seller/plan/create-intent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          seller_id: s.seller_id,
+          plan_type: s.plan_type,
+          billing_cycle: s.billing_cycle,
+          quantity: s.quantity || 1,
+          promo_code_id: appliedPromo?.promo_code_id || null,
+        }),
+      })
+      const d = await res.json()
+      if (d.clientSecret) {
+        setClientSecret(d.clientSecret)
+        setIntentType(d.type || 'subscription')
+        if (d.subscription_id) {
+          const s2 = JSON.parse(sessionStorage.getItem('onboarding') || '{}')
+          sessionStorage.setItem('onboarding', JSON.stringify({ ...s2, subscription_id: d.subscription_id }))
+        }
+      } else {
+        setError(d.error || 'Failed to initialize payment')
+      }
+    } catch {
+      setError('Failed to initialize payment')
+    }
+    setLoading(false)
+  }
+
+  if (!clientSecret) return (
+    <div className="space-y-4">
+      {/* Promo code */}
+      <div className="rounded border border-[#E8E8E4] overflow-hidden">
+        <div className="bg-[#FAFAF8] px-4 py-2.5 border-b border-[#E8E8E4]">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-[#A8A8A4]">Promo Code</p>
+        </div>
+        <div className="bg-white px-4 py-4">
+          {appliedPromo ? (
+            <div className="flex items-center justify-between p-3 rounded" style={{ background: '#E4F5EC', border: '1px solid #B3DFC5' }}>
+              <div>
+                <p className="text-[13px] font-semibold text-[#0F6E56]">{appliedPromo.name}</p>
+                <p className="text-[11px] text-[#0F6E56] mt-0.5">
+                  {appliedPromo.discount.type === 'percent' ? `${appliedPromo.discount.value}% off` : `$${appliedPromo.discount.value} off`}
+                  {appliedPromo.duration === 'once' ? ' · first payment' : appliedPromo.duration === 'repeating' ? ` · ${appliedPromo.duration_in_months} months` : ' · forever'}
+                </p>
+              </div>
+              <button onClick={() => setAppliedPromo(null)} className="text-[12px] text-[#0F6E56] font-medium hover:underline">Remove</button>
+            </div>
+          ) : (
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={promoCode}
+                onChange={e => { setPromoCode(e.target.value.toUpperCase()); setPromoError(null) }}
+                onKeyDown={e => e.key === 'Enter' && validatePromo()}
+                placeholder="Enter promo code"
+                className="flex-1 h-[40px] px-3 rounded border border-[#E8E8E4] text-[13px] text-[#1A1816] bg-white outline-none focus:border-[#D03839]"
+              />
+              <button
+                type="button"
+                onClick={validatePromo}
+                disabled={promoValidating || !promoCode.trim()}
+                className="px-4 h-[40px] rounded text-[13px] font-semibold border border-[#E8E8E4] text-[#444441] bg-white hover:bg-[#FAFAF8] disabled:opacity-50 transition-colors flex items-center gap-1.5"
+              >
+                {promoValidating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
+                Apply
+              </button>
+            </div>
+          )}
+          {promoError && <p className="text-[12px] text-[#D03839] mt-2">{promoError}</p>}
+        </div>
+      </div>
+
+      {error && <div className="p-3 bg-[#FEF0EF] border border-[#F5C0BF] rounded text-[13px] text-[#D03839]">{error}</div>}
+
+      <button
+        type="button"
+        onClick={createIntent}
+        disabled={loading}
+        className="w-full h-[46px] bg-[#D03839] hover:bg-[#E0493B] text-white text-[14px] font-semibold rounded transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+      >
+        {loading ? <><Loader2 className="w-4 h-4 animate-spin" /> Loading…</> : 'Continue to Payment'}
+      </button>
+    </div>
   )
 
   return stripePromise && clientSecret ? (
     <Elements stripe={stripePromise} options={{ clientSecret, terms: { card: 'never' } }}>
-      <CheckoutForm session={session} intentType={intentType} onSuccess={(pmId) => {
+      <CheckoutForm session={session} intentType={intentType} appliedPromo={appliedPromo} onSuccess={(pmId) => {
         if (pmId) {
           const s2 = JSON.parse(sessionStorage.getItem('onboarding') || '{}')
           sessionStorage.setItem('onboarding', JSON.stringify({ ...s2, pm_id: pmId }))
