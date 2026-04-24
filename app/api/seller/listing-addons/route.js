@@ -17,14 +17,32 @@ const ADD_ON_PRICES = {
 export async function POST(request) {
   const { supabase, stripe } = getClients()
   try {
-    const { seller_id, add_ons = [], property_id } = await request.json()
+    const { seller_id, add_ons = [], property_id, promo_code_id } = await request.json()
 
     if (!seller_id) return NextResponse.json({ error: 'seller_id required' }, { status: 400 })
 
     const validAddOns = add_ons.filter(id => ADD_ON_PRICES[id])
     if (validAddOns.length === 0) return NextResponse.json({ error: 'No valid add-ons provided' }, { status: 400 })
 
-    const amount = validAddOns.reduce((sum, id) => sum + ADD_ON_PRICES[id].amount, 0)
+    const baseAmount = validAddOns.reduce((sum, id) => sum + ADD_ON_PRICES[id].amount, 0)
+
+    let amount = baseAmount
+    let discountInfo = null
+    if (promo_code_id) {
+      const promoCode = await stripe.promotionCodes.retrieve(promo_code_id)
+      const coupon = promoCode.coupon
+      if (coupon.valid) {
+        const discountAmount = coupon.percent_off
+          ? Math.round(baseAmount * coupon.percent_off / 100)
+          : Math.min(coupon.amount_off, baseAmount)
+        amount = Math.max(baseAmount - discountAmount, 50)
+        discountInfo = {
+          type: coupon.percent_off ? 'percent' : 'fixed',
+          value: coupon.percent_off || coupon.amount_off / 100,
+          discountAmount,
+        }
+      }
+    }
 
     // Resolve Stripe customer
     let customerId = null
@@ -63,6 +81,8 @@ export async function POST(request) {
     return NextResponse.json({
       clientSecret: paymentIntent.client_secret,
       amount,
+      baseAmount,
+      discountInfo,
       add_ons: validAddOns,
     })
   } catch (err) {

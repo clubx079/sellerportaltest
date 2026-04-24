@@ -1369,6 +1369,12 @@ function AddOnsTab({
   userId, onPublish, saving, onBack,
   formData, images, trialPlan, onShowUpgradePrompt,
 }) {
+  const [promoCode, setPromoCode] = React.useState('')
+  const [promoValidating, setPromoValidating] = React.useState(false)
+  const [promoError, setPromoError] = React.useState(null)
+  const [appliedPromo, setAppliedPromo] = React.useState(null)
+  const [finalAmount, setFinalAmount] = React.useState(null)
+
   const toggleAddOn = (id) => {
     setSelectedAddOns(prev => {
       if (prev.includes(id)) return prev.filter(a => a !== id)
@@ -1379,12 +1385,35 @@ function AddOnsTab({
     })
     setAddOnClientSecret(null)
     setAddOnError(null)
+    setAppliedPromo(null)
+    setFinalAmount(null)
   }
 
   const total = selectedAddOns.reduce((sum, id) => {
     const ao = ADD_ONS.find(a => a.id === id)
     return sum + (ao?.price || 0)
   }, 0)
+
+  const validatePromo = async () => {
+    if (!promoCode.trim()) return
+    setPromoValidating(true)
+    setPromoError(null)
+    try {
+      const res = await fetch(`/api/coupons/validate?code=${encodeURIComponent(promoCode.trim())}`)
+      const data = await res.json()
+      if (!res.ok || !data.valid) {
+        setPromoError(data.error || 'Invalid promo code')
+        setAppliedPromo(null)
+      } else {
+        setAppliedPromo(data)
+        setPromoError(null)
+      }
+    } catch {
+      setPromoError('Failed to validate code')
+    } finally {
+      setPromoValidating(false)
+    }
+  }
 
   const handleInitPayment = async () => {
     if (!userId || selectedAddOns.length === 0) return
@@ -1402,11 +1431,16 @@ function AddOnsTab({
       const res = await fetch('/api/seller/listing-addons', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ seller_id: userId, add_ons: selectedAddOns }),
+        body: JSON.stringify({
+          seller_id: userId,
+          add_ons: selectedAddOns,
+          promo_code_id: appliedPromo?.promo_code_id || null,
+        }),
       })
       const d = await res.json()
       if (!res.ok) throw new Error(d.error || 'Failed to initialize payment')
       setAddOnClientSecret(d.clientSecret)
+      setFinalAmount(d.amount)
     } catch (err) {
       setAddOnError(err.message)
     } finally {
@@ -1423,7 +1457,7 @@ function AddOnsTab({
     || (images || []).find(img => img.status === 'completed')
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-8 items-start">
+    <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-8 items-start" style={{ fontFamily: 'var(--font-dm-sans), sans-serif' }}>
 
       {/* ── Left: base plan card + add-on cards + payment form ── */}
       <div className="space-y-6">
@@ -1431,14 +1465,14 @@ function AddOnsTab({
         {/* What you're paying for */}
         <div>
           <p className="text-[11px] font-medium tracking-[0.12em] uppercase text-[#737370] mb-3">What you&apos;re getting</p>
-          <div className="relative border border-[#E8E8E4] rounded-xl bg-gradient-to-b from-[#FAFAF6] to-[#F5F3EE] p-5 overflow-hidden">
-            <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-[#D03839] rounded-l-xl" />
+          <div className="relative border border-[#E8E8E4] rounded bg-[#FAFAF8] p-5 overflow-hidden">
+            <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-[#D03839]" />
             <div className="flex justify-between items-baseline mb-3">
               <div className="flex items-center gap-2">
-                <span className="text-[17px] font-bold text-[#1A1816]">Basic Listing</span>
+                <span className="text-[15px] font-bold text-[#1A1816]">Basic Listing</span>
                 <span className="font-mono text-[10px] font-medium tracking-[0.08em] uppercase text-[#737370] bg-white border border-[#E8E8E4] px-2 py-0.5 rounded">30 Days</span>
               </div>
-              <span className="text-[18px] font-bold text-[#1A1816]">FREE</span>
+              <span className="text-[16px] font-bold text-[#1A1816]">FREE</span>
             </div>
             <ul className="flex flex-wrap gap-x-5 gap-y-1.5">
               {['Public marketplace listing', 'Full photo gallery', 'Buyer inquiry inbox', 'Listing analytics'].map(feat => (
@@ -1469,24 +1503,24 @@ function AddOnsTab({
                   type="button"
                   onClick={() => !isDisabled && toggleAddOn(ao.id)}
                   disabled={isDisabled}
-                  className={`w-full grid grid-cols-[44px_1fr_auto_22px] gap-4 items-center p-[18px_20px] border rounded-xl text-left transition-all
+                  className={`w-full grid grid-cols-[44px_1fr_auto_22px] gap-4 items-center p-[18px_20px] border rounded text-left transition-all
                     ${selected ? 'border-[#D03839] bg-gradient-to-b from-[#FEF8F9] to-white shadow-[0_0_0_1px_#D03839]'
                     : isDisabled ? 'border-[#E8E8E4] bg-white opacity-40 cursor-not-allowed'
                     : 'border-[#E8E8E4] bg-white hover:border-[#C8C8C4] hover:-translate-y-px hover:shadow-sm'}`}
                 >
                   {/* Icon */}
-                  <div className={`w-11 h-11 rounded-lg flex items-center justify-center flex-shrink-0 ${selected ? 'bg-[#FEF0EF] text-[#D03839]' : 'bg-[#F5F3EE] text-[#444441]'}`}>
+                  <div className={`w-11 h-11 rounded flex items-center justify-center flex-shrink-0 ${selected ? 'bg-[#FEF0EF] text-[#D03839]' : 'bg-[#F3F3F0] text-[#444441]'}`}>
                     <Icon className="w-5 h-5" />
                   </div>
                   {/* Text */}
                   <div className="min-w-0">
                     <div className="flex items-center flex-wrap gap-2 mb-0.5">
                       <span className="text-[14px] font-semibold text-[#1A1816]">{ao.label}</span>
-                      <span className="font-mono text-[10px] font-medium tracking-[0.08em] uppercase text-[#737370] bg-[#F5F3EE] border border-[#E8E8E4] px-1.5 py-0.5 rounded">
+                      <span className="font-mono text-[10px] font-medium tracking-[0.08em] uppercase text-[#737370] bg-[#F3F3F0] border border-[#E8E8E4] px-1.5 py-0.5 rounded">
                         {ao.duration}
                       </span>
                       {ao.savings && (
-                        <span className="font-mono text-[10px] font-semibold tracking-[0.06em] uppercase text-[#0F6E56] bg-[#E8F1EC] px-1.5 py-0.5 rounded">
+                        <span className="font-mono text-[10px] font-semibold tracking-[0.06em] uppercase text-[#0F6E56] bg-[#E4F5EC] px-1.5 py-0.5 rounded">
                           Save ${(ao.savings / 100).toFixed(2)}
                         </span>
                       )}
@@ -1498,13 +1532,13 @@ function AddOnsTab({
                     {ao.strikePrice && (
                       <p className="text-[12px] text-[#A8A8A4] line-through">${(ao.strikePrice / 100).toFixed(2)}</p>
                     )}
-                    <p className={`text-[16px] font-bold ${selected ? 'text-[#D03839]' : 'text-[#1A1816]'}`}>
+                    <p className={`text-[15px] font-bold ${selected ? 'text-[#D03839]' : 'text-[#1A1816]'}`}>
                       +${(ao.price / 100).toFixed(2)}
                     </p>
                   </div>
                   {/* Checkbox */}
                   <div className={`w-[22px] h-[22px] rounded-full border flex items-center justify-center flex-shrink-0 transition-all
-                    ${selected ? 'bg-[#D03839] border-[#D03839]' : 'border-[#C8C8C4]'}`}>
+                    ${selected ? 'bg-[#D03839] border-[#D03839]' : 'border-[#D4D4CF]'}`}>
                     {selected && <Check className="w-3 h-3 text-white" />}
                   </div>
                 </button>
@@ -1514,19 +1548,19 @@ function AddOnsTab({
         </div>
 
         {addOnError && (
-          <div className="p-3 bg-[#FEF0EF] border border-[#F5C4C0] rounded-lg text-[13px] text-[#D03839]">{addOnError}</div>
+          <div className="p-3 bg-[#FEF0EF] border border-[#F5C4C0] rounded text-[13px] text-[#D03839]">{addOnError}</div>
         )}
 
         {/* Payment form when client secret is ready */}
         {addOnClientSecret && stripePromise && (
-          <div className="border border-[#E8E8E4] rounded-xl p-5 bg-white">
+          <div className="border border-[#E8E8E4] rounded p-5 bg-white">
             <p className="text-[14px] font-semibold text-[#1A1816] mb-1">Payment Details</p>
             <p className="text-[13px] text-[#737370] mb-5">
-              Your card will be charged <span className="font-semibold text-[#1A1816]">${(total / 100).toFixed(2)}</span> upon publishing.
+              Your card will be charged <span className="font-semibold text-[#1A1816]">${((finalAmount ?? total) / 100).toFixed(2)}</span> upon publishing.
             </p>
             <Elements stripe={stripePromise} options={{ clientSecret: addOnClientSecret }}>
               <AddOnsCheckoutForm
-                amount={total}
+                amount={finalAmount ?? total}
                 onSuccess={(piId) => {
                   onPublish('active', { skipFeaturedPrompt: true, forceAutoSelectFeatured: true, addOnFlags, addonPaymentIntentId: piId })
                 }}
@@ -1541,7 +1575,7 @@ function AddOnsTab({
           <button
             type="button"
             onClick={onBack}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-lg border border-[#E8E8E4] text-[13px] font-medium text-[#737370] hover:border-[#1A1816] hover:text-[#1A1816] transition-colors"
+            className="flex items-center gap-1.5 px-4 py-2 rounded border border-[#E8E8E4] text-[13px] font-medium text-[#737370] hover:border-[#1A1816] hover:text-[#1A1816] transition-colors"
           >
             <ArrowLeft className="w-4 h-4" /> Back
           </button>
@@ -1549,14 +1583,14 @@ function AddOnsTab({
       </div>
 
       {/* ── Right: sticky order summary ── */}
-      <div className="lg:sticky lg:top-6 border border-[#E8E8E4] rounded-xl overflow-hidden bg-white flex flex-col shadow-sm">
+      <div className="lg:sticky lg:top-6 border border-[#E8E8E4] rounded overflow-hidden bg-white flex flex-col">
 
         {/* Property preview */}
         <div className="p-5 border-b border-[#E8E8E4] flex gap-3.5">
           {featuredImage?.imageUrl ? (
-            <img src={featuredImage.imageUrl} alt="" className="w-16 h-16 rounded-lg object-cover flex-shrink-0 border border-[#E8E8E4]" />
+            <img src={featuredImage.imageUrl} alt="" className="w-16 h-16 rounded object-cover flex-shrink-0 border border-[#E8E8E4]" />
           ) : (
-            <div className="w-16 h-16 rounded-lg bg-gradient-to-br from-[#3A4A5C] to-[#1E2830] flex-shrink-0 flex items-center justify-center border border-[#E8E8E4]">
+            <div className="w-16 h-16 rounded bg-gradient-to-br from-[#3A4A5C] to-[#1E2830] flex-shrink-0 flex items-center justify-center border border-[#E8E8E4]">
               <Home className="w-6 h-6 text-white/60" />
             </div>
           )}
@@ -1581,7 +1615,7 @@ function AddOnsTab({
               <span className="text-[13px] font-medium text-[#1A1816]">
                 Basic Listing <span className="font-normal text-[#737370]">· 30 days</span>
               </span>
-              <span className="font-mono text-[13px] font-bold text-[#0F6E56]">FREE</span>
+              <span className="text-[13px] font-bold text-[#0F6E56]">FREE</span>
             </div>
             {/* Add-on lines */}
             {selectedAddOns.map(id => {
@@ -1590,15 +1624,61 @@ function AddOnsTab({
               return (
                 <div key={id} className="flex justify-between items-baseline py-2">
                   <span className="text-[13px] text-[#444441]">
-                    <span className="font-mono text-[11px] text-[#A8A8A4] mr-1">+</span>
+                    <span className="text-[11px] text-[#A8A8A4] mr-1">+</span>
                     {ao.label}
                   </span>
-                  <span className="font-mono text-[13px] font-bold text-[#1A1816]">+${(ao.price / 100).toFixed(2)}</span>
+                  <span className="text-[13px] font-bold text-[#1A1816]">+${(ao.price / 100).toFixed(2)}</span>
                 </div>
               )
             })}
           </div>
         </div>
+
+        {/* Promo code — only show when add-ons are selected and payment not yet initiated */}
+        {total > 0 && !addOnClientSecret && (
+          <div className="px-5 py-4 border-b border-[#E8E8E4]">
+            {appliedPromo ? (
+              <div className="flex items-center justify-between gap-2">
+                <div>
+                  <p className="text-[12px] font-semibold text-[#0F6E56]">{appliedPromo.name} applied</p>
+                  <p className="text-[11px] text-[#737370]">
+                    {appliedPromo.discount.type === 'percent'
+                      ? `${appliedPromo.discount.value}% off`
+                      : `$${(appliedPromo.discount.value).toFixed(2)} off`}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => { setAppliedPromo(null); setPromoCode('') }}
+                  className="text-[11px] text-[#D03839] font-medium hover:underline"
+                >Remove</button>
+              </div>
+            ) : (
+              <div>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={promoCode}
+                    onChange={e => setPromoCode(e.target.value.toUpperCase())}
+                    onKeyDown={e => e.key === 'Enter' && validatePromo()}
+                    placeholder="Promo code"
+                    className="flex-1 h-9 px-3 text-[13px] border border-[#E8E8E4] rounded outline-none focus:border-[#1A1816] bg-white"
+                    style={{ fontFamily: 'var(--font-dm-sans), sans-serif' }}
+                  />
+                  <button
+                    type="button"
+                    onClick={validatePromo}
+                    disabled={promoValidating || !promoCode.trim()}
+                    className="h-9 px-3 text-[13px] font-semibold text-white bg-[#1A1816] rounded disabled:opacity-40 hover:bg-[#333] transition-colors flex items-center gap-1.5"
+                  >
+                    {promoValidating ? <span className="animate-spin w-3 h-3 border-2 border-white/30 border-t-white rounded-full" /> : 'Apply'}
+                  </button>
+                </div>
+                {promoError && <p className="text-[11px] text-[#D03839] mt-1.5">{promoError}</p>}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Total */}
         <div className="px-5 py-4 flex justify-between items-baseline">
@@ -1606,7 +1686,14 @@ function AddOnsTab({
             <p className="text-[15px] font-bold text-[#1A1816]">Total</p>
             <p className="text-[11px] text-[#737370] mt-0.5">{total === 0 ? 'Included in your subscription' : 'One-time charge'}</p>
           </div>
-          <span className="text-[28px] font-bold text-[#1A1816] tracking-tight">${(total / 100).toFixed(2)}</span>
+          <div className="text-right">
+            {appliedPromo && (
+              <p className="text-[13px] text-[#A8A8A4] line-through">${(total / 100).toFixed(2)}</p>
+            )}
+            <span className="text-[28px] font-bold text-[#1A1816] tracking-tight">
+              ${((finalAmount ?? total) / 100).toFixed(2)}
+            </span>
+          </div>
         </div>
 
         {/* CTA — shown when no payment form is open yet */}
@@ -1617,7 +1704,7 @@ function AddOnsTab({
                 type="button"
                 onClick={handleInitPayment}
                 disabled={addOnLoading}
-                className="w-full h-[48px] bg-[#D03839] hover:bg-[#B8102A] active:scale-[0.98] text-white text-[14px] font-semibold rounded-lg transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-[0_4px_12px_rgba(208,56,57,0.25)]"
+                className="w-full h-[48px] bg-[#D03839] hover:bg-[#E0493B] text-white text-[14px] font-semibold rounded transition-all disabled:opacity-50 flex items-center justify-center gap-2"
               >
                 {addOnLoading
                   ? <><span className="animate-spin w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full" />Preparing…</>
@@ -1628,7 +1715,7 @@ function AddOnsTab({
                 type="button"
                 onClick={() => onPublish('active', { skipFeaturedPrompt: true, forceAutoSelectFeatured: true })}
                 disabled={saving}
-                className="w-full h-[48px] bg-[#D03839] hover:bg-[#B8102A] active:scale-[0.98] text-white text-[14px] font-semibold rounded-lg transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-[0_4px_12px_rgba(208,56,57,0.25)]"
+                className="w-full h-[48px] bg-[#D03839] hover:bg-[#E0493B] text-white text-[14px] font-semibold rounded transition-all disabled:opacity-50 flex items-center justify-center gap-2"
               >
                 {saving
                   ? <><span className="animate-spin w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full" />Publishing…</>
