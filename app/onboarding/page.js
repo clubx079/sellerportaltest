@@ -733,6 +733,18 @@ function OnboardingContent() {
           {/* Heading */}
           {step < 4 && (
             <div className="mb-7">
+              {step === 1 && (
+                <button onClick={back} className="flex items-center gap-1.5 text-[13px] text-[#737370] hover:text-[#1A1816] transition-colors mb-4">
+                  <ChevronRight className="w-3.5 h-3.5 rotate-180" />
+                  Back to account
+                </button>
+              )}
+              {step === 2 && (
+                <button onClick={back} className="flex items-center gap-1.5 text-[13px] text-[#737370] hover:text-[#1A1816] transition-colors mb-4">
+                  <ChevronRight className="w-3.5 h-3.5 rotate-180" />
+                  Back to phone verification
+                </button>
+              )}
               {step === 3 && (
                 <button onClick={back} className="flex items-center gap-1.5 text-[13px] text-[#737370] hover:text-[#1A1816] transition-colors mb-4">
                   <ChevronRight className="w-3.5 h-3.5 rotate-180" />
