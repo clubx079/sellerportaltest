@@ -24,7 +24,17 @@ export async function POST(request) {
       // ── Standard plan OR add-on payment succeeded ──────────────────────
       case 'payment_intent.succeeded': {
         const pi = event.data.object
-        const { seller_id, plan_type, quantity, add_ons, property_id } = pi.metadata
+        const { seller_id, plan_type, quantity, add_ons, property_id, promo_code_id } = pi.metadata
+
+        // Track promo code usage
+        if (promo_code_id) {
+          try {
+            await supabase.from('promo_code_usages').upsert(
+              { promo_code_id, stripe_payment_intent_id: pi.id, portal: seller_id && add_ons ? 'seller_addon' : 'seller_standard' },
+              { onConflict: 'stripe_payment_intent_id' }
+            )
+          } catch {}
+        }
 
         // ── Standard plan ──
         if (seller_id && plan_type === 'standard') {
