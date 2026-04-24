@@ -29,9 +29,9 @@ export async function POST(request) {
     let amount = baseAmount
     let discountInfo = null
     if (promo_code_id) {
-      const promoCode = await stripe.promotionCodes.retrieve(promo_code_id)
-      const coupon = promoCode.coupon
-      if (coupon.valid) {
+      const promoCode = await stripe.promotionCodes.retrieve(promo_code_id, { expand: ['promotion.coupon'] })
+      const coupon = promoCode.promotion?.coupon
+      if (coupon && typeof coupon !== 'string' && coupon.valid) {
         const discountAmount = coupon.percent_off
           ? Math.round(baseAmount * coupon.percent_off / 100)
           : Math.min(coupon.amount_off, baseAmount)
