@@ -10,29 +10,36 @@ export async function GET(request) {
   if (!code) return NextResponse.json({ error: 'code is required' }, { status: 400 })
 
   try {
-    const promoCodes = await stripe.promotionCodes.list({ code: code.toUpperCase(), active: true, limit: 1 })
+    const promoCodes = await stripe.promotionCodes.list({
+      code: code.toUpperCase(), active: true, limit: 1,
+      expand: ['data.promotion.coupon'],
+    })
 
     if (!promoCodes.data.length) {
       return NextResponse.json({ valid: false, error: 'Invalid or expired promo code' }, { status: 404 })
     }
 
     const promoCode = promoCodes.data[0]
-    const coupon = promoCode.promotion?.coupon || promoCode.coupon
+    const coupon = promoCode.promotion?.coupon
 
-    if (!coupon?.valid) {
+    if (!coupon || typeof coupon === 'string') {
+      return NextResponse.json({ valid: false, error: 'Could not load coupon details' }, { status: 500 })
+    }
+
+    if (!coupon.valid) {
       return NextResponse.json({ valid: false, error: 'This coupon is no longer valid' }, { status: 404 })
     }
 
     return NextResponse.json({
       valid: true,
       promo_code_id: promoCode.id,
-      coupon_id: typeof coupon === 'string' ? coupon : coupon?.id,
-      discount: coupon?.percent_off
+      coupon_id: coupon.id,
+      discount: coupon.percent_off
         ? { type: 'percent', value: coupon.percent_off }
-        : { type: 'fixed', value: (coupon?.amount_off || 0) / 100 },
-      duration: coupon?.duration,
-      duration_in_months: coupon?.duration_in_months,
-      name: coupon?.name,
+        : { type: 'fixed', value: coupon.amount_off / 100 },
+      duration: coupon.duration,
+      duration_in_months: coupon.duration_in_months,
+      name: coupon.name,
     })
   } catch (err) {
     return NextResponse.json({ valid: false, error: 'Failed to validate code' }, { status: 500 })
