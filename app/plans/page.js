@@ -334,12 +334,12 @@ export default function PlansPage() {
 
                     <div className="flex items-end gap-1.5 leading-none mb-1">
                       <span className="text-[38px] font-bold text-[#1A1816] tracking-tight leading-none">
-                        <sup className="text-lg font-normal align-super">$</sup>{viewAnnual ? '79' : '99'}
+                        <sup className="text-lg font-normal align-super">$</sup>{viewAnnual ? '948' : '99'}
                       </span>
-                      <span className="text-sm font-normal text-[#737370] mb-1">/ per month</span>
+                      <span className="text-sm font-normal text-[#737370] mb-1">{viewAnnual ? '/ year' : '/ per month'}</span>
                     </div>
                     <p className="text-xs text-[#737370] mb-1">
-                      {viewAnnual ? 'Billed annually · $948/yr' : 'Billed monthly'} · 10 listings included
+                      {viewAnnual ? '$79/mo · billed as $948 upfront' : 'Billed monthly'} · 10 listings included
                     </p>
                     <p className="text-[11px] text-[#A8A8A4] mb-5">
                       {viewAnnual ? 'Save $240 vs monthly' : '$19 per additional listing'}
@@ -413,12 +413,12 @@ export default function PlansPage() {
 
                     <div className="flex items-end gap-1.5 leading-none mb-1">
                       <span className="text-[38px] font-bold text-[#1A1816] tracking-tight leading-none">
-                        <sup className="text-lg font-normal align-super">$</sup>{viewAnnual ? '239' : '299'}
+                        <sup className="text-lg font-normal align-super">$</sup>{viewAnnual ? '2,868' : '299'}
                       </span>
-                      <span className="text-sm font-normal text-[#737370] mb-1">/ per month</span>
+                      <span className="text-sm font-normal text-[#737370] mb-1">{viewAnnual ? '/ year' : '/ per month'}</span>
                     </div>
                     <p className="text-xs text-[#737370] mb-1">
-                      {viewAnnual ? 'Billed annually · $2,868/yr' : 'Billed monthly'} · unlimited listings
+                      {viewAnnual ? '$239/mo · billed as $2,868 upfront' : 'Billed monthly'} · unlimited listings
                     </p>
                     <p className="text-[11px] text-[#A8A8A4] mb-5">
                       {viewAnnual ? 'Save $720 vs monthly' : <>&nbsp;</>}

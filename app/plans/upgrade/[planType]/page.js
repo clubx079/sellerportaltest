@@ -315,12 +315,12 @@ function UpgradeContent() {
               <div className="text-right flex-shrink-0">
                 <div className="flex items-end gap-1 leading-none">
                   <span className="text-[32px] font-bold text-[#1A1816] tracking-tight leading-none">
-                    <sup className="text-[14px] font-normal align-super">$</sup>{price}
+                    <sup className="text-[14px] font-normal align-super">$</sup>{isAnnual ? annualTotal.toLocaleString() : price}
                   </span>
-                  <span className="text-[12px] text-[#737370] mb-0.5">/mo</span>
+                  <span className="text-[12px] text-[#737370] mb-0.5">{isAnnual ? '/yr' : '/mo'}</span>
                 </div>
                 {isAnnual && (
-                  <p className="text-[11px] text-[#A8A8A4] mt-1">${annualTotal}/yr</p>
+                  <p className="text-[11px] text-[#A8A8A4] mt-1">${price}/mo · billed upfront</p>
                 )}
               </div>
             </div>
