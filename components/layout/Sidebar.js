@@ -6,7 +6,7 @@ import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard, Building2, MessageCircle, X, Settings,
-  FileText, TrendingUp, BarChart3, CreditCard, Zap
+  FileText, TrendingUp, BarChart3, CreditCard, Zap, ScrollText
 } from 'lucide-react'
 
 const DESKTOP_BREAKPOINT = 1024
@@ -72,6 +72,7 @@ export default function Sidebar({ isOpen, setIsOpen, activeItem, setActiveItem }
       label: 'TOOLS',
       items: [
         { id: 'analytics', label: 'Analytics', icon: BarChart3, path: '/analytics' },
+        { id: 'contracts', label: 'Contracts', icon: ScrollText, path: '/contracts' },
       ]
     },
     {
