@@ -125,6 +125,8 @@ function StepPhone({ onNext }) {
   const [sent, setSent] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [changingPhone, setChangingPhone] = useState(false)
+  const [newPhone, setNewPhone] = useState('')
 
   const session = typeof window !== 'undefined' ? JSON.parse(sessionStorage.getItem('onboarding') || '{}') : {}
 
@@ -209,9 +211,58 @@ function StepPhone({ onNext }) {
             className="w-full h-[46px] bg-[#D03839] hover:bg-[#E0493B] text-white text-[14px] font-semibold rounded transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
             {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <>Verify <ChevronRight className="w-4 h-4" /></>}
           </button>
-          <button onClick={() => { setSent(false); setOtp('') }} className="w-full text-center text-[13px] text-[#737370] hover:text-[#1A1816]">
-            Change number
-          </button>
+
+          {!changingPhone ? (
+            <button
+              onClick={() => { setChangingPhone(true); setNewPhone(phone); setError('') }}
+              className="w-full text-center text-[13px] text-[#737370] hover:text-[#1A1816] transition-colors"
+            >
+              Wrong number? Change it
+            </button>
+          ) : (
+            <div className="border border-[#E8E8E4] rounded p-3.5 space-y-3">
+              <p className="text-[13px] font-medium text-[#1A1816]">Change phone number</p>
+              <input
+                className={inputCls}
+                value={newPhone}
+                onChange={e => setNewPhone(formatPhone(e.target.value))}
+                placeholder="(555) 000-0000"
+                type="tel"
+              />
+              <div className="flex gap-2">
+                <button
+                  onClick={() => { setChangingPhone(false); setNewPhone('') }}
+                  className="flex-1 h-[38px] border border-[#E8E8E4] text-[13px] font-medium text-[#737370] rounded hover:bg-[#F3F3F0] transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  disabled={loading || newPhone.replace(/\D/g, '').length < 10}
+                  onClick={async () => {
+                    setError('')
+                    setLoading(true)
+                    try {
+                      const res = await fetch('/api/auth/send-otp', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ phone: newPhone, email: session.email }),
+                      })
+                      const data = await res.json()
+                      if (!res.ok) { setError(data.error || 'Failed to send code'); setLoading(false); return }
+                      setPhone(newPhone)
+                      setOtp('')
+                      setChangingPhone(false)
+                      setNewPhone('')
+                    } catch { setError('Failed to send code') }
+                    setLoading(false)
+                  }}
+                  className="flex-1 h-[38px] bg-[#D03839] hover:bg-[#E0493B] text-white text-[13px] font-semibold rounded transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5"
+                >
+                  {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Send new code'}
+                </button>
+              </div>
+            </div>
+          )}
         </>
       )}
     </div>
