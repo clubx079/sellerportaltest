@@ -17,22 +17,22 @@ export async function GET(request) {
     }
 
     const promoCode = promoCodes.data[0]
-    const coupon = promoCode.coupon
+    const coupon = promoCode.promotion?.coupon || promoCode.coupon
 
-    if (!coupon.valid) {
+    if (!coupon?.valid) {
       return NextResponse.json({ valid: false, error: 'This coupon is no longer valid' }, { status: 404 })
     }
 
     return NextResponse.json({
       valid: true,
       promo_code_id: promoCode.id,
-      coupon_id: coupon.id,
-      discount: coupon.percent_off
+      coupon_id: typeof coupon === 'string' ? coupon : coupon?.id,
+      discount: coupon?.percent_off
         ? { type: 'percent', value: coupon.percent_off }
-        : { type: 'fixed', value: coupon.amount_off / 100 },
-      duration: coupon.duration,
-      duration_in_months: coupon.duration_in_months,
-      name: coupon.name,
+        : { type: 'fixed', value: (coupon?.amount_off || 0) / 100 },
+      duration: coupon?.duration,
+      duration_in_months: coupon?.duration_in_months,
+      name: coupon?.name,
     })
   } catch (err) {
     return NextResponse.json({ valid: false, error: 'Failed to validate code' }, { status: 500 })
