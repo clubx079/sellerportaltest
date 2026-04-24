@@ -46,7 +46,7 @@ const STEPS = ['Account', 'Choose Plan', 'Payment']
 
 function StepDots({ current }) {
   return (
-    <div className="flex items-center gap-2 mb-8">
+    <div className="flex items-center justify-center gap-2 mb-8">
       {STEPS.map((label, i) => {
         const done = i < current
         const active = i === current
