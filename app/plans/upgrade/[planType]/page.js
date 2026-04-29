@@ -20,7 +20,7 @@ const PLAN_CONFIG = {
       'Advanced analytics',
       'Priority search placement',
       'Priority support',
-      '10 listings / month',
+      '5 listings / month',
     ],
   },
   enterprise: {
@@ -64,6 +64,10 @@ function UpgradeContent() {
   const [confirming,    setConfirming]    = useState(false)
   const [error,         setError]         = useState(null)
   const [propBlock,     setPropBlock]     = useState(null)
+  const [promoCode,     setPromoCode]     = useState('')
+  const [promoValidating, setPromoValidating] = useState(false)
+  const [promoError,    setPromoError]    = useState(null)
+  const [appliedPromo,  setAppliedPromo]  = useState(null)
 
   const targetCfg = PLAN_CONFIG[targetType]
 
@@ -104,6 +108,25 @@ function UpgradeContent() {
     }
   }
 
+  const validatePromo = async () => {
+    if (!promoCode.trim()) return
+    setPromoValidating(true)
+    setPromoError(null)
+    try {
+      const res = await fetch(`/api/coupons/validate?code=${encodeURIComponent(promoCode.trim())}`)
+      const data = await res.json()
+      if (data.valid) {
+        setAppliedPromo(data)
+      } else {
+        setPromoError(data.error || 'Invalid promo code')
+      }
+    } catch {
+      setPromoError('Failed to validate code')
+    } finally {
+      setPromoValidating(false)
+    }
+  }
+
   const handleConfirm = async () => {
     if (!sellerId) return
     setConfirming(true)
@@ -113,7 +136,7 @@ function UpgradeContent() {
       const res  = await fetch('/api/seller/plan/change', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ seller_id: sellerId, new_plan_type: targetType, billing_cycle: cycle }),
+        body: JSON.stringify({ seller_id: sellerId, new_plan_type: targetType, billing_cycle: cycle, promo_code_id: appliedPromo?.promo_code_id || null }),
       })
       const data = await res.json()
 
@@ -209,7 +232,7 @@ function UpgradeContent() {
               {propBlock.count} active listings detected
             </p>
             <p className="text-[12px] text-[#B82F30] leading-relaxed">
-              Pro allows a maximum of 10 listings. Please deactivate {propBlock.count - 10} listing{propBlock.count - 10 > 1 ? 's' : ''} before switching.
+              Pro allows a max 5 listings. Please deactivate {propBlock.count - 5} listing{propBlock.count - 5 > 1 ? 's' : ''} before switching.
             </p>
           </div>
           <a
@@ -329,6 +352,47 @@ function UpgradeContent() {
               <div className="flex items-center justify-between px-3 py-2 bg-[#E4F5EC] border border-[#9FDBB8] rounded">
                 <p className="text-[12px] font-semibold text-[#0F6E56]">Annual discount</p>
                 <p className="text-[12px] font-semibold text-[#0F6E56]">Save 20%</p>
+              </div>
+            )}
+
+            {/* Promo code */}
+            {appliedPromo ? (
+              <div className="flex items-center justify-between px-3 py-2 bg-[#E4F5EC] border border-[#9FDBB8] rounded">
+                <div>
+                  <p className="text-[12px] font-semibold text-[#0F6E56]">{appliedPromo.name || promoCode.toUpperCase()} applied</p>
+                  <p className="text-[11px] text-[#0F6E56]">
+                    {appliedPromo.discount.type === 'percent'
+                      ? `${appliedPromo.discount.value}% off — applied at renewal`
+                      : `$${appliedPromo.discount.value.toFixed(2)} off — applied at renewal`}
+                  </p>
+                </div>
+                <button
+                  onClick={() => { setAppliedPromo(null); setPromoCode('') }}
+                  className="text-[11px] text-[#0F6E56] underline hover:no-underline"
+                >Remove</button>
+              </div>
+            ) : (
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#A8A8A4] mb-2">Promo Code</p>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={promoCode}
+                    onChange={e => { setPromoCode(e.target.value.toUpperCase()); setPromoError(null) }}
+                    onKeyDown={e => e.key === 'Enter' && validatePromo()}
+                    placeholder="Enter promo code"
+                    className="flex-1 h-[36px] px-3 text-[13px] border border-[#E8E8E4] rounded bg-white focus:outline-none focus:border-[#D03839]"
+                  />
+                  <button
+                    type="button"
+                    onClick={validatePromo}
+                    disabled={promoValidating || !promoCode.trim()}
+                    className="px-3 h-[36px] text-[13px] font-semibold border border-[#E8E8E4] rounded bg-white hover:bg-[#FAFAF8] disabled:opacity-50 flex items-center gap-1.5"
+                  >
+                    {promoValidating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Apply'}
+                  </button>
+                </div>
+                {promoError && <p className="text-[12px] text-[#D03839] mt-1.5">{promoError}</p>}
               </div>
             )}
 

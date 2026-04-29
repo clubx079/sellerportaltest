@@ -82,6 +82,7 @@ export default function NewPropertyPage() {
   });
 
   const [sellerType, setSellerType] = useState('');
+  const [ownershipConfirmed, setOwnershipConfirmed] = useState(false);
   const [contractUpload, setContractUpload] = useState({
     url: null,
     key: null,
@@ -152,7 +153,7 @@ export default function NewPropertyPage() {
   // ── Step completion ──────────────────────────────────────────────────────────
   const isBasicComplete = !!(formData.location && formData.price && formData.property_type && formData.bedrooms && formData.bathrooms && formData.floor_area);
   const isImagesComplete = imageUploadStatus.images.filter(img => img.status === 'completed').length > 0 && !imageUploadStatus.isUploading;
-  const isOwnershipComplete = !!(sellerType && (sellerType !== 'wholesaler' || contractUpload.url));
+  const isOwnershipComplete = !!(sellerType && (sellerType === 'wholesaler' ? contractUpload.url : ownershipConfirmed));
 
   const isTabAccessible = (tabId) => {
     const idx = TAB_ORDER.indexOf(tabId);
@@ -241,9 +242,9 @@ export default function NewPropertyPage() {
           return;
         }
       }
-      // Pro plan: max 10 listings per billing period
+      // Pro plan: max 5 listings per billing period
       if (publishStatus === 'active' && trialPlan?.plan_type === 'pro' && trialPlan?.status === 'active') {
-        if ((trialPlan.listings_used_this_period ?? 0) >= 10) {
+        if ((trialPlan.listings_used_this_period ?? 0) >= 5) {
           setShowUpgradePrompt(true);
           return;
         }
@@ -731,7 +732,7 @@ export default function NewPropertyPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <button
-            onClick={() => router.back()}
+            onClick={async () => { await handleSave('draft'); router.back() }}
             className="p-2 rounded hover:bg-[#F0F0EE] transition-colors"
           >
             <ArrowLeft size={20} className="text-[#737370]" />
@@ -1013,7 +1014,7 @@ export default function NewPropertyPage() {
                 <div className="grid grid-cols-2 gap-3">
                   <button
                     type="button"
-                    onClick={() => setSellerType('owner')}
+                    onClick={() => { setSellerType('owner'); setOwnershipConfirmed(false) }}
                     className={`flex flex-col items-center gap-3 p-5 rounded border-2 transition-all ${
                       sellerType === 'owner'
                         ? 'border-[#D03839] bg-[#FEF0EF]'
@@ -1044,13 +1045,29 @@ export default function NewPropertyPage() {
                 </div>
               </div>
 
+              {sellerType === 'owner' && (
+                <div className="rounded border border-[#E8E8E4] bg-[#FAFAF8] p-4">
+                  <label className="flex items-start gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={ownershipConfirmed}
+                      onChange={e => setOwnershipConfirmed(e.target.checked)}
+                      className="mt-0.5 w-4 h-4 accent-[#D03839] shrink-0"
+                    />
+                    <span className="text-[13px] text-[#444441] leading-snug">
+                      I confirm that I am the legal owner of this property and have the authority to list it for sale. I understand that providing false ownership information may result in listing removal and account suspension.
+                    </span>
+                  </label>
+                </div>
+              )}
+
               {sellerType === 'wholesaler' && (
                 <div>
                   <h3 className="text-[15px] font-semibold text-[#1A1816] mb-1">
-                    Assignment Contract <span className="text-[#D03839]">*</span>
+                    Purchase Contract / Agreement <span className="text-[#D03839]">*</span>
                   </h3>
                   <p className="text-[13px] text-[#737370] mb-4">
-                    Upload your signed assignment contract. Required before publishing. (PDF or DOC)
+                    Upload your signed purchase contract or agreement. Required before publishing. (PDF or DOC)
                   </p>
 
                   {!contractUpload.url ? (

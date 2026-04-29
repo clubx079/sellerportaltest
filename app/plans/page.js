@@ -44,7 +44,7 @@ const PRO_FEATURES = [
   [true,  'Advanced analytics'],
   [true,  'Priority search placement'],
   [true,  'Priority support'],
-  [true,  '10 listings / month'],
+  [true,  '5 listings / month'],
   [false, 'CRM features'],
   [false, 'Team accounts'],
 ]
@@ -215,7 +215,7 @@ export default function PlansPage() {
                   <div>
                     <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#A8A8A4] mb-1">Listings used</p>
                     <p className="text-[14px] font-semibold text-[#1A1816]">
-                      {plan.listings_used_this_period ?? 0}{isPro ? ' / 10' : isEnterprise ? ' / ∞' : ''}
+                      {plan.listings_used_this_period ?? 0}{isPro ? ' / 5' : isEnterprise ? ' / ∞' : ''}
                     </p>
                   </div>
                   <div>
@@ -229,12 +229,12 @@ export default function PlansPage() {
                   <div className="mt-4 pt-4 border-t border-[#E8E8E4]">
                     <div className="flex justify-between items-center mb-1.5">
                       <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#A8A8A4]">Monthly listings</p>
-                      <p className="text-[11px] text-[#737370]">{plan.listings_used_this_period ?? 0} of 10 used</p>
+                      <p className="text-[11px] text-[#737370]">{plan.listings_used_this_period ?? 0} of 5 used</p>
                     </div>
                     <div className="h-1.5 bg-[#F3F3F0] rounded-full overflow-hidden">
                       <div
                         className="h-full bg-[#D03839] rounded-full transition-all"
-                        style={{ width: `${Math.min(100, ((plan.listings_used_this_period ?? 0) / 10) * 100)}%` }}
+                        style={{ width: `${Math.min(100, ((plan.listings_used_this_period ?? 0) / 5) * 100)}%` }}
                       />
                     </div>
                   </div>
@@ -339,7 +339,7 @@ export default function PlansPage() {
                       <span className="text-sm font-normal text-[#737370] mb-1">{viewAnnual ? '/ year' : '/ per month'}</span>
                     </div>
                     <p className="text-xs text-[#737370] mb-1">
-                      {viewAnnual ? '$79/mo · billed as $948 upfront' : 'Billed monthly'} · 10 listings included
+                      {viewAnnual ? '$79/mo · billed as $948 upfront' : 'Billed monthly'} · 5 listings included
                     </p>
                     <p className="text-[11px] text-[#A8A8A4] mb-5">
                       {viewAnnual ? 'Save $240 vs monthly' : '$19 per additional listing'}

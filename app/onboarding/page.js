@@ -514,14 +514,25 @@ function CheckoutForm({ session, intentType, appliedPromo, onSuccess }) {
             </div>
             <p className="text-[13px] font-semibold text-[#1A1816]">{chargeLabel}</p>
           </div>
-          {appliedPromo && (
-            <div className="flex justify-between items-center">
-              <p className="text-[12px] text-[#0F6E56]">
-                Promo: {appliedPromo.name} ({appliedPromo.discount.type === 'percent' ? `${appliedPromo.discount.value}% off` : `$${appliedPromo.discount.value} off`})
-              </p>
-              <p className="text-[12px] font-semibold text-[#0F6E56]">Applied after trial</p>
-            </div>
-          )}
+          {appliedPromo && (() => {
+            const basePrice = isAnnual ? annualTotal : monthlyPrice
+            const discountedPrice = appliedPromo.discount.type === 'percent'
+              ? basePrice * (1 - appliedPromo.discount.value / 100)
+              : Math.max(0, basePrice - appliedPromo.discount.value)
+            const discountLabel = isAnnual ? '/ year' : '/ month'
+            return (
+              <div className="flex justify-between items-center">
+                <p className="text-[12px] text-[#0F6E56]">
+                  {appliedPromo.name} · {appliedPromo.discount.type === 'percent' ? `${appliedPromo.discount.value}% off` : `$${appliedPromo.discount.value} off`}
+                  {appliedPromo.duration === 'once' ? ' (first payment)' : appliedPromo.duration === 'repeating' ? ` (${appliedPromo.duration_in_months} months)` : ''}
+                </p>
+                <div className="text-right">
+                  <p className="text-[11px] text-[#A8A8A4] line-through">${basePrice.toLocaleString()}</p>
+                  <p className="text-[12px] font-semibold text-[#0F6E56]">${discountedPrice % 1 === 0 ? discountedPrice.toLocaleString() : discountedPrice.toFixed(2)} {discountLabel}</p>
+                </div>
+              </div>
+            )
+          })()}
           <div className="border-t border-[#E8E8E4] pt-3 flex justify-between items-center">
             <p className="text-[13px] font-bold text-[#1A1816]">Due today</p>
             <p className="text-[22px] font-bold text-[#0F6E56]">$0</p>
@@ -576,6 +587,34 @@ function StepPayment({ onSuccess }) {
       if (data.valid) {
         setAppliedPromo(data)
         setPromoCode('')
+        // Re-create the payment intent with the promo code applied
+        if (clientSecret) {
+          setClientSecret(null)
+          setLoading(true)
+          const s = JSON.parse(sessionStorage.getItem('onboarding') || '{}')
+          const intentRes = await fetch('/api/seller/plan/create-intent', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              seller_id: s.seller_id,
+              plan_type: s.plan_type,
+              billing_cycle: s.billing_cycle,
+              quantity: s.quantity || 1,
+              promo_code_id: data.promo_code_id || null,
+            }),
+          })
+          const intentData = await intentRes.json()
+          if (intentData.clientSecret) {
+            setClientSecret(intentData.clientSecret)
+            setIntentType(intentData.type || 'subscription')
+            if (intentData.subscription_id) {
+              sessionStorage.setItem('onboarding', JSON.stringify({ ...s, subscription_id: intentData.subscription_id }))
+            }
+          } else {
+            setError(intentData.error || 'Failed to apply promo code')
+          }
+          setLoading(false)
+        }
       } else {
         setPromoError(data.error || 'Invalid promo code')
       }
@@ -620,6 +659,21 @@ function StepPayment({ onSuccess }) {
 
   if (!clientSecret) return (
     <div className="space-y-4">
+      {error && <div className="p-3 bg-[#FEF0EF] border border-[#F5C0BF] rounded text-[13px] text-[#D03839]">{error}</div>}
+
+      <button
+        type="button"
+        onClick={createIntent}
+        disabled={loading}
+        className="w-full h-[46px] bg-[#D03839] hover:bg-[#E0493B] text-white text-[14px] font-semibold rounded transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+      >
+        {loading ? <><Loader2 className="w-4 h-4 animate-spin" /> Loading…</> : 'Continue to Payment'}
+      </button>
+    </div>
+  )
+
+  return stripePromise && clientSecret ? (
+    <div className="space-y-4">
       {/* Promo code */}
       <div className="rounded border border-[#E8E8E4] overflow-hidden">
         <div className="bg-[#FAFAF8] px-4 py-2.5 border-b border-[#E8E8E4]">
@@ -662,29 +716,16 @@ function StepPayment({ onSuccess }) {
         </div>
       </div>
 
-      {error && <div className="p-3 bg-[#FEF0EF] border border-[#F5C0BF] rounded text-[13px] text-[#D03839]">{error}</div>}
-
-      <button
-        type="button"
-        onClick={createIntent}
-        disabled={loading}
-        className="w-full h-[46px] bg-[#D03839] hover:bg-[#E0493B] text-white text-[14px] font-semibold rounded transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-      >
-        {loading ? <><Loader2 className="w-4 h-4 animate-spin" /> Loading…</> : 'Continue to Payment'}
-      </button>
+      <Elements stripe={stripePromise} options={{ clientSecret, terms: { card: 'never' } }}>
+        <CheckoutForm session={session} intentType={intentType} appliedPromo={appliedPromo} onSuccess={(pmId) => {
+          if (pmId) {
+            const s2 = JSON.parse(sessionStorage.getItem('onboarding') || '{}')
+            sessionStorage.setItem('onboarding', JSON.stringify({ ...s2, pm_id: pmId }))
+          }
+          onSuccess()
+        }} />
+      </Elements>
     </div>
-  )
-
-  return stripePromise && clientSecret ? (
-    <Elements stripe={stripePromise} options={{ clientSecret, terms: { card: 'never' } }}>
-      <CheckoutForm session={session} intentType={intentType} appliedPromo={appliedPromo} onSuccess={(pmId) => {
-        if (pmId) {
-          const s2 = JSON.parse(sessionStorage.getItem('onboarding') || '{}')
-          sessionStorage.setItem('onboarding', JSON.stringify({ ...s2, pm_id: pmId }))
-        }
-        onSuccess()
-      }} />
-    </Elements>
   ) : (
     <div className="p-4 bg-[#FEF3E2] border border-[#F5D9A0] rounded text-[13px] text-[#B5620A] text-center">
       Stripe is not configured. Add <code className="font-mono">NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY</code> to env.

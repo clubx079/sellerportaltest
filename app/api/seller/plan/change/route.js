@@ -16,7 +16,7 @@ export async function POST(request) {
   const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
 
   try {
-    const { seller_id, new_plan_type, billing_cycle: requested_cycle } = await request.json()
+    const { seller_id, new_plan_type, billing_cycle: requested_cycle, promo_code_id } = await request.json()
     if (!seller_id || !new_plan_type) {
       return NextResponse.json({ error: 'seller_id and new_plan_type are required' }, { status: 400 })
     }
@@ -51,9 +51,9 @@ export async function POST(request) {
         .eq('seller_id', seller_id)
         .in('status', ['active', 'under_review'])
 
-      if ((count || 0) > 10) {
+      if ((count || 0) > 5) {
         return NextResponse.json({
-          error: `You have ${count} active listings. Please deactivate down to 10 before switching to Pro.`,
+          error: `You have ${count} active listings. Please deactivate down to 5 before switching to Pro.`,
           active_count: count,
           requires_deactivation: true,
         }, { status: 422 })
@@ -90,10 +90,12 @@ export async function POST(request) {
 
     // ── Trialing subscriptions: update price directly, trial continues unchanged ──
     if (sub.status === 'trialing') {
-      await stripe.subscriptions.update(plan.stripe_subscription_id, {
+      const trialUpdateParams = {
         items: [{ id: currentItem.id, price: newPriceId, quantity: 1 }],
         proration_behavior: 'none',
-      })
+      }
+      if (promo_code_id) trialUpdateParams.discounts = [{ promotion_code: promo_code_id }]
+      await stripe.subscriptions.update(plan.stripe_subscription_id, trialUpdateParams)
 
       await supabase
         .from('seller_plans')
@@ -147,6 +149,12 @@ export async function POST(request) {
       }, { status: 500 })
     }
 
+    const phase2 = {
+      items: [{ price: newPriceId, quantity: 1 }],
+      proration_behavior: 'none',
+    }
+    if (promo_code_id) phase2.discounts = [{ promotion_code: promo_code_id }]
+
     await stripe.subscriptionSchedules.update(schedule.id, {
       end_behavior: 'release',
       phases: [
@@ -156,10 +164,7 @@ export async function POST(request) {
           end_date: phase0EndDate,
           proration_behavior: 'none',
         },
-        {
-          items: [{ price: newPriceId, quantity: 1 }],
-          proration_behavior: 'none',
-        },
+        phase2,
       ],
     })
 

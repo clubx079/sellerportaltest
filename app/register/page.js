@@ -77,7 +77,7 @@ const PRO_FEATURES = [
   [true,  'Advanced analytics'],
   [true,  'Priority search placement'],
   [true,  'Priority support'],
-  [true,  '10 listings / month'],
+  [true,  '5 listings / month'],
   [false, 'CRM features'],
   [false, 'Team accounts'],
 ]
@@ -98,8 +98,8 @@ function PlanCard({ id, selected, annual, onSelect }) {
   const isSelected = selected === id
   const price = isPro ? (annual ? '79' : '99') : (annual ? '239' : '299')
   const billingNote = annual
-    ? (isPro ? 'Billed annually · $948/yr · 10 listings included' : 'Billed annually · $2,868/yr · unlimited listings')
-    : (isPro ? 'Billed monthly · 10 listings included' : 'Billed monthly · unlimited listings')
+    ? (isPro ? 'Billed annually · $948/yr · 5 listings included' : 'Billed annually · $2,868/yr · unlimited listings')
+    : (isPro ? 'Billed monthly · 5 listings included' : 'Billed monthly · unlimited listings')
   const savingsNote = annual
     ? (isPro ? 'Save $240 vs monthly' : 'Save $720 vs monthly')
     : (isPro ? '$19 per additional listing' : '\u00a0')

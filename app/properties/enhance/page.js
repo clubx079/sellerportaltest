@@ -113,7 +113,7 @@ function CheckoutForm({ amount, addOns, propertyId, sellerId, onSuccess }) {
       >
         {processing
           ? <><Loader2 className="w-4 h-4 animate-spin" /> Processing…</>
-          : `Pay $${(amount / 100).toFixed(2)} & Enhance`}
+          : `Pay $${(amount / 100).toFixed(2)}`}
       </button>
     </form>
   )
@@ -131,6 +131,10 @@ function EnhanceContent() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [success, setSuccess] = useState(false)
+  const [promoCode, setPromoCode] = useState('')
+  const [promoValidating, setPromoValidating] = useState(false)
+  const [promoError, setPromoError] = useState(null)
+  const [appliedPromo, setAppliedPromo] = useState(null)
 
   useEffect(() => {
     const userStr = localStorage.getItem('seller_user')
@@ -185,6 +189,32 @@ function EnhanceContent() {
     return sum + (ao?.price || 0)
   }, 0)
 
+  const discountAmount = appliedPromo
+    ? appliedPromo.discount.type === 'percent'
+      ? Math.round(total * appliedPromo.discount.value / 100)
+      : Math.min(appliedPromo.discount.value * 100, total - 50)
+    : 0
+  const finalTotal = total - discountAmount
+
+  const validatePromo = async () => {
+    if (!promoCode.trim()) return
+    setPromoValidating(true)
+    setPromoError(null)
+    try {
+      const res = await fetch(`/api/coupons/validate?code=${encodeURIComponent(promoCode.trim())}`)
+      const data = await res.json()
+      if (data.valid) {
+        setAppliedPromo(data)
+      } else {
+        setPromoError(data.error || 'Invalid promo code')
+      }
+    } catch {
+      setPromoError('Failed to validate code')
+    } finally {
+      setPromoValidating(false)
+    }
+  }
+
   const handleInitPayment = async () => {
     if (!userId || selectedAddOns.length === 0) return
     setLoading(true)
@@ -193,7 +223,7 @@ function EnhanceContent() {
       const res = await fetch('/api/seller/listing-addons', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ seller_id: userId, add_ons: selectedAddOns, property_id: propertyId }),
+        body: JSON.stringify({ seller_id: userId, add_ons: selectedAddOns, property_id: propertyId, promo_code_id: appliedPromo?.promo_code_id || null }),
       })
       const d = await res.json()
       if (!res.ok) throw new Error(d.error || 'Failed to initialize payment')
@@ -225,7 +255,7 @@ function EnhanceContent() {
     )
   }
 
-  const title = property?.seo_title || property?.address || 'Your listing'
+  const title = property?.address || property?.seo_title || 'Your listing'
   const location = [property?.city, property?.state].filter(Boolean).join(', ')
   const activeEnhancements = property ? getActiveEnhancements(property) : []
 
@@ -237,8 +267,8 @@ function EnhanceContent() {
           <ArrowLeft size={20} className="text-[#737370]" />
         </button>
         <div>
-          <h1 className="text-[18px] font-bold text-[#1A1816]">Enhance Listing</h1>
-          {property && <p className="text-[13px] text-[#737370] mt-0.5">{title}{location ? ` · ${location}` : ''}</p>}
+          <h1 className="text-[18px] font-bold text-[#1A1816]">{property ? title : 'Enhance Listing'}</h1>
+          {property && location && <p className="text-[13px] text-[#737370] mt-0.5">{location}</p>}
         </div>
       </div>
 
@@ -403,13 +433,61 @@ function EnhanceContent() {
             )}
           </div>
 
+          {/* Promo code */}
+          <div className="px-5 py-4 border-b border-[#E8E8E4]">
+            {appliedPromo ? (
+              <div className="flex items-center justify-between p-2.5 bg-[#E4F5EC] border border-[#9FDBB8] rounded">
+                <div>
+                  <p className="text-[12px] font-semibold text-[#0F6E56]">{appliedPromo.name || promoCode.toUpperCase()} applied</p>
+                  <p className="text-[11px] text-[#0F6E56]">
+                    {appliedPromo.discount.type === 'percent'
+                      ? `${appliedPromo.discount.value}% off`
+                      : `$${appliedPromo.discount.value.toFixed(2)} off`}
+                  </p>
+                </div>
+                <button
+                  onClick={() => { setAppliedPromo(null); setPromoCode('') }}
+                  className="text-[11px] text-[#0F6E56] underline hover:no-underline"
+                >Remove</button>
+              </div>
+            ) : (
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#A8A8A4] mb-2">Promo Code</p>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={promoCode}
+                    onChange={e => { setPromoCode(e.target.value.toUpperCase()); setPromoError(null) }}
+                    onKeyDown={e => e.key === 'Enter' && validatePromo()}
+                    placeholder="Enter promo code"
+                    className="flex-1 h-[36px] px-3 text-[13px] border border-[#E8E8E4] rounded bg-white focus:outline-none focus:border-[#D03839]"
+                  />
+                  <button
+                    type="button"
+                    onClick={validatePromo}
+                    disabled={promoValidating || !promoCode.trim()}
+                    className="px-3 h-[36px] text-[13px] font-semibold border border-[#E8E8E4] rounded bg-white hover:bg-[#FAFAF8] disabled:opacity-50 flex items-center gap-1.5"
+                  >
+                    {promoValidating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Apply'}
+                  </button>
+                </div>
+                {promoError && <p className="text-[12px] text-[#D03839] mt-1.5">{promoError}</p>}
+              </div>
+            )}
+          </div>
+
           {/* Total */}
           <div className="px-5 py-4 flex justify-between items-baseline border-b border-[#E8E8E4]">
             <div>
               <p className="text-[15px] font-bold text-[#1A1816]">Total</p>
               <p className="text-[11px] text-[#737370] mt-0.5">One-time charge</p>
             </div>
-            <span className="text-[28px] font-bold text-[#1A1816] tracking-tight">${(total / 100).toFixed(2)}</span>
+            <div className="text-right">
+              {discountAmount > 0 && (
+                <p className="text-[13px] text-[#A8A8A4] line-through">${(total / 100).toFixed(2)}</p>
+              )}
+              <span className="text-[28px] font-bold text-[#1A1816] tracking-tight">${(finalTotal / 100).toFixed(2)}</span>
+            </div>
           </div>
 
           {error && <div className="mx-5 mt-4 p-3 bg-[#FEF0EF] border border-[#F5C4C0] rounded-lg text-[13px] text-[#D03839]">{error}</div>}
