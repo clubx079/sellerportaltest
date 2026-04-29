@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
-import { CreditCard, Check, AlertCircle, Loader2, ExternalLink } from 'lucide-react'
+import { CreditCard, Check, AlertCircle, Loader2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 
 const labelCls = 'block text-[12px] font-semibold text-[#737370] uppercase tracking-[0.08em] mb-1'
@@ -109,21 +109,6 @@ export default function BillingPage() {
     }
   }
 
-  const handleManageBilling = async () => {
-    if (!plan?.stripe_customer_id) return
-    try {
-      const res = await fetch('/api/billing/portal', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ customer_id: plan.stripe_customer_id }),
-      })
-      const data = await res.json()
-      if (data.url) window.open(data.url, '_blank')
-    } catch {
-      setError('Could not open billing portal.')
-    }
-  }
-
   return (
     <div className="space-y-6">
       <div>
@@ -209,21 +194,6 @@ export default function BillingPage() {
               )}
             </div>
 
-            {plan.stripe_subscription_id ? (
-              <button
-                onClick={handleManageBilling}
-                className="flex items-center gap-1.5 text-[13px] font-semibold text-[#D03839] hover:text-[#E0493B] transition-colors mt-1"
-              >
-                Manage subscription <ExternalLink className="w-3.5 h-3.5" />
-              </button>
-            ) : plan.stripe_customer_id && (
-              <button
-                onClick={handleManageBilling}
-                className="flex items-center gap-1.5 text-[13px] font-semibold text-[#D03839] hover:text-[#E0493B] transition-colors mt-1"
-              >
-                View receipt <ExternalLink className="w-3.5 h-3.5" />
-              </button>
-            )}
           </div>
         ) : (
           <div className="space-y-3">
@@ -268,29 +238,8 @@ export default function BillingPage() {
           <p className="text-[13px] text-[#737370]">No payment method on file.</p>
         )}
 
-        {plan?.stripe_customer_id && (
-          <button
-            onClick={handleManageBilling}
-            className="mt-4 flex items-center gap-1.5 px-4 py-2 border border-[#D1D1CE] text-[#1A1816] text-[13px] font-semibold rounded hover:bg-[#F3F3F0] transition-colors"
-          >
-            Update payment method
-          </button>
-        )}
       </div>
 
-      {/* Billing History */}
-      <div className="bg-white border border-[#E8E8E4] rounded p-5">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.09em] text-[#A8A8A4] mb-4">Billing History</p>
-        <p className="text-[13px] text-[#737370] mb-3">View your invoices and receipts in the Stripe billing portal.</p>
-        {plan?.stripe_customer_id && (
-          <button
-            onClick={handleManageBilling}
-            className="flex items-center gap-1.5 text-[13px] font-semibold text-[#D03839] hover:text-[#E0493B] transition-colors"
-          >
-            Open billing portal <ExternalLink className="w-3.5 h-3.5" />
-          </button>
-        )}
-      </div>
     </div>
   )
 }
