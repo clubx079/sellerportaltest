@@ -115,7 +115,7 @@ export default function BillingPage() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="space-y-6">
       <div>
         <h1 className="text-[20px] font-bold text-[#1A1816] tracking-tight">Billing</h1>
         <p className="text-[13px] text-[#737370] mt-0.5">Manage your plan and payment information.</p>
