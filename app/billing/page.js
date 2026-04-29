@@ -36,6 +36,7 @@ function planLabel(type) {
 export default function BillingPage() {
   const [plan, setPlan] = useState(null)
   const [paymentMethod, setPaymentMethod] = useState(null)
+  const [subDetails, setSubDetails] = useState(null)
   const [loading, setLoading] = useState(true)
   const [pmLoading, setPmLoading] = useState(false)
   const [error, setError] = useState(null)
@@ -78,6 +79,15 @@ export default function BillingPage() {
       }
 
       setPlan(planData)
+
+      if (planData?.stripe_subscription_id) {
+        const detRes = await fetch('/api/billing/subscription-details', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ subscription_id: planData.stripe_subscription_id }),
+        })
+        if (detRes.ok) setSubDetails(await detRes.json())
+      }
 
       if (planData?.stripe_customer_id) {
         setPmLoading(true)
@@ -143,6 +153,25 @@ export default function BillingPage() {
                 <p className="text-[13px] text-[#737370] mt-0.5 capitalize">
                   {plan.plan_type !== 'standard' ? plan.billing_cycle : 'One-time payment'}
                 </p>
+                {subDetails?.has_discount ? (
+                  <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                    <span className="text-[13px] text-[#A8A8A4] line-through">
+                      ${(subDetails.original_amount / 100).toFixed(2)}/{subDetails.interval}
+                    </span>
+                    <span className="text-[14px] font-bold text-[#1A1816]">
+                      ${(subDetails.discounted_amount / 100).toFixed(2)}/{subDetails.interval}
+                    </span>
+                    {subDetails.coupon_name && (
+                      <span className="text-[11px] font-semibold bg-[#E4F5EC] text-[#0F6E56] border border-[#B6E4CE] px-2 py-0.5 rounded-full">
+                        {subDetails.coupon_name}
+                      </span>
+                    )}
+                  </div>
+                ) : subDetails?.original_amount ? (
+                  <p className="text-[13px] font-semibold text-[#1A1816] mt-1.5">
+                    ${(subDetails.original_amount / 100).toFixed(2)}/{subDetails.interval}
+                  </p>
+                ) : null}
               </div>
               <PlanBadge status={plan.status} />
             </div>
