@@ -441,7 +441,7 @@ function StepPlan({ onNext }) {
 }
 
 // ─── Step 3: Payment ──────────────────────────────────────────────────────────
-function CheckoutForm({ session, intentType, appliedPromo, onSuccess }) {
+function CheckoutForm({ session, intentType, appliedPromo, noTrial, onSuccess }) {
   const stripe = useStripe()
   const elements = useElements()
   const [processing, setProcessing] = useState(false)
@@ -480,7 +480,7 @@ function CheckoutForm({ session, intentType, appliedPromo, onSuccess }) {
   // Full charge amounts
   const monthlyPrice = isPro ? 99  : 299
   const annualTotal  = isPro ? 948 : 2868
-  const dueToday     = 0  // both Pro and Enterprise have 7-day free trial
+  const dueToday     = noTrial ? (isAnnual ? annualTotal : monthlyPrice) : 0
   const planName     = isPro ? 'Pro Seller' : 'Enterprise'
 
   // What to show as the charge line
@@ -488,18 +488,19 @@ function CheckoutForm({ session, intentType, appliedPromo, onSuccess }) {
     ? `$${annualTotal.toLocaleString()} / year`
     : `$${monthlyPrice} / month`
 
-  // Button label — both plans start with 7-day free trial
-  const btnLabel = 'Start 7-Day Free Trial'
+  const btnLabel = noTrial ? 'Start My Subscription' : 'Start 7-Day Free Trial'
 
   return (
     <form onSubmit={handlePay} className="space-y-4">
-      {/* Trial banner */}
-      <div className="flex items-center gap-2 bg-[#E4F5EC] border border-[#B3DFC5] rounded px-3 py-2.5">
-        <Check className="w-3.5 h-3.5 text-[#0F6E56] shrink-0" />
-        <p className="text-[12px] font-medium text-[#0F6E56]">
-          7-day free trial · then {chargeLabel}{isAnnual ? ' — billed as one annual payment' : ''}
-        </p>
-      </div>
+      {/* Trial banner — only shown when trial applies */}
+      {!noTrial && (
+        <div className="flex items-center gap-2 bg-[#E4F5EC] border border-[#B3DFC5] rounded px-3 py-2.5">
+          <Check className="w-3.5 h-3.5 text-[#0F6E56] shrink-0" />
+          <p className="text-[12px] font-medium text-[#0F6E56]">
+            7-day free trial · then {chargeLabel}{isAnnual ? ' — billed as one annual payment' : ''}
+          </p>
+        </div>
+      )}
 
       {/* Order Summary */}
       <div className="rounded border border-[#E8E8E4] overflow-hidden">
@@ -535,7 +536,9 @@ function CheckoutForm({ session, intentType, appliedPromo, onSuccess }) {
           })()}
           <div className="border-t border-[#E8E8E4] pt-3 flex justify-between items-center">
             <p className="text-[13px] font-bold text-[#1A1816]">Due today</p>
-            <p className="text-[22px] font-bold text-[#0F6E56]">$0</p>
+            <p className={`text-[22px] font-bold ${noTrial ? 'text-[#1A1816]' : 'text-[#0F6E56]'}`}>
+              {noTrial ? chargeLabel : '$0'}
+            </p>
           </div>
         </div>
       </div>
@@ -600,6 +603,7 @@ function StepPayment({ onSuccess }) {
               plan_type: s.plan_type,
               billing_cycle: s.billing_cycle,
               quantity: s.quantity || 1,
+              no_trial: s.no_trial || false,
               promo_code_id: data.promo_code_id || null,
             }),
           })
@@ -637,6 +641,7 @@ function StepPayment({ onSuccess }) {
           plan_type: s.plan_type,
           billing_cycle: s.billing_cycle,
           quantity: s.quantity || 1,
+          no_trial: s.no_trial || false,
           promo_code_id: appliedPromo?.promo_code_id || null,
         }),
       })
@@ -717,7 +722,7 @@ function StepPayment({ onSuccess }) {
       </div>
 
       <Elements stripe={stripePromise} options={{ clientSecret, terms: { card: 'never' } }}>
-        <CheckoutForm session={session} intentType={intentType} appliedPromo={appliedPromo} onSuccess={(pmId) => {
+        <CheckoutForm session={session} intentType={intentType} appliedPromo={appliedPromo} noTrial={session.no_trial || false} onSuccess={(pmId) => {
           if (pmId) {
             const s2 = JSON.parse(sessionStorage.getItem('onboarding') || '{}')
             sessionStorage.setItem('onboarding', JSON.stringify({ ...s2, pm_id: pmId }))
@@ -796,6 +801,7 @@ const STEP_TITLES = [
 function OnboardingContent() {
   const [step, setStep] = useState(0)
   const router = useRouter()
+  const searchParams = useSearchParams()
 
   useEffect(() => {
     // If already logged in, go to dashboard
@@ -803,6 +809,16 @@ function OnboardingContent() {
       router.push('/dashboard')
     }
   }, [router])
+
+  useEffect(() => {
+    // Store no_trial flag from URL into session so payment step can use it
+    if (searchParams.get('no_trial') === '1') {
+      try {
+        const s = JSON.parse(sessionStorage.getItem('onboarding') || '{}')
+        sessionStorage.setItem('onboarding', JSON.stringify({ ...s, no_trial: true }))
+      } catch {}
+    }
+  }, [searchParams])
 
   const next = () => setStep(s => s + 1)
   const back = () => setStep(s => s - 1)
