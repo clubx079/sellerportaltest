@@ -75,6 +75,8 @@ export async function POST(request) {
         seller_id,
         property_id: property_id || '',
         add_ons: validAddOns.join(','),
+        original_amount: String(baseAmount),
+        discount_amount: String(baseAmount - amount),
       },
     })
 

@@ -1,6 +1,14 @@
 import { NextResponse } from 'next/server'
 import Stripe from 'stripe'
 
+// Must match listing-addons prices exactly
+const ADD_ON_PRICES = {
+  highlight: 999,
+  boost:     1499,
+  homepage:  2900,
+  bundle:    2200,
+}
+
 export async function POST(request) {
   const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
   try {
@@ -47,19 +55,37 @@ export async function POST(request) {
     // Addon charges — only PaymentIntents that have add_ons in metadata (never subscription charges)
     const addonCharges = piList.data
       .filter(pi => pi.status === 'succeeded' && pi.metadata?.add_ons)
-      .map(pi => ({
-        id:                 pi.id,
-        number:             null,
-        created:            pi.created,
-        amount_paid:        pi.amount,
-        amount_due:         pi.amount,
-        currency:           pi.currency,
-        status:             'paid',
-        hosted_invoice_url: pi.charges?.data?.[0]?.receipt_url || null,
-        invoice_pdf:        null,
-        description:        `Add-ons: ${pi.metadata.add_ons.split(',').join(', ')}`,
-        type:               'charge',
-      }))
+      .map(pi => {
+        // Prefer stored original_amount; fall back to reconstructing from known prices
+        let subtotal
+        if (pi.metadata.original_amount) {
+          subtotal = parseInt(pi.metadata.original_amount)
+        } else {
+          const addOnIds = pi.metadata.add_ons.split(',').map(s => s.trim())
+          subtotal = addOnIds.reduce((sum, id) => sum + (ADD_ON_PRICES[id] || 0), 0) || pi.amount
+        }
+
+        const discountAmount = pi.metadata.discount_amount
+          ? parseInt(pi.metadata.discount_amount)
+          : Math.max(subtotal - pi.amount, 0)
+
+        return {
+          id:                 pi.id,
+          number:             null,
+          created:            pi.created,
+          amount_paid:        pi.amount,
+          amount_due:         pi.amount,
+          subtotal:           subtotal,
+          discount_amount:    discountAmount,
+          discount_label:     null,
+          currency:           pi.currency,
+          status:             'paid',
+          hosted_invoice_url: pi.charges?.data?.[0]?.receipt_url || null,
+          invoice_pdf:        null,
+          description:        `Add-ons: ${pi.metadata.add_ons.split(',').map(s => s.trim()).join(', ')}`,
+          type:               'charge',
+        }
+      })
 
     // Merge and sort by date descending
     const all = [...invoices, ...addonCharges].sort((a, b) => b.created - a.created)
