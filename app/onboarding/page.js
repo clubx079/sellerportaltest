@@ -480,13 +480,26 @@ function CheckoutForm({ session, intentType, appliedPromo, noTrial, onSuccess })
   // Full charge amounts
   const monthlyPrice = isPro ? 99  : 299
   const annualTotal  = isPro ? 948 : 2868
-  const dueToday     = noTrial ? (isAnnual ? annualTotal : monthlyPrice) : 0
+  const basePrice    = isAnnual ? annualTotal : monthlyPrice
   const planName     = isPro ? 'Pro Seller' : 'Enterprise'
+
+  // Discounted price when promo is applied
+  const discountedPrice = appliedPromo
+    ? (appliedPromo.discount.type === 'percent'
+        ? basePrice * (1 - appliedPromo.discount.value / 100)
+        : Math.max(0, basePrice - appliedPromo.discount.value))
+    : basePrice
 
   // What to show as the charge line
   const chargeLabel  = isAnnual
     ? `$${annualTotal.toLocaleString()} / year`
     : `$${monthlyPrice} / month`
+
+  const dueTodayLabel = noTrial
+    ? (appliedPromo
+        ? `$${discountedPrice % 1 === 0 ? discountedPrice.toLocaleString() : discountedPrice.toFixed(2)} / ${isAnnual ? 'year' : 'month'}`
+        : chargeLabel)
+    : '$0'
 
   const btnLabel = noTrial ? 'Start My Subscription' : 'Start 7-Day Free Trial'
 
@@ -515,29 +528,22 @@ function CheckoutForm({ session, intentType, appliedPromo, noTrial, onSuccess })
             </div>
             <p className="text-[13px] font-semibold text-[#1A1816]">{chargeLabel}</p>
           </div>
-          {appliedPromo && (() => {
-            const basePrice = isAnnual ? annualTotal : monthlyPrice
-            const discountedPrice = appliedPromo.discount.type === 'percent'
-              ? basePrice * (1 - appliedPromo.discount.value / 100)
-              : Math.max(0, basePrice - appliedPromo.discount.value)
-            const discountLabel = isAnnual ? '/ year' : '/ month'
-            return (
-              <div className="flex justify-between items-center">
-                <p className="text-[12px] text-[#0F6E56]">
-                  {appliedPromo.name} · {appliedPromo.discount.type === 'percent' ? `${appliedPromo.discount.value}% off` : `$${appliedPromo.discount.value} off`}
-                  {appliedPromo.duration === 'once' ? ' (first payment)' : appliedPromo.duration === 'repeating' ? ` (${appliedPromo.duration_in_months} months)` : ''}
-                </p>
-                <div className="text-right">
-                  <p className="text-[11px] text-[#A8A8A4] line-through">${basePrice.toLocaleString()}</p>
-                  <p className="text-[12px] font-semibold text-[#0F6E56]">${discountedPrice % 1 === 0 ? discountedPrice.toLocaleString() : discountedPrice.toFixed(2)} {discountLabel}</p>
-                </div>
+          {appliedPromo && (
+            <div className="flex justify-between items-center">
+              <p className="text-[12px] text-[#0F6E56]">
+                {appliedPromo.name} · {appliedPromo.discount.type === 'percent' ? `${appliedPromo.discount.value}% off` : `$${appliedPromo.discount.value} off`}
+                {appliedPromo.duration === 'once' ? ' (first payment)' : appliedPromo.duration === 'repeating' ? ` (${appliedPromo.duration_in_months} months)` : ''}
+              </p>
+              <div className="text-right">
+                <p className="text-[11px] text-[#A8A8A4] line-through">${basePrice.toLocaleString()}</p>
+                <p className="text-[12px] font-semibold text-[#0F6E56]">${discountedPrice % 1 === 0 ? discountedPrice.toLocaleString() : discountedPrice.toFixed(2)} / {isAnnual ? 'year' : 'month'}</p>
               </div>
-            )
-          })()}
+            </div>
+          )}
           <div className="border-t border-[#E8E8E4] pt-3 flex justify-between items-center">
             <p className="text-[13px] font-bold text-[#1A1816]">Due today</p>
             <p className={`text-[22px] font-bold ${noTrial ? 'text-[#1A1816]' : 'text-[#0F6E56]'}`}>
-              {noTrial ? chargeLabel : '$0'}
+              {dueTodayLabel}
             </p>
           </div>
         </div>
@@ -578,6 +584,34 @@ function StepPayment({ onSuccess }) {
   useEffect(() => {
     const s = JSON.parse(sessionStorage.getItem('onboarding') || '{}')
     setSession(s)
+    // Auto-create intent so user goes straight to payment form
+    setLoading(true)
+    setError(null)
+    fetch('/api/seller/plan/create-intent', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        seller_id: s.seller_id,
+        plan_type: s.plan_type,
+        billing_cycle: s.billing_cycle,
+        quantity: s.quantity || 1,
+        no_trial: s.no_trial || false,
+        promo_code_id: null,
+      }),
+    }).then(r => r.json()).then(d => {
+      if (d.clientSecret) {
+        setClientSecret(d.clientSecret)
+        setIntentType(d.type || 'subscription')
+        if (d.subscription_id) {
+          const s2 = JSON.parse(sessionStorage.getItem('onboarding') || '{}')
+          sessionStorage.setItem('onboarding', JSON.stringify({ ...s2, subscription_id: d.subscription_id }))
+        }
+      } else {
+        setError(d.error || 'Failed to initialize payment')
+      }
+    }).catch(() => {
+      setError('Failed to initialize payment')
+    }).finally(() => setLoading(false))
   }, [])
 
   const validatePromo = async () => {
@@ -665,15 +699,11 @@ function StepPayment({ onSuccess }) {
   if (!clientSecret) return (
     <div className="space-y-4">
       {error && <div className="p-3 bg-[#FEF0EF] border border-[#F5C0BF] rounded text-[13px] text-[#D03839]">{error}</div>}
-
-      <button
-        type="button"
-        onClick={createIntent}
-        disabled={loading}
-        className="w-full h-[46px] bg-[#D03839] hover:bg-[#E0493B] text-white text-[14px] font-semibold rounded transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-      >
-        {loading ? <><Loader2 className="w-4 h-4 animate-spin" /> Loading…</> : 'Continue to Payment'}
-      </button>
+      {loading && (
+        <div className="flex items-center justify-center gap-2 py-8 text-[#737370] text-[13px]">
+          <Loader2 className="w-4 h-4 animate-spin" /> Setting up payment…
+        </div>
+      )}
     </div>
   )
 

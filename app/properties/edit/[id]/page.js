@@ -57,6 +57,7 @@ function parseRejectionReasons(raw) {
 export default function EditPropertyPage() {
   const router = useRouter();
   const { id } = useParams();
+  const fromDraft = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('from_draft') === '1';
   const [saving, setSaving] = useState(false);
   const [loadingProperty, setLoadingProperty] = useState(true);
   const [error, setError] = useState(null);
@@ -502,7 +503,7 @@ export default function EditPropertyPage() {
             ? 'Property updated and sent for review!'
             : 'Property updated successfully!'
         );
-        setTimeout(() => router.push('/properties'), 1500);
+        setTimeout(() => router.push(fromDraft ? `/properties/enhance?id=${id}` : '/properties'), 1500);
         setSaving(false);
         return;
       }
@@ -563,7 +564,7 @@ export default function EditPropertyPage() {
       );
 
       setTimeout(() => {
-        router.push('/properties');
+        router.push(fromDraft ? `/properties/enhance?id=${data.id}` : '/properties');
       }, 1500);
     } catch (err) {
       console.error('Update failed:', err);

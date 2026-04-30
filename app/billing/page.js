@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
-import { CreditCard, Check, AlertCircle, Loader2 } from 'lucide-react'
+import { CreditCard, Check, AlertCircle, Loader2, Receipt } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 
 const labelCls = 'block text-[12px] font-semibold text-[#737370] uppercase tracking-[0.08em] mb-1'
@@ -37,6 +37,7 @@ export default function BillingPage() {
   const [plan, setPlan] = useState(null)
   const [paymentMethod, setPaymentMethod] = useState(null)
   const [subDetails, setSubDetails] = useState(null)
+  const [invoices, setInvoices] = useState([])
   const [loading, setLoading] = useState(true)
   const [pmLoading, setPmLoading] = useState(false)
   const [error, setError] = useState(null)
@@ -91,14 +92,25 @@ export default function BillingPage() {
 
       if (planData?.stripe_customer_id) {
         setPmLoading(true)
-        const res = await fetch('/api/billing/payment-methods', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ customer_id: planData.stripe_customer_id }),
-        })
-        if (res.ok) {
-          const d = await res.json()
+        const [pmRes, invRes] = await Promise.all([
+          fetch('/api/billing/payment-methods', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ customer_id: planData.stripe_customer_id }),
+          }),
+          fetch('/api/billing/invoices', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ customer_id: planData.stripe_customer_id }),
+          }),
+        ])
+        if (pmRes.ok) {
+          const d = await pmRes.json()
           setPaymentMethod(d.default_payment_method || null)
+        }
+        if (invRes.ok) {
+          const d = await invRes.json()
+          setInvoices(d.invoices || [])
         }
         setPmLoading(false)
       }
@@ -237,7 +249,56 @@ export default function BillingPage() {
         ) : (
           <p className="text-[13px] text-[#737370]">No payment method on file.</p>
         )}
+      </div>
 
+      {/* Billing History */}
+      <div className="bg-white border border-[#E8E8E4] rounded p-5">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.09em] text-[#A8A8A4] mb-4">Billing History</p>
+        {pmLoading ? (
+          <div className="flex items-center gap-2 text-[#737370] text-[13px]">
+            <Loader2 className="w-4 h-4 animate-spin" /> Loading…
+          </div>
+        ) : invoices.length === 0 ? (
+          <div className="flex items-center gap-2 py-2">
+            <Receipt className="w-4 h-4 text-[#A8A8A4]" />
+            <p className="text-[13px] text-[#737370]">No billing history yet.</p>
+          </div>
+        ) : (
+          <div className="-mx-5 -mb-5">
+            {invoices.map((inv, i) => (
+              <div
+                key={inv.id}
+                className={`flex items-center justify-between px-5 py-3.5 ${i !== invoices.length - 1 ? 'border-b border-[#F3F3F0]' : ''} hover:bg-[#FAFAF8] transition-colors`}
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-8 h-8 rounded bg-[#F3F3F0] flex items-center justify-center flex-shrink-0">
+                    <Receipt className="w-4 h-4 text-[#737370]" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-[13px] font-semibold text-[#1A1816] truncate">{inv.description}</p>
+                    <p className="text-[11px] text-[#A8A8A4] mt-0.5">{formatDate(inv.created * 1000)}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 flex-shrink-0 ml-4">
+                  <div className="text-right">
+                    {inv.discount_amount > 0 && (
+                      <p className="text-[11px] text-[#A8A8A4] line-through">${(inv.subtotal / 100).toFixed(2)}</p>
+                    )}
+                    <p className="text-[13px] font-bold text-[#1A1816]">${((inv.amount_paid || inv.amount_due) / 100).toFixed(2)}</p>
+                    {inv.discount_amount > 0 && (
+                      <p className="text-[11px] text-[#0F6E56] font-medium">−${(inv.discount_amount / 100).toFixed(2)} discount</p>
+                    )}
+                  </div>
+                  <span className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold border ${
+                    inv.status === 'paid' ? 'bg-[#E4F5EC] text-[#0F6E56] border-[#9FDBB8]' : 'bg-[#F3F3F0] text-[#737370] border-[#E8E8E4]'
+                  }`}>
+                    {inv.status === 'paid' ? 'Paid' : inv.status}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
     </div>

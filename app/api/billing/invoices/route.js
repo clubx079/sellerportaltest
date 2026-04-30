@@ -16,19 +16,33 @@ export async function POST(request) {
     // Subscription invoices
     const invoices = invoiceList.data
       .filter(inv => inv.amount_paid > 0 || inv.amount_due > 0)
-      .map(inv => ({
-        id:                 inv.id,
-        number:             inv.number,
-        created:            inv.created,
-        amount_paid:        inv.amount_paid,
-        amount_due:         inv.amount_due,
-        currency:           inv.currency,
-        status:             inv.status,
-        hosted_invoice_url: inv.hosted_invoice_url,
-        invoice_pdf:        inv.invoice_pdf,
-        description:        inv.lines?.data?.[0]?.description || 'Subscription',
-        type:               'invoice',
-      }))
+      .map(inv => {
+        const discountAmount = (inv.total_discount_amounts || []).reduce((sum, d) => sum + d.amount, 0)
+        const subtotal = inv.subtotal || 0
+        const discountLabel = inv.discount
+          ? (inv.discount.coupon?.percent_off
+              ? `${inv.discount.coupon.percent_off}% off`
+              : inv.discount.coupon?.amount_off
+                ? `$${(inv.discount.coupon.amount_off / 100).toFixed(2)} off`
+                : null)
+          : null
+        return {
+          id:                 inv.id,
+          number:             inv.number,
+          created:            inv.created,
+          amount_paid:        inv.amount_paid,
+          amount_due:         inv.amount_due,
+          subtotal:           subtotal,
+          discount_amount:    discountAmount,
+          discount_label:     discountLabel,
+          currency:           inv.currency,
+          status:             inv.status,
+          hosted_invoice_url: inv.hosted_invoice_url,
+          invoice_pdf:        inv.invoice_pdf,
+          description:        inv.lines?.data?.[0]?.description || 'Subscription',
+          type:               'invoice',
+        }
+      })
 
     // Addon charges — only PaymentIntents that have add_ons in metadata (never subscription charges)
     const addonCharges = piList.data
