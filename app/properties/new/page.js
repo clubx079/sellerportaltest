@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { Save, Eye, ArrowLeft, Upload, X, AlertCircle, Home, FileText, Zap, Star, TrendingUp, Package, Check, Lock, ChevronRight } from 'lucide-react';
 import ImageGalleryManager from '@/components/properties/ImageGalleryManager';
@@ -42,6 +42,8 @@ const PROPERTY_TYPES = [
 
 export default function NewPropertyPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const draftId = searchParams.get('draft_id') || null;
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
@@ -100,7 +102,6 @@ export default function NewPropertyPage() {
     if (userStr) {
       const user = JSON.parse(userStr);
       setUserId(user.id);
-      // Fetch plan to check trial/subscription status
       supabase
         .from('seller_plans')
         .select('status, plan_type, billing_cycle, listings_used_this_period, trial_ends_at, current_period_end')
@@ -109,6 +110,66 @@ export default function NewPropertyPage() {
         .then(({ data }) => { if (data) setTrialPlan(data) });
     }
   }, []);
+
+  // Pre-fill form from draft when draft_id is present
+  useEffect(() => {
+    if (!draftId) return;
+    const userStr = localStorage.getItem('seller_user');
+    if (!userStr) return;
+    const user = JSON.parse(userStr);
+
+    supabase
+      .from('properties')
+      .select('*, property_images(id, image_url, image_key, sort_order)')
+      .eq('id', draftId)
+      .eq('seller_id', user.id)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (!data) return;
+        setFormData(prev => ({
+          ...prev,
+          location: data.address || '',
+          price: data.price ?? '',
+          bedrooms: data.bedrooms ?? '',
+          bathrooms: data.bathrooms ?? '',
+          floor_area: data.floor_area ?? '',
+          property_type: data.property_type || '',
+          property_status: data.property_status || 'available',
+          latitude: data.latitude ?? '',
+          longitude: data.longitude ?? '',
+          county: data.county ?? '',
+          city: data.city ?? '',
+          zipcode: data.zipcode ?? '',
+          state: data.state ?? '',
+          description: data.description || '',
+          repairs: data.repairs || '',
+          seo_title: data.seo_title || '',
+          seo_description: data.seo_description || '',
+          social_title: data.social_title || '',
+          social_description: data.social_description || '',
+          social_image_url: data.social_image_url || '',
+        }));
+        if (data.property_images?.length > 0) {
+          const sorted = [...data.property_images].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
+          setImageUploadStatus({
+            isUploading: false,
+            uploadingCount: 0,
+            images: sorted.map((img, i) => ({
+              id: img.id || `existing-${i}`,
+              status: 'completed',
+              imageUrl: img.image_url,
+              imageKey: img.image_key,
+              preview: img.image_url,
+              isFeatured: i === 0,
+            })),
+          });
+        }
+        if (data.seller_type) setSellerType(data.seller_type);
+        if (data.inspection_report_url) setInspectionReport({ url: data.inspection_report_url, key: data.inspection_report_key || null, uploading: false });
+        if (data.contract_url) setContractUpload({ url: data.contract_url, key: null, filename: 'Contract', uploading: false });
+        if (data.seller_type === 'owner') setOwnershipConfirmed(true);
+      });
+  }, [draftId]);
 
   const handleInputChange = (field, value) => {
     setFormData(prev => ({
@@ -375,12 +436,15 @@ export default function NewPropertyPage() {
     setError(null);
     setSuccess(null);
 
-    // Short unique slug: 7 alphabets + 2 numerics (e.g. kxmnpqr29) — more readable, less numeric
-    const alpha = 'abcdefghjkmnpqrstuvwxyz';
-    const nums = '23456789';
-    const part1 = Array.from({ length: 7 }, () => alpha[Math.floor(Math.random() * alpha.length)]).join('');
-    const part2 = Array.from({ length: 2 }, () => nums[Math.floor(Math.random() * nums.length)]).join('');
-    const shortSlug = part1 + part2;
+    // Short unique slug — reuse existing slug for drafts, generate new for fresh properties
+    let shortSlug;
+    if (!draftId) {
+      const alpha = 'abcdefghjkmnpqrstuvwxyz';
+      const nums = '23456789';
+      const part1 = Array.from({ length: 7 }, () => alpha[Math.floor(Math.random() * alpha.length)]).join('');
+      const part2 = Array.from({ length: 2 }, () => nums[Math.floor(Math.random() * nums.length)]).join('');
+      shortSlug = part1 + part2;
+    }
 
     // Create save data object matching the actual database schema
     // When publishing, set under_review so AI moderation can run first
@@ -388,7 +452,7 @@ export default function NewPropertyPage() {
     const saveData = {
       seller_id: sellerId,
       status: actualStatus,
-      slug: shortSlug,
+      ...(shortSlug ? { slug: shortSlug } : {}),
       address: formData.location || '', // 'location' in form maps to 'address' in DB
       property_status: formData.property_status || 'available',
       property_type: formData.property_type || null,
@@ -422,17 +486,30 @@ export default function NewPropertyPage() {
     if (sellerType) saveData.seller_type = sellerType;
     if (contractUpload.url) saveData.contract_url = contractUpload.url;
 
-    console.log('Saving property with data:', saveData);
-
     try {
-      // Create property
-      const { data, error: saveErr } = await supabase
-        .from('properties')
-        .insert([saveData])
-        .select()
-        .single();
-
-      if (saveErr) throw saveErr;
+      // Update existing draft or create new property
+      let data;
+      if (draftId) {
+        const { data: updated, error: updateErr } = await supabase
+          .from('properties')
+          .update({ ...saveData, updated_at: new Date().toISOString() })
+          .eq('id', draftId)
+          .eq('seller_id', sellerId)
+          .select()
+          .single();
+        if (updateErr) throw updateErr;
+        data = updated;
+        // Remove old images so we can replace with current set
+        await supabase.from('property_images').delete().eq('property_id', draftId);
+      } else {
+        const { data: inserted, error: saveErr } = await supabase
+          .from('properties')
+          .insert([saveData])
+          .select()
+          .single();
+        if (saveErr) throw saveErr;
+        data = inserted;
+      }
 
       // Save images to database
       if (completedImagesForSave.length > 0) {
@@ -738,8 +815,12 @@ export default function NewPropertyPage() {
             <ArrowLeft size={20} className="text-[#737370]" />
           </button>
           <div>
-            <h1 className="text-[18px] md:text-[20px] font-bold tracking-[-0.4px] text-[#1A1816]">Post a Deal</h1>
-            <p className="text-[12px] text-[#737370] mt-0.5">Create a new wholesale property listing</p>
+            <h1 className="text-[18px] md:text-[20px] font-bold tracking-[-0.4px] text-[#1A1816]">
+              {draftId ? 'Complete Your Listing' : 'Post a Deal'}
+            </h1>
+            <p className="text-[12px] text-[#737370] mt-0.5">
+              {draftId ? 'Your saved draft has been pre-filled — review and submit when ready' : 'Create a new wholesale property listing'}
+            </p>
           </div>
         </div>
         <button
@@ -1473,7 +1554,13 @@ function AddOnsTab({
   const featuredImage = (images || []).find(img => img.isFeatured && img.status === 'completed')
     || (images || []).find(img => img.status === 'completed')
 
-  const discountLineAmount = appliedPromo && finalAmount != null ? total - finalAmount : 0
+  const estimatedDiscount = appliedPromo
+    ? (appliedPromo.discount.type === 'percent'
+        ? Math.round(total * appliedPromo.discount.value / 100)
+        : Math.min(total, Math.round(appliedPromo.discount.value * 100)))
+    : 0
+  const discountLineAmount = finalAmount != null ? total - finalAmount : estimatedDiscount
+  const displayTotal = finalAmount != null ? finalAmount : Math.max(0, total - estimatedDiscount)
 
   return (
     <div className="space-y-6" style={{ fontFamily: 'var(--font-dm-sans), sans-serif' }}>
@@ -1693,7 +1780,7 @@ function AddOnsTab({
                 <p className="text-[13px] text-[#A8A8A4] line-through">${(total / 100).toFixed(2)}</p>
               )}
               <span className="text-[28px] font-bold text-[#1A1816] tracking-tight">
-                ${((finalAmount ?? total) / 100).toFixed(2)}
+                ${(displayTotal / 100).toFixed(2)}
               </span>
             </div>
           </div>

@@ -809,6 +809,14 @@ const PropertiesManagement = () => {
                           </>
                         ) : (
                           <>
+                            {property._source === 'manual' && property.status === 'draft' && (
+                              <button
+                                onClick={() => router.push(`/properties/new?draft_id=${property.id}`)}
+                                className="h-7 px-3 text-[11px] font-semibold bg-[#D03839] hover:bg-[#E0493B] text-white rounded transition-colors"
+                              >
+                                Complete
+                              </button>
+                            )}
                             {property._source === 'manual' && property.status === 'rejected' && (
                               <button
                                 onClick={() => router.push(`/properties/edit/${property.id}`)}
@@ -831,7 +839,7 @@ const PropertiesManagement = () => {
                             <button onClick={() => { setPropertyForUTM({ ...property, slug: property.slug || property.id, id: property.id }); setShowUTMModal(true); }} className="flex items-center justify-center w-8 h-8 rounded text-[#A8A8A4] hover:text-primary hover:bg-[#E8E8E4] transition-colors" title="Share links (UTM)">
                               <Link2 className="w-4 h-4" strokeWidth={2} />
                             </button>
-                            {property.status !== 'rejected' && (
+                            {property.status !== 'rejected' && property.status !== 'draft' && (
                               <button onClick={() => router.push(`/properties/edit/${property.id}`)} className="flex items-center justify-center w-8 h-8 rounded text-[#A8A8A4] hover:text-primary hover:bg-[#E8E8E4] transition-colors" title="Edit">
                                 <Edit2 className="w-4 h-4" strokeWidth={2} />
                               </button>
@@ -954,6 +962,14 @@ const PropertiesManagement = () => {
                     </>
                   ) : (
                     <>
+                      {property._source === 'manual' && property.status === 'draft' && (
+                        <button
+                          onClick={() => router.push(`/properties/new?draft_id=${property.id}`)}
+                          className="flex-1 flex flex-col items-center gap-1 py-1 text-white bg-[#D03839] hover:bg-[#E0493B] rounded transition-colors"
+                        >
+                          <span className="text-[10px] font-semibold">Complete</span>
+                        </button>
+                      )}
                       {property._source === 'manual' && property.status === 'rejected' && (
                         <button
                           onClick={() => router.push(`/properties/edit/${property.id}`)}
@@ -974,7 +990,7 @@ const PropertiesManagement = () => {
                       <button onClick={() => { setPropertyForUTM({ ...property, slug: property.slug || property.id, id: property.id }); setShowUTMModal(true); }} className="flex-1 flex items-center justify-center h-9 rounded text-[#737370] hover:text-primary hover:bg-[#E8E8E4] transition-colors" title="Share links">
                         <Link2 className="w-4 h-4" strokeWidth={2} />
                       </button>
-                      {property.status !== 'rejected' && (
+                      {property.status !== 'rejected' && property.status !== 'draft' && (
                         <button onClick={() => router.push(`/properties/edit/${property.id}`)} className="flex-1 flex items-center justify-center h-9 rounded text-[#737370] hover:text-primary hover:bg-[#E8E8E4] transition-colors" title="Edit">
                           <Edit2 className="w-4 h-4" strokeWidth={2} />
                         </button>
