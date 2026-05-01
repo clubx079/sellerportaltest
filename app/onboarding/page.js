@@ -709,6 +709,16 @@ function StepPayment({ onSuccess }) {
 
   return stripePromise && clientSecret ? (
     <div className="space-y-4">
+      <Elements stripe={stripePromise} options={{ clientSecret, terms: { card: 'never' } }}>
+        <CheckoutForm session={session} intentType={intentType} appliedPromo={appliedPromo} noTrial={session.no_trial || false} onSuccess={(pmId) => {
+          if (pmId) {
+            const s2 = JSON.parse(sessionStorage.getItem('onboarding') || '{}')
+            sessionStorage.setItem('onboarding', JSON.stringify({ ...s2, pm_id: pmId }))
+          }
+          onSuccess()
+        }} />
+      </Elements>
+
       {/* Promo code */}
       <div className="rounded border border-[#E8E8E4] overflow-hidden">
         <div className="bg-[#FAFAF8] px-4 py-2.5 border-b border-[#E8E8E4]">
@@ -750,16 +760,6 @@ function StepPayment({ onSuccess }) {
           {promoError && <p className="text-[12px] text-[#D03839] mt-2">{promoError}</p>}
         </div>
       </div>
-
-      <Elements stripe={stripePromise} options={{ clientSecret, terms: { card: 'never' } }}>
-        <CheckoutForm session={session} intentType={intentType} appliedPromo={appliedPromo} noTrial={session.no_trial || false} onSuccess={(pmId) => {
-          if (pmId) {
-            const s2 = JSON.parse(sessionStorage.getItem('onboarding') || '{}')
-            sessionStorage.setItem('onboarding', JSON.stringify({ ...s2, pm_id: pmId }))
-          }
-          onSuccess()
-        }} />
-      </Elements>
     </div>
   ) : (
     <div className="p-4 bg-[#FEF3E2] border border-[#F5D9A0] rounded text-[13px] text-[#B5620A] text-center">
