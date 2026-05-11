@@ -35,7 +35,7 @@ export async function POST(request) {
     const otp = Math.floor(100000 + Math.random() * 900000).toString()
     otpStore.set(email, { otp, expires: Date.now() + 10 * 60 * 1000 })
 
-    const smsResponse = await fetch('https://ap.airosofts.com/api/external/sms/send', {
+    const smsResponse = await fetch('https://text.airosofts.com/api/external/sms/send', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${process.env.AIROSOFTS_SMS_API_KEY}`,
