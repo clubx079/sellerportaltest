@@ -98,7 +98,7 @@ export async function POST(request) {
     const code = firstName ? `${firstName}${suffix}` : `DEEL${suffix}`
 
     const promoCode = await stripe.promotionCodes.create({
-      coupon: REFERRAL_COUPON_ID,
+      promotion: { type: 'coupon', coupon: REFERRAL_COUPON_ID },
       code,
       metadata: { user_id: sellerId, user_type: 'seller' },
     })
