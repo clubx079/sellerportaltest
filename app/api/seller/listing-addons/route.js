@@ -77,6 +77,7 @@ export async function POST(request) {
         add_ons: validAddOns.join(','),
         original_amount: String(baseAmount),
         discount_amount: String(baseAmount - amount),
+        ...(promo_code_id ? { promo_code_id } : {}),
       },
     })
 

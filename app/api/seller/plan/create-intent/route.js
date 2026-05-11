@@ -110,7 +110,7 @@ export async function POST(request) {
       payment_behavior: 'default_incomplete',
       payment_settings: { save_default_payment_method: 'on_subscription' },
       expand: ['latest_invoice.payment_intent', 'pending_setup_intent'],
-      metadata: { seller_id, plan_type, billing_cycle: billing_cycle || 'monthly' },
+      metadata: { seller_id, plan_type, billing_cycle: billing_cycle || 'monthly', ...(promo_code_id ? { promo_code_id } : {}) },
       ...(promo_code_id ? { discounts: [{ promotion_code: promo_code_id }] } : {}),
     }
 

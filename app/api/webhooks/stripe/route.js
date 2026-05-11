@@ -264,8 +264,21 @@ export async function POST(request) {
         break
       }
 
-      // ── Invoice paid: no counter reset — listings stay active across renewals ──
+      // ── Invoice paid: track promo code usage for subscription payments ──
       case 'invoice.payment_succeeded': {
+        const invoice = event.data.object
+        if (invoice.subscription) {
+          try {
+            const sub = await stripe.subscriptions.retrieve(invoice.subscription)
+            const promo_code_id = sub.metadata?.promo_code_id
+            if (promo_code_id && invoice.payment_intent) {
+              await supabase.from('promo_code_usages').upsert(
+                { promo_code_id, stripe_payment_intent_id: invoice.payment_intent, portal: 'seller_subscription' },
+                { onConflict: 'stripe_payment_intent_id' }
+              )
+            }
+          } catch {}
+        }
         break
       }
 
