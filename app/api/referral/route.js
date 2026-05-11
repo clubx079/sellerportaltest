@@ -28,16 +28,12 @@ export async function GET(request) {
 
     if (!referral) return NextResponse.json({ referral: null })
 
-    let timesRedeemed = 0
-    try {
-      const promoCode = await stripe.promotionCodes.retrieve(referral.promo_code_id)
-      timesRedeemed = promoCode.times_redeemed || 0
-    } catch {}
-
     const { data: usages } = await supabase
       .from('promo_code_usages')
       .select('stripe_payment_intent_id, portal')
       .eq('promo_code_id', referral.promo_code_id)
+
+    const timesRedeemed = usages?.length || 0
 
     let estimatedEarnings = 0
     if (usages && usages.length > 0) {
