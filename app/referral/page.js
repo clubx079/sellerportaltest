@@ -240,7 +240,7 @@ export default function ReferralPage() {
               { step: '1', title: 'Get your code', desc: 'Generate your personal referral code — it\'s unique to you.' },
               { step: '2', title: 'Share with anyone', desc: 'Send it to agents, wholesalers, or investors in your network.' },
               { step: '3', title: 'They save 20%', desc: 'They use your code at checkout and get 20% off their listing fee.' },
-              { step: '4', title: 'You earn 20%', desc: 'We send you 20% of their original listing fee at the end of the month via Stripe.' },
+              { step: '4', title: 'You earn 20%', desc: '20% of every listing fee paid through your code goes directly to you — automatically, every month.' },
             ].map(({ step, title, desc }, i, arr) => (
               <div key={step} className="flex gap-4">
                 <div className="flex flex-col items-center">
