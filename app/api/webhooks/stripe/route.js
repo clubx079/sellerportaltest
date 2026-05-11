@@ -38,7 +38,6 @@ export async function POST(request) {
 
         // ── Standard plan ──
         if (seller_id && plan_type === 'standard') {
-          // Idempotency — skip if already processed
           const { data: existing } = await supabase
             .from('seller_plans')
             .select('id')
@@ -62,6 +61,28 @@ export async function POST(request) {
               .update({ status: 'approved' })
               .eq('id', seller_id)
           }
+
+          // Link referral commission for standard plan
+          if (pi.amount > 0) {
+            const { data: signup } = await supabase
+              .from('link_referral_signups')
+              .select('referrer_id')
+              .eq('referred_id', seller_id)
+              .maybeSingle()
+
+            if (signup) {
+              await supabase.from('link_referral_commissions').upsert(
+                {
+                  referrer_id: signup.referrer_id,
+                  referred_id: seller_id,
+                  stripe_payment_intent_id: pi.id,
+                  amount_cents: Math.round(pi.amount * 0.20),
+                },
+                { onConflict: 'stripe_payment_intent_id' }
+              ).catch(() => {})
+            }
+          }
+
           break
         }
 
@@ -264,7 +285,7 @@ export async function POST(request) {
         break
       }
 
-      // ── Invoice paid: track promo code usage for subscription payments ──
+      // ── Invoice paid: track promo code usage + link referral commission ──
       case 'invoice.payment_succeeded': {
         const invoice = event.data.object
         if (invoice.subscription) {
@@ -276,6 +297,27 @@ export async function POST(request) {
                 { promo_code_id, stripe_payment_intent_id: invoice.payment_intent, portal: 'seller_subscription' },
                 { onConflict: 'stripe_payment_intent_id' }
               )
+            }
+
+            const sellerId = sub.metadata?.seller_id
+            if (sellerId && invoice.payment_intent && invoice.amount_paid > 0) {
+              const { data: signup } = await supabase
+                .from('link_referral_signups')
+                .select('referrer_id')
+                .eq('referred_id', sellerId)
+                .maybeSingle()
+
+              if (signup) {
+                await supabase.from('link_referral_commissions').upsert(
+                  {
+                    referrer_id: signup.referrer_id,
+                    referred_id: sellerId,
+                    stripe_payment_intent_id: invoice.payment_intent,
+                    amount_cents: Math.round(invoice.amount_paid * 0.20),
+                  },
+                  { onConflict: 'stripe_payment_intent_id' }
+                )
+              }
             }
           } catch {}
         }

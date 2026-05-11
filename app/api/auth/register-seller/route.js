@@ -56,6 +56,24 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Failed to create account' }, { status: 500 })
     }
 
+    // Link referral attribution — check for ref cookie set by middleware
+    const refCookie = request.cookies.get('deelmap_ref')?.value
+    if (refCookie) {
+      const { data: linkRef } = await supabase
+        .from('link_referrals')
+        .select('referrer_id')
+        .eq('ref_code', refCookie.toUpperCase())
+        .maybeSingle()
+
+      if (linkRef && linkRef.referrer_id !== seller.id) {
+        await supabase.from('link_referral_signups').insert({
+          ref_code: refCookie.toUpperCase(),
+          referrer_id: linkRef.referrer_id,
+          referred_id: seller.id,
+        }).catch(() => {})
+      }
+    }
+
     return NextResponse.json({ seller_id: seller.id })
   } catch (err) {
     console.error('[register-seller]', err)
