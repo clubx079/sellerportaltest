@@ -549,7 +549,10 @@ function CheckoutForm({ session, intentType, appliedPromo, noTrial, onSuccess })
         </div>
       </div>
 
-      <PaymentElement />
+      <PaymentElement options={{
+        layout: { type: 'accordion', defaultCollapsed: false, radios: true, spacedAccordionItems: false },
+        wallets: { applePay: 'auto', googlePay: 'never' },
+      }} />
 
       {error && (
         <div className="p-3 bg-[#FEF0EF] border border-[#F5C0BF] rounded text-[13px] text-[#D03839]">{error}</div>

@@ -90,7 +90,7 @@ export async function POST(request) {
         amount,
         currency: 'usd',
         customer: customerId,
-        automatic_payment_methods: { enabled: true },
+        payment_method_types: ['card', 'us_bank_account'],
         metadata: { seller_id, plan_type: 'standard', quantity: String(quantity), promo_code_id: promo_code_id || '' },
       })
       return NextResponse.json({ type: 'payment_intent', clientSecret: paymentIntent.client_secret })
@@ -108,7 +108,7 @@ export async function POST(request) {
       customer: customerId,
       items: [{ price: priceId }],
       payment_behavior: 'default_incomplete',
-      payment_settings: { save_default_payment_method: 'on_subscription' },
+      payment_settings: { save_default_payment_method: 'on_subscription', payment_method_types: ['card', 'us_bank_account'] },
       expand: ['latest_invoice.payment_intent', 'pending_setup_intent'],
       metadata: { seller_id, plan_type, billing_cycle: billing_cycle || 'monthly', ...(promo_code_id ? { promo_code_id } : {}) },
       ...(promo_code_id ? { discounts: [{ promotion_code: promo_code_id }] } : {}),
