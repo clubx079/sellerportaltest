@@ -877,26 +877,27 @@ export default function EditPropertyPage() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm font-semibold text-neutral-700 mb-2">Rooms/Units</label>
-                  <input
-                    type="number"
+                  <select
                     value={formData.bedrooms || ''}
                     onChange={(e) => handleInputChange('bedrooms', e.target.value)}
                     className="w-full px-4 py-3 border-2 border-neutral-200 rounded focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all text-sm"
-                    placeholder="50"
-                    min="0"
-                  />
+                  >
+                    <option value="">Select</option>
+                    {[1,2,3,4].map(n => <option key={n} value={n}>{n}</option>)}
+                    <option value="5">5+</option>
+                  </select>
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-neutral-700 mb-2">Bathrooms</label>
-                  <input
-                    type="number"
-                    step="0.5"
+                  <select
                     value={formData.bathrooms || ''}
                     onChange={(e) => handleInputChange('bathrooms', e.target.value)}
                     className="w-full px-4 py-3 border-2 border-neutral-200 rounded focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all text-sm"
-                    placeholder="50"
-                    min="0"
-                  />
+                  >
+                    <option value="">Select</option>
+                    {[1,1.5,2,2.5,3,3.5,4,4.5].map(n => <option key={n} value={n}>{n}</option>)}
+                    <option value="5">5+</option>
+                  </select>
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-neutral-700 mb-2">Floor Area (sqft)</label>

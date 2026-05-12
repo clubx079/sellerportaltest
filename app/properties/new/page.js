@@ -537,11 +537,9 @@ export default function NewPropertyPage() {
         }
       }
 
-      // Increment listing counter on publish (trial OR active pro)
-      const shouldIncrementCounter = publishStatus === 'active' && (
-        trialPlan?.status === 'trialing' ||
-        (trialPlan?.plan_type === 'pro' && trialPlan?.status === 'active')
-      );
+      // Increment listing counter on publish (trial OR active)
+      const shouldIncrementCounter = publishStatus === 'active' &&
+        ['trialing', 'active'].includes(trialPlan?.status);
       if (shouldIncrementCounter) {
         await supabase
           .from('seller_plans')
@@ -996,26 +994,27 @@ export default function NewPropertyPage() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-[13px] font-semibold text-[#1A1816] mb-2">Beds *</label>
-                  <input
-                    type="number"
+                  <select
                     value={formData.bedrooms || ''}
                     onChange={(e) => handleInputChange('bedrooms', e.target.value)}
-                    className="w-full px-4 py-3 border border-[#E8E8E4] rounded focus:border-[#D03839] focus:outline-none transition-colors text-[13px] text-[#1A1816] placeholder:text-[#A8A8A4]"
-                    placeholder="50"
-                    min="0"
-                  />
+                    className="w-full px-4 py-3 border border-[#E8E8E4] rounded focus:border-[#D03839] focus:outline-none transition-colors text-[13px] text-[#1A1816]"
+                  >
+                    <option value="">Select</option>
+                    {[1,2,3,4].map(n => <option key={n} value={n}>{n}</option>)}
+                    <option value="5">5+</option>
+                  </select>
                 </div>
                 <div>
                   <label className="block text-[13px] font-semibold text-[#1A1816] mb-2">Baths *</label>
-                  <input
-                    type="number"
-                    step="0.5"
+                  <select
                     value={formData.bathrooms || ''}
                     onChange={(e) => handleInputChange('bathrooms', e.target.value)}
-                    className="w-full px-4 py-3 border border-[#E8E8E4] rounded focus:border-[#D03839] focus:outline-none transition-colors text-[13px] text-[#1A1816] placeholder:text-[#A8A8A4]"
-                    placeholder="50"
-                    min="0"
-                  />
+                    className="w-full px-4 py-3 border border-[#E8E8E4] rounded focus:border-[#D03839] focus:outline-none transition-colors text-[13px] text-[#1A1816]"
+                  >
+                    <option value="">Select</option>
+                    {[1,1.5,2,2.5,3,3.5,4,4.5].map(n => <option key={n} value={n}>{n}</option>)}
+                    <option value="5">5+</option>
+                  </select>
                 </div>
                 <div>
                   <label className="block text-[13px] font-semibold text-[#1A1816] mb-2">Floor Area (sqft) *</label>

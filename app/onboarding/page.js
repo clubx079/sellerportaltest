@@ -276,7 +276,7 @@ const PRO_FEATURES = [
   [true,  'Advanced analytics'],
   [true,  'Priority search placement'],
   [true,  'Priority support'],
-  [true,  '10 listings / month'],
+  [true,  '5 listings / month'],
   [false, 'CRM features'],
   [false, 'Team accounts'],
 ]
@@ -867,6 +867,9 @@ function OnboardingContent() {
 
         {/* Card */}
         <div className="bg-white border border-[#E8E8E4] rounded p-10 shadow-sm">
+
+          {/* Step indicator */}
+          {step < 4 && <StepDots current={step} />}
 
           {/* Heading */}
           {step < 4 && (
