@@ -80,9 +80,10 @@ export async function POST(request) {
           const nextPriceId = phase2.items?.[0]?.price
           const nextPriceIdStr = typeof nextPriceId === 'string' ? nextPriceId : nextPriceId?.id
           const nextPlanInfo = priceMap[nextPriceIdStr]
-          if (nextPlanInfo && nextPlanInfo.plan_type !== plan.plan_type) {
+          if (nextPlanInfo && (nextPlanInfo.plan_type !== plan.plan_type || nextPlanInfo.billing_cycle !== plan.billing_cycle)) {
             pending = {
               plan_type: nextPlanInfo.plan_type,
+              billing_cycle: nextPlanInfo.billing_cycle,
               scheduled_for: phase1.end_date
                 ? new Date(phase1.end_date * 1000).toISOString()
                 : null,
