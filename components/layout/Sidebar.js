@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard, Building2, MessageCircle, X, Settings,
@@ -103,17 +104,8 @@ export default function Sidebar({ isOpen, setIsOpen, activeItem, setActiveItem }
       `}>
         {/* Logo */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-[#E8E8E4] shrink-0">
-          <Link href="/dashboard" className="flex items-center gap-2.5">
-            <div className="w-9 h-9 bg-[#D03839] rounded-lg flex items-center justify-center shrink-0">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" fill="white"/>
-                <circle cx="12" cy="9" r="2.5" fill="#D03839"/>
-              </svg>
-            </div>
-            <div className="flex flex-col leading-tight">
-              <span className="text-[17px] font-bold text-[#1A1816] tracking-[-0.3px]">DeelMap</span>
-              <span className="text-[11px] font-medium text-[#A8A8A4] tracking-[0.2px]">Seller Portal</span>
-            </div>
+          <Link href="/dashboard">
+            <Image src="/assets/logo-seller-portal.svg" alt="DeelMap Seller Portal" width={147} height={70} priority />
           </Link>
           {isOpen && (
             <button onClick={() => setIsOpen(false)} className="lg:hidden p-2 rounded hover:bg-[#FAFAF8] text-[#737370] transition-colors duration-200" aria-label="Close menu">
