@@ -18,7 +18,7 @@ export async function DELETE(request, { params }) {
   if (!sellerId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   try {
-    const memberId = params.id
+    const { id: memberId } = await params
 
     // Verify caller owns the org that this member belongs to
     const { data: member } = await supabase
