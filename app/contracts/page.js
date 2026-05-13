@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
-import { FileText, CheckCircle, ExternalLink } from 'lucide-react'
+import { FileText, CheckCircle, ExternalLink, Plus, X } from 'lucide-react'
 
 const STATUS = {
   completed: { label: 'Completed', cls: 'text-[#16A34A] bg-[#DCFCE7]' },
@@ -16,10 +16,136 @@ function fmtDate(d) {
   return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
+function NewContractModal({ email, onClose, onCreated }) {
+  const [templates, setTemplates] = useState([])
+  const [form, setForm] = useState({ buyerName: '', buyerEmail: '', property: '', templateId: '' })
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    fetch('/api/contracts?type=templates')
+      .then(r => r.json())
+      .then(data => {
+        setTemplates(data)
+        if (data.length > 0) setForm(f => ({ ...f, templateId: String(data[0].id) }))
+      })
+      .catch(() => {})
+  }, [])
+
+  async function handleSubmit(e) {
+    e.preventDefault()
+    if (!form.buyerEmail || !form.templateId) return
+    setSubmitting(true)
+    setError('')
+    try {
+      const res = await fetch('/api/contracts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...form, sellerEmail: email }),
+      })
+      const data = await res.json()
+      if (!res.ok || data.error) { setError(data.error || 'Failed to create contract'); return }
+      onCreated()
+    } catch {
+      setError('Something went wrong. Please try again.')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4">
+      <div className="bg-white rounded w-full max-w-[480px] shadow-xl">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-[#E8E8E4]">
+          <h2 className="text-[16px] font-bold text-[#1A1816]">New Contract</h2>
+          <button onClick={onClose} className="p-1.5 rounded hover:bg-[#FAFAF8] text-[#737370] transition-colors">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
+          {/* Template */}
+          <div>
+            <label className="block text-[12px] font-semibold text-[#444441] mb-1.5">Contract Template</label>
+            <select
+              value={form.templateId}
+              onChange={e => setForm(f => ({ ...f, templateId: e.target.value }))}
+              className="w-full h-9 px-3 border border-[#E8E8E4] rounded text-[13px] text-[#1A1816] bg-white focus:outline-none focus:border-[#1A1816]"
+              required
+            >
+              {templates.length === 0 && <option value="">Loading templates...</option>}
+              {templates.map(t => (
+                <option key={t.id} value={String(t.id)}>{t.name}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Buyer name */}
+          <div>
+            <label className="block text-[12px] font-semibold text-[#444441] mb-1.5">Buyer Full Name</label>
+            <input
+              type="text"
+              placeholder="John Smith"
+              value={form.buyerName}
+              onChange={e => setForm(f => ({ ...f, buyerName: e.target.value }))}
+              className="w-full h-9 px-3 border border-[#E8E8E4] rounded text-[13px] text-[#1A1816] placeholder:text-[#A8A8A4] focus:outline-none focus:border-[#1A1816]"
+            />
+          </div>
+
+          {/* Buyer email */}
+          <div>
+            <label className="block text-[12px] font-semibold text-[#444441] mb-1.5">Buyer Email <span className="text-[#D03839]">*</span></label>
+            <input
+              type="email"
+              placeholder="buyer@example.com"
+              value={form.buyerEmail}
+              onChange={e => setForm(f => ({ ...f, buyerEmail: e.target.value }))}
+              className="w-full h-9 px-3 border border-[#E8E8E4] rounded text-[13px] text-[#1A1816] placeholder:text-[#A8A8A4] focus:outline-none focus:border-[#1A1816]"
+              required
+            />
+          </div>
+
+          {/* Property */}
+          <div>
+            <label className="block text-[12px] font-semibold text-[#444441] mb-1.5">Property Address <span className="text-[#A8A8A4] font-normal">(optional)</span></label>
+            <input
+              type="text"
+              placeholder="123 Main St, Dallas, TX"
+              value={form.property}
+              onChange={e => setForm(f => ({ ...f, property: e.target.value }))}
+              className="w-full h-9 px-3 border border-[#E8E8E4] rounded text-[13px] text-[#1A1816] placeholder:text-[#A8A8A4] focus:outline-none focus:border-[#1A1816]"
+            />
+          </div>
+
+          {error && <p className="text-[12px] text-[#D03839]">{error}</p>}
+
+          <div className="flex gap-2 pt-1">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 h-9 border border-[#E8E8E4] text-[#444441] text-[13px] font-medium rounded hover:border-[#1A1816] transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={submitting || !form.buyerEmail || !form.templateId}
+              className="flex-1 h-9 bg-[#D03839] hover:bg-[#E0493B] text-white text-[13px] font-semibold rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {submitting ? 'Sending...' : 'Send Contract'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
 export default function ContractsPage() {
   const [contracts, setContracts] = useState([])
   const [loading, setLoading] = useState(true)
   const [email, setEmail] = useState(null)
+  const [showModal, setShowModal] = useState(false)
 
   useEffect(() => {
     const raw = localStorage.getItem('seller_user')
@@ -29,12 +155,17 @@ export default function ContractsPage() {
 
   useEffect(() => {
     if (!email) return
+    fetchContracts()
+  }, [email])
+
+  function fetchContracts() {
+    setLoading(true)
     fetch(`/api/contracts?email=${encodeURIComponent(email)}`)
       .then(r => r.json())
       .then(setContracts)
       .catch(() => {})
       .finally(() => setLoading(false))
-  }, [email])
+  }
 
   function signUrl(contract) {
     const sub = contract.submitters?.find(s => s.email?.toLowerCase() === email?.toLowerCase())
@@ -44,7 +175,7 @@ export default function ContractsPage() {
 
   if (loading) {
     return (
-      <div className="max-w-4xl mx-auto p-4 lg:p-6 space-y-3 animate-pulse">
+      <div className="p-4 lg:p-6 space-y-3 animate-pulse">
         <div className="h-7 bg-[#E8E8E4] rounded w-36" />
         <div className="h-4 bg-[#E8E8E4] rounded w-56" />
         {[1, 2, 3].map(i => <div key={i} className="h-16 bg-[#E8E8E4] rounded" />)}
@@ -53,12 +184,26 @@ export default function ContractsPage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto p-4 lg:p-6">
-      <div className="mb-6">
-        <h1 className="text-[24px] font-bold text-[#1A1816] mb-1">Contracts</h1>
-        <p className="text-[14px] text-[#737370]">
-          E-signature documents tied to your listings.
-        </p>
+    <div className="p-4 lg:p-6">
+      {showModal && (
+        <NewContractModal
+          email={email}
+          onClose={() => setShowModal(false)}
+          onCreated={() => { setShowModal(false); fetchContracts() }}
+        />
+      )}
+
+      <div className="flex items-start justify-between mb-6">
+        <div>
+          <h1 className="text-[24px] font-bold text-[#1A1816] mb-1">Contracts</h1>
+          <p className="text-[14px] text-[#737370]">Send and manage e-signature contracts with buyers.</p>
+        </div>
+        <button
+          onClick={() => setShowModal(true)}
+          className="flex items-center gap-1.5 h-9 px-4 bg-[#D03839] hover:bg-[#E0493B] text-white text-[13px] font-semibold rounded transition-colors shrink-0"
+        >
+          <Plus className="w-4 h-4" /> New Contract
+        </button>
       </div>
 
       {contracts.length === 0 ? (
@@ -67,9 +212,15 @@ export default function ContractsPage() {
             <FileText className="w-6 h-6 text-[#D03839]" />
           </div>
           <h3 className="text-[15px] font-semibold text-[#1A1816] mb-1">No contracts yet</h3>
-          <p className="text-[13px] text-[#737370] max-w-[300px] mx-auto leading-relaxed">
-            Contracts will appear here when a buyer initiates a deal on one of your listings.
+          <p className="text-[13px] text-[#737370] max-w-[300px] mx-auto leading-relaxed mb-4">
+            Send your first contract to a buyer to get started.
           </p>
+          <button
+            onClick={() => setShowModal(true)}
+            className="inline-flex items-center gap-1.5 h-9 px-4 bg-[#D03839] hover:bg-[#E0493B] text-white text-[13px] font-semibold rounded transition-colors"
+          >
+            <Plus className="w-4 h-4" /> New Contract
+          </button>
         </div>
       ) : (
         <div className="space-y-2">
@@ -77,6 +228,7 @@ export default function ContractsPage() {
             const { label, cls } = badge(c.status)
             const url = signUrl(c)
             const others = c.submitters?.filter(s => s.email?.toLowerCase() !== email?.toLowerCase()) ?? []
+            const property = c.metadata?.property
 
             return (
               <div key={c.id} className="bg-white border border-[#E8E8E4] rounded p-4 flex items-center gap-4">
@@ -87,7 +239,7 @@ export default function ContractsPage() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-0.5 flex-wrap">
                     <span className="text-[14px] font-semibold text-[#1A1816] truncate">
-                      {c.template?.name || `Contract #${c.id}`}
+                      {property || c.template?.name || `Contract #${c.id}`}
                     </span>
                     <span className={`inline-flex h-5 px-2 rounded text-[11px] font-semibold shrink-0 items-center ${cls}`}>
                       {label}
@@ -96,7 +248,10 @@ export default function ContractsPage() {
                   <div className="flex items-center gap-3 text-[12px] text-[#737370] flex-wrap">
                     <span>{fmtDate(c.created_at)}</span>
                     {others.length > 0 && (
-                      <span>With: {others.map(s => s.name || s.email).join(', ')}</span>
+                      <span>Buyer: {others.map(s => s.name || s.email).join(', ')}</span>
+                    )}
+                    {property && c.template?.name && (
+                      <span className="text-[#A8A8A4]">{c.template.name}</span>
                     )}
                   </div>
                 </div>
