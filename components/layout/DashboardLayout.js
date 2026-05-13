@@ -23,7 +23,7 @@ export default function DashboardLayout({ children }) {
   const notifRef = useRef(null)
 
   useEffect(() => {
-    const isPublicPage = ['/login', '/register', '/forgot-password', '/apply', '/'].includes(pathname) || pathname.startsWith('/onboarding') || pathname.startsWith('/properties/preview') || pathname.startsWith('/auth/')
+    const isPublicPage = ['/login', '/register', '/forgot-password', '/apply', '/'].includes(pathname) || pathname.startsWith('/onboarding') || pathname.startsWith('/properties/preview') || pathname.startsWith('/auth/') || pathname.startsWith('/team/accept')
     if (isPublicPage) { setLoading(false); return; }
     const userStr = localStorage.getItem('seller_user')
     if (!userStr) { router.push('/login'); return; }
@@ -77,7 +77,7 @@ export default function DashboardLayout({ children }) {
     return () => { document.body.style.overflow = '' }
   }, [isSidebarOpen])
 
-  const isPublicPage = ['/login', '/register', '/forgot-password', '/apply', '/'].includes(pathname) || pathname.startsWith('/onboarding') || pathname.startsWith('/properties/preview') || pathname.startsWith('/auth/')
+  const isPublicPage = ['/login', '/register', '/forgot-password', '/apply', '/'].includes(pathname) || pathname.startsWith('/onboarding') || pathname.startsWith('/properties/preview') || pathname.startsWith('/auth/') || pathname.startsWith('/team/accept')
   if (isPublicPage) return <>{children}</>
 
   if (!user && loading) {
