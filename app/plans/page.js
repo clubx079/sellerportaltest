@@ -71,7 +71,9 @@ export default function PlansPage() {
   const [error,         setError]         = useState(null)
   const [success,       setSuccess]       = useState(null)
   const [viewAnnual,    setViewAnnual]    = useState(true)
-  const [cancelingPend, setCancelingPend] = useState(false)
+  const [cancelingPend,       setCancelingPend]       = useState(false)
+  const [endingTrial,         setEndingTrial]         = useState(false)
+  const [showEndTrialConfirm, setShowEndTrialConfirm] = useState(false)
 
   useEffect(() => {
     const userStr = localStorage.getItem('seller_user')
@@ -102,6 +104,27 @@ export default function PlansPage() {
       setError('Failed to load plan information.')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleEndTrial = async () => {
+    setEndingTrial(true)
+    setError(null)
+    try {
+      const res = await fetch('/api/seller/plan/end-trial', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ seller_id: sellerId }),
+      })
+      const data = await res.json()
+      if (!res.ok || data.error) { setError(data.error || 'Failed to end trial.'); return }
+      setSuccess('Your trial has ended. Your subscription is now active.')
+      setShowEndTrialConfirm(false)
+      await loadPlanInfo()
+    } catch {
+      setError('Something went wrong. Please try again.')
+    } finally {
+      setEndingTrial(false)
     }
   }
 
@@ -201,7 +224,13 @@ export default function PlansPage() {
                   {isTrialing && plan.trial_ends_at && (
                     <div>
                       <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#A8A8A4] mb-1">Trial ends</p>
-                      <p className="text-[14px] font-semibold text-[#B5620A]">{formatDate(plan.trial_ends_at)}</p>
+                      <p className="text-[14px] font-semibold text-[#B5620A] mb-1">{formatDate(plan.trial_ends_at)}</p>
+                      <button
+                        onClick={() => setShowEndTrialConfirm(true)}
+                        className="text-[11px] font-semibold text-[#737370] underline underline-offset-2 hover:text-[#1A1816] hover:no-underline"
+                      >
+                        End trial early
+                      </button>
                     </div>
                   )}
                   {plan.current_period_end && (
@@ -223,6 +252,34 @@ export default function PlansPage() {
                     <p className="text-[14px] font-semibold text-[#1A1816]">{isAnnual ? 'Annual' : 'Monthly'}</p>
                   </div>
                 </div>
+
+                {/* End trial confirmation */}
+                {isTrialing && showEndTrialConfirm && (
+                  <div className="mt-4 pt-4 border-t border-[#E8E8E4] flex items-start gap-3">
+                    <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5 text-[#B5620A]" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[13px] font-semibold text-[#1A1816]">End your trial now?</p>
+                      <p className="text-[12px] text-[#737370] mt-0.5">Your card will be charged immediately and your subscription will activate today.</p>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <button
+                        onClick={() => setShowEndTrialConfirm(false)}
+                        disabled={endingTrial}
+                        className="text-[12px] font-semibold text-[#737370] hover:text-[#1A1816] disabled:opacity-50"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={handleEndTrial}
+                        disabled={endingTrial}
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-[#1A1816] text-white text-[12px] font-semibold rounded hover:bg-[#2d2d2a] disabled:opacity-50 transition-colors"
+                      >
+                        {endingTrial && <Loader2 className="w-3 h-3 animate-spin" />}
+                        End trial
+                      </button>
+                    </div>
+                  </div>
+                )}
 
                 {/* Usage bar for Pro */}
                 {isPro && (
