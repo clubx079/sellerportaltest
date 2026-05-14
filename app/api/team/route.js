@@ -28,20 +28,16 @@ export async function GET(request) {
 
     if (!seller) return NextResponse.json({ error: 'Seller not found' }, { status: 404 })
 
-    // Check plan
     const { data: plan } = await supabase
       .from('seller_plans')
-      .select('plan_type')
+      .select('plan_type, status')
       .eq('seller_id', sellerId)
       .maybeSingle()
 
     const isEnterprise = plan?.plan_type === 'enterprise'
+    const isTrialing = plan?.status === 'trialing'
 
-    // Find org where this seller is owner or member
-    let org = null
-    let members = []
-
-    // Check if owner
+    // Check if owner of an org
     const { data: ownedOrg } = await supabase
       .from('seller_organizations')
       .select('*')
@@ -49,33 +45,108 @@ export async function GET(request) {
       .maybeSingle()
 
     if (ownedOrg) {
-      org = ownedOrg
-      org.is_owner = true
-    } else if (seller.org_id) {
-      // Member of an org
-      const { data: memberOrg } = await supabase
-        .from('seller_organizations')
-        .select('*')
-        .eq('id', seller.org_id)
-        .maybeSingle()
-      if (memberOrg) {
-        org = memberOrg
-        org.is_owner = false
-      }
-    }
-
-    if (org) {
       const { data: rows } = await supabase
         .from('org_members')
         .select('*')
-        .eq('org_id', org.id)
+        .eq('org_id', ownedOrg.id)
+        .order('invited_at', { ascending: true })
+      return NextResponse.json({
+        org: { ...ownedOrg, is_owner: true },
+        members: rows || [],
+        memberOrgs: [],
+        isEnterprise,
+        isTrialing,
+        seller,
+      })
+    }
+
+    // Not an owner — find all orgs this seller is a member of
+    const { data: memberships } = await supabase
+      .from('org_members')
+      .select('org_id, role, status')
+      .eq('seller_id', sellerId)
+      .eq('status', 'active')
+
+    const memberOrgIds = (memberships || []).map(m => m.org_id)
+
+    let memberOrgs = []
+    if (memberOrgIds.length > 0) {
+      const { data: orgs } = await supabase
+        .from('seller_organizations')
+        .select('id, name, owner_seller_id')
+        .in('id', memberOrgIds)
+
+      // Enrich with owner name
+      const ownerIds = [...new Set((orgs || []).map(o => o.owner_seller_id))]
+      const { data: owners } = await supabase
+        .from('seller_applications')
+        .select('id, contact_person_name, email')
+        .in('id', ownerIds)
+
+      const ownerMap = Object.fromEntries((owners || []).map(o => [o.id, o]))
+      memberOrgs = (orgs || []).map(org => ({
+        ...org,
+        is_owner: false,
+        owner: ownerMap[org.owner_seller_id] || null,
+      }))
+    }
+
+    // Active org = seller.org_id (or first one if not set)
+    const activeOrgId = seller.org_id || memberOrgIds[0] || null
+    const activeOrg = memberOrgs.find(o => o.id === activeOrgId) || memberOrgs[0] || null
+
+    let members = []
+    if (activeOrg) {
+      const { data: rows } = await supabase
+        .from('org_members')
+        .select('*')
+        .eq('org_id', activeOrg.id)
         .order('invited_at', { ascending: true })
       members = rows || []
     }
 
-    return NextResponse.json({ org, members, isEnterprise, seller })
+    return NextResponse.json({
+      org: activeOrg,
+      members,
+      memberOrgs,
+      isEnterprise,
+      isTrialing,
+      seller,
+    })
   } catch (err) {
     console.error('[team GET]', err)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}
+
+// PATCH /api/team — switch active org for a team member
+export async function PATCH(request) {
+  const sellerId = getSellerId(request)
+  if (!sellerId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  try {
+    const { orgId } = await request.json()
+    if (!orgId) return NextResponse.json({ error: 'orgId required' }, { status: 400 })
+
+    // Verify they actually belong to this org
+    const { data: membership } = await supabase
+      .from('org_members')
+      .select('id')
+      .eq('org_id', orgId)
+      .eq('seller_id', sellerId)
+      .eq('status', 'active')
+      .maybeSingle()
+
+    if (!membership) return NextResponse.json({ error: 'Not a member of this org' }, { status: 403 })
+
+    await supabase
+      .from('seller_applications')
+      .update({ org_id: orgId })
+      .eq('id', sellerId)
+
+    return NextResponse.json({ success: true })
+  } catch (err) {
+    console.error('[team PATCH]', err)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
@@ -100,12 +171,16 @@ export async function POST(request) {
     // Check plan
     const { data: plan } = await supabase
       .from('seller_plans')
-      .select('plan_type')
+      .select('plan_type, status')
       .eq('seller_id', sellerId)
       .maybeSingle()
 
     if (plan?.plan_type !== 'enterprise') {
       return NextResponse.json({ error: 'Enterprise plan required to invite team members' }, { status: 403 })
+    }
+
+    if (plan?.status === 'trialing') {
+      return NextResponse.json({ error: 'TRIAL_ACTIVE' }, { status: 403 })
     }
 
     // Get or create org

@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
-import { Users, Plus, Trash2, X, Mail, Crown, Clock, CheckCircle, Zap } from 'lucide-react'
+import { Users, Plus, Trash2, X, Mail, Crown, Clock, CheckCircle, Zap, AlertTriangle, ChevronDown } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
 function fmtDate(d) {
@@ -25,12 +25,15 @@ function InviteModal({ onClose, onInvited, hasOrg, defaultOrgName }) {
   const [form, setForm] = useState({ email: '', name: '', orgName: defaultOrgName || '' })
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
+  const [isTrialBlock, setIsTrialBlock] = useState(false)
+  const router = useRouter()
 
   async function handleSubmit(e) {
     e.preventDefault()
     if (!form.email) return
     setSubmitting(true)
     setError('')
+    setIsTrialBlock(false)
     try {
       const sellerId = JSON.parse(localStorage.getItem('seller_user') || '{}')?.id
       const res = await fetch('/api/team', {
@@ -39,7 +42,8 @@ function InviteModal({ onClose, onInvited, hasOrg, defaultOrgName }) {
         body: JSON.stringify(form),
       })
       const data = await res.json()
-      if (!res.ok || data.error) { setError(data.error || 'Failed to send invitation'); return }
+      if (data.error === 'TRIAL_ACTIVE') { setIsTrialBlock(true); setSubmitting(false); return }
+      if (!res.ok || data.error) { setError(data.error || 'Failed to send invitation'); setSubmitting(false); return }
       onInvited()
     } catch {
       setError('Something went wrong. Please try again.')
@@ -48,14 +52,45 @@ function InviteModal({ onClose, onInvited, hasOrg, defaultOrgName }) {
     }
   }
 
+  if (isTrialBlock) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4">
+        <div className="bg-white rounded w-full max-w-[420px] shadow-xl">
+          <div className="flex items-center justify-between px-6 py-4 border-b border-[#E8E8E4]">
+            <h2 className="text-[16px] font-bold text-[#1A1816]">Trial Active</h2>
+            <button onClick={onClose} className="p-1.5 rounded hover:bg-[#FAFAF8] text-[#737370]"><X className="w-4 h-4" /></button>
+          </div>
+          <div className="px-6 py-6">
+            <div className="w-10 h-10 bg-[#FEF3C7] rounded flex items-center justify-center mb-4">
+              <AlertTriangle className="w-5 h-5 text-[#D97706]" />
+            </div>
+            <p className="text-[14px] text-[#1A1816] font-semibold mb-2">Your trial is still active</p>
+            <p className="text-[13px] text-[#737370] leading-relaxed mb-6">
+              Team members can only be invited after your trial ends and your subscription is active. End your trial now to start inviting your team.
+            </p>
+            <div className="flex gap-2">
+              <button onClick={onClose} className="flex-1 h-9 border border-[#E8E8E4] text-[#444441] text-[13px] font-medium rounded hover:border-[#1A1816]">
+                Cancel
+              </button>
+              <button
+                onClick={() => router.push('/billing')}
+                className="flex-1 h-9 bg-[#D03839] hover:bg-[#E0493B] text-white text-[13px] font-semibold rounded"
+              >
+                Go to Billing
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4">
       <div className="bg-white rounded w-full max-w-[440px] shadow-xl">
         <div className="flex items-center justify-between px-6 py-4 border-b border-[#E8E8E4]">
           <h2 className="text-[16px] font-bold text-[#1A1816]">Invite Team Member</h2>
-          <button onClick={onClose} className="p-1.5 rounded hover:bg-[#FAFAF8] text-[#737370]">
-            <X className="w-4 h-4" />
-          </button>
+          <button onClick={onClose} className="p-1.5 rounded hover:bg-[#FAFAF8] text-[#737370]"><X className="w-4 h-4" /></button>
         </div>
         <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
           {!hasOrg && (
@@ -116,6 +151,7 @@ export default function TeamPage() {
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
   const [removing, setRemoving] = useState(null)
+  const [switchingOrg, setSwitchingOrg] = useState(false)
 
   useEffect(() => { fetchTeam() }, [])
 
@@ -136,13 +172,23 @@ export default function TeamPage() {
   async function removeMember(memberId) {
     setRemoving(memberId)
     try {
-      await fetch(`/api/team/${memberId}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${getSellerId()}` },
-      })
+      await fetch(`/api/team/${memberId}`, { method: 'DELETE', headers: { Authorization: `Bearer ${getSellerId()}` } })
       fetchTeam()
     } catch {}
     setRemoving(null)
+  }
+
+  async function switchOrg(orgId) {
+    setSwitchingOrg(true)
+    try {
+      await fetch('/api/team', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getSellerId()}` },
+        body: JSON.stringify({ orgId }),
+      })
+      fetchTeam()
+    } catch {}
+    setSwitchingOrg(false)
   }
 
   if (loading) {
@@ -155,7 +201,12 @@ export default function TeamPage() {
     )
   }
 
-  if (!data?.isEnterprise) {
+  const { org, members, memberOrgs = [], isEnterprise, isTrialing, seller } = data || {}
+  const isOwner = org?.is_owner ?? false
+  const isMemberOfAnyOrg = memberOrgs.length > 0 || (org && !isOwner)
+
+  // Not enterprise and not in any team → upgrade wall
+  if (!isEnterprise && !isMemberOfAnyOrg) {
     return (
       <div className="p-4 lg:p-6">
         <div className="border border-[#E8E8E4] rounded bg-white p-12 text-center max-w-lg mx-auto">
@@ -177,9 +228,6 @@ export default function TeamPage() {
     )
   }
 
-  const { org, members, seller } = data
-  const isOwner = org?.is_owner ?? true
-
   return (
     <div className="p-4 lg:p-6">
       {showModal && (
@@ -191,11 +239,48 @@ export default function TeamPage() {
         />
       )}
 
+      {/* Trial warning banner for owners */}
+      {isOwner && isTrialing && (
+        <div className="flex items-start gap-3 p-4 bg-[#FEF3C7] border border-[#F5D9A0] rounded mb-5">
+          <AlertTriangle className="w-4 h-4 text-[#D97706] shrink-0 mt-0.5" />
+          <div>
+            <p className="text-[13px] font-semibold text-[#B5620A]">Trial period active</p>
+            <p className="text-[12px] text-[#B5620A] mt-0.5">You can't invite team members while on trial. <button onClick={() => router.push('/billing')} className="underline font-medium">End your trial</button> to activate your subscription first.</p>
+          </div>
+        </div>
+      )}
+
+      {/* Member org switcher */}
+      {!isOwner && memberOrgs.length > 1 && (
+        <div className="mb-5">
+          <label className="block text-[11px] font-semibold text-[#A8A8A4] uppercase tracking-[1px] mb-2">Active Workspace</label>
+          <div className="flex gap-2 flex-wrap">
+            {memberOrgs.map(o => (
+              <button
+                key={o.id}
+                onClick={() => o.id !== org?.id && switchOrg(o.id)}
+                disabled={switchingOrg}
+                className={`flex items-center gap-2 px-4 h-9 rounded border text-[13px] font-medium transition-colors ${
+                  o.id === org?.id
+                    ? 'bg-[#1A1816] border-[#1A1816] text-white'
+                    : 'bg-white border-[#E8E8E4] text-[#444441] hover:border-[#1A1816]'
+                }`}
+              >
+                {o.name}
+                {o.id === org?.id && <CheckCircle className="w-3.5 h-3.5" />}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="flex items-start justify-between mb-6">
         <div>
           <h1 className="text-[24px] font-bold text-[#1A1816] mb-1">Team</h1>
           {org ? (
-            <p className="text-[14px] text-[#737370]">{org.name}</p>
+            <p className="text-[14px] text-[#737370]">
+              {isOwner ? org.name : `You're a member of ${org.name}`}
+            </p>
           ) : (
             <p className="text-[14px] text-[#737370]">Invite colleagues to collaborate on your listings.</p>
           )}
@@ -212,27 +297,31 @@ export default function TeamPage() {
 
       <div className="space-y-2">
         {/* Owner row */}
-        <div className="bg-white border border-[#E8E8E4] rounded p-4 flex items-center gap-4">
-          <div className="w-9 h-9 rounded-full bg-[#1A1816] flex items-center justify-center shrink-0">
-            <span className="text-white text-[13px] font-bold">
-              {(seller?.contact_person_name || seller?.email || '?')[0].toUpperCase()}
-            </span>
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
-              <span className="text-[14px] font-semibold text-[#1A1816] truncate">
-                {seller?.contact_person_name || seller?.email}
-              </span>
-              <span className="inline-flex items-center gap-1 px-2 h-5 rounded text-[11px] font-semibold bg-[#F3F3F0] text-[#444441]">
-                <Crown className="w-2.5 h-2.5" /> Owner
+        {org && (
+          <div className="bg-white border border-[#E8E8E4] rounded p-4 flex items-center gap-4">
+            <div className="w-9 h-9 rounded-full bg-[#1A1816] flex items-center justify-center shrink-0">
+              <span className="text-white text-[13px] font-bold">
+                {(isOwner ? seller?.contact_person_name : org.owner?.contact_person_name || org.name)?.[0]?.toUpperCase() || '?'}
               </span>
             </div>
-            <p className="text-[12px] text-[#737370] truncate">{seller?.email}</p>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="text-[14px] font-semibold text-[#1A1816] truncate">
+                  {isOwner ? (seller?.contact_person_name || seller?.email) : (org.owner?.contact_person_name || org.owner?.email || 'Owner')}
+                </span>
+                <span className="inline-flex items-center gap-1 px-2 h-5 rounded text-[11px] font-semibold bg-[#F3F3F0] text-[#444441]">
+                  <Crown className="w-2.5 h-2.5" /> Owner
+                </span>
+              </div>
+              <p className="text-[12px] text-[#737370] truncate">
+                {isOwner ? seller?.email : (org.owner?.email || '')}
+              </p>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Members */}
-        {members.map(m => (
+        {members?.map(m => (
           <div key={m.id} className="bg-white border border-[#E8E8E4] rounded p-4 flex items-center gap-4">
             <div className="w-9 h-9 rounded-full bg-[#E8E8E4] flex items-center justify-center shrink-0">
               <span className="text-[#444441] text-[13px] font-bold">
@@ -241,9 +330,7 @@ export default function TeamPage() {
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-0.5">
-                <span className="text-[14px] font-semibold text-[#1A1816] truncate">
-                  {m.name || m.email}
-                </span>
+                <span className="text-[14px] font-semibold text-[#1A1816] truncate">{m.name || m.email}</span>
                 <StatusBadge status={m.status} />
               </div>
               <div className="flex items-center gap-3 text-[12px] text-[#737370]">
@@ -264,7 +351,7 @@ export default function TeamPage() {
           </div>
         ))}
 
-        {members.length === 0 && (
+        {(!members || members.length === 0) && isOwner && (
           <div className="border border-dashed border-[#E8E8E4] rounded p-8 text-center">
             <Mail className="w-5 h-5 text-[#A8A8A4] mx-auto mb-2" />
             <p className="text-[13px] text-[#737370]">No team members yet. Invite someone to get started.</p>

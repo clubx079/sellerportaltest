@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { Resend } from 'resend';
+import { getWorkspaceSellerId } from '@/lib/workspace';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -116,8 +117,9 @@ function buildEmailHtml(logoUrl, title, titleColor, propertyBlock, bodyHtml, cta
 // (no param)          → all offers for this seller, enriched with property + buyer info
 export async function GET(request) {
   try {
-    const sellerId = getSellerId(request);
-    if (!sellerId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const rawSellerId = getSellerId(request);
+    if (!rawSellerId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const { effectiveId: sellerId } = await getWorkspaceSellerId(rawSellerId);
 
     const { searchParams } = new URL(request.url);
     const conversationId = searchParams.get('conversation_id');
@@ -216,8 +218,9 @@ export async function GET(request) {
 // PATCH — accept / reject / counter
 export async function PATCH(request) {
   try {
-    const sellerId = getSellerId(request);
-    if (!sellerId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const rawSellerId = getSellerId(request);
+    if (!rawSellerId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const { effectiveId: sellerId } = await getWorkspaceSellerId(rawSellerId);
 
     const body = await request.json();
     const { offer_id, action, counter_data } = body;

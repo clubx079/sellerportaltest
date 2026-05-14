@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { getWorkspaceSellerId } from '@/lib/workspace';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -28,10 +29,11 @@ function getPeriodDates() {
 export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId');
-    if (!userId) {
+    const rawUserId = searchParams.get('userId');
+    if (!rawUserId) {
       return NextResponse.json({ error: 'Missing userId' }, { status: 400 });
     }
+    const { effectiveId: userId } = await getWorkspaceSellerId(rawUserId);
 
     const { data: manualRows } = await supabase
       .from('properties')
