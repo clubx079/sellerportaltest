@@ -441,7 +441,7 @@ function StepPlan({ onNext }) {
 }
 
 // ─── Step 3: Payment ──────────────────────────────────────────────────────────
-function CheckoutForm({ session, intentType, appliedPromo, noTrial, onSuccess }) {
+function CheckoutForm({ session, intentType, appliedPromo, noTrial, onSuccess, promoSection }) {
   const stripe = useStripe()
   const elements = useElements()
   const [processing, setProcessing] = useState(false)
@@ -548,6 +548,8 @@ function CheckoutForm({ session, intentType, appliedPromo, noTrial, onSuccess })
           </div>
         </div>
       </div>
+
+      {promoSection}
 
       <PaymentElement options={{
         layout: { type: 'accordion', defaultCollapsed: false, radios: 'auto', spacedAccordionItems: false },
@@ -713,56 +715,62 @@ function StepPayment({ onSuccess }) {
   return stripePromise && clientSecret ? (
     <div className="space-y-4">
       <Elements stripe={stripePromise} options={{ clientSecret, terms: { card: 'never' } }}>
-        <CheckoutForm session={session} intentType={intentType} appliedPromo={appliedPromo} noTrial={session.no_trial || false} onSuccess={(pmId) => {
-          if (pmId) {
-            const s2 = JSON.parse(sessionStorage.getItem('onboarding') || '{}')
-            sessionStorage.setItem('onboarding', JSON.stringify({ ...s2, pm_id: pmId }))
-          }
-          onSuccess()
-        }} />
-      </Elements>
-
-      {/* Promo code */}
-      <div className="rounded border border-[#E8E8E4] overflow-hidden">
-        <div className="bg-[#FAFAF8] px-4 py-2.5 border-b border-[#E8E8E4]">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-[#A8A8A4]">Promo Code</p>
-        </div>
-        <div className="bg-white px-4 py-4">
-          {appliedPromo ? (
-            <div className="flex items-center justify-between p-3 rounded" style={{ background: '#E4F5EC', border: '1px solid #B3DFC5' }}>
-              <div>
-                <p className="text-[13px] font-semibold text-[#0F6E56]">{appliedPromo.name}</p>
-                <p className="text-[11px] text-[#0F6E56] mt-0.5">
-                  {appliedPromo.discount.type === 'percent' ? `${appliedPromo.discount.value}% off` : `$${appliedPromo.discount.value} off`}
-                  {appliedPromo.duration === 'once' ? ' · first payment' : appliedPromo.duration === 'repeating' ? ` · ${appliedPromo.duration_in_months} months` : ' · forever'}
-                </p>
+        <CheckoutForm
+          session={session}
+          intentType={intentType}
+          appliedPromo={appliedPromo}
+          noTrial={session.no_trial || false}
+          onSuccess={(pmId) => {
+            if (pmId) {
+              const s2 = JSON.parse(sessionStorage.getItem('onboarding') || '{}')
+              sessionStorage.setItem('onboarding', JSON.stringify({ ...s2, pm_id: pmId }))
+            }
+            onSuccess()
+          }}
+          promoSection={
+            <div className="rounded border border-[#E8E8E4] overflow-hidden">
+              <div className="bg-[#FAFAF8] px-4 py-2.5 border-b border-[#E8E8E4]">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-[#A8A8A4]">Promo Code</p>
               </div>
-              <button onClick={() => setAppliedPromo(null)} className="text-[12px] text-[#0F6E56] font-medium hover:underline">Remove</button>
+              <div className="bg-white px-4 py-4">
+                {appliedPromo ? (
+                  <div className="flex items-center justify-between p-3 rounded" style={{ background: '#E4F5EC', border: '1px solid #B3DFC5' }}>
+                    <div>
+                      <p className="text-[13px] font-semibold text-[#0F6E56]">{appliedPromo.name}</p>
+                      <p className="text-[11px] text-[#0F6E56] mt-0.5">
+                        {appliedPromo.discount.type === 'percent' ? `${appliedPromo.discount.value}% off` : `$${appliedPromo.discount.value} off`}
+                        {appliedPromo.duration === 'once' ? ' · first payment' : appliedPromo.duration === 'repeating' ? ` · ${appliedPromo.duration_in_months} months` : ' · forever'}
+                      </p>
+                    </div>
+                    <button onClick={() => setAppliedPromo(null)} className="text-[12px] text-[#0F6E56] font-medium hover:underline">Remove</button>
+                  </div>
+                ) : (
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={promoCode}
+                      onChange={e => { setPromoCode(e.target.value.toUpperCase()); setPromoError(null) }}
+                      onKeyDown={e => e.key === 'Enter' && validatePromo()}
+                      placeholder="Enter promo code"
+                      className="flex-1 h-[40px] px-3 rounded border border-[#E8E8E4] text-[13px] text-[#1A1816] bg-white outline-none focus:border-[#D03839]"
+                    />
+                    <button
+                      type="button"
+                      onClick={validatePromo}
+                      disabled={promoValidating || !promoCode.trim()}
+                      className="px-4 h-[40px] rounded text-[13px] font-semibold border border-[#E8E8E4] text-[#444441] bg-white hover:bg-[#FAFAF8] disabled:opacity-50 transition-colors flex items-center gap-1.5"
+                    >
+                      {promoValidating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
+                      Apply
+                    </button>
+                  </div>
+                )}
+                {promoError && <p className="text-[12px] text-[#D03839] mt-2">{promoError}</p>}
+              </div>
             </div>
-          ) : (
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={promoCode}
-                onChange={e => { setPromoCode(e.target.value.toUpperCase()); setPromoError(null) }}
-                onKeyDown={e => e.key === 'Enter' && validatePromo()}
-                placeholder="Enter promo code"
-                className="flex-1 h-[40px] px-3 rounded border border-[#E8E8E4] text-[13px] text-[#1A1816] bg-white outline-none focus:border-[#D03839]"
-              />
-              <button
-                type="button"
-                onClick={validatePromo}
-                disabled={promoValidating || !promoCode.trim()}
-                className="px-4 h-[40px] rounded text-[13px] font-semibold border border-[#E8E8E4] text-[#444441] bg-white hover:bg-[#FAFAF8] disabled:opacity-50 transition-colors flex items-center gap-1.5"
-              >
-                {promoValidating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
-                Apply
-              </button>
-            </div>
-          )}
-          {promoError && <p className="text-[12px] text-[#D03839] mt-2">{promoError}</p>}
-        </div>
-      </div>
+          }
+        />
+      </Elements>
     </div>
   ) : (
     <div className="p-4 bg-[#FEF3E2] border border-[#F5D9A0] rounded text-[13px] text-[#B5620A] text-center">
