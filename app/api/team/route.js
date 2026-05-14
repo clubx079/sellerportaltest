@@ -149,25 +149,52 @@ export async function POST(request) {
     // Send invite email
     const acceptUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://sell.deelmap.com'}/team/accept?token=${member.invite_token}`
 
+    const inviterName = (seller.contact_person_name || 'Someone').replace(/</g, '&lt;')
+    const inviteeName = (name || email).replace(/</g, '&lt;')
+
     await resend.emails.send({
-      from: 'DeelMap <notifications@deelmap.com>',
+      from: process.env.RESEND_FROM_EMAIL || 'Deelmap <notifications@deelmap.com>',
       to: email.trim().toLowerCase(),
       subject: `${seller.contact_person_name} invited you to join their DeelMap team`,
       html: `
-        <div style="font-family: -apple-system, sans-serif; max-width: 480px; margin: 0 auto; padding: 32px 24px;">
-          <img src="https://deelmap.com/assets/logo.svg" alt="DeelMap" width="120" style="margin-bottom: 24px;" />
-          <h2 style="font-size: 20px; font-weight: 700; color: #1A1816; margin: 0 0 8px;">You've been invited</h2>
-          <p style="color: #444441; font-size: 14px; line-height: 1.6; margin: 0 0 24px;">
-            <strong>${seller.contact_person_name}</strong> has invited you to join their team on DeelMap Seller Portal.
-          </p>
-          <a href="${acceptUrl}" style="display: inline-block; background: #D03839; color: white; font-size: 14px; font-weight: 600; padding: 10px 24px; border-radius: 6px; text-decoration: none;">
-            Accept Invitation
-          </a>
-          <p style="color: #737370; font-size: 12px; margin: 24px 0 0;">
-            This link expires in 7 days. If you weren't expecting this, you can ignore this email.
-          </p>
-        </div>
-      `,
+<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#F5F5F3;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif">
+  <table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:32px 16px">
+    <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;background:#ffffff">
+      <tr>
+        <td style="background:#ffffff;padding:12px 40px;text-align:center;border-bottom:2px solid #D03839">
+          <img src="https://sellerportaldeelmap-production-bea8.up.railway.app/deelmap.png" alt="Deelmap" height="72" style="display:inline-block;height:72px;width:auto;border:0" />
+        </td>
+      </tr>
+      <tr>
+        <td style="padding:36px 40px 32px;background:#ffffff">
+          <p style="margin:0 0 6px;font-size:14px;color:#737370">Hi ${inviteeName},</p>
+          <h1 style="margin:0 0 12px;font-size:22px;font-weight:700;color:#1A1816;letter-spacing:-0.4px;line-height:1.25">You've been invited to join a team</h1>
+          <p style="margin:0 0 28px;font-size:14px;line-height:1.65;color:#737370"><strong style="color:#1A1816">${inviterName}</strong> has invited you to join their team on the DeelMap Seller Portal. Click the button below to create your account and get started.</p>
+          <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:28px">
+            <tr><td>
+              <a href="${acceptUrl}" style="display:inline-block;background:#D03839;color:#ffffff;font-size:14px;font-weight:600;padding:12px 28px;border-radius:4px;text-decoration:none;letter-spacing:0.1px">Accept Invitation</a>
+            </td></tr>
+          </table>
+          <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:28px">
+            <tr>
+              <td style="background:#FAFAF8;border:1px solid #E8E8E4;border-radius:4px;padding:16px 20px">
+                <p style="margin:0 0 4px;font-size:11px;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;color:#A8A8A4">Invitation link</p>
+                <p style="margin:0;font-size:12px;color:#737370;word-break:break-all;line-height:1.5">${acceptUrl}</p>
+              </td>
+            </tr>
+          </table>
+          <p style="margin:0;font-size:12px;color:#A8A8A4;line-height:1.6">This link expires in 7 days. If you weren't expecting this invitation, you can safely ignore this email.</p>
+        </td>
+      </tr>
+      <tr>
+        <td style="background:#ffffff;border-top:1px solid #E8E8E4;padding:20px 40px;text-align:center">
+          <p style="margin:0;font-size:12px;color:#A8A8A4">© 2026 Deelmap. All rights reserved.</p>
+        </td>
+      </tr>
+    </table>
+  </td></tr></table>
+</body></html>`,
     })
 
     return NextResponse.json({ member, org })
