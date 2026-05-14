@@ -28,6 +28,7 @@ const PropertiesManagement = () => {
   const [filterPropertyStatus, setFilterPropertyStatus] = useState('');
   const [statusUpdatingId, setStatusUpdatingId] = useState(null);
   const [userId, setUserId] = useState(null);
+  const [effectiveUserId, setEffectiveUserId] = useState(null);
   const [showUTMModal, setShowUTMModal] = useState(false);
   const [propertyForUTM, setPropertyForUTM] = useState(null);
   const [selectedPropertyRaw, setSelectedPropertyRaw] = useState(null); // raw property for UTM (slug/id)
@@ -46,14 +47,19 @@ const PropertiesManagement = () => {
     if (userStr) {
       const user = JSON.parse(userStr);
       setUserId(user.id);
+      // Resolve workspace effective ID (team member → owner's ID)
+      fetch('/api/team/workspace', { headers: { Authorization: `Bearer ${user.id}` } })
+        .then(r => r.json())
+        .then(data => setEffectiveUserId(data.effectiveId || user.id))
+        .catch(() => setEffectiveUserId(user.id));
     }
   }, []);
 
   useEffect(() => {
-    if (userId) {
+    if (effectiveUserId) {
       fetchProperties();
     }
-  }, [userId, viewMode]);
+  }, [effectiveUserId, viewMode]);
 
   const fetchProperties = async () => {
     try {
@@ -63,14 +69,14 @@ const PropertiesManagement = () => {
       const { data: sellerData } = await supabase
         .from('seller_applications')
         .select('temp_seller_id')
-        .eq('id', userId)
+        .eq('id', effectiveUserId)
         .maybeSingle();
 
       // 1) Manual listings: from properties table (seller_id = current seller)
       const { data: manualList, error: manualError } = await supabase
         .from('properties')
         .select('*')
-        .eq('seller_id', userId)
+        .eq('seller_id', effectiveUserId)
         .order('created_at', { ascending: false });
 
       if (manualError) {
@@ -242,13 +248,13 @@ const PropertiesManagement = () => {
           .from('properties')
           .update({ status: 'archived', property_status: 'unavailable' })
           .eq('id', selectedProperty.id)
-          .eq('seller_id', userId);
+          .eq('seller_id', effectiveUserId);
         if (error) throw error;
       } else {
         const { data: sellerRow } = await supabase
           .from('seller_applications')
           .select('temp_seller_id')
-          .eq('id', userId)
+          .eq('id', effectiveUserId)
           .maybeSingle();
         const tempSellerId = sellerRow?.temp_seller_id;
         if (!tempSellerId) {
@@ -278,13 +284,13 @@ const PropertiesManagement = () => {
           .from('properties')
           .update({ status: 'draft', property_status: 'available' })
           .eq('id', property.id)
-          .eq('seller_id', userId);
+          .eq('seller_id', effectiveUserId);
         if (error) throw error;
       } else {
         const { data: sellerRow } = await supabase
           .from('seller_applications')
           .select('temp_seller_id')
-          .eq('id', userId)
+          .eq('id', effectiveUserId)
           .maybeSingle();
         const tempSellerId = sellerRow?.temp_seller_id;
         if (!tempSellerId) {
@@ -323,13 +329,13 @@ const PropertiesManagement = () => {
           .from('properties')
           .delete()
           .eq('id', selectedProperty.id)
-          .eq('seller_id', userId);
+          .eq('seller_id', effectiveUserId);
         if (error) throw error;
       } else {
         const { data: sellerRow } = await supabase
           .from('seller_applications')
           .select('temp_seller_id')
-          .eq('id', userId)
+          .eq('id', effectiveUserId)
           .maybeSingle();
         const tempSellerId = sellerRow?.temp_seller_id;
         if (!tempSellerId) {
@@ -369,7 +375,7 @@ const PropertiesManagement = () => {
       const { data: plan } = await supabase
         .from('seller_plans')
         .select('status')
-        .eq('seller_id', userId)
+        .eq('seller_id', effectiveUserId)
         .maybeSingle()
 
       if (!plan || plan.status === 'canceled') {
@@ -391,13 +397,13 @@ const PropertiesManagement = () => {
           .from('properties')
           .update({ status: nextStatus, property_status: nextPropertyStatus })
           .eq('id', property.id)
-          .eq('seller_id', userId);
+          .eq('seller_id', effectiveUserId);
         if (error) throw error;
       } else {
         const { data: sellerRow } = await supabase
           .from('seller_applications')
           .select('temp_seller_id')
-          .eq('id', userId)
+          .eq('id', effectiveUserId)
           .maybeSingle();
         const tempSellerId = sellerRow?.temp_seller_id;
         if (!tempSellerId) {
