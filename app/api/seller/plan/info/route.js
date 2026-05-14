@@ -41,14 +41,23 @@ export async function POST(request) {
     const liveStatus   = sub.status
     const liveTrialEnd = liveStatus === 'trialing' ? toISO(sub.trial_end) : null
 
+    // Fallback period end when Stripe returns 0 (e.g. briefly after ending trial)
+    let resolvedPeriodEnd = livePeriodEnd
+    if (!resolvedPeriodEnd && liveStatus === 'active' && !plan.current_period_end) {
+      const end = new Date()
+      if (plan.billing_cycle === 'annual') end.setFullYear(end.getFullYear() + 1)
+      else end.setMonth(end.getMonth() + 1)
+      resolvedPeriodEnd = end.toISOString()
+    }
+
     const needsSync = (liveInfo && liveInfo.plan_type !== plan.plan_type)
-      || (livePeriodEnd && livePeriodEnd !== plan.current_period_end)
+      || (resolvedPeriodEnd && resolvedPeriodEnd !== plan.current_period_end)
       || (liveStatus && liveStatus !== plan.status)
 
     if (needsSync) {
       const update = {
-        current_period_start: livePeriodStart,
-        current_period_end:   livePeriodEnd,
+        current_period_start: livePeriodStart || plan.current_period_start,
+        current_period_end:   resolvedPeriodEnd,
         status:               liveStatus,
         trial_ends_at:        liveTrialEnd,
         updated_at:           new Date().toISOString(),
@@ -67,8 +76,8 @@ export async function POST(request) {
         plan.plan_type     = liveInfo.plan_type
         plan.billing_cycle = liveInfo.billing_cycle
       }
-      plan.current_period_end   = livePeriodEnd
-      plan.current_period_start = livePeriodStart
+      plan.current_period_end   = resolvedPeriodEnd
+      plan.current_period_start = livePeriodStart || plan.current_period_start
       plan.status               = liveStatus
       plan.trial_ends_at        = liveTrialEnd
     }
