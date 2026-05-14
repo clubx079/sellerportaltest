@@ -202,8 +202,8 @@ export default function TeamPage() {
   }
 
   const { org, members, memberOrgs = [], isEnterprise, isTrialing, seller } = data || {}
-  const isOwner = org?.is_owner ?? false
-  const isMemberOfAnyOrg = memberOrgs.length > 0 || (org && !isOwner)
+  const isOwner = isEnterprise || (org?.is_owner ?? false)
+  const isMemberOfAnyOrg = memberOrgs.length > 0 || (org && !isEnterprise)
 
   // Not enterprise and not in any team → upgrade wall
   if (!isEnterprise && !isMemberOfAnyOrg) {
