@@ -550,7 +550,7 @@ function CheckoutForm({ session, intentType, appliedPromo, noTrial, onSuccess })
       </div>
 
       <PaymentElement options={{
-        layout: { type: 'accordion', defaultCollapsed: false, radios: true, spacedAccordionItems: false },
+        layout: { type: 'accordion', defaultCollapsed: false, radios: 'auto', spacedAccordionItems: false },
         wallets: { applePay: 'auto', googlePay: 'never' },
       }} />
 
