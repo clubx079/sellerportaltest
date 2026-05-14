@@ -38,18 +38,24 @@ export async function POST(request) {
     const livePeriodEnd = toISO(sub.current_period_end)
     const livePeriodStart = toISO(sub.current_period_start)
 
+    const liveStatus   = sub.status
+    const liveTrialEnd = liveStatus === 'trialing' ? toISO(sub.trial_end) : null
+
     const needsSync = (liveInfo && liveInfo.plan_type !== plan.plan_type)
       || (livePeriodEnd && livePeriodEnd !== plan.current_period_end)
+      || (liveStatus && liveStatus !== plan.status)
 
     if (needsSync) {
       const update = {
         current_period_start: livePeriodStart,
         current_period_end:   livePeriodEnd,
+        status:               liveStatus,
+        trial_ends_at:        liveTrialEnd,
         updated_at:           new Date().toISOString(),
       }
       if (liveInfo) {
-        update.plan_type     = liveInfo.plan_type
-        update.billing_cycle = liveInfo.billing_cycle
+        update.plan_type       = liveInfo.plan_type
+        update.billing_cycle   = liveInfo.billing_cycle
         update.stripe_price_id = livePriceId
       }
       await supabase
@@ -58,11 +64,13 @@ export async function POST(request) {
         .eq('stripe_subscription_id', sub.id)
 
       if (liveInfo) {
-        plan.plan_type    = liveInfo.plan_type
+        plan.plan_type     = liveInfo.plan_type
         plan.billing_cycle = liveInfo.billing_cycle
       }
       plan.current_period_end   = livePeriodEnd
       plan.current_period_start = livePeriodStart
+      plan.status               = liveStatus
+      plan.trial_ends_at        = liveTrialEnd
     }
 
     // Check for a pending scheduled plan change via Stripe Subscription Schedule
