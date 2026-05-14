@@ -85,7 +85,7 @@ function LoginForm() {
         return
       }
 
-      if (application.status !== 'approved') {
+      if (!['approved', 'onboarding'].includes(application.status)) {
         setError('Your application status does not allow login. Please contact support.')
         setLoading(false)
         return
