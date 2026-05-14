@@ -74,10 +74,10 @@ function InviteModal({ onClose, onInvited, hasOrg, defaultOrgName }) {
                 Cancel
               </button>
               <button
-                onClick={() => router.push('/billing')}
+                onClick={() => router.push('/plans')}
                 className="flex-1 h-9 bg-[#D03839] hover:bg-[#E0493B] text-white text-[13px] font-semibold rounded"
               >
-                Go to Billing
+                Go to Plans
               </button>
             </div>
           </div>
@@ -246,7 +246,7 @@ export default function TeamPage() {
           <AlertTriangle className="w-4 h-4 text-[#D97706] shrink-0 mt-0.5" />
           <div>
             <p className="text-[13px] font-semibold text-[#B5620A]">Trial period active</p>
-            <p className="text-[12px] text-[#B5620A] mt-0.5">You can't invite team members while on trial. <button onClick={() => router.push('/billing')} className="underline font-medium">End your trial</button> to activate your subscription first.</p>
+            <p className="text-[12px] text-[#B5620A] mt-0.5">You can't invite team members while on trial. <button onClick={() => router.push('/plans')} className="underline font-medium">End your trial</button> to activate your subscription first.</p>
           </div>
         </div>
       )}
