@@ -76,14 +76,9 @@ export async function POST(request) {
       })
     }
 
-    // Save stripe_customer_id to seller_applications as a reliable fallback
     await supabase
       .from('seller_applications')
-      .update({
-        status: 'approved',
-        stripe_customer_id: customerId,
-        phone_verified: true,
-      })
+      .update({ status: 'approved' })
       .eq('id', seller_id)
 
     return NextResponse.json({ success: true })
