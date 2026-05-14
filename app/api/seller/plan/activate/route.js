@@ -78,7 +78,7 @@ export async function POST(request) {
 
     await supabase
       .from('seller_applications')
-      .update({ status: 'approved' })
+      .update({ status: 'approved', stripe_customer_id: customerId })
       .eq('id', seller_id)
 
     return NextResponse.json({ success: true })
