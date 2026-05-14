@@ -72,7 +72,7 @@ export default function Sidebar({ isOpen, setIsOpen, activeItem, setActiveItem }
       items: [
         { id: 'analytics', label: 'Analytics', icon: BarChart3, path: '/analytics' },
         { id: 'contracts', label: 'Contracts', icon: ScrollText, path: '/contracts' },
-        { id: 'team', label: 'Team', icon: Users, path: '/team' },
+        ...(sellerUser?.plan !== 'pro' ? [{ id: 'team', label: 'Team', icon: Users, path: '/team' }] : []),
       ]
     },
     {

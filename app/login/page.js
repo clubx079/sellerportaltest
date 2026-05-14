@@ -91,13 +91,20 @@ function LoginForm() {
         return
       }
 
+      const { data: planRow } = await supabase
+        .from('seller_plans')
+        .select('plan_type')
+        .eq('seller_id', application.id)
+        .maybeSingle()
+
       const userData = {
         id: application.id,
         email: application.email,
         businessName: application.business_name,
         contactPersonName: application.contact_person_name,
         phone: application.phone,
-        businessType: application.business_type
+        businessType: application.business_type,
+        plan: planRow?.plan_type || null,
       }
 
       localStorage.setItem('seller_user', JSON.stringify(userData))

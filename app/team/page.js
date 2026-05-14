@@ -43,6 +43,7 @@ function InviteModal({ onClose, onInvited, hasOrg, defaultOrgName }) {
       })
       const data = await res.json()
       if (data.error === 'TRIAL_ACTIVE') { setIsTrialBlock(true); setSubmitting(false); return }
+      if (data.error === 'MEMBER_LIMIT') { setError('Team limit reached. Enterprise plans allow up to 3 team members.'); setSubmitting(false); return }
       if (!res.ok || data.error) { setError(data.error || 'Failed to send invitation'); setSubmitting(false); return }
       onInvited()
     } catch {

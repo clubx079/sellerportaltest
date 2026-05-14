@@ -200,6 +200,16 @@ export async function POST(request) {
       org = newOrg
     }
 
+    // Enforce 3-member limit
+    const { count: memberCount } = await supabase
+      .from('org_members')
+      .select('id', { count: 'exact', head: true })
+      .eq('org_id', org.id)
+
+    if (memberCount >= 3) {
+      return NextResponse.json({ error: 'MEMBER_LIMIT', message: 'Team limit reached. Enterprise plans allow up to 3 team members.' }, { status: 403 })
+    }
+
     // Check if already invited
     const { data: existing } = await supabase
       .from('org_members')
