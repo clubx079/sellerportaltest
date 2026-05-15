@@ -746,72 +746,104 @@ export default function NewPropertyPage() {
         </div>
       )}
 
-      {/* Upgrade modal — end trial early and publish */}
+      {/* Upgrade modal */}
       {showUpgradePrompt && (() => {
+        const isTrialLimit = trialPlan?.status === 'trialing';
         const planLabel = trialPlan?.plan_type === 'enterprise' ? 'Enterprise' : 'Pro Seller';
         const planPrice = trialPlan?.plan_type === 'enterprise'
           ? (trialPlan?.billing_cycle === 'annual' ? '$239/mo' : '$299/mo')
           : (trialPlan?.billing_cycle === 'annual' ? '$79/mo' : '$99/mo');
+        const resetDate = trialPlan?.current_period_end
+          ? new Date(trialPlan.current_period_end).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+          : null;
         return (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
             <div className="bg-white rounded shadow-2xl w-full max-w-sm p-6 space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="text-[15px] font-bold text-[#1A1816]">Start your subscription</h3>
+                <h3 className="text-[15px] font-bold text-[#1A1816]">
+                  {isTrialLimit ? 'Start your subscription' : 'Listing limit reached'}
+                </h3>
                 <button onClick={() => { setShowUpgradePrompt(false); setUpgradeError(null); endTrialCalledRef.current = false; }} className="p-1.5 rounded hover:bg-[#F0F0EE] transition-colors">
                   <X size={16} className="text-[#737370]" />
                 </button>
               </div>
-              <p className="text-[13px] text-[#737370]">
-                Your free trial allows 1 published listing. To publish more, your trial will end now and your <strong>{planLabel}</strong> subscription ({planPrice}) will begin immediately.{selectedAddOns.length > 0 ? ' You\'ll then be taken back to complete your add-on payment.' : ''}
-              </p>
-              <div className="bg-[#FAFAF8] border border-[#E8E8E4] rounded p-3 flex items-center justify-between">
-                <span className="text-[13px] font-medium text-[#1A1816]">{planLabel}</span>
-                <span className="text-[13px] font-bold text-[#1A1816]">{planPrice}</span>
-              </div>
-              {upgradeError && <p className="text-[12px] text-red-600">{upgradeError}</p>}
-              <div className="flex gap-3">
-                <button
-                  onClick={() => { setShowUpgradePrompt(false); setUpgradeError(null); endTrialCalledRef.current = false; }}
-                  className="flex-1 h-[40px] border border-[#E8E8E4] rounded text-[13px] font-medium text-[#1A1816] hover:border-[#1A1816] transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  disabled={upgradeLoading}
-                  onClick={async () => {
-                    if (endTrialCalledRef.current) return;
-                    endTrialCalledRef.current = true;
-                    setUpgradeLoading(true);
-                    setUpgradeError(null);
-                    try {
-                      const res = await fetch('/api/seller/plan/end-trial', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ seller_id: userId }),
-                      });
-                      const data = await res.json();
-                      if (!res.ok) throw new Error(data.error || 'Failed to start subscription');
-                      setTrialPlan(prev => prev ? { ...prev, status: 'active' } : prev);
-                      setShowUpgradePrompt(false);
-                      if (selectedAddOns.length > 0) {
-                        setAddOnClientSecret(null);
-                        setAddOnError(null);
-                        setActiveTab('addons');
-                      } else {
-                        handleSave('active', { bypassLimit: true });
-                      }
-                    } catch (err) {
-                      endTrialCalledRef.current = false;
-                      setUpgradeError(err.message);
-                    } finally {
-                      setUpgradeLoading(false);
-                    }
-                  }}
-                  className="flex-1 h-[40px] bg-[#D03839] hover:bg-[#E0493B] rounded text-[13px] font-semibold text-white transition-colors disabled:opacity-50"
-                >
-                  {upgradeLoading ? 'Processing…' : 'Confirm & Publish'}
-                </button>
-              </div>
+
+              {isTrialLimit ? (
+                <>
+                  <p className="text-[13px] text-[#737370]">
+                    Your free trial allows 1 published listing. To publish more, your trial will end now and your <strong>{planLabel}</strong> subscription ({planPrice}) will begin immediately.{selectedAddOns.length > 0 ? ' You\'ll then be taken back to complete your add-on payment.' : ''}
+                  </p>
+                  <div className="bg-[#FAFAF8] border border-[#E8E8E4] rounded p-3 flex items-center justify-between">
+                    <span className="text-[13px] font-medium text-[#1A1816]">{planLabel}</span>
+                    <span className="text-[13px] font-bold text-[#1A1816]">{planPrice}</span>
+                  </div>
+                  {upgradeError && <p className="text-[12px] text-red-600">{upgradeError}</p>}
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => { setShowUpgradePrompt(false); setUpgradeError(null); endTrialCalledRef.current = false; }}
+                      className="flex-1 h-[40px] border border-[#E8E8E4] rounded text-[13px] font-medium text-[#1A1816] hover:border-[#1A1816] transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      disabled={upgradeLoading}
+                      onClick={async () => {
+                        if (endTrialCalledRef.current) return;
+                        endTrialCalledRef.current = true;
+                        setUpgradeLoading(true);
+                        setUpgradeError(null);
+                        try {
+                          const res = await fetch('/api/seller/plan/end-trial', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ seller_id: userId }),
+                          });
+                          const data = await res.json();
+                          if (!res.ok) throw new Error(data.error || 'Failed to start subscription');
+                          setTrialPlan(prev => prev ? { ...prev, status: 'active' } : prev);
+                          setShowUpgradePrompt(false);
+                          if (selectedAddOns.length > 0) {
+                            setAddOnClientSecret(null);
+                            setAddOnError(null);
+                            setActiveTab('addons');
+                          } else {
+                            handleSave('active', { bypassLimit: true });
+                          }
+                        } catch (err) {
+                          endTrialCalledRef.current = false;
+                          setUpgradeError(err.message);
+                        } finally {
+                          setUpgradeLoading(false);
+                        }
+                      }}
+                      className="flex-1 h-[40px] bg-[#D03839] hover:bg-[#E0493B] rounded text-[13px] font-semibold text-white transition-colors disabled:opacity-50"
+                    >
+                      {upgradeLoading ? 'Processing…' : 'Confirm & Publish'}
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <p className="text-[13px] text-[#737370]">
+                    Your Pro plan includes 5 published listings per billing period. You've used all 5 this period.
+                    {resetDate ? ` Your limit resets on ${resetDate}.` : ''} Upgrade to Enterprise for unlimited listings.
+                  </p>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => setShowUpgradePrompt(false)}
+                      className="flex-1 h-[40px] border border-[#E8E8E4] rounded text-[13px] font-medium text-[#1A1816] hover:border-[#1A1816] transition-colors"
+                    >
+                      Close
+                    </button>
+                    <button
+                      onClick={() => { setShowUpgradePrompt(false); router.push('/plans'); }}
+                      className="flex-1 h-[40px] bg-[#D03839] hover:bg-[#E0493B] rounded text-[13px] font-semibold text-white transition-colors"
+                    >
+                      Upgrade to Enterprise
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         );
