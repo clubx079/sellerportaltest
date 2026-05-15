@@ -91,8 +91,9 @@ export default function PlansPage() {
   }, [])
 
   useEffect(() => {
-    if (sellerId) loadPlanInfo()
-  }, [sellerId])
+    if (sellerId && !teamWorkspace) loadPlanInfo()
+    else if (sellerId && teamWorkspace) setLoading(false)
+  }, [sellerId, teamWorkspace])
 
   const loadPlanInfo = async () => {
     setLoading(true)

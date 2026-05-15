@@ -49,9 +49,15 @@ export default function BillingPage() {
     const user = JSON.parse(userStr)
     fetch('/api/team/workspaces', { headers: { Authorization: `Bearer ${user.id}` } })
       .then(r => r.json())
-      .then(ws => { if (ws?.current?.id) setTeamWorkspace(ws.current) })
-      .catch(() => {})
-    loadBilling(user.id)
+      .then(ws => {
+        if (ws?.current?.id) {
+          setTeamWorkspace(ws.current)
+          setLoading(false)
+        } else {
+          loadBilling(user.id)
+        }
+      })
+      .catch(() => loadBilling(user.id))
   }, [])
 
   const loadBilling = async (sellerId) => {
@@ -147,6 +153,14 @@ export default function BillingPage() {
           <div className="flex items-center gap-2 text-[#737370] text-[13px]">
             <Loader2 className="w-4 h-4 animate-spin" /> Loading...
           </div>
+        ) : teamWorkspace ? (
+          <div className="flex items-start gap-3 p-4 bg-[#F3F3F0] rounded border border-[#E8E8E4]">
+            <Check className="w-4 h-4 text-[#0F6E56] shrink-0 mt-0.5" />
+            <div>
+              <p className="text-[14px] font-semibold text-[#1A1816]">Covered by {teamWorkspace.name}</p>
+              <p className="text-[13px] text-[#737370] mt-0.5">Your access is included under your team's Enterprise plan. Billing is managed by the team owner.</p>
+            </div>
+          </div>
         ) : plan ? (
           <div className="space-y-4">
             <div className="flex items-start justify-between gap-4">
@@ -233,86 +247,90 @@ export default function BillingPage() {
         )}
       </div>
 
-      {/* Payment Method */}
-      <div className="bg-white border border-[#E8E8E4] rounded p-5">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.09em] text-[#A8A8A4] mb-4">Payment Method</p>
-        {pmLoading ? (
-          <div className="flex items-center gap-2 text-[#737370] text-[13px]">
-            <Loader2 className="w-4 h-4 animate-spin" /> Loading...
-          </div>
-        ) : paymentMethod ? (
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-7 bg-[#F3F3F0] border border-[#E8E8E4] rounded flex items-center justify-center">
-                <CreditCard className="w-4 h-4 text-[#737370]" />
+      {!teamWorkspace && (
+        <>
+          {/* Payment Method */}
+          <div className="bg-white border border-[#E8E8E4] rounded p-5">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.09em] text-[#A8A8A4] mb-4">Payment Method</p>
+            {pmLoading ? (
+              <div className="flex items-center gap-2 text-[#737370] text-[13px]">
+                <Loader2 className="w-4 h-4 animate-spin" /> Loading...
               </div>
-              <div>
-                <p className="text-[14px] font-semibold text-[#1A1816] capitalize">
-                  {paymentMethod.brand} •••• {paymentMethod.last4}
-                </p>
-                <p className="text-[12px] text-[#737370]">
-                  Expires {paymentMethod.exp_month}/{paymentMethod.exp_year}
-                </p>
+            ) : paymentMethod ? (
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-7 bg-[#F3F3F0] border border-[#E8E8E4] rounded flex items-center justify-center">
+                    <CreditCard className="w-4 h-4 text-[#737370]" />
+                  </div>
+                  <div>
+                    <p className="text-[14px] font-semibold text-[#1A1816] capitalize">
+                      {paymentMethod.brand} •••• {paymentMethod.last4}
+                    </p>
+                    <p className="text-[12px] text-[#737370]">
+                      Expires {paymentMethod.exp_month}/{paymentMethod.exp_year}
+                    </p>
+                  </div>
+                </div>
+                <span className="flex items-center gap-1 text-[11px] font-semibold text-[#0F6E56] bg-[#E4F5EC] px-2 py-0.5 rounded border border-[#9FDBB8]">
+                  <Check className="w-3 h-3" /> Default
+                </span>
               </div>
-            </div>
-            <span className="flex items-center gap-1 text-[11px] font-semibold text-[#0F6E56] bg-[#E4F5EC] px-2 py-0.5 rounded border border-[#9FDBB8]">
-              <Check className="w-3 h-3" /> Default
-            </span>
+            ) : (
+              <p className="text-[13px] text-[#737370]">No payment method on file.</p>
+            )}
           </div>
-        ) : (
-          <p className="text-[13px] text-[#737370]">No payment method on file.</p>
-        )}
-      </div>
 
-      {/* Billing History */}
-      <div className="bg-white border border-[#E8E8E4] rounded p-5">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.09em] text-[#A8A8A4] mb-4">Billing History</p>
-        {pmLoading ? (
-          <div className="flex items-center gap-2 text-[#737370] text-[13px]">
-            <Loader2 className="w-4 h-4 animate-spin" /> Loading…
-          </div>
-        ) : invoices.length === 0 ? (
-          <div className="flex items-center gap-2 py-2">
-            <Receipt className="w-4 h-4 text-[#A8A8A4]" />
-            <p className="text-[13px] text-[#737370]">No billing history yet.</p>
-          </div>
-        ) : (
-          <div className="-mx-5 -mb-5">
-            {invoices.map((inv, i) => (
-              <div
-                key={inv.id}
-                className={`flex items-center justify-between px-5 py-3.5 ${i !== invoices.length - 1 ? 'border-b border-[#F3F3F0]' : ''} hover:bg-[#FAFAF8] transition-colors`}
-              >
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-8 h-8 rounded bg-[#F3F3F0] flex items-center justify-center flex-shrink-0">
-                    <Receipt className="w-4 h-4 text-[#737370]" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-[13px] font-semibold text-[#1A1816] truncate">{inv.description}</p>
-                    <p className="text-[11px] text-[#A8A8A4] mt-0.5">{formatDate(inv.created * 1000)}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3 flex-shrink-0 ml-4">
-                  <div className="text-right">
-                    {inv.discount_amount > 0 && (
-                      <p className="text-[11px] text-[#A8A8A4] line-through">${(inv.subtotal / 100).toFixed(2)}</p>
-                    )}
-                    <p className="text-[13px] font-bold text-[#1A1816]">${((inv.amount_paid || inv.amount_due) / 100).toFixed(2)}</p>
-                    {inv.discount_amount > 0 && (
-                      <p className="text-[11px] text-[#0F6E56] font-medium">−${(inv.discount_amount / 100).toFixed(2)} discount</p>
-                    )}
-                  </div>
-                  <span className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold border ${
-                    inv.status === 'paid' ? 'bg-[#E4F5EC] text-[#0F6E56] border-[#9FDBB8]' : 'bg-[#F3F3F0] text-[#737370] border-[#E8E8E4]'
-                  }`}>
-                    {inv.status === 'paid' ? 'Paid' : inv.status}
-                  </span>
-                </div>
+          {/* Billing History */}
+          <div className="bg-white border border-[#E8E8E4] rounded p-5">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.09em] text-[#A8A8A4] mb-4">Billing History</p>
+            {pmLoading ? (
+              <div className="flex items-center gap-2 text-[#737370] text-[13px]">
+                <Loader2 className="w-4 h-4 animate-spin" /> Loading…
               </div>
-            ))}
+            ) : invoices.length === 0 ? (
+              <div className="flex items-center gap-2 py-2">
+                <Receipt className="w-4 h-4 text-[#A8A8A4]" />
+                <p className="text-[13px] text-[#737370]">No billing history yet.</p>
+              </div>
+            ) : (
+              <div className="-mx-5 -mb-5">
+                {invoices.map((inv, i) => (
+                  <div
+                    key={inv.id}
+                    className={`flex items-center justify-between px-5 py-3.5 ${i !== invoices.length - 1 ? 'border-b border-[#F3F3F0]' : ''} hover:bg-[#FAFAF8] transition-colors`}
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-8 h-8 rounded bg-[#F3F3F0] flex items-center justify-center flex-shrink-0">
+                        <Receipt className="w-4 h-4 text-[#737370]" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-[13px] font-semibold text-[#1A1816] truncate">{inv.description}</p>
+                        <p className="text-[11px] text-[#A8A8A4] mt-0.5">{formatDate(inv.created * 1000)}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3 flex-shrink-0 ml-4">
+                      <div className="text-right">
+                        {inv.discount_amount > 0 && (
+                          <p className="text-[11px] text-[#A8A8A4] line-through">${(inv.subtotal / 100).toFixed(2)}</p>
+                        )}
+                        <p className="text-[13px] font-bold text-[#1A1816]">${((inv.amount_paid || inv.amount_due) / 100).toFixed(2)}</p>
+                        {inv.discount_amount > 0 && (
+                          <p className="text-[11px] text-[#0F6E56] font-medium">−${(inv.discount_amount / 100).toFixed(2)} discount</p>
+                        )}
+                      </div>
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold border ${
+                        inv.status === 'paid' ? 'bg-[#E4F5EC] text-[#0F6E56] border-[#9FDBB8]' : 'bg-[#F3F3F0] text-[#737370] border-[#E8E8E4]'
+                      }`}>
+                        {inv.status === 'paid' ? 'Paid' : inv.status}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
-        )}
-      </div>
+        </>
+      )}
 
     </div>
   )
