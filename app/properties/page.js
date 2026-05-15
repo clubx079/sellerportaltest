@@ -29,6 +29,7 @@ const PropertiesManagement = () => {
   const [statusUpdatingId, setStatusUpdatingId] = useState(null);
   const [userId, setUserId] = useState(null);
   const [effectiveUserId, setEffectiveUserId] = useState(null);
+  const [workspaceRole, setWorkspaceRole] = useState('admin');
   const [showUTMModal, setShowUTMModal] = useState(false);
   const [propertyForUTM, setPropertyForUTM] = useState(null);
   const [selectedPropertyRaw, setSelectedPropertyRaw] = useState(null); // raw property for UTM (slug/id)
@@ -47,10 +48,13 @@ const PropertiesManagement = () => {
     if (userStr) {
       const user = JSON.parse(userStr);
       setUserId(user.id);
-      // Resolve workspace effective ID (team member → owner's ID)
-      fetch('/api/team/workspace', { headers: { Authorization: `Bearer ${user.id}` } })
+      // Resolve workspace effective ID and role
+      fetch('/api/team/workspaces', { headers: { Authorization: `Bearer ${user.id}` } })
         .then(r => r.json())
-        .then(data => setEffectiveUserId(data.effectiveId || user.id))
+        .then(data => {
+          setEffectiveUserId(data.current?.effectiveSellerId || user.id)
+          setWorkspaceRole(data.current?.role || 'admin')
+        })
         .catch(() => setEffectiveUserId(user.id));
     }
   }, []);
@@ -843,7 +847,7 @@ const PropertiesManagement = () => {
                                 Fix Issues
                               </button>
                             )}
-                            {property._source === 'manual' && ['active', 'published'].includes((property.status || '').toLowerCase()) && (
+                            {workspaceRole === 'admin' && property._source === 'manual' && ['active', 'published'].includes((property.status || '').toLowerCase()) && (
                               <button
                                 onClick={() => router.push(`/properties/enhance?id=${property.id}`)}
                                 className="h-7 px-3 text-[11px] font-semibold bg-[#D03839] hover:bg-[#E0493B] text-white rounded transition-colors"
@@ -997,7 +1001,7 @@ const PropertiesManagement = () => {
                           <span className="text-[10px] font-medium">Fix Issues</span>
                         </button>
                       )}
-                      {property._source === 'manual' && ['active', 'published'].includes((property.status || '').toLowerCase()) && (
+                      {workspaceRole === 'admin' && property._source === 'manual' && ['active', 'published'].includes((property.status || '').toLowerCase()) && (
                         <button onClick={() => router.push(`/properties/enhance?id=${property.id}`)} className="flex-1 flex items-center justify-center h-9 rounded text-[#737370] hover:text-[#D03839] hover:bg-[#FEF0EF] transition-colors" title="Enhance listing">
                           <Zap className="w-4 h-4" strokeWidth={2} />
                         </button>
