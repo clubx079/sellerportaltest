@@ -74,10 +74,17 @@ export default function PlansPage() {
   const [cancelingPend,       setCancelingPend]       = useState(false)
   const [endingTrial,         setEndingTrial]         = useState(false)
   const [showEndTrialConfirm, setShowEndTrialConfirm] = useState(false)
+  const [teamWorkspace,       setTeamWorkspace]       = useState(null)
 
   useEffect(() => {
     const userStr = localStorage.getItem('seller_user')
-    if (userStr) setSellerId(JSON.parse(userStr).id)
+    if (!userStr) return
+    const user = JSON.parse(userStr)
+    setSellerId(user.id)
+    fetch('/api/team/workspaces', { headers: { Authorization: `Bearer ${user.id}` } })
+      .then(r => r.json())
+      .then(ws => { if (ws?.current?.id) setTeamWorkspace(ws.current) })
+      .catch(() => {})
     // Pick up success message passed back from the upgrade page
     const msg = sessionStorage.getItem('planChangeSuccess')
     if (msg) { setSuccess(msg); sessionStorage.removeItem('planChangeSuccess') }
@@ -516,19 +523,31 @@ export default function PlansPage() {
           </>
         ) : (
           /* No plan state */
-          <div className="bg-white border border-[#E8E8E4] rounded p-8 text-center">
-            <div className="w-12 h-12 rounded bg-[#F3F3F0] flex items-center justify-center mx-auto mb-3">
-              <Zap className="w-6 h-6 text-[#A8A8A4]" />
+          teamWorkspace ? (
+            <div className="bg-white border border-[#E8E8E4] rounded p-8 flex items-start gap-4">
+              <div className="w-10 h-10 rounded bg-[#E4F5EC] flex items-center justify-center shrink-0">
+                <Zap className="w-5 h-5 text-[#0F6E56]" />
+              </div>
+              <div>
+                <p className="text-[14px] font-semibold text-[#1A1816] mb-1">Covered by {teamWorkspace.name}</p>
+                <p className="text-[13px] text-[#737370] leading-relaxed">Your access is included under your team's Enterprise plan. Billing and plan management is handled by the team owner.</p>
+              </div>
             </div>
-            <p className="text-[14px] font-semibold text-[#1A1816] mb-1">No active plan</p>
-            <p className="text-[13px] text-[#737370] mb-4">Complete onboarding to subscribe to a plan.</p>
-            <a
-              href="/onboarding"
-              className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-[#D03839] hover:bg-[#B82F30] text-white text-[13px] font-semibold rounded transition-colors"
-            >
-              Choose a plan
-            </a>
-          </div>
+          ) : (
+            <div className="bg-white border border-[#E8E8E4] rounded p-8 text-center">
+              <div className="w-12 h-12 rounded bg-[#F3F3F0] flex items-center justify-center mx-auto mb-3">
+                <Zap className="w-6 h-6 text-[#A8A8A4]" />
+              </div>
+              <p className="text-[14px] font-semibold text-[#1A1816] mb-1">No active plan</p>
+              <p className="text-[13px] text-[#737370] mb-4">Complete onboarding to subscribe to a plan.</p>
+              <a
+                href="/onboarding"
+                className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-[#D03839] hover:bg-[#B82F30] text-white text-[13px] font-semibold rounded transition-colors"
+              >
+                Choose a plan
+              </a>
+            </div>
+          )
         )}
 
       </div>
