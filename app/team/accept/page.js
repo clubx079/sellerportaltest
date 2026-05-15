@@ -9,12 +9,12 @@ function AcceptContent() {
   const router = useRouter()
   const token = searchParams.get('token')
 
-  const [info, setInfo] = useState(null)
-  const [error, setError] = useState('')
-  const [loading, setLoading] = useState(true)
-  const [form, setForm] = useState({ name: '', password: '', confirm: '' })
+  const [info, setInfo]           = useState(null)
+  const [error, setError]         = useState('')
+  const [loading, setLoading]     = useState(true)
+  const [form, setForm]           = useState({ name: '', password: '', confirm: '' })
   const [submitting, setSubmitting] = useState(false)
-  const [done, setDone] = useState(false)
+  const [done, setDone]           = useState(false)
 
   useEffect(() => {
     if (!token) { setError('Invalid invitation link.'); setLoading(false); return }
@@ -31,24 +31,24 @@ function AcceptContent() {
 
   async function handleSubmit(e) {
     e.preventDefault()
-    if (form.password !== form.confirm) { setError('Passwords do not match.'); return }
-    if (form.password.length < 8) { setError('Password must be at least 8 characters.'); return }
+    const isLogin = info?.hasExistingAccount
+    if (!isLogin && form.password !== form.confirm) { setError('Passwords do not match.'); return }
+    if (!isLogin && form.password.length < 8) { setError('Password must be at least 8 characters.'); return }
     setSubmitting(true)
     setError('')
     try {
       const res = await fetch('/api/team/accept', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token, name: form.name, password: form.password }),
+        body: JSON.stringify({ token, name: form.name, password: form.password, isLogin }),
       })
       const data = await res.json()
       if (!res.ok || data.error) { setError(data.error || 'Failed to accept invitation'); return }
-      // Log them in
       localStorage.setItem('seller_user', JSON.stringify({
         id: data.seller_id,
         email: data.email,
         name: data.name,
-        plan: 'enterprise',
+        plan: data.plan || null,
       }))
       setDone(true)
       setTimeout(() => router.push('/dashboard'), 2000)
@@ -66,6 +66,8 @@ function AcceptContent() {
       </div>
     )
   }
+
+  const isLogin = info?.hasExistingAccount
 
   return (
     <div className="min-h-screen bg-[#FAFAF8] flex items-center justify-center p-4">
@@ -90,23 +92,28 @@ function AcceptContent() {
           ) : (
             <>
               <div className="mb-6">
-                <h1 className="text-[20px] font-bold text-[#1A1816] mb-1">Accept Invitation</h1>
+                <h1 className="text-[20px] font-bold text-[#1A1816] mb-1">
+                  {isLogin ? 'Join Team' : 'Accept Invitation'}
+                </h1>
                 <p className="text-[13px] text-[#737370]">
                   You've been invited to join <strong>{info?.orgName || 'a team'}</strong> on DeelMap.
+                  {isLogin && ' Log in with your existing account to accept.'}
                 </p>
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-4">
-                <div>
-                  <label className="block text-[12px] font-semibold text-[#444441] mb-1.5">Your Name</label>
-                  <input
-                    type="text"
-                    placeholder="Jane Smith"
-                    value={form.name}
-                    onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-                    className="w-full h-9 px-3 border border-[#E8E8E4] rounded text-[13px] text-[#1A1816] placeholder:text-[#A8A8A4] focus:outline-none focus:border-[#1A1816]"
-                  />
-                </div>
+                {!isLogin && (
+                  <div>
+                    <label className="block text-[12px] font-semibold text-[#444441] mb-1.5">Your Name</label>
+                    <input
+                      type="text"
+                      placeholder="Jane Smith"
+                      value={form.name}
+                      onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+                      className="w-full h-9 px-3 border border-[#E8E8E4] rounded text-[13px] text-[#1A1816] placeholder:text-[#A8A8A4] focus:outline-none focus:border-[#1A1816]"
+                    />
+                  </div>
+                )}
 
                 <div>
                   <label className="block text-[12px] font-semibold text-[#444441] mb-1.5">Email</label>
@@ -119,10 +126,12 @@ function AcceptContent() {
                 </div>
 
                 <div>
-                  <label className="block text-[12px] font-semibold text-[#444441] mb-1.5">Password <span className="text-[#D03839]">*</span></label>
+                  <label className="block text-[12px] font-semibold text-[#444441] mb-1.5">
+                    Password <span className="text-[#D03839]">*</span>
+                  </label>
                   <input
                     type="password"
-                    placeholder="Min. 8 characters"
+                    placeholder={isLogin ? 'Your account password' : 'Min. 8 characters'}
                     value={form.password}
                     onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
                     className="w-full h-9 px-3 border border-[#E8E8E4] rounded text-[13px] text-[#1A1816] placeholder:text-[#A8A8A4] focus:outline-none focus:border-[#1A1816]"
@@ -130,17 +139,21 @@ function AcceptContent() {
                   />
                 </div>
 
-                <div>
-                  <label className="block text-[12px] font-semibold text-[#444441] mb-1.5">Confirm Password <span className="text-[#D03839]">*</span></label>
-                  <input
-                    type="password"
-                    placeholder="Repeat password"
-                    value={form.confirm}
-                    onChange={e => setForm(f => ({ ...f, confirm: e.target.value }))}
-                    className="w-full h-9 px-3 border border-[#E8E8E4] rounded text-[13px] text-[#1A1816] placeholder:text-[#A8A8A4] focus:outline-none focus:border-[#1A1816]"
-                    required
-                  />
-                </div>
+                {!isLogin && (
+                  <div>
+                    <label className="block text-[12px] font-semibold text-[#444441] mb-1.5">
+                      Confirm Password <span className="text-[#D03839]">*</span>
+                    </label>
+                    <input
+                      type="password"
+                      placeholder="Repeat password"
+                      value={form.confirm}
+                      onChange={e => setForm(f => ({ ...f, confirm: e.target.value }))}
+                      className="w-full h-9 px-3 border border-[#E8E8E4] rounded text-[13px] text-[#1A1816] placeholder:text-[#A8A8A4] focus:outline-none focus:border-[#1A1816]"
+                      required
+                    />
+                  </div>
+                )}
 
                 {error && <p className="text-[12px] text-[#D03839]">{error}</p>}
 
@@ -149,7 +162,9 @@ function AcceptContent() {
                   disabled={submitting}
                   className="w-full h-9 bg-[#D03839] hover:bg-[#E0493B] text-white text-[13px] font-semibold rounded disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {submitting ? 'Creating account…' : 'Create Account & Join Team'}
+                  {submitting
+                    ? (isLogin ? 'Joining team…' : 'Creating account…')
+                    : (isLogin ? 'Log In & Join Team' : 'Create Account & Join Team')}
                 </button>
               </form>
             </>

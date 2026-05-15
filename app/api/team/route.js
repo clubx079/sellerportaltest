@@ -126,7 +126,15 @@ export async function PATCH(request) {
 
   try {
     const { orgId } = await request.json()
-    if (!orgId) return NextResponse.json({ error: 'orgId required' }, { status: 400 })
+
+    // null orgId = switch to personal workspace
+    if (orgId === null || orgId === undefined) {
+      await supabase
+        .from('seller_applications')
+        .update({ org_id: null })
+        .eq('id', sellerId)
+      return NextResponse.json({ success: true })
+    }
 
     // Verify they actually belong to this org
     const { data: membership } = await supabase

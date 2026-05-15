@@ -28,7 +28,13 @@ export async function GET(request) {
       .eq('id', member.org_id)
       .maybeSingle()
 
-    return NextResponse.json({ member, orgName: org?.name })
+    const { data: existingAccount } = await supabase
+      .from('seller_applications')
+      .select('id')
+      .eq('email', member.email)
+      .maybeSingle()
+
+    return NextResponse.json({ member, orgName: org?.name, hasExistingAccount: !!existingAccount })
   } catch (err) {
     console.error('[team/accept GET]', err)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
@@ -38,9 +44,9 @@ export async function GET(request) {
 // POST /api/team/accept — create account and accept invite
 export async function POST(request) {
   try {
-    const { token, name, password } = await request.json()
+    const { token, name, password, isLogin } = await request.json()
     if (!token || !password) return NextResponse.json({ error: 'Token and password required' }, { status: 400 })
-    if (password.length < 8) return NextResponse.json({ error: 'Password must be at least 8 characters' }, { status: 400 })
+    if (!isLogin && password.length < 8) return NextResponse.json({ error: 'Password must be at least 8 characters' }, { status: 400 })
 
     const { data: member } = await supabase
       .from('org_members')
@@ -62,20 +68,21 @@ export async function POST(request) {
     // Check if account already exists for this email
     const { data: existing } = await supabase
       .from('seller_applications')
-      .select('id, org_id')
+      .select('id, org_id, password')
       .eq('email', member.email)
       .maybeSingle()
 
     let sellerId
     if (existing) {
-      sellerId = existing.id
-      // Update their org_id if not already set
-      if (!existing.org_id) {
-        await supabase
-          .from('seller_applications')
-          .update({ org_id: member.org_id })
-          .eq('id', sellerId)
+      // Verify password matches existing account
+      if (existing.password !== password) {
+        return NextResponse.json({ error: 'Incorrect password for your existing account' }, { status: 401 })
       }
+      sellerId = existing.id
+      await supabase
+        .from('seller_applications')
+        .update({ org_id: member.org_id })
+        .eq('id', sellerId)
     } else {
       // Create new seller account
       const nameParts = displayName.split(' ')
