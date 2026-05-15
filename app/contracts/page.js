@@ -16,7 +16,7 @@ function fmtDate(d) {
   return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
-function NewContractModal({ email, onClose, onCreated }) {
+function NewContractModal({ email, sellerName, onClose, onCreated }) {
   const [templates, setTemplates] = useState([])
   const [form, setForm] = useState({ buyerName: '', buyerEmail: '', property: '', templateId: '' })
   const [submitting, setSubmitting] = useState(false)
@@ -41,10 +41,11 @@ function NewContractModal({ email, onClose, onCreated }) {
       const res = await fetch('/api/contracts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...form, sellerEmail: email }),
+        body: JSON.stringify({ ...form, sellerEmail: email, sellerName: sellerName }),
       })
       const data = await res.json()
       if (!res.ok || data.error) { setError(data.error || 'Failed to create contract'); return }
+      if (data.assignor_slug) window.open(`https://docuseal.com/s/${data.assignor_slug}`, '_blank')
       onCreated()
     } catch {
       setError('Something went wrong. Please try again.')
@@ -147,10 +148,15 @@ export default function ContractsPage() {
   const [email, setEmail] = useState(null)
   const [showModal, setShowModal] = useState(false)
 
+  const [sellerName, setSellerName] = useState('')
+
   useEffect(() => {
     const raw = localStorage.getItem('seller_user')
-    if (raw) setEmail(JSON.parse(raw).email)
-    else setLoading(false)
+    if (raw) {
+      const u = JSON.parse(raw)
+      setEmail(u.email)
+      setSellerName(u.name || u.full_name || u.first_name || '')
+    } else setLoading(false)
   }, [])
 
   useEffect(() => {
@@ -188,6 +194,7 @@ export default function ContractsPage() {
       {showModal && (
         <NewContractModal
           email={email}
+          sellerName={sellerName}
           onClose={() => setShowModal(false)}
           onCreated={() => { setShowModal(false); fetchContracts() }}
         />
