@@ -331,6 +331,18 @@ const PropertiesManagement = () => {
           .eq('id', selectedProperty.id)
           .eq('seller_id', effectiveUserId);
         if (error) throw error;
+        // Decrement listings_used_this_period
+        const { data: planRow } = await supabase
+          .from('seller_plans')
+          .select('id, listings_used_this_period')
+          .eq('seller_id', effectiveUserId)
+          .maybeSingle()
+        if (planRow && planRow.listings_used_this_period > 0) {
+          await supabase
+            .from('seller_plans')
+            .update({ listings_used_this_period: planRow.listings_used_this_period - 1 })
+            .eq('id', planRow.id)
+        }
       } else {
         const { data: sellerRow } = await supabase
           .from('seller_applications')
