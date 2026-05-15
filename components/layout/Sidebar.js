@@ -87,6 +87,9 @@ export default function Sidebar({ isOpen, setIsOpen, activeItem, setActiveItem }
     if (typeof window !== 'undefined' && window.innerWidth < DESKTOP_BREAKPOINT) setIsOpen(false)
   }
 
+  const currentRole = workspaces?.current?.role || 'admin'
+  const isTeamMember = currentRole === 'member'
+
   const sections = [
     {
       label: 'MAIN',
@@ -100,7 +103,7 @@ export default function Sidebar({ isOpen, setIsOpen, activeItem, setActiveItem }
     {
       label: 'TOOLS',
       items: [
-        { id: 'analytics', label: 'Analytics', icon: BarChart3, path: '/analytics' },
+        ...(!isTeamMember ? [{ id: 'analytics', label: 'Analytics', icon: BarChart3, path: '/analytics' }] : []),
         { id: 'contracts', label: 'Contracts', icon: ScrollText, path: '/contracts' },
         { id: 'team', label: 'Team', icon: Users, path: '/team' },
       ]

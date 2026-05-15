@@ -140,13 +140,23 @@ export default function SellerAnalyticsPage() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState(null);
+  const [accessDenied, setAccessDenied] = useState(false);
 
   useEffect(() => {
     try {
       const s = localStorage.getItem('seller_user');
       if (s) {
         const parsed = JSON.parse(s);
-        if (parsed?.id) { setUserId(parsed.id); return; }
+        if (parsed?.id) {
+          fetch('/api/team/workspaces', { headers: { Authorization: `Bearer ${parsed.id}` } })
+            .then(r => r.json())
+            .then(ws => {
+              if (ws?.current?.role === 'member') { setAccessDenied(true); setLoading(false); return }
+              setUserId(parsed.id)
+            })
+            .catch(() => setUserId(parsed.id))
+          return
+        }
       }
     } catch {}
     setLoading(false);
@@ -188,6 +198,20 @@ export default function SellerAnalyticsPage() {
   const trendUp = s.viewTrend != null ? s.viewTrend >= 0 : null;
 
   const maxPropViews = topProps[0]?.views || 1;
+
+  if (accessDenied) {
+    return (
+      <div className="min-h-screen bg-[#FAFAF8] flex items-center justify-center p-6">
+        <div className="bg-white border border-[#E8E8E4] rounded p-10 text-center max-w-sm">
+          <div className="w-12 h-12 bg-[#F3F3F0] rounded flex items-center justify-center mx-auto mb-4">
+            <BarChart2 className="w-6 h-6 text-[#A8A8A4]" />
+          </div>
+          <h2 className="text-[16px] font-bold text-[#1A1816] mb-2">Admin access required</h2>
+          <p className="text-[13px] text-[#737370] leading-relaxed">Analytics is only available to workspace admins. Contact your team admin for access.</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-[#FAFAF8] p-4 lg:p-6" style={{ fontFamily: 'var(--font-dm-sans), sans-serif' }}>
