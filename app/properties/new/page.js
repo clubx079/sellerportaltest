@@ -51,6 +51,7 @@ export default function NewPropertyPage() {
   const [continuedTabs, setContinuedTabs] = useState(new Set());
   const [showAllPreviewImages, setShowAllPreviewImages] = useState(false);
   const [userId, setUserId] = useState(null);
+  const [workspaceRole, setWorkspaceRole] = useState('admin');
   const [trialPlan, setTrialPlan] = useState(null);
   const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
   const [upgradeLoading, setUpgradeLoading] = useState(false);
@@ -106,6 +107,7 @@ export default function NewPropertyPage() {
       .then(r => r.json())
       .then(ws => {
         const effectiveId = ws?.current?.effectiveSellerId || user.id;
+        setWorkspaceRole(ws?.current?.role || 'admin');
         setUserId(effectiveId);
         supabase
           .from('seller_plans')
@@ -223,7 +225,9 @@ export default function NewPropertyPage() {
     return { title, desc };
   };
 
-  const TAB_ORDER = ['basic', 'images', 'ownership', 'content', 'seo', 'addons'];
+  const TAB_ORDER = workspaceRole === 'member'
+    ? ['basic', 'images', 'ownership', 'content', 'seo']
+    : ['basic', 'images', 'ownership', 'content', 'seo', 'addons'];
 
   // ── Step completion ──────────────────────────────────────────────────────────
   const isBasicComplete = !!(formData.location && formData.price && formData.property_type && formData.bedrooms && formData.bathrooms && formData.floor_area);

@@ -111,9 +111,11 @@ export default function Sidebar({ isOpen, setIsOpen, activeItem, setActiveItem }
     {
       label: 'ACCOUNT',
       items: [
-        { id: 'plans', label: 'Plans', icon: Zap, path: '/plans' },
-        { id: 'referral', label: 'Referral', icon: Gift, path: '/referral' },
-        { id: 'billing', label: 'Billing', icon: CreditCard, path: '/billing' },
+        ...(!isTeamMember ? [
+          { id: 'plans',    label: 'Plans',    icon: Zap,        path: '/plans' },
+          { id: 'referral', label: 'Referral', icon: Gift,       path: '/referral' },
+          { id: 'billing',  label: 'Billing',  icon: CreditCard, path: '/billing' },
+        ] : []),
         { id: 'settings', label: 'Settings', icon: Settings, path: '/settings' },
       ]
     }
