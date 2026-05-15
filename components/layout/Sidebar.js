@@ -54,10 +54,11 @@ export default function Sidebar({ isOpen, setIsOpen, activeItem, setActiveItem }
   useEffect(() => {
     const sellerId = sellerUser?.id || sellerUser?.userId
     if (!sellerId) return
+    const effectiveId = workspaces?.current?.effectiveSellerId || sellerId
     let mounted = true, timer = null
     const fetchCounts = async () => {
       try {
-        const res = await fetch('/api/seller/chat?action=get_conversations', { headers: { Authorization: `Bearer ${sellerId}` } })
+        const res = await fetch('/api/seller/chat?action=get_conversations', { headers: { Authorization: `Bearer ${effectiveId}` } })
         const data = await res.json()
         if (!mounted) return
         if (data?.success && Array.isArray(data.conversations)) setMessagesUnreadCount(data.conversations.reduce((sum, c) => sum + Number(c.unread_count || 0), 0))
@@ -65,11 +66,11 @@ export default function Sidebar({ isOpen, setIsOpen, activeItem, setActiveItem }
       try {
         const { createClient } = await import('@supabase/supabase-js')
         const sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
-        const { count: lCount } = await sb.from('properties').select('*', { count: 'exact', head: true }).eq('seller_id', sellerId)
+        const { count: lCount } = await sb.from('properties').select('*', { count: 'exact', head: true }).eq('seller_id', effectiveId)
         if (mounted && lCount != null) setListingsCount(lCount)
       } catch {}
       try {
-        const oRes = await fetch('/api/seller/offers', { headers: { Authorization: `Bearer ${sellerId}` } })
+        const oRes = await fetch('/api/seller/offers', { headers: { Authorization: `Bearer ${effectiveId}` } })
         const oData = await oRes.json()
         if (!mounted) return
         if (oData?.pendingCount != null) setOffersCount(oData.pendingCount)
@@ -79,7 +80,7 @@ export default function Sidebar({ isOpen, setIsOpen, activeItem, setActiveItem }
     fetchCounts()
     timer = setInterval(() => { if (typeof document === 'undefined' || document.visibilityState === 'visible') fetchCounts() }, 30000)
     return () => { mounted = false; if (timer) clearInterval(timer) }
-  }, [sellerUser?.id, sellerUser?.userId])
+  }, [sellerUser?.id, sellerUser?.userId, workspaces?.current?.effectiveSellerId])
 
   const handleItemClick = (item) => {
     setActiveItem(item.id)
