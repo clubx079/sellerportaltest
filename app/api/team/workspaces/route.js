@@ -31,21 +31,21 @@ export async function GET(request) {
       .eq('seller_id', sellerId)
       .eq('status', 'active')
 
-    const available = [{ id: null, name: 'Personal' }]
+    const available = [{ id: null, name: 'Personal', effectiveSellerId: sellerId }]
 
     if (memberships?.length) {
       const orgIds = memberships.map(m => m.org_id)
       const { data: orgs } = await supabase
         .from('seller_organizations')
-        .select('id, name')
+        .select('id, name, owner_seller_id')
         .in('id', orgIds)
 
-      if (orgs?.length) available.push(...orgs.map(o => ({ id: o.id, name: o.name })))
+      if (orgs?.length) available.push(...orgs.map(o => ({ id: o.id, name: o.name, effectiveSellerId: o.owner_seller_id })))
     }
 
     const current = seller?.org_id
       ? available.find(w => w.id === seller.org_id) || null
-      : null
+      : available[0]
 
     return NextResponse.json({ current, available })
   } catch (err) {

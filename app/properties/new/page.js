@@ -99,16 +99,30 @@ export default function NewPropertyPage() {
 
   useEffect(() => {
     const userStr = localStorage.getItem('seller_user');
-    if (userStr) {
-      const user = JSON.parse(userStr);
-      setUserId(user.id);
-      supabase
-        .from('seller_plans')
-        .select('status, plan_type, billing_cycle, listings_used_this_period, trial_ends_at, current_period_end')
-        .eq('seller_id', user.id)
-        .maybeSingle()
-        .then(({ data }) => { if (data) setTrialPlan(data) });
-    }
+    if (!userStr) return;
+    const user = JSON.parse(userStr);
+    // Resolve effective seller_id (org owner when in team workspace)
+    fetch('/api/team/workspaces', { headers: { Authorization: `Bearer ${user.id}` } })
+      .then(r => r.json())
+      .then(ws => {
+        const effectiveId = ws?.current?.effectiveSellerId || user.id;
+        setUserId(effectiveId);
+        supabase
+          .from('seller_plans')
+          .select('status, plan_type, billing_cycle, listings_used_this_period, trial_ends_at, current_period_end')
+          .eq('seller_id', effectiveId)
+          .maybeSingle()
+          .then(({ data }) => { if (data) setTrialPlan(data) });
+      })
+      .catch(() => {
+        setUserId(user.id);
+        supabase
+          .from('seller_plans')
+          .select('status, plan_type, billing_cycle, listings_used_this_period, trial_ends_at, current_period_end')
+          .eq('seller_id', user.id)
+          .maybeSingle()
+          .then(({ data }) => { if (data) setTrialPlan(data) });
+      });
   }, []);
 
   // Pre-fill form from draft when draft_id is present

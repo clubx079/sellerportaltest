@@ -41,11 +41,16 @@ export default function BillingPage() {
   const [loading, setLoading] = useState(true)
   const [pmLoading, setPmLoading] = useState(false)
   const [error, setError] = useState(null)
+  const [teamWorkspace, setTeamWorkspace] = useState(null)
 
   useEffect(() => {
     const userStr = localStorage.getItem('seller_user')
     if (!userStr) { window.location.href = '/login'; return }
     const user = JSON.parse(userStr)
+    fetch('/api/team/workspaces', { headers: { Authorization: `Bearer ${user.id}` } })
+      .then(r => r.json())
+      .then(ws => { if (ws?.current?.id) setTeamWorkspace(ws.current) })
+      .catch(() => {})
     loadBilling(user.id)
   }, [])
 
@@ -206,6 +211,14 @@ export default function BillingPage() {
               )}
             </div>
 
+          </div>
+        ) : teamWorkspace ? (
+          <div className="flex items-start gap-3 p-4 bg-[#F3F3F0] rounded border border-[#E8E8E4]">
+            <Check className="w-4 h-4 text-[#0F6E56] shrink-0 mt-0.5" />
+            <div>
+              <p className="text-[14px] font-semibold text-[#1A1816]">Covered by {teamWorkspace.name}</p>
+              <p className="text-[13px] text-[#737370] mt-0.5">Your access is included under your team's Enterprise plan. Billing is managed by the team owner.</p>
+            </div>
           </div>
         ) : (
           <div className="space-y-3">
