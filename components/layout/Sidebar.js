@@ -6,7 +6,7 @@ import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard, Building2, MessageCircle, X, Settings,
-  FileText, TrendingUp, BarChart3, CreditCard, Zap, ScrollText, Gift, Users, ChevronDown, Check
+  FileText, TrendingUp, BarChart3, CreditCard, Zap, ScrollText, Gift, Users, ChevronDown, Check, Shield, User
 } from 'lucide-react'
 
 const DESKTOP_BREAKPOINT = 1024
@@ -158,6 +158,11 @@ export default function Sidebar({ isOpen, setIsOpen, activeItem, setActiveItem }
                 </span>
               </div>
               <span className="flex-1 text-left truncate">{workspaces.current?.name || 'Personal'}</span>
+              {workspaces.current?.role === 'admin'
+                ? <span className="flex items-center gap-0.5 text-[10px] font-semibold text-[#4A90E2] shrink-0"><Shield className="w-2.5 h-2.5" />Admin</span>
+                : workspaces.current?.id
+                  ? <span className="flex items-center gap-0.5 text-[10px] font-semibold text-[#737370] shrink-0"><User className="w-2.5 h-2.5" />Member</span>
+                  : null}
               <ChevronDown className={`w-3.5 h-3.5 text-[#737370] shrink-0 transition-transform ${wsOpen ? 'rotate-180' : ''}`} />
             </button>
             {wsOpen && (

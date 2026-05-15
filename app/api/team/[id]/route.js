@@ -12,6 +12,44 @@ function getSellerId(request) {
   return null
 }
 
+// PATCH /api/team/[id] — change a member's role
+export async function PATCH(request, { params }) {
+  const sellerId = getSellerId(request)
+  if (!sellerId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  try {
+    const { id: memberId } = await params
+    const { role } = await request.json()
+    if (role !== 'admin' && role !== 'member') {
+      return NextResponse.json({ error: 'Invalid role' }, { status: 400 })
+    }
+
+    const { data: member } = await supabase
+      .from('org_members')
+      .select('org_id')
+      .eq('id', memberId)
+      .maybeSingle()
+
+    if (!member) return NextResponse.json({ error: 'Member not found' }, { status: 404 })
+
+    const { data: org } = await supabase
+      .from('seller_organizations')
+      .select('owner_seller_id')
+      .eq('id', member.org_id)
+      .maybeSingle()
+
+    if (!org || org.owner_seller_id !== sellerId) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+
+    await supabase.from('org_members').update({ role }).eq('id', memberId)
+    return NextResponse.json({ success: true })
+  } catch (err) {
+    console.error('[team PATCH id]', err)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}
+
 // DELETE /api/team/[id] — remove a member
 export async function DELETE(request, { params }) {
   const sellerId = getSellerId(request)
