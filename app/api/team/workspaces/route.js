@@ -53,18 +53,6 @@ export async function GET(request) {
       }
     }
 
-    // Also check if this seller OWNS any org (they're always admin in their own org)
-    const { data: ownedOrg } = await supabase
-      .from('seller_organizations')
-      .select('id, name, owner_seller_id')
-      .eq('owner_seller_id', sellerId)
-      .maybeSingle()
-
-    // If they own an org that isn't already in available (owners aren't in org_members), add it
-    if (ownedOrg && !available.find(w => w.id === ownedOrg.id)) {
-      available.push({ id: ownedOrg.id, name: ownedOrg.name, effectiveSellerId: sellerId, role: 'admin' })
-    }
-
     const current = seller?.org_id
       ? available.find(w => w.id === seller.org_id) || available[0]
       : available[0]
