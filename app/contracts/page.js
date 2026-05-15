@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
-import { FileText, CheckCircle, ExternalLink, Plus, X } from 'lucide-react'
+import { FileText, CheckCircle, ExternalLink, Plus, X, Send, Loader2 } from 'lucide-react'
 
 const STATUS = {
   completed: { label: 'Completed', cls: 'text-[#16A34A] bg-[#DCFCE7]' },
@@ -147,7 +147,8 @@ export default function ContractsPage() {
   const [loading, setLoading] = useState(true)
   const [email, setEmail] = useState(null)
   const [showModal, setShowModal] = useState(false)
-
+  const [sending, setSending] = useState(null)
+  const [sendResult, setSendResult] = useState({})
   const [sellerName, setSellerName] = useState('')
 
   useEffect(() => {
@@ -177,6 +178,31 @@ export default function ContractsPage() {
     const sub = contract.submitters?.find(s => s.email?.toLowerCase() === email?.toLowerCase())
     if (!sub || sub.status === 'completed' || sub.status === 'declined') return null
     return `https://docuseal.com/s/${sub.slug}`
+  }
+
+  async function sendToAssignee(submissionId) {
+    setSending(submissionId)
+    setSendResult(r => ({ ...r, [submissionId]: null }))
+    try {
+      const res = await fetch('/api/contracts/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ submission_id: submissionId }),
+      })
+      const data = await res.json()
+      setSendResult(r => ({ ...r, [submissionId]: data.ok ? 'sent' : (data.error || 'error') }))
+      if (data.ok) fetchContracts()
+    } catch {
+      setSendResult(r => ({ ...r, [submissionId]: 'error' }))
+    } finally {
+      setSending(null)
+    }
+  }
+
+  function needsSending(contract) {
+    const assignor = contract.submitters?.find(s => s.role === 'Assignor')
+    const assignee = contract.submitters?.find(s => s.role === 'Assignee')
+    return assignor?.status === 'completed' && assignee?.email?.includes('@noreply.deelmap.com')
   }
 
   if (loading) {
@@ -276,6 +302,24 @@ export default function ContractsPage() {
                   >
                     Sign Now <ExternalLink className="w-3 h-3" />
                   </a>
+                ) : needsSending(c) ? (
+                  <div className="shrink-0 flex flex-col items-end gap-1">
+                    <button
+                      onClick={() => sendToAssignee(c.id)}
+                      disabled={sending === c.id}
+                      className="h-8 px-4 bg-[#1A1816] hover:bg-[#2a2826] text-white text-[13px] font-semibold rounded transition-colors flex items-center gap-1.5 disabled:opacity-50"
+                    >
+                      {sending === c.id
+                        ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Sending...</>
+                        : <><Send className="w-3 h-3" /> Send to Buyer</>}
+                    </button>
+                    {sendResult[c.id] === 'sent' && (
+                      <span className="text-[11px] text-[#0F6E56] font-medium">Email sent ✓</span>
+                    )}
+                    {sendResult[c.id] && sendResult[c.id] !== 'sent' && (
+                      <span className="text-[11px] text-[#D03839]">{sendResult[c.id]}</span>
+                    )}
+                  </div>
                 ) : null}
               </div>
             )
