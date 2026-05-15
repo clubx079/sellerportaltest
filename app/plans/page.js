@@ -81,27 +81,30 @@ export default function PlansPage() {
     if (!userStr) return
     const user = JSON.parse(userStr)
     setSellerId(user.id)
-    fetch('/api/team/workspaces', { headers: { Authorization: `Bearer ${user.id}` } })
-      .then(r => r.json())
-      .then(ws => { if (ws?.current?.id) setTeamWorkspace(ws.current) })
-      .catch(() => {})
-    // Pick up success message passed back from the upgrade page
     const msg = sessionStorage.getItem('planChangeSuccess')
     if (msg) { setSuccess(msg); sessionStorage.removeItem('planChangeSuccess') }
+    // Check workspace first, then decide whether to load plan
+    fetch('/api/team/workspaces', { headers: { Authorization: `Bearer ${user.id}` } })
+      .then(r => r.json())
+      .then(ws => {
+        if (ws?.current?.id) {
+          setTeamWorkspace(ws.current)
+          setLoading(false)
+        } else {
+          loadPlanInfo(user.id)
+        }
+      })
+      .catch(() => loadPlanInfo(user.id))
   }, [])
 
-  useEffect(() => {
-    if (sellerId && !teamWorkspace) loadPlanInfo()
-    else if (sellerId && teamWorkspace) setLoading(false)
-  }, [sellerId, teamWorkspace])
-
-  const loadPlanInfo = async () => {
+  const loadPlanInfo = async (id) => {
+    const sid = id || sellerId
     setLoading(true)
     try {
       const res = await fetch('/api/seller/plan/info', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ seller_id: sellerId }),
+        body: JSON.stringify({ seller_id: sid }),
       })
       const data = await res.json()
       setPlan(data.plan || null)
