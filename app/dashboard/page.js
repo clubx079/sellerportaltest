@@ -102,8 +102,15 @@ export default function DashboardPage() {
       const currentUser = JSON.parse(userStr);
       const currentUserId = currentUser.id;
 
-      const { data: sellerData } = await supabase.from("seller_applications").select("temp_seller_id, contact_person_name").eq("id", currentUserId).maybeSingle();
-      const tempSellerId = sellerData?.temp_seller_id ?? null;
+      // Resolve effective seller_id for active workspace
+      let effectiveUserId = currentUserId;
+      try {
+        const wsRes = await fetch('/api/team/workspace', { headers: { Authorization: `Bearer ${currentUserId}` } });
+        const wsData = await wsRes.json();
+        if (wsData?.effectiveId) effectiveUserId = wsData.effectiveId;
+      } catch {}
+
+      const { data: sellerData } = await supabase.from("seller_applications").select("temp_seller_id, contact_person_name").eq("id", effectiveUserId).maybeSingle();
 
       // Backfill contactPersonName if missing (e.g. users who signed up via onboarding)
       if (sellerData?.contact_person_name && !currentUser.contactPersonName) {
@@ -113,7 +120,7 @@ export default function DashboardPage() {
       }
 
       // Manual properties
-      const { data: manualList = [] } = await supabase.from("properties").select("*").eq("seller_id", currentUserId).order("created_at", { ascending: false });
+      const { data: manualList = [] } = await supabase.from("properties").select("*").eq("seller_id", effectiveUserId).order("created_at", { ascending: false });
       let manualWithImages = manualList || [];
       if (manualWithImages.length > 0) {
         const ids = manualWithImages.map(p => p.id);
