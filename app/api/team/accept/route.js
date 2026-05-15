@@ -95,7 +95,7 @@ export async function POST(request) {
           primary_markets: '',
           property_types: [],
           description: '',
-          status: 'active',
+          status: 'approved',
           org_id: member.org_id,
         })
         .select('id')
