@@ -111,6 +111,7 @@ export default function DashboardPage() {
       } catch {}
 
       const { data: sellerData } = await supabase.from("seller_applications").select("temp_seller_id, contact_person_name").eq("id", effectiveUserId).maybeSingle();
+      const tempSellerId = sellerData?.temp_seller_id;
 
       // Backfill contactPersonName if missing (e.g. users who signed up via onboarding)
       if (sellerData?.contact_person_name && !currentUser.contactPersonName) {
@@ -153,7 +154,7 @@ export default function DashboardPage() {
       // Views
       let totalViews = 0, viewsThisWeek = 0;
       try {
-        const res = await fetch(`/api/seller/dashboard-stats?userId=${encodeURIComponent(currentUserId)}`);
+        const res = await fetch(`/api/seller/dashboard-stats?userId=${encodeURIComponent(effectiveUserId)}`);
         const data = await res.json();
         totalViews = Number(data.totalViews) || 0;
         viewsThisWeek = Number(data.viewsLast7Days || data.viewsLast30Days) || 0;
@@ -162,7 +163,7 @@ export default function DashboardPage() {
       // Conversations
       let totalInquiries = 0;
       try {
-        const res = await fetch("/api/seller/chat?action=get_conversations", { headers: { Authorization: `Bearer ${currentUserId}` } });
+        const res = await fetch("/api/seller/chat?action=get_conversations", { headers: { Authorization: `Bearer ${effectiveUserId}` } });
         const data = await res.json();
         const conversations = data.conversations || [];
         totalInquiries = conversations.length;
@@ -172,7 +173,7 @@ export default function DashboardPage() {
       // Offers
       let offersReceived = 0, offersThisWeek = 0;
       try {
-        const oRes = await fetch('/api/seller/offers', { headers: { Authorization: `Bearer ${currentUserId}` } });
+        const oRes = await fetch('/api/seller/offers', { headers: { Authorization: `Bearer ${effectiveUserId}` } });
         const oData = await oRes.json();
         const allOffers = oData.offers || [];
         offersReceived = allOffers.length;
