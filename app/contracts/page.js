@@ -150,7 +150,7 @@ export default function ContractsPage() {
   const [sending, setSending] = useState(null)
   const [sendResult, setSendResult] = useState({})
   const [sellerName, setSellerName] = useState('')
-  const [canCreateContract, setCanCreateContract] = useState(true)
+  const [canCreateContract, setCanCreateContract] = useState(null)
 
   useEffect(() => {
     const raw = localStorage.getItem('seller_user')
@@ -161,10 +161,10 @@ export default function ContractsPage() {
       fetch('/api/team/workspaces', { headers: { Authorization: `Bearer ${u.id}` } })
         .then(r => r.json())
         .then(ws => {
-          const isOwner = ws?.current?.role === 'admin'
+          const isOwner = !ws?.current?.id || ws?.current?.role === 'admin'
           setCanCreateContract(isOwner || !!ws?.current?.permissions?.contracts_create)
         })
-        .catch(() => {})
+        .catch(() => setCanCreateContract(false))
     } else setLoading(false)
   }, [])
 

@@ -29,7 +29,7 @@ const PropertiesManagement = () => {
   const [statusUpdatingId, setStatusUpdatingId] = useState(null);
   const [userId, setUserId] = useState(null);
   const [effectiveUserId, setEffectiveUserId] = useState(null);
-  const [workspaceRole, setWorkspaceRole] = useState('admin');
+  const [workspaceRole, setWorkspaceRole] = useState(null);
   const [workspacePerms, setWorkspacePerms] = useState(null);
   const [showUTMModal, setShowUTMModal] = useState(false);
   const [propertyForUTM, setPropertyForUTM] = useState(null);
@@ -57,7 +57,7 @@ const PropertiesManagement = () => {
           setWorkspaceRole(data.current?.role || 'admin')
           setWorkspacePerms(data.current?.permissions || null)
         })
-        .catch(() => setEffectiveUserId(user.id));
+        .catch(() => { setEffectiveUserId(user.id); setWorkspaceRole('admin'); });
     }
   }, []);
 

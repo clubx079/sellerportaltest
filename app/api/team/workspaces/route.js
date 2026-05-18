@@ -25,11 +25,21 @@ export async function GET(request) {
       .maybeSingle()
 
     // Get all orgs this seller is an active member of (with their role + permissions)
-    const { data: memberships } = await supabase
+    let { data: memberships, error: memErr } = await supabase
       .from('org_members')
       .select('org_id, role, permissions')
       .eq('seller_id', sellerId)
       .eq('status', 'active')
+
+    // Fallback: if permissions column doesn't exist yet, query without it
+    if (memErr) {
+      const { data: fallback } = await supabase
+        .from('org_members')
+        .select('org_id, role')
+        .eq('seller_id', sellerId)
+        .eq('status', 'active')
+      memberships = (fallback || []).map(m => ({ ...m, permissions: {} }))
+    }
 
     // Personal workspace — owner is always admin of their own account
     const available = [{ id: null, name: 'Personal', effectiveSellerId: sellerId, role: 'admin', permissions: null }]
