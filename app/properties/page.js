@@ -30,6 +30,7 @@ const PropertiesManagement = () => {
   const [userId, setUserId] = useState(null);
   const [effectiveUserId, setEffectiveUserId] = useState(null);
   const [workspaceRole, setWorkspaceRole] = useState('admin');
+  const [workspacePerms, setWorkspacePerms] = useState(null);
   const [showUTMModal, setShowUTMModal] = useState(false);
   const [propertyForUTM, setPropertyForUTM] = useState(null);
   const [selectedPropertyRaw, setSelectedPropertyRaw] = useState(null); // raw property for UTM (slug/id)
@@ -54,6 +55,7 @@ const PropertiesManagement = () => {
         .then(data => {
           setEffectiveUserId(data.current?.effectiveSellerId || user.id)
           setWorkspaceRole(data.current?.role || 'admin')
+          setWorkspacePerms(data.current?.permissions || null)
         })
         .catch(() => setEffectiveUserId(user.id));
     }
@@ -586,16 +588,18 @@ const PropertiesManagement = () => {
             </button>
           </div>
         </div>
-        <div className="flex justify-end">
-          <button
-            onClick={() => router.push('/properties/new')}
-            className="flex items-center gap-1.5 bg-[#D03839] hover:bg-[#E0493B] text-white px-3 py-2 rounded text-[13px] font-semibold transition-colors shrink-0"
-          >
-            <Plus size={14} />
-            <span className="hidden sm:inline">Post a Deal</span>
-            <span className="sm:hidden">Post</span>
-          </button>
-        </div>
+        {(workspaceRole === 'admin' || workspacePerms?.listings_create) && (
+          <div className="flex justify-end">
+            <button
+              onClick={() => router.push('/properties/new')}
+              className="flex items-center gap-1.5 bg-[#D03839] hover:bg-[#E0493B] text-white px-3 py-2 rounded text-[13px] font-semibold transition-colors shrink-0"
+            >
+              <Plus size={14} />
+              <span className="hidden sm:inline">Post a Deal</span>
+              <span className="sm:hidden">Post</span>
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Stats: only on Active view; minimal and professional. Trash view shows a single summary line. */}
@@ -825,13 +829,15 @@ const PropertiesManagement = () => {
                             <button onClick={() => handleRestore(property)} className="flex items-center justify-center w-8 h-8 rounded text-[#A8A8A4] hover:text-primary hover:bg-[#E8E8E4] transition-colors" title="Restore">
                               <RotateCcw className="w-4 h-4" strokeWidth={2} />
                             </button>
-                            <button onClick={() => handleDeleteClick(property)} className="flex items-center justify-center w-8 h-8 rounded text-[#A8A8A4] hover:text-red-600 hover:bg-red-50 transition-colors" title="Delete Permanently">
-                              <Trash2 className="w-4 h-4" strokeWidth={2} />
-                            </button>
+                            {(workspaceRole === 'admin' || workspacePerms?.listings_delete) && (
+                              <button onClick={() => handleDeleteClick(property)} className="flex items-center justify-center w-8 h-8 rounded text-[#A8A8A4] hover:text-red-600 hover:bg-red-50 transition-colors" title="Delete Permanently">
+                                <Trash2 className="w-4 h-4" strokeWidth={2} />
+                              </button>
+                            )}
                           </>
                         ) : (
                           <>
-                            {property._source === 'manual' && property.status === 'draft' && (
+                            {(workspaceRole === 'admin' || workspacePerms?.listings_create) && property._source === 'manual' && property.status === 'draft' && (
                               <button
                                 onClick={() => router.push(`/properties/new?draft_id=${property.id}`)}
                                 className="h-7 px-3 text-[11px] font-semibold bg-[#D03839] hover:bg-[#E0493B] text-white rounded transition-colors"
@@ -839,7 +845,7 @@ const PropertiesManagement = () => {
                                 Complete
                               </button>
                             )}
-                            {property._source === 'manual' && property.status === 'rejected' && (
+                            {(workspaceRole === 'admin' || workspacePerms?.listings_update) && property._source === 'manual' && property.status === 'rejected' && (
                               <button
                                 onClick={() => router.push(`/properties/edit/${property.id}`)}
                                 className="h-7 px-3 text-[11px] font-semibold bg-[#D03839] hover:bg-[#E0493B] text-white rounded transition-colors"
@@ -861,7 +867,7 @@ const PropertiesManagement = () => {
                             <button onClick={() => { setPropertyForUTM({ ...property, slug: property.slug || property.id, id: property.id }); setShowUTMModal(true); }} className="flex items-center justify-center w-8 h-8 rounded text-[#A8A8A4] hover:text-primary hover:bg-[#E8E8E4] transition-colors" title="Share links (UTM)">
                               <Link2 className="w-4 h-4" strokeWidth={2} />
                             </button>
-                            {property.status !== 'rejected' && property.status !== 'draft' && (
+                            {(workspaceRole === 'admin' || workspacePerms?.listings_update) && property.status !== 'rejected' && property.status !== 'draft' && (
                               <button onClick={() => router.push(`/properties/edit/${property.id}`)} className="flex items-center justify-center w-8 h-8 rounded text-[#A8A8A4] hover:text-primary hover:bg-[#E8E8E4] transition-colors" title="Edit">
                                 <Edit2 className="w-4 h-4" strokeWidth={2} />
                               </button>
@@ -869,9 +875,11 @@ const PropertiesManagement = () => {
                             <button onClick={() => { setPropertyForAnalytics(property); setShowAnalyticsSidebar(true); }} className="flex items-center justify-center w-8 h-8 rounded text-[#A8A8A4] hover:text-primary hover:bg-[#E8E8E4] transition-colors" title="Analytics">
                               <BarChart2 className="w-4 h-4" strokeWidth={2} />
                             </button>
-                            <button onClick={() => handleArchiveClick(property)} className="flex items-center justify-center w-8 h-8 rounded text-[#A8A8A4] hover:text-red-600 hover:bg-red-50 transition-colors" title="Move to Trash">
-                              <Trash2 className="w-4 h-4" strokeWidth={2} />
-                            </button>
+                            {(workspaceRole === 'admin' || workspacePerms?.listings_delete) && (
+                              <button onClick={() => handleArchiveClick(property)} className="flex items-center justify-center w-8 h-8 rounded text-[#A8A8A4] hover:text-red-600 hover:bg-red-50 transition-colors" title="Move to Trash">
+                                <Trash2 className="w-4 h-4" strokeWidth={2} />
+                              </button>
+                            )}
                           </>
                         )}
                       </div>
@@ -978,13 +986,15 @@ const PropertiesManagement = () => {
                       <button onClick={() => handleRestore(property)} className="flex-1 flex items-center justify-center h-9 rounded text-[#737370] hover:text-primary hover:bg-[#E8E8E4] transition-colors" title="Restore">
                         <RotateCcw className="w-4 h-4" strokeWidth={2} />
                       </button>
-                      <button onClick={() => handleDeleteClick(property)} className="flex-1 flex items-center justify-center h-9 rounded text-[#737370] hover:text-red-600 hover:bg-red-50 transition-colors" title="Delete Permanently">
-                        <Trash2 className="w-4 h-4" strokeWidth={2} />
-                      </button>
+                      {(workspaceRole === 'admin' || workspacePerms?.listings_delete) && (
+                        <button onClick={() => handleDeleteClick(property)} className="flex-1 flex items-center justify-center h-9 rounded text-[#737370] hover:text-red-600 hover:bg-red-50 transition-colors" title="Delete Permanently">
+                          <Trash2 className="w-4 h-4" strokeWidth={2} />
+                        </button>
+                      )}
                     </>
                   ) : (
                     <>
-                      {property._source === 'manual' && property.status === 'draft' && (
+                      {(workspaceRole === 'admin' || workspacePerms?.listings_create) && property._source === 'manual' && property.status === 'draft' && (
                         <button
                           onClick={() => router.push(`/properties/new?draft_id=${property.id}`)}
                           className="flex-1 flex flex-col items-center gap-1 py-1 text-white bg-[#D03839] hover:bg-[#E0493B] rounded transition-colors"
@@ -992,7 +1002,7 @@ const PropertiesManagement = () => {
                           <span className="text-[10px] font-semibold">Complete</span>
                         </button>
                       )}
-                      {property._source === 'manual' && property.status === 'rejected' && (
+                      {(workspaceRole === 'admin' || workspacePerms?.listings_update) && property._source === 'manual' && property.status === 'rejected' && (
                         <button
                           onClick={() => router.push(`/properties/edit/${property.id}`)}
                           className="flex-1 flex flex-col items-center gap-1 py-1 text-[#D03839] bg-[#FEF0EF] hover:bg-[#FCDEDE] rounded transition-colors"
@@ -1012,7 +1022,7 @@ const PropertiesManagement = () => {
                       <button onClick={() => { setPropertyForUTM({ ...property, slug: property.slug || property.id, id: property.id }); setShowUTMModal(true); }} className="flex-1 flex items-center justify-center h-9 rounded text-[#737370] hover:text-primary hover:bg-[#E8E8E4] transition-colors" title="Share links">
                         <Link2 className="w-4 h-4" strokeWidth={2} />
                       </button>
-                      {property.status !== 'rejected' && property.status !== 'draft' && (
+                      {(workspaceRole === 'admin' || workspacePerms?.listings_update) && property.status !== 'rejected' && property.status !== 'draft' && (
                         <button onClick={() => router.push(`/properties/edit/${property.id}`)} className="flex-1 flex items-center justify-center h-9 rounded text-[#737370] hover:text-primary hover:bg-[#E8E8E4] transition-colors" title="Edit">
                           <Edit2 className="w-4 h-4" strokeWidth={2} />
                         </button>
@@ -1020,9 +1030,11 @@ const PropertiesManagement = () => {
                       <button onClick={() => { setPropertyForAnalytics(property); setShowAnalyticsSidebar(true); }} className="flex-1 flex items-center justify-center h-9 rounded text-[#737370] hover:text-primary hover:bg-[#E8E8E4] transition-colors" title="Analytics">
                         <BarChart2 className="w-4 h-4" strokeWidth={2} />
                       </button>
-                      <button onClick={() => handleArchiveClick(property)} className="flex-1 flex items-center justify-center h-9 rounded text-[#737370] hover:text-red-600 hover:bg-red-50 transition-colors" title="Move to Trash">
-                        <Trash2 className="w-4 h-4" strokeWidth={2} />
-                      </button>
+                      {(workspaceRole === 'admin' || workspacePerms?.listings_delete) && (
+                        <button onClick={() => handleArchiveClick(property)} className="flex-1 flex items-center justify-center h-9 rounded text-[#737370] hover:text-red-600 hover:bg-red-50 transition-colors" title="Move to Trash">
+                          <Trash2 className="w-4 h-4" strokeWidth={2} />
+                        </button>
+                      )}
                     </>
                   )}
                 </div>

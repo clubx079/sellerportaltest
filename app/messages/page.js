@@ -103,6 +103,7 @@ export default function MessagesPage() {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState(null);
+  const [accessDenied, setAccessDenied] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [contextAddress, setContextAddress] = useState('');
   const [contextConversationId, setContextConversationId] = useState(null);
@@ -156,6 +157,20 @@ export default function MessagesPage() {
     const close = () => setContextMenu(null);
     window.addEventListener('click', close);
     return () => window.removeEventListener('click', close);
+  }, []);
+
+  // Access gate
+  useEffect(() => {
+    const raw = localStorage.getItem('seller_user');
+    if (!raw) return;
+    const user = JSON.parse(raw);
+    fetch('/api/team/workspaces', { headers: { Authorization: `Bearer ${user.id}` } })
+      .then(r => r.json())
+      .then(ws => {
+        const isOwner = ws?.current?.role === 'admin'
+        if (!isOwner && !ws?.current?.permissions?.inbox_access) setAccessDenied(true)
+      })
+      .catch(() => {})
   }, []);
 
   // Initial load
@@ -441,6 +456,16 @@ export default function MessagesPage() {
     acc[key].push(item);
     return acc;
   }, {});
+
+  if (accessDenied) return (
+    <div className="flex flex-col items-center justify-center h-full py-20 text-center" style={{ fontFamily: FONT }}>
+      <div className="w-12 h-12 bg-[#FEF0EF] rounded-full flex items-center justify-center mb-4">
+        <Shield className="w-6 h-6 text-[#D03839]" />
+      </div>
+      <h3 className="text-[16px] font-bold text-[#1A1816] mb-2">Access Restricted</h3>
+      <p className="text-[13px] text-[#737370] max-w-xs">You don't have permission to access messages. Contact your team owner to request access.</p>
+    </div>
+  )
 
   return (
     <div className="flex flex-col h-full min-h-0 flex-1 overflow-hidden -m-4 lg:-m-6" style={{ fontFamily: FONT }}>

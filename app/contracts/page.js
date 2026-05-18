@@ -150,6 +150,7 @@ export default function ContractsPage() {
   const [sending, setSending] = useState(null)
   const [sendResult, setSendResult] = useState({})
   const [sellerName, setSellerName] = useState('')
+  const [canCreateContract, setCanCreateContract] = useState(true)
 
   useEffect(() => {
     const raw = localStorage.getItem('seller_user')
@@ -157,6 +158,13 @@ export default function ContractsPage() {
       const u = JSON.parse(raw)
       setEmail(u.email)
       setSellerName(u.name || u.full_name || u.first_name || '')
+      fetch('/api/team/workspaces', { headers: { Authorization: `Bearer ${u.id}` } })
+        .then(r => r.json())
+        .then(ws => {
+          const isOwner = ws?.current?.role === 'admin'
+          setCanCreateContract(isOwner || !!ws?.current?.permissions?.contracts_create)
+        })
+        .catch(() => {})
     } else setLoading(false)
   }, [])
 
@@ -231,12 +239,14 @@ export default function ContractsPage() {
           <h1 className="text-[24px] font-bold text-[#1A1816] mb-1">Contracts</h1>
           <p className="text-[14px] text-[#737370]">Send and manage e-signature contracts with buyers.</p>
         </div>
-        <button
-          onClick={() => setShowModal(true)}
-          className="flex items-center gap-1.5 h-9 px-4 bg-[#D03839] hover:bg-[#E0493B] text-white text-[13px] font-semibold rounded transition-colors shrink-0"
-        >
-          <Plus className="w-4 h-4" /> New Contract
-        </button>
+        {canCreateContract && (
+          <button
+            onClick={() => setShowModal(true)}
+            className="flex items-center gap-1.5 h-9 px-4 bg-[#D03839] hover:bg-[#E0493B] text-white text-[13px] font-semibold rounded transition-colors shrink-0"
+          >
+            <Plus className="w-4 h-4" /> New Contract
+          </button>
+        )}
       </div>
 
       {contracts.length === 0 ? (
@@ -248,12 +258,14 @@ export default function ContractsPage() {
           <p className="text-[13px] text-[#737370] max-w-[300px] mx-auto leading-relaxed mb-4">
             Send your first contract to a buyer to get started.
           </p>
-          <button
-            onClick={() => setShowModal(true)}
-            className="inline-flex items-center gap-1.5 h-9 px-4 bg-[#D03839] hover:bg-[#E0493B] text-white text-[13px] font-semibold rounded transition-colors"
-          >
-            <Plus className="w-4 h-4" /> New Contract
-          </button>
+          {canCreateContract && (
+            <button
+              onClick={() => setShowModal(true)}
+              className="inline-flex items-center gap-1.5 h-9 px-4 bg-[#D03839] hover:bg-[#E0493B] text-white text-[13px] font-semibold rounded transition-colors"
+            >
+              <Plus className="w-4 h-4" /> New Contract
+            </button>
+          )}
         </div>
       ) : (
         <div className="space-y-2">
