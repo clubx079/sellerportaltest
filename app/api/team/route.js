@@ -125,7 +125,7 @@ export async function POST(request) {
   if (!sellerId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   try {
-    const { email, name, orgName, role } = await request.json()
+    const { email, name, orgName, permissions } = await request.json()
     if (!email) return NextResponse.json({ error: 'Email is required' }, { status: 400 })
 
     const { data: seller } = await supabase
@@ -191,10 +191,9 @@ export async function POST(request) {
     }
 
     // Create member row with auto-generated invite_token
-    const memberRole = role === 'admin' ? 'admin' : 'member'
     const { data: member, error: memberErr } = await supabase
       .from('org_members')
-      .insert({ org_id: org.id, email: email.trim().toLowerCase(), name: name || null, role: memberRole })
+      .insert({ org_id: org.id, email: email.trim().toLowerCase(), name: name || null, role: 'member', permissions: permissions || {} })
       .select()
       .single()
 

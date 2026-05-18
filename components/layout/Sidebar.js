@@ -69,8 +69,10 @@ export default function Sidebar({ isOpen, setIsOpen, activeItem, setActiveItem }
     if (typeof window !== 'undefined' && window.innerWidth < DESKTOP_BREAKPOINT) setIsOpen(false)
   }
 
+  const isPersonalWorkspace = workspaces?.current?.id === null
   const currentRole = workspaces?.current?.role || 'admin'
-  const isTeamMember = currentRole === 'member'
+  const perms = workspaces?.current?.permissions || {}
+  const hasFullAccess = isPersonalWorkspace || currentRole === 'admin'
 
   const sections = [
     {
@@ -78,14 +80,14 @@ export default function Sidebar({ isOpen, setIsOpen, activeItem, setActiveItem }
       items: [
         { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
         { id: 'properties', label: 'My Listings', icon: Building2, path: '/properties', badge: listingsCount || null },
-        { id: 'messages', label: 'Messages', icon: MessageCircle, path: '/messages', badge: messagesUnreadCount, badgeRed: true },
+        ...(hasFullAccess || perms.inbox_access ? [{ id: 'messages', label: 'Messages', icon: MessageCircle, path: '/messages', badge: messagesUnreadCount, badgeRed: true }] : []),
         { id: 'offers', label: 'Offers received', icon: FileText, path: '/offers', badge: offersCount || null },
       ]
     },
     {
       label: 'TOOLS',
       items: [
-        ...(!isTeamMember ? [{ id: 'analytics', label: 'Analytics', icon: BarChart3, path: '/analytics' }] : []),
+        ...(hasFullAccess || perms.analytics_view ? [{ id: 'analytics', label: 'Analytics', icon: BarChart3, path: '/analytics' }] : []),
         { id: 'contracts', label: 'Contracts', icon: ScrollText, path: '/contracts' },
         { id: 'team', label: 'Team', icon: Users, path: '/team' },
       ]
@@ -93,7 +95,7 @@ export default function Sidebar({ isOpen, setIsOpen, activeItem, setActiveItem }
     {
       label: 'ACCOUNT',
       items: [
-        ...(!isTeamMember ? [
+        ...(hasFullAccess ? [
           { id: 'plans',    label: 'Plans',    icon: Zap,        path: '/plans' },
           { id: 'referral', label: 'Referral', icon: Gift,       path: '/referral' },
           { id: 'billing',  label: 'Billing',  icon: CreditCard, path: '/billing' },

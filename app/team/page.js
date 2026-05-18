@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
-import { Users, Plus, Trash2, X, Mail, Crown, Clock, CheckCircle, Zap, AlertTriangle, ChevronDown, Shield, User } from 'lucide-react'
+import { Users, Plus, Trash2, X, Mail, Crown, Clock, CheckCircle, Check, Zap, AlertTriangle, Shield, Settings2 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
 function fmtDate(d) {
@@ -21,23 +21,119 @@ function StatusBadge({ status }) {
   )
 }
 
-function RoleBadge({ role }) {
-  if (role === 'admin') return (
-    <span className="inline-flex items-center gap-1 px-2 h-5 rounded text-[11px] font-semibold bg-[#EBF3FC] text-[#4A90E2] border border-[#C5DDF8]">
-      <Shield className="w-2.5 h-2.5" /> Admin
-    </span>
-  )
+const PERMISSION_GROUPS = [
+  {
+    group: 'Listings',
+    items: [
+      { key: 'listings_create', label: 'Create listings' },
+      { key: 'listings_update', label: 'Edit listings' },
+      { key: 'listings_delete', label: 'Delete listings' },
+    ]
+  },
+  {
+    group: 'Analytics',
+    items: [
+      { key: 'analytics_view', label: 'View analytics' },
+    ]
+  },
+  {
+    group: 'Contracts',
+    items: [
+      { key: 'contracts_create', label: 'Create contracts' },
+      { key: 'contracts_update', label: 'Edit contracts' },
+      { key: 'contracts_delete', label: 'Delete contracts' },
+    ]
+  },
+  {
+    group: 'Offers',
+    items: [
+      { key: 'offers_create', label: 'Create offers' },
+    ]
+  },
+  {
+    group: 'Inbox',
+    items: [
+      { key: 'inbox_access', label: 'Access messages' },
+    ]
+  },
+  {
+    group: 'Add-ons',
+    items: [
+      { key: 'addons_buy', label: 'Purchase add-ons' },
+    ]
+  },
+]
+
+const ALL_PERMISSION_KEYS = PERMISSION_GROUPS.flatMap(g => g.items.map(i => i.key))
+const TOTAL_PERMISSIONS = ALL_PERMISSION_KEYS.length
+
+function getPermissionCount(perms) {
+  if (!perms) return 0
+  return ALL_PERMISSION_KEYS.filter(k => perms[k]).length
+}
+
+function derivePermissionsFromRole(role) {
+  const allTrue = Object.fromEntries(ALL_PERMISSION_KEYS.map(k => [k, true]))
+  const allFalse = Object.fromEntries(ALL_PERMISSION_KEYS.map(k => [k, false]))
+  return role === 'admin' ? allTrue : allFalse
+}
+
+function PermissionToggles({ permissions, onChange }) {
   return (
-    <span className="inline-flex items-center gap-1 px-2 h-5 rounded text-[11px] font-semibold bg-[#F3F3F0] text-[#737370] border border-[#E8E8E4]">
-      <User className="w-2.5 h-2.5" /> Member
-    </span>
+    <div className="space-y-4">
+      {PERMISSION_GROUPS.map(group => {
+        const allOn = group.items.every(i => permissions[i.key])
+        return (
+          <div key={group.group}>
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[11px] font-semibold text-[#A8A8A4] uppercase tracking-wider">{group.group}</span>
+              <button
+                type="button"
+                onClick={() => {
+                  const newPerms = { ...permissions }
+                  group.items.forEach(i => { newPerms[i.key] = !allOn })
+                  onChange(newPerms)
+                }}
+                className="text-[11px] text-[#D03839] hover:underline font-medium"
+              >
+                {allOn ? 'Remove all' : 'Select all'}
+              </button>
+            </div>
+            <div className="space-y-2">
+              {group.items.map(item => (
+                <button
+                  key={item.key}
+                  type="button"
+                  onClick={() => onChange({ ...permissions, [item.key]: !permissions[item.key] })}
+                  className="flex items-center gap-2.5 w-full text-left group"
+                >
+                  <div className={`w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 transition-colors ${
+                    permissions[item.key]
+                      ? 'bg-[#1A1816] border-[#1A1816]'
+                      : 'border-[#E8E8E4] group-hover:border-[#A8A8A4]'
+                  }`}>
+                    {permissions[item.key] && <Check className="w-2.5 h-2.5 text-white" />}
+                  </div>
+                  <span className="text-[13px] text-[#444441] group-hover:text-[#1A1816]">{item.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )
+      })}
+    </div>
   )
 }
 
-function RoleDropdown({ memberId, currentRole, onChanged }) {
+function PermissionsPopup({ memberId, currentPermissions, memberRole, onChanged }) {
   const [open, setOpen] = useState(false)
-  const [loading, setLoading] = useState(false)
+  const [perms, setPerms] = useState(() => currentPermissions || derivePermissionsFromRole(memberRole))
+  const [saving, setSaving] = useState(false)
   const ref = useRef(null)
+
+  useEffect(() => {
+    setPerms(currentPermissions || derivePermissionsFromRole(memberRole))
+  }, [currentPermissions, memberRole])
 
   useEffect(() => {
     function handleClick(e) {
@@ -47,46 +143,62 @@ function RoleDropdown({ memberId, currentRole, onChanged }) {
     return () => document.removeEventListener('mousedown', handleClick)
   }, [open])
 
-  async function changeRole(newRole) {
-    if (newRole === currentRole) { setOpen(false); return }
-    setLoading(true)
-    setOpen(false)
+  async function save() {
+    setSaving(true)
     try {
       const sellerId = JSON.parse(localStorage.getItem('seller_user') || '{}')?.id
       await fetch(`/api/team/${memberId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${sellerId}` },
-        body: JSON.stringify({ role: newRole }),
+        body: JSON.stringify({ permissions: perms }),
       })
       onChanged()
+      setOpen(false)
     } catch {}
-    setLoading(false)
+    setSaving(false)
   }
+
+  const count = getPermissionCount(perms)
 
   return (
     <div className="relative" ref={ref}>
       <button
         onClick={() => setOpen(o => !o)}
-        disabled={loading}
-        className="flex items-center gap-1.5 h-7 px-2.5 border border-[#E8E8E4] rounded text-[12px] font-medium text-[#444441] hover:border-[#1A1816] transition-colors disabled:opacity-50"
+        className={`flex items-center gap-1.5 h-7 px-2.5 border rounded text-[12px] font-medium transition-colors ${
+          open
+            ? 'border-[#1A1816] bg-[#FAFAF8] text-[#1A1816]'
+            : 'border-[#E8E8E4] text-[#444441] hover:border-[#1A1816]'
+        }`}
       >
-        {currentRole === 'admin' ? <Shield className="w-3 h-3 text-[#4A90E2]" /> : <User className="w-3 h-3 text-[#737370]" />}
-        {currentRole === 'admin' ? 'Admin' : 'Member'}
-        <ChevronDown className="w-3 h-3 text-[#A8A8A4]" />
+        <Settings2 className="w-3 h-3" />
+        {count}/{TOTAL_PERMISSIONS} access
       </button>
       {open && (
-        <div className="absolute right-0 top-full mt-1 w-36 bg-white border border-[#E8E8E4] rounded shadow-lg z-20 overflow-hidden">
-          {['admin', 'member'].map(r => (
-            <button
-              key={r}
-              onClick={() => changeRole(r)}
-              className={`w-full flex items-center gap-2 px-3 py-2 text-[13px] hover:bg-[#FAFAF8] transition-colors ${currentRole === r ? 'text-[#1A1816] font-semibold' : 'text-[#444441]'}`}
-            >
-              {r === 'admin' ? <Shield className="w-3.5 h-3.5 text-[#4A90E2]" /> : <User className="w-3.5 h-3.5 text-[#737370]" />}
-              <span className="capitalize">{r}</span>
-              {currentRole === r && <CheckCircle className="w-3 h-3 text-[#0F6E56] ml-auto" />}
+        <div className="absolute right-0 top-full mt-1 w-72 bg-white border border-[#E8E8E4] rounded shadow-xl z-30 overflow-hidden">
+          <div className="px-4 py-3 border-b border-[#E8E8E4] flex items-center justify-between">
+            <span className="text-[13px] font-semibold text-[#1A1816]">Manage Access</span>
+            <button onClick={() => setOpen(false)} className="p-1 rounded hover:bg-[#FAFAF8]">
+              <X className="w-3.5 h-3.5 text-[#737370]" />
             </button>
-          ))}
+          </div>
+          <div className="p-4 max-h-80 overflow-y-auto">
+            <PermissionToggles permissions={perms} onChange={setPerms} />
+          </div>
+          <div className="px-4 py-3 border-t border-[#E8E8E4] flex gap-2">
+            <button
+              onClick={() => { setPerms(currentPermissions || derivePermissionsFromRole(memberRole)); setOpen(false) }}
+              className="flex-1 h-8 border border-[#E8E8E4] text-[#444441] text-[12px] font-medium rounded hover:border-[#1A1816]"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={save}
+              disabled={saving}
+              className="flex-1 h-8 bg-[#D03839] hover:bg-[#E0493B] text-white text-[12px] font-semibold rounded disabled:opacity-50"
+            >
+              {saving ? 'Saving...' : 'Save'}
+            </button>
+          </div>
         </div>
       )}
     </div>
@@ -94,7 +206,9 @@ function RoleDropdown({ memberId, currentRole, onChanged }) {
 }
 
 function InviteModal({ onClose, onInvited, hasOrg, defaultOrgName }) {
-  const [form, setForm] = useState({ email: '', name: '', orgName: defaultOrgName || '', role: 'member' })
+  const DEFAULT_PERMS = Object.fromEntries(ALL_PERMISSION_KEYS.map(k => [k, false]))
+  const [form, setForm] = useState({ email: '', name: '', orgName: defaultOrgName || '' })
+  const [permissions, setPermissions] = useState(DEFAULT_PERMS)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
   const [isTrialBlock, setIsTrialBlock] = useState(false)
@@ -111,7 +225,7 @@ function InviteModal({ onClose, onInvited, hasOrg, defaultOrgName }) {
       const res = await fetch('/api/team', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${sellerId}` },
-        body: JSON.stringify(form),
+        body: JSON.stringify({ ...form, permissions }),
       })
       const data = await res.json()
       if (data.error === 'TRIAL_ACTIVE') { setIsTrialBlock(true); setSubmitting(false); return }
@@ -151,75 +265,62 @@ function InviteModal({ onClose, onInvited, hasOrg, defaultOrgName }) {
     )
   }
 
+  const permCount = getPermissionCount(permissions)
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4">
-      <div className="bg-white rounded w-full max-w-[440px] shadow-xl">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-[#E8E8E4]">
+      <div className="bg-white rounded w-full max-w-[480px] shadow-xl max-h-[90vh] flex flex-col">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-[#E8E8E4] shrink-0">
           <h2 className="text-[16px] font-bold text-[#1A1816]">Invite Team Member</h2>
           <button onClick={onClose} className="p-1.5 rounded hover:bg-[#FAFAF8] text-[#737370]"><X className="w-4 h-4" /></button>
         </div>
-        <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
-          {!hasOrg && (
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
+          <div className="px-6 py-5 space-y-4 overflow-y-auto flex-1">
+            {!hasOrg && (
+              <div>
+                <label className="block text-[12px] font-semibold text-[#444441] mb-1.5">Team Name</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Acme Wholesale"
+                  value={form.orgName}
+                  onChange={e => setForm(f => ({ ...f, orgName: e.target.value }))}
+                  className="w-full h-9 px-3 border border-[#E8E8E4] rounded text-[13px] text-[#1A1816] placeholder:text-[#A8A8A4] focus:outline-none focus:border-[#1A1816]"
+                />
+              </div>
+            )}
             <div>
-              <label className="block text-[12px] font-semibold text-[#444441] mb-1.5">Team Name</label>
+              <label className="block text-[12px] font-semibold text-[#444441] mb-1.5">Email Address <span className="text-[#D03839]">*</span></label>
+              <input
+                type="email"
+                placeholder="colleague@example.com"
+                value={form.email}
+                onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
+                className="w-full h-9 px-3 border border-[#E8E8E4] rounded text-[13px] text-[#1A1816] placeholder:text-[#A8A8A4] focus:outline-none focus:border-[#1A1816]"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-[12px] font-semibold text-[#444441] mb-1.5">Name <span className="text-[#A8A8A4] font-normal">(optional)</span></label>
               <input
                 type="text"
-                placeholder="e.g. Acme Wholesale"
-                value={form.orgName}
-                onChange={e => setForm(f => ({ ...f, orgName: e.target.value }))}
+                placeholder="Jane Smith"
+                value={form.name}
+                onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
                 className="w-full h-9 px-3 border border-[#E8E8E4] rounded text-[13px] text-[#1A1816] placeholder:text-[#A8A8A4] focus:outline-none focus:border-[#1A1816]"
               />
             </div>
-          )}
-          <div>
-            <label className="block text-[12px] font-semibold text-[#444441] mb-1.5">Email Address <span className="text-[#D03839]">*</span></label>
-            <input
-              type="email"
-              placeholder="colleague@example.com"
-              value={form.email}
-              onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
-              className="w-full h-9 px-3 border border-[#E8E8E4] rounded text-[13px] text-[#1A1816] placeholder:text-[#A8A8A4] focus:outline-none focus:border-[#1A1816]"
-              required
-            />
-          </div>
-          <div>
-            <label className="block text-[12px] font-semibold text-[#444441] mb-1.5">Name <span className="text-[#A8A8A4] font-normal">(optional)</span></label>
-            <input
-              type="text"
-              placeholder="Jane Smith"
-              value={form.name}
-              onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-              className="w-full h-9 px-3 border border-[#E8E8E4] rounded text-[13px] text-[#1A1816] placeholder:text-[#A8A8A4] focus:outline-none focus:border-[#1A1816]"
-            />
-          </div>
-          <div>
-            <label className="block text-[12px] font-semibold text-[#444441] mb-1.5">Role</label>
-            <div className="grid grid-cols-2 gap-2">
-              {[
-                { value: 'member', label: 'Member', icon: <User className="w-4 h-4" />, desc: 'Can manage listings & messages' },
-                { value: 'admin', label: 'Admin', icon: <Shield className="w-4 h-4" />, desc: 'Full access including billing & offers' },
-              ].map(r => (
-                <button
-                  key={r.value}
-                  type="button"
-                  onClick={() => setForm(f => ({ ...f, role: r.value }))}
-                  className={`flex flex-col items-start gap-1.5 p-3 rounded border text-left transition-colors ${
-                    form.role === r.value
-                      ? 'border-[#1A1816] bg-[#FAFAF8]'
-                      : 'border-[#E8E8E4] hover:border-[#A8A8A4]'
-                  }`}
-                >
-                  <div className={`flex items-center gap-1.5 text-[13px] font-semibold ${form.role === r.value ? 'text-[#1A1816]' : 'text-[#444441]'}`}>
-                    {r.icon}
-                    {r.label}
-                  </div>
-                  <p className="text-[11px] text-[#737370] leading-snug">{r.desc}</p>
-                </button>
-              ))}
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <label className="text-[12px] font-semibold text-[#444441]">Permissions</label>
+                <span className="text-[11px] text-[#737370]">{permCount} of {TOTAL_PERMISSIONS} selected</span>
+              </div>
+              <div className="border border-[#E8E8E4] rounded p-4">
+                <PermissionToggles permissions={permissions} onChange={setPermissions} />
+              </div>
             </div>
+            {error && <p className="text-[12px] text-[#D03839]">{error}</p>}
           </div>
-          {error && <p className="text-[12px] text-[#D03839]">{error}</p>}
-          <div className="flex gap-2 pt-1">
+          <div className="flex gap-2 px-6 py-4 border-t border-[#E8E8E4] shrink-0">
             <button type="button" onClick={onClose} className="flex-1 h-9 border border-[#E8E8E4] text-[#444441] text-[13px] font-medium rounded hover:border-[#1A1816]">Cancel</button>
             <button
               type="submit"
@@ -324,7 +425,6 @@ export default function TeamPage() {
         </div>
       )}
 
-
       <div className="flex items-start justify-between mb-6">
         <div>
           <h1 className="text-[24px] font-bold text-[#1A1816] mb-1">Team</h1>
@@ -346,18 +446,6 @@ export default function TeamPage() {
         )}
       </div>
 
-      {/* Role legend */}
-      <div className="flex items-center gap-4 mb-4 px-1">
-        <div className="flex items-center gap-1.5 text-[12px] text-[#737370]">
-          <Shield className="w-3.5 h-3.5 text-[#4A90E2]" />
-          <span><strong className="text-[#1A1816]">Admin</strong> — billing, offers, promotions, team management</span>
-        </div>
-        <div className="flex items-center gap-1.5 text-[12px] text-[#737370]">
-          <User className="w-3.5 h-3.5 text-[#737370]" />
-          <span><strong className="text-[#1A1816]">Member</strong> — listings, messages, contracts, analytics</span>
-        </div>
-      </div>
-
       <div className="space-y-2">
         {/* Owner row */}
         {org && (
@@ -375,6 +463,9 @@ export default function TeamPage() {
                 <span className="inline-flex items-center gap-1 px-2 h-5 rounded text-[11px] font-semibold bg-[#F3F3F0] text-[#444441] border border-[#E8E8E4]">
                   <Crown className="w-2.5 h-2.5" /> Owner
                 </span>
+                <span className="inline-flex items-center gap-1 px-2 h-5 rounded text-[11px] font-semibold bg-[#EBF3FC] text-[#4A90E2] border border-[#C5DDF8]">
+                  <Shield className="w-2.5 h-2.5" /> Full Access
+                </span>
               </div>
               <p className="text-[12px] text-[#737370] truncate">
                 {isOwner ? seller?.email : (org.owner?.email || '')}
@@ -384,43 +475,52 @@ export default function TeamPage() {
         )}
 
         {/* Members */}
-        {members?.map(m => (
-          <div key={m.id} className="bg-white border border-[#E8E8E4] rounded p-4 flex items-center gap-4">
-            <div className="w-9 h-9 rounded-full bg-[#E8E8E4] flex items-center justify-center shrink-0">
-              <span className="text-[#444441] text-[13px] font-bold">
-                {(m.name || m.email)[0].toUpperCase()}
-              </span>
+        {members?.map(m => {
+          const perms = m.permissions && Object.keys(m.permissions).length > 0
+            ? m.permissions
+            : derivePermissionsFromRole(m.role)
+          const count = getPermissionCount(perms)
+          return (
+            <div key={m.id} className="bg-white border border-[#E8E8E4] rounded p-4 flex items-center gap-4">
+              <div className="w-9 h-9 rounded-full bg-[#E8E8E4] flex items-center justify-center shrink-0">
+                <span className="text-[#444441] text-[13px] font-bold">
+                  {(m.name || m.email)[0].toUpperCase()}
+                </span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-0.5 flex-wrap">
+                  <span className="text-[14px] font-semibold text-[#1A1816] truncate">{m.name || m.email}</span>
+                  <StatusBadge status={m.status} />
+                  <span className="inline-flex items-center gap-1 px-2 h-5 rounded text-[11px] font-semibold bg-[#F3F3F0] text-[#737370] border border-[#E8E8E4]">
+                    {count}/{TOTAL_PERMISSIONS} access
+                  </span>
+                </div>
+                <div className="flex items-center gap-3 text-[12px] text-[#737370]">
+                  <span className="truncate">{m.email}</span>
+                  <span className="shrink-0">Invited {fmtDate(m.invited_at)}</span>
+                </div>
+              </div>
+              {isOwner && (
+                <div className="flex items-center gap-2 shrink-0">
+                  <PermissionsPopup
+                    memberId={m.id}
+                    currentPermissions={perms}
+                    memberRole={m.role}
+                    onChanged={fetchTeam}
+                  />
+                  <button
+                    onClick={() => removeMember(m.id)}
+                    disabled={removing === m.id}
+                    className="p-2 rounded hover:bg-[#FEF0EF] text-[#737370] hover:text-[#D03839] disabled:opacity-50 transition-colors"
+                    title="Remove member"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
             </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-0.5 flex-wrap">
-                <span className="text-[14px] font-semibold text-[#1A1816] truncate">{m.name || m.email}</span>
-                <StatusBadge status={m.status} />
-                <RoleBadge role={m.role || 'member'} />
-              </div>
-              <div className="flex items-center gap-3 text-[12px] text-[#737370]">
-                <span className="truncate">{m.email}</span>
-                <span className="shrink-0">Invited {fmtDate(m.invited_at)}</span>
-              </div>
-            </div>
-            {isOwner && (
-              <div className="flex items-center gap-2 shrink-0">
-                <RoleDropdown
-                  memberId={m.id}
-                  currentRole={m.role || 'member'}
-                  onChanged={fetchTeam}
-                />
-                <button
-                  onClick={() => removeMember(m.id)}
-                  disabled={removing === m.id}
-                  className="p-2 rounded hover:bg-[#FEF0EF] text-[#737370] hover:text-[#D03839] disabled:opacity-50 transition-colors"
-                  title="Remove member"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              </div>
-            )}
-          </div>
-        ))}
+          )
+        })}
 
         {(!members || members.length === 0) && isOwner && (
           <div className="border border-dashed border-[#E8E8E4] rounded p-8 text-center">

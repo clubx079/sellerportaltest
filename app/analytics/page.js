@@ -151,7 +151,9 @@ export default function SellerAnalyticsPage() {
           fetch('/api/team/workspaces', { headers: { Authorization: `Bearer ${parsed.id}` } })
             .then(r => r.json())
             .then(ws => {
-              if (ws?.current?.role === 'member') { setAccessDenied(true); setLoading(false); return }
+              const isOwner = !ws?.current?.id || ws?.current?.role === 'admin'
+              const hasAccess = isOwner || ws?.current?.permissions?.analytics_view
+              if (!hasAccess) { setAccessDenied(true); setLoading(false); return }
               setUserId(parsed.id)
             })
             .catch(() => setUserId(parsed.id))

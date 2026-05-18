@@ -12,16 +12,17 @@ function getSellerId(request) {
   return null
 }
 
-// PATCH /api/team/[id] — change a member's role
+// PATCH /api/team/[id] — update a member's permissions
 export async function PATCH(request, { params }) {
   const sellerId = getSellerId(request)
   if (!sellerId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   try {
     const { id: memberId } = await params
-    const { role } = await request.json()
-    if (role !== 'admin' && role !== 'member') {
-      return NextResponse.json({ error: 'Invalid role' }, { status: 400 })
+    const { permissions } = await request.json()
+
+    if (!permissions || typeof permissions !== 'object' || Array.isArray(permissions)) {
+      return NextResponse.json({ error: 'Invalid permissions' }, { status: 400 })
     }
 
     const { data: member } = await supabase
@@ -42,7 +43,7 @@ export async function PATCH(request, { params }) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    await supabase.from('org_members').update({ role }).eq('id', memberId)
+    await supabase.from('org_members').update({ permissions, role: 'member' }).eq('id', memberId)
     return NextResponse.json({ success: true })
   } catch (err) {
     console.error('[team PATCH id]', err)
@@ -58,7 +59,6 @@ export async function DELETE(request, { params }) {
   try {
     const { id: memberId } = await params
 
-    // Verify caller owns the org that this member belongs to
     const { data: member } = await supabase
       .from('org_members')
       .select('org_id, seller_id')
@@ -77,7 +77,6 @@ export async function DELETE(request, { params }) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    // If member had accepted and created an account, unlink their org
     if (member.seller_id) {
       await supabase
         .from('seller_applications')
@@ -86,7 +85,6 @@ export async function DELETE(request, { params }) {
     }
 
     await supabase.from('org_members').delete().eq('id', memberId)
-
     return NextResponse.json({ success: true })
   } catch (err) {
     console.error('[team DELETE]', err)

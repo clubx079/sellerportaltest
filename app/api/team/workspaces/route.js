@@ -24,19 +24,20 @@ export async function GET(request) {
       .eq('id', sellerId)
       .maybeSingle()
 
-    // Get all orgs this seller is an active member of (with their role)
+    // Get all orgs this seller is an active member of (with their role + permissions)
     const { data: memberships } = await supabase
       .from('org_members')
-      .select('org_id, role')
+      .select('org_id, role, permissions')
       .eq('seller_id', sellerId)
       .eq('status', 'active')
 
     // Personal workspace — owner is always admin of their own account
-    const available = [{ id: null, name: 'Personal', effectiveSellerId: sellerId, role: 'admin' }]
+    const available = [{ id: null, name: 'Personal', effectiveSellerId: sellerId, role: 'admin', permissions: null }]
 
     if (memberships?.length) {
       const orgIds = memberships.map(m => m.org_id)
       const roleByOrg = Object.fromEntries(memberships.map(m => [m.org_id, m.role || 'member']))
+      const permsByOrg = Object.fromEntries(memberships.map(m => [m.org_id, m.permissions || {}]))
 
       const { data: orgs } = await supabase
         .from('seller_organizations')
@@ -49,6 +50,7 @@ export async function GET(request) {
           name: o.name,
           effectiveSellerId: o.owner_seller_id,
           role: roleByOrg[o.id] || 'member',
+          permissions: permsByOrg[o.id] || {},
         })))
       }
     }
