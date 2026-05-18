@@ -1,9 +1,24 @@
 import { NextResponse } from 'next/server'
+import { createClient } from '@supabase/supabase-js'
+import { getWorkspaceSellerId } from '@/lib/workspace'
 
 const DOCUSEAL_BASE = 'https://api.docuseal.com'
 
 function dsHeaders() {
   return { 'X-Auth-Token': process.env.DOCUSEAL_API_KEY, 'Content-Type': 'application/json' }
+}
+
+async function resolveEffectiveEmail(request, fallbackEmail) {
+  const auth = request.headers.get('authorization')
+  if (!auth?.startsWith('Bearer ')) return fallbackEmail
+  const sellerId = auth.slice(7).trim()
+  try {
+    const { effectiveId } = await getWorkspaceSellerId(sellerId)
+    if (effectiveId === sellerId) return fallbackEmail
+    const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY)
+    const { data } = await supabase.from('seller_applications').select('email').eq('id', effectiveId).maybeSingle()
+    return data?.email || fallbackEmail
+  } catch { return fallbackEmail }
 }
 
 export async function GET(request) {
@@ -18,9 +33,11 @@ export async function GET(request) {
       return NextResponse.json(json.data || [])
     }
 
+    const effectiveEmail = await resolveEffectiveEmail(request, email)
+
     // Get submission IDs belonging to this seller via application_key
     const subRes = await fetch(
-      `${DOCUSEAL_BASE}/submitters?application_key=seller:${encodeURIComponent(email)}&limit=100`,
+      `${DOCUSEAL_BASE}/submitters?application_key=seller:${encodeURIComponent(effectiveEmail)}&limit=100`,
       { headers: dsHeaders(), cache: 'no-store' }
     )
     const subJson = await subRes.json()

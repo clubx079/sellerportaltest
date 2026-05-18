@@ -146,10 +146,13 @@ export default function ContractsPage() {
   const [contracts, setContracts] = useState([])
   const [loading, setLoading] = useState(true)
   const [email, setEmail] = useState(null)
+  const [userId, setUserId] = useState(null)
   const [showModal, setShowModal] = useState(false)
   const [sending, setSending] = useState(null)
   const [sendResult, setSendResult] = useState({})
   const [sellerName, setSellerName] = useState('')
+  const [effectiveEmail, setEffectiveEmail] = useState(null)
+  const [effectiveName, setEffectiveName] = useState('')
   const [canCreateContract, setCanCreateContract] = useState(null)
 
   useEffect(() => {
@@ -157,12 +160,25 @@ export default function ContractsPage() {
     if (raw) {
       const u = JSON.parse(raw)
       setEmail(u.email)
-      setSellerName(u.name || u.full_name || u.first_name || '')
+      setUserId(u.id)
+      const myName = u.name || u.full_name || u.first_name || ''
+      setSellerName(myName)
+      setEffectiveEmail(u.email)
+      setEffectiveName(myName)
       fetch('/api/team/workspaces', { headers: { Authorization: `Bearer ${u.id}` } })
         .then(r => r.json())
         .then(ws => {
           const isOwner = !ws?.current?.id || ws?.current?.role === 'admin'
           setCanCreateContract(isOwner || !!ws?.current?.permissions?.contracts_create)
+          if (!isOwner && ws?.current?.effectiveSellerId) {
+            fetch(`/api/team/owner-info?sellerId=${ws.current.effectiveSellerId}`)
+              .then(r => r.json())
+              .then(info => {
+                if (info?.email) setEffectiveEmail(info.email)
+                if (info?.name) setEffectiveName(info.name)
+              })
+              .catch(() => {})
+          }
         })
         .catch(() => setCanCreateContract(false))
     } else setLoading(false)
@@ -175,7 +191,9 @@ export default function ContractsPage() {
 
   function fetchContracts() {
     setLoading(true)
-    fetch(`/api/contracts?email=${encodeURIComponent(email)}`)
+    fetch(`/api/contracts?email=${encodeURIComponent(email)}`, {
+      headers: userId ? { Authorization: `Bearer ${userId}` } : {},
+    })
       .then(r => r.json())
       .then(setContracts)
       .catch(() => {})
@@ -227,8 +245,8 @@ export default function ContractsPage() {
     <div className="p-4 lg:p-6">
       {showModal && (
         <NewContractModal
-          email={email}
-          sellerName={sellerName}
+          email={effectiveEmail || email}
+          sellerName={effectiveName || sellerName}
           onClose={() => setShowModal(false)}
           onCreated={() => { setShowModal(false); fetchContracts() }}
         />
