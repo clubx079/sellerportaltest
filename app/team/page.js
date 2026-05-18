@@ -241,7 +241,6 @@ export default function TeamPage() {
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
   const [removing, setRemoving] = useState(null)
-  const [switchingOrg, setSwitchingOrg] = useState(false)
 
   useEffect(() => { fetchTeam() }, [])
 
@@ -266,19 +265,6 @@ export default function TeamPage() {
       fetchTeam()
     } catch {}
     setRemoving(null)
-  }
-
-  async function switchOrg(orgId) {
-    setSwitchingOrg(true)
-    try {
-      await fetch('/api/team', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getSellerId()}` },
-        body: JSON.stringify({ orgId }),
-      })
-      fetchTeam()
-    } catch {}
-    setSwitchingOrg(false)
   }
 
   if (loading) {
@@ -338,28 +324,6 @@ export default function TeamPage() {
         </div>
       )}
 
-      {!isOwner && memberOrgs.length > 1 && (
-        <div className="mb-5">
-          <label className="block text-[11px] font-semibold text-[#A8A8A4] uppercase tracking-[1px] mb-2">Active Workspace</label>
-          <div className="flex gap-2 flex-wrap">
-            {memberOrgs.map(o => (
-              <button
-                key={o.id}
-                onClick={() => o.id !== org?.id && switchOrg(o.id)}
-                disabled={switchingOrg}
-                className={`flex items-center gap-2 px-4 h-9 rounded border text-[13px] font-medium transition-colors ${
-                  o.id === org?.id
-                    ? 'bg-[#1A1816] border-[#1A1816] text-white'
-                    : 'bg-white border-[#E8E8E4] text-[#444441] hover:border-[#1A1816]'
-                }`}
-              >
-                {o.name}
-                {o.id === org?.id && <CheckCircle className="w-3.5 h-3.5" />}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
 
       <div className="flex items-start justify-between mb-6">
         <div>

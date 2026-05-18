@@ -119,46 +119,6 @@ export async function GET(request) {
   }
 }
 
-// PATCH /api/team — switch active org for a team member
-export async function PATCH(request) {
-  const sellerId = getSellerId(request)
-  if (!sellerId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
-  try {
-    const { orgId } = await request.json()
-
-    // null orgId = switch to personal workspace
-    if (orgId === null || orgId === undefined) {
-      await supabase
-        .from('seller_applications')
-        .update({ org_id: null })
-        .eq('id', sellerId)
-      return NextResponse.json({ success: true })
-    }
-
-    // Verify they actually belong to this org
-    const { data: membership } = await supabase
-      .from('org_members')
-      .select('id')
-      .eq('org_id', orgId)
-      .eq('seller_id', sellerId)
-      .eq('status', 'active')
-      .maybeSingle()
-
-    if (!membership) return NextResponse.json({ error: 'Not a member of this org' }, { status: 403 })
-
-    await supabase
-      .from('seller_applications')
-      .update({ org_id: orgId })
-      .eq('id', sellerId)
-
-    return NextResponse.json({ success: true })
-  } catch (err) {
-    console.error('[team PATCH]', err)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
-  }
-}
-
 // POST /api/team — invite a member (or create org first if none exists)
 export async function POST(request) {
   const sellerId = getSellerId(request)

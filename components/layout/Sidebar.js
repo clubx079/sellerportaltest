@@ -6,7 +6,7 @@ import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard, Building2, MessageCircle, X, Settings,
-  FileText, TrendingUp, BarChart3, CreditCard, Zap, ScrollText, Gift, Users, ChevronDown, Check, Shield, User
+  FileText, TrendingUp, BarChart3, CreditCard, Zap, ScrollText, Gift, Users
 } from 'lucide-react'
 
 const DESKTOP_BREAKPOINT = 1024
@@ -18,8 +18,6 @@ export default function Sidebar({ isOpen, setIsOpen, activeItem, setActiveItem }
   const [listingsCount, setListingsCount] = useState(0)
   const [offersCount, setOffersCount] = useState(0)
   const [workspaces, setWorkspaces] = useState(null)
-  const [wsOpen, setWsOpen] = useState(false)
-  const [switching, setSwitching] = useState(false)
 
   useEffect(() => {
     try { const raw = localStorage.getItem('seller_user'); if (raw) setSellerUser(JSON.parse(raw)) } catch {}
@@ -34,22 +32,6 @@ export default function Sidebar({ isOpen, setIsOpen, activeItem, setActiveItem }
       .catch(() => {})
   }, [sellerUser?.id])
 
-
-  async function switchWorkspace(orgId) {
-    const sellerId = sellerUser?.id
-    if (!sellerId || switching) return
-    setSwitching(true)
-    setWsOpen(false)
-    try {
-      await fetch('/api/team', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${sellerId}` },
-        body: JSON.stringify({ orgId }),
-      })
-      window.location.reload()
-    } catch {}
-    setSwitching(false)
-  }
 
   useEffect(() => {
     const sellerId = sellerUser?.id || sellerUser?.userId
@@ -149,52 +131,6 @@ export default function Sidebar({ isOpen, setIsOpen, activeItem, setActiveItem }
             </button>
           )}
         </div>
-
-        {/* Workspace switcher */}
-        {workspaces?.available?.length > 1 && (
-          <div className="px-3 py-2.5 border-b border-[#E8E8E4] relative">
-            <button
-              onClick={() => setWsOpen(v => !v)}
-              disabled={switching}
-              className="w-full flex items-center gap-2 px-3 py-2 rounded border border-[#E8E8E4] bg-[#FAFAF8] hover:border-[#1A1816] text-[13px] text-[#1A1816] font-medium transition-colors disabled:opacity-50"
-            >
-              <div className="w-5 h-5 rounded bg-[#1A1816] flex items-center justify-center shrink-0">
-                <span className="text-white text-[9px] font-bold">
-                  {(workspaces.current?.name || 'Personal')[0].toUpperCase()}
-                </span>
-              </div>
-              <span className="flex-1 text-left truncate">{workspaces.current?.name || 'Personal'}</span>
-              {workspaces.current?.role === 'admin'
-                ? <span className="flex items-center gap-0.5 text-[10px] font-semibold text-[#4A90E2] shrink-0"><Shield className="w-2.5 h-2.5" />Admin</span>
-                : workspaces.current?.id
-                  ? <span className="flex items-center gap-0.5 text-[10px] font-semibold text-[#737370] shrink-0"><User className="w-2.5 h-2.5" />Member</span>
-                  : null}
-              <ChevronDown className={`w-3.5 h-3.5 text-[#737370] shrink-0 transition-transform ${wsOpen ? 'rotate-180' : ''}`} />
-            </button>
-            {wsOpen && (
-              <>
-                <div className="fixed inset-0 z-40" onClick={() => setWsOpen(false)} />
-                <div className="absolute left-3 right-3 top-full mt-1 bg-white border border-[#E8E8E4] rounded shadow-md z-50 overflow-hidden">
-                {workspaces.available.map(ws => (
-                  <button
-                    key={ws.id ?? 'personal'}
-                    onClick={() => switchWorkspace(ws.id)}
-                    className="w-full flex items-center gap-2.5 px-3 py-2.5 text-[13px] text-[#444441] hover:bg-[#FAFAF8] transition-colors text-left"
-                  >
-                    <div className="w-5 h-5 rounded bg-[#E8E8E4] flex items-center justify-center shrink-0">
-                      <span className="text-[#444441] text-[9px] font-bold">{ws.name[0].toUpperCase()}</span>
-                    </div>
-                    <span className="flex-1 truncate">{ws.name}</span>
-                    {(workspaces.current?.id ?? null) === ws.id && (
-                      <Check className="w-3.5 h-3.5 text-[#1A1816] shrink-0" />
-                    )}
-                  </button>
-                ))}
-                </div>
-              </>
-            )}
-          </div>
-        )}
 
         {/* Navigation */}
         <nav className="flex-1 overflow-y-auto py-4 px-3">
