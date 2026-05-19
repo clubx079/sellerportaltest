@@ -1430,6 +1430,7 @@ export default function NewPropertyPage() {
               images={imageUploadStatus.images}
               trialPlan={trialPlan}
               onShowUpgradePrompt={() => setShowUpgradePrompt(true)}
+              isLifetimeFree={!trialPlan?.stripe_subscription_id && trialPlan?.status === 'active'}
             />
           )}
 
@@ -1515,6 +1516,7 @@ function AddOnsTab({
   addOnError, setAddOnError,
   userId, onPublish, saving, onBack,
   formData, images, trialPlan, onShowUpgradePrompt,
+  isLifetimeFree,
 }) {
   const [promoCode, setPromoCode] = React.useState('')
   const [promoValidating, setPromoValidating] = React.useState(false)
@@ -1586,6 +1588,10 @@ function AddOnsTab({
       })
       const d = await res.json()
       if (!res.ok) throw new Error(d.error || 'Failed to initialize payment')
+      if (d.free) {
+        onPublish('active', { skipFeaturedPrompt: true, forceAutoSelectFeatured: true, addOnFlags })
+        return
+      }
       setAddOnClientSecret(d.clientSecret)
       setFinalAmount(d.amount)
     } catch (err) {
@@ -1685,11 +1691,11 @@ function AddOnsTab({
                       <p className="text-[13px] text-[#737370]">{ao.desc}</p>
                     </div>
                     <div className="text-right flex-shrink-0">
-                      {ao.strikePrice && (
+                      {!isLifetimeFree && ao.strikePrice && (
                         <p className="text-[12px] text-[#A8A8A4] line-through">${(ao.strikePrice / 100).toFixed(2)}</p>
                       )}
-                      <p className={`text-[15px] font-bold ${selected ? 'text-[#D03839]' : 'text-[#1A1816]'}`}>
-                        +${(ao.price / 100).toFixed(2)}
+                      <p className={`text-[15px] font-bold ${isLifetimeFree ? 'text-[#0F6E56]' : selected ? 'text-[#D03839]' : 'text-[#1A1816]'}`}>
+                        {isLifetimeFree ? 'Free' : `+$${(ao.price / 100).toFixed(2)}`}
                       </p>
                     </div>
                     <div className={`w-[22px] h-[22px] rounded-full border flex items-center justify-center flex-shrink-0 transition-all
@@ -1753,7 +1759,7 @@ function AddOnsTab({
                     <span className="text-[13px] text-[#444441]">
                       <span className="text-[11px] text-[#A8A8A4] mr-1">+</span>{ao.label}
                     </span>
-                    <span className="text-[13px] font-bold text-[#1A1816]">+${(ao.price / 100).toFixed(2)}</span>
+                    <span className="text-[13px] font-bold text-[#0F6E56]">{isLifetimeFree ? 'Free' : `+$${(ao.price / 100).toFixed(2)}`}</span>
                   </div>
                 )
               })}
@@ -1768,8 +1774,8 @@ function AddOnsTab({
             </div>
           </div>
 
-          {/* Promo code — always shown when add-ons selected */}
-          {total > 0 && (
+          {/* Promo code — hidden for lifetime free accounts */}
+          {total > 0 && !isLifetimeFree && (
             <div className="px-5 py-4 border-b border-[#E8E8E4]">
               {appliedPromo ? (
                 <div className="flex items-center justify-between gap-2">
@@ -1822,14 +1828,14 @@ function AddOnsTab({
           <div className="px-5 py-4 flex justify-between items-baseline border-b border-[#E8E8E4]">
             <div>
               <p className="text-[15px] font-bold text-[#1A1816]">Total</p>
-              <p className="text-[11px] text-[#737370] mt-0.5">{total === 0 ? 'Included in your subscription' : 'One-time charge'}</p>
+              <p className="text-[11px] text-[#737370] mt-0.5">{isLifetimeFree ? 'Complimentary — Ableman account' : total === 0 ? 'Included in your subscription' : 'One-time charge'}</p>
             </div>
             <div className="text-right">
-              {discountLineAmount > 0 && (
+              {!isLifetimeFree && discountLineAmount > 0 && (
                 <p className="text-[13px] text-[#A8A8A4] line-through">${(total / 100).toFixed(2)}</p>
               )}
-              <span className="text-[28px] font-bold text-[#1A1816] tracking-tight">
-                ${(displayTotal / 100).toFixed(2)}
+              <span className={`text-[28px] font-bold tracking-tight ${isLifetimeFree ? 'text-[#0F6E56]' : 'text-[#1A1816]'}`}>
+                {isLifetimeFree ? 'Free' : `$${(displayTotal / 100).toFixed(2)}`}
               </span>
             </div>
           </div>
@@ -1842,11 +1848,11 @@ function AddOnsTab({
                   type="button"
                   onClick={handleInitPayment}
                   disabled={addOnLoading}
-                  className="w-full h-[48px] bg-[#D03839] hover:bg-[#E0493B] text-white text-[14px] font-semibold rounded transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                  className={`w-full h-[48px] text-white text-[14px] font-semibold rounded transition-all disabled:opacity-50 flex items-center justify-center gap-2 ${isLifetimeFree ? 'bg-[#0F6E56] hover:bg-[#0D5E49]' : 'bg-[#D03839] hover:bg-[#E0493B]'}`}
                 >
                   {addOnLoading
                     ? <><span className="animate-spin w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full" />Preparing…</>
-                    : 'Proceed to Payment'}
+                    : isLifetimeFree ? 'Publish Listing' : 'Proceed to Payment'}
                 </button>
               ) : (
                 <button
@@ -1864,15 +1870,17 @@ function AddOnsTab({
           )}
 
           {/* Secured footer */}
-          <div className="px-5 py-3.5 bg-[#FAFAF6] border-t border-[#E8E8E4] text-center">
-            <div className="flex items-center justify-center gap-1.5 mb-1">
-              <svg className="w-3 h-3 text-[#737370]" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-              </svg>
-              <span className="text-[12px] text-[#737370]">Secured by Stripe</span>
+          {!isLifetimeFree && (
+            <div className="px-5 py-3.5 bg-[#FAFAF6] border-t border-[#E8E8E4] text-center">
+              <div className="flex items-center justify-center gap-1.5 mb-1">
+                <svg className="w-3 h-3 text-[#737370]" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                </svg>
+                <span className="text-[12px] text-[#737370]">Secured by Stripe</span>
+              </div>
+              <p className="text-[11px] text-[#A8A8A4]">No subscription · No auto-renewal</p>
             </div>
-            <p className="text-[11px] text-[#A8A8A4]">No subscription · No auto-renewal</p>
-          </div>
+          )}
         </div>
       </div>
 
