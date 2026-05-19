@@ -67,6 +67,7 @@ export default function PlansPage() {
   const [sellerId,      setSellerId]      = useState(null)
   const [plan,          setPlan]          = useState(null)
   const [pending,       setPending]       = useState(null)
+  const [isLifetimeFree, setIsLifetimeFree] = useState(false)
   const [loading,       setLoading]       = useState(true)
   const [error,         setError]         = useState(null)
   const [success,       setSuccess]       = useState(null)
@@ -109,6 +110,7 @@ export default function PlansPage() {
       const data = await res.json()
       setPlan(data.plan || null)
       setPending(data.pending || null)
+      setIsLifetimeFree(!!data.lifetime_free)
       // Initialise toggle to current billing cycle on first load
       if (data.plan?.billing_cycle) setViewAnnual(data.plan.billing_cycle === 'annual')
     } catch {
@@ -176,6 +178,39 @@ export default function PlansPage() {
     return (
       <div className="min-h-[50vh] flex items-center justify-center">
         <Loader2 className="w-6 h-6 animate-spin text-[#737370]" />
+      </div>
+    )
+  }
+
+  if (isLifetimeFree && plan) {
+    return (
+      <div className="max-w-4xl mx-auto space-y-5">
+        <div>
+          <h1 className="text-lg md:text-xl font-semibold tracking-tight text-[#1A1816]">Plans</h1>
+          <p className="text-[13px] text-[#737370] mt-0.5">Your subscription plan.</p>
+        </div>
+        <div className="bg-white border-2 border-[#1A1816] rounded p-5 flex flex-col max-w-sm">
+          <div className="min-h-[22px] mb-3">
+            <span className="inline-block text-[11px] font-semibold bg-[#E4F5EC] text-[#0F6E56] border border-[#9FDBB8] px-2.5 py-0.5 rounded">
+              Lifetime Free
+            </span>
+          </div>
+          <p className="text-[11px] font-semibold tracking-[0.09em] uppercase text-[#A8A8A4] mb-1">Subscription</p>
+          <h2 className="text-2xl font-bold text-[#1A1816] tracking-tight mb-1">Enterprise</h2>
+          <p className="text-xs text-[#737370] leading-relaxed mb-4">Full enterprise access, complimentary.</p>
+          <div className="w-full py-2.5 text-center text-xs font-semibold tracking-[0.05em] uppercase border border-[#E8E8E4] text-[#A8A8A4] rounded mb-5 cursor-default select-none">
+            Active — no billing required
+          </div>
+          <hr className="border-t border-[#E8E8E4] mb-4" />
+          <p className="text-[11px] font-semibold tracking-[0.09em] uppercase text-[#A8A8A4] mb-3">Includes</p>
+          <ul className="flex flex-col gap-1.5 flex-1">
+            {ENTERPRISE_FEATURES.map(([on, label], i) => (
+              <li key={i} className={`flex items-start gap-2 text-xs leading-snug ${on ? 'text-[#1A1816]' : 'text-[#A8A8A4]'}`}>
+                <CheckIcon filled={on} />{label}
+              </li>
+            ))}
+          </ul>
+        </div>
       </div>
     )
   }

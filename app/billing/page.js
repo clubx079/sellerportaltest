@@ -35,6 +35,7 @@ function planLabel(type) {
 
 export default function BillingPage() {
   const [plan, setPlan] = useState(null)
+  const [isLifetimeFree, setIsLifetimeFree] = useState(false)
   const [paymentMethod, setPaymentMethod] = useState(null)
   const [subDetails, setSubDetails] = useState(null)
   const [invoices, setInvoices] = useState([])
@@ -64,6 +65,15 @@ export default function BillingPage() {
     setLoading(true)
     setError(null)
     try {
+      const { data: appRow } = await supabase
+        .from('seller_applications')
+        .select('admin_notes')
+        .eq('id', sellerId)
+        .maybeSingle()
+
+      const lifetimeFree = appRow?.admin_notes === 'LIFETIME_FREE'
+      setIsLifetimeFree(lifetimeFree)
+
       let { data: planData } = await supabase
         .from('seller_plans')
         .select('*')
@@ -167,9 +177,9 @@ export default function BillingPage() {
               <div>
                 <p className={valueCls + ' text-[16px]'}>{planLabel(plan.plan_type)}</p>
                 <p className="text-[13px] text-[#737370] mt-0.5 capitalize">
-                  {plan.plan_type !== 'standard' ? plan.billing_cycle : 'One-time payment'}
+                  {isLifetimeFree ? 'Lifetime Free' : plan.plan_type !== 'standard' ? plan.billing_cycle : 'One-time payment'}
                 </p>
-                {subDetails?.has_discount ? (
+                {isLifetimeFree ? null : subDetails?.has_discount ? (
                   <div className="flex items-center gap-2 mt-1.5 flex-wrap">
                     <span className="text-[13px] text-[#A8A8A4] line-through">
                       ${(subDetails.original_amount / 100).toFixed(2)}/{subDetails.interval}
@@ -207,20 +217,22 @@ export default function BillingPage() {
               )}
               {plan.plan_type !== 'standard' && (
                 <>
-                  {plan.status === 'trialing' && plan.trial_ends_at && (
+                  <div>
+                    <p className={labelCls}>Listings this period</p>
+                    <p className={valueCls}>{plan.listings_used_this_period || 0} used</p>
+                  </div>
+                  {!isLifetimeFree && plan.status === 'trialing' && plan.trial_ends_at && (
                     <div>
                       <p className={labelCls}>Trial ends</p>
                       <p className={valueCls}>{formatDate(plan.trial_ends_at)}</p>
                     </div>
                   )}
-                  <div>
-                    <p className={labelCls}>Next renewal</p>
-                    <p className={valueCls}>{formatDate(plan.current_period_end)}</p>
-                  </div>
-                  <div>
-                    <p className={labelCls}>Listings this period</p>
-                    <p className={valueCls}>{plan.listings_used_this_period || 0} used</p>
-                  </div>
+                  {!isLifetimeFree && (
+                    <div>
+                      <p className={labelCls}>Next renewal</p>
+                      <p className={valueCls}>{formatDate(plan.current_period_end)}</p>
+                    </div>
+                  )}
                 </>
               )}
             </div>
@@ -247,7 +259,17 @@ export default function BillingPage() {
         )}
       </div>
 
-      {!teamWorkspace && (
+      {!teamWorkspace && isLifetimeFree && plan && (
+        <div className="flex items-start gap-3 p-4 bg-[#E4F5EC] border border-[#9FDBB8] rounded">
+          <Check className="w-4 h-4 text-[#0F6E56] shrink-0 mt-0.5" />
+          <div>
+            <p className="text-[14px] font-semibold text-[#0F6E56]">Lifetime Free Account</p>
+            <p className="text-[13px] text-[#737370] mt-0.5">This account has complimentary Enterprise access. No payment method or billing history applies.</p>
+          </div>
+        </div>
+      )}
+
+      {!teamWorkspace && !isLifetimeFree && (
         <>
           {/* Payment Method */}
           <div className="bg-white border border-[#E8E8E4] rounded p-5">
@@ -335,3 +357,4 @@ export default function BillingPage() {
     </div>
   )
 }
+

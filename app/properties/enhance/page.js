@@ -126,6 +126,7 @@ function EnhanceContent() {
 
   const [property, setProperty] = useState(null)
   const [userId, setUserId] = useState(null)
+  const [isLifetimeFree, setIsLifetimeFree] = useState(false)
   const [selectedAddOns, setSelectedAddOns] = useState([])
   const [clientSecret, setClientSecret] = useState(null)
   const [loading, setLoading] = useState(false)
@@ -141,6 +142,14 @@ function EnhanceContent() {
     if (!userStr) { router.push('/login'); return }
     const user = JSON.parse(userStr)
     setUserId(user.id)
+
+    supabase
+      .from('seller_applications')
+      .select('admin_notes')
+      .eq('id', user.id)
+      .maybeSingle()
+      .then(({ data }) => { if (data?.admin_notes === 'LIFETIME_FREE') setIsLifetimeFree(true) })
+
     if (propertyId) {
       supabase
         .from('properties')
@@ -212,6 +221,42 @@ function EnhanceContent() {
       setPromoError('Failed to validate code')
     } finally {
       setPromoValidating(false)
+    }
+  }
+
+  const applyFreeAddons = async () => {
+    if (!userId || selectedAddOns.length === 0) return
+    setLoading(true)
+    setError(null)
+    try {
+      const res = await fetch('/api/seller/listing-addons', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ seller_id: userId, add_ons: selectedAddOns, property_id: propertyId }),
+      })
+      const d = await res.json()
+      if (!res.ok) throw new Error(d.error || 'Failed to apply add-ons')
+      // Update property flags client-side
+      const now = new Date()
+      const flags = {}
+      if (selectedAddOns.includes('highlight') || selectedAddOns.includes('bundle')) {
+        flags.is_highlighted = true
+        flags.highlight_ends_at = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString()
+      }
+      if (selectedAddOns.includes('boost') || selectedAddOns.includes('bundle')) {
+        flags.is_boosted = true
+        flags.boost_ends_at = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString()
+      }
+      if (selectedAddOns.includes('homepage')) {
+        flags.is_homepage_featured = true
+        flags.homepage_feature_ends_at = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString()
+      }
+      await supabase.from('properties').update(flags).eq('id', propertyId)
+      setSuccess(true)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -335,7 +380,7 @@ function EnhanceContent() {
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-8 items-start">
         {/* Left: Add-on selection */}
         <div className="space-y-3">
-          <p className="text-[13px] text-[#737370]">Select the add-ons you want to apply to this listing. One-time payments per listing.</p>
+          <p className="text-[13px] text-[#737370]">{isLifetimeFree ? 'Select the add-ons you want to apply to this listing.' : 'Select the add-ons you want to apply to this listing. One-time payments per listing.'}</p>
           {ADD_ONS.map((ao) => {
             const Icon = ao.icon
             const selected = selectedAddOns.includes(ao.id)
@@ -391,7 +436,7 @@ function EnhanceContent() {
                     <p className="text-[12px] text-[#A8A8A4] line-through">${(ao.strikePrice / 100).toFixed(2)}</p>
                   )}
                   <p className={`text-[16px] font-bold ${alreadyActive ? 'text-[#0F6E56]' : selected ? 'text-[#D03839]' : 'text-[#1A1816]'}`}>
-                    {alreadyActive ? 'Active' : `+$${(ao.price / 100).toFixed(2)}`}
+                    {alreadyActive ? 'Active' : isLifetimeFree ? 'Free' : `+$${(ao.price / 100).toFixed(2)}`}
                   </p>
                 </div>
                 {/* Checkbox */}
@@ -425,7 +470,7 @@ function EnhanceContent() {
                         <span className="font-mono text-[11px] text-[#A8A8A4] mr-1">+</span>
                         {ao.label}
                       </span>
-                      <span className="font-mono text-[13px] font-bold text-[#1A1816]">+${(ao.price / 100).toFixed(2)}</span>
+                      <span className="font-mono text-[13px] font-bold text-[#0F6E56]">{isLifetimeFree ? 'Free' : `+$${(ao.price / 100).toFixed(2)}`}</span>
                     </div>
                   ) : null
                 })}
@@ -433,60 +478,62 @@ function EnhanceContent() {
             )}
           </div>
 
-          {/* Promo code */}
-          <div className="px-5 py-4 border-b border-[#E8E8E4]">
-            {appliedPromo ? (
-              <div className="flex items-center justify-between p-2.5 bg-[#E4F5EC] border border-[#9FDBB8] rounded">
-                <div>
-                  <p className="text-[12px] font-semibold text-[#0F6E56]">{appliedPromo.name || promoCode.toUpperCase()} applied</p>
-                  <p className="text-[11px] text-[#0F6E56]">
-                    {appliedPromo.discount.type === 'percent'
-                      ? `${appliedPromo.discount.value}% off`
-                      : `$${appliedPromo.discount.value.toFixed(2)} off`}
-                  </p>
-                </div>
-                <button
-                  onClick={() => { setAppliedPromo(null); setPromoCode('') }}
-                  className="text-[11px] text-[#0F6E56] underline hover:no-underline"
-                >Remove</button>
-              </div>
-            ) : (
-              <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#A8A8A4] mb-2">Promo Code</p>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={promoCode}
-                    onChange={e => { setPromoCode(e.target.value.toUpperCase()); setPromoError(null) }}
-                    onKeyDown={e => e.key === 'Enter' && validatePromo()}
-                    placeholder="Enter promo code"
-                    className="flex-1 h-[36px] px-3 text-[13px] border border-[#E8E8E4] rounded bg-white focus:outline-none focus:border-[#D03839]"
-                  />
+          {/* Promo code — hidden for lifetime free accounts */}
+          {!isLifetimeFree && (
+            <div className="px-5 py-4 border-b border-[#E8E8E4]">
+              {appliedPromo ? (
+                <div className="flex items-center justify-between p-2.5 bg-[#E4F5EC] border border-[#9FDBB8] rounded">
+                  <div>
+                    <p className="text-[12px] font-semibold text-[#0F6E56]">{appliedPromo.name || promoCode.toUpperCase()} applied</p>
+                    <p className="text-[11px] text-[#0F6E56]">
+                      {appliedPromo.discount.type === 'percent'
+                        ? `${appliedPromo.discount.value}% off`
+                        : `$${appliedPromo.discount.value.toFixed(2)} off`}
+                    </p>
+                  </div>
                   <button
-                    type="button"
-                    onClick={validatePromo}
-                    disabled={promoValidating || !promoCode.trim()}
-                    className="px-3 h-[36px] text-[13px] font-semibold border border-[#E8E8E4] rounded bg-white hover:bg-[#FAFAF8] disabled:opacity-50 flex items-center gap-1.5"
-                  >
-                    {promoValidating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Apply'}
-                  </button>
+                    onClick={() => { setAppliedPromo(null); setPromoCode('') }}
+                    className="text-[11px] text-[#0F6E56] underline hover:no-underline"
+                  >Remove</button>
                 </div>
-                {promoError && <p className="text-[12px] text-[#D03839] mt-1.5">{promoError}</p>}
-              </div>
-            )}
-          </div>
+              ) : (
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#A8A8A4] mb-2">Promo Code</p>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={promoCode}
+                      onChange={e => { setPromoCode(e.target.value.toUpperCase()); setPromoError(null) }}
+                      onKeyDown={e => e.key === 'Enter' && validatePromo()}
+                      placeholder="Enter promo code"
+                      className="flex-1 h-[36px] px-3 text-[13px] border border-[#E8E8E4] rounded bg-white focus:outline-none focus:border-[#D03839]"
+                    />
+                    <button
+                      type="button"
+                      onClick={validatePromo}
+                      disabled={promoValidating || !promoCode.trim()}
+                      className="px-3 h-[36px] text-[13px] font-semibold border border-[#E8E8E4] rounded bg-white hover:bg-[#FAFAF8] disabled:opacity-50 flex items-center gap-1.5"
+                    >
+                      {promoValidating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Apply'}
+                    </button>
+                  </div>
+                  {promoError && <p className="text-[12px] text-[#D03839] mt-1.5">{promoError}</p>}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Total */}
           <div className="px-5 py-4 flex justify-between items-baseline border-b border-[#E8E8E4]">
             <div>
               <p className="text-[15px] font-bold text-[#1A1816]">Total</p>
-              <p className="text-[11px] text-[#737370] mt-0.5">One-time charge</p>
+              <p className="text-[11px] text-[#737370] mt-0.5">{isLifetimeFree ? 'Complimentary — Ableman account' : 'One-time charge'}</p>
             </div>
             <div className="text-right">
-              {discountAmount > 0 && (
+              {!isLifetimeFree && discountAmount > 0 && (
                 <p className="text-[13px] text-[#A8A8A4] line-through">${(total / 100).toFixed(2)}</p>
               )}
-              <span className="text-[28px] font-bold text-[#1A1816] tracking-tight">${(finalTotal / 100).toFixed(2)}</span>
+              <span className="text-[28px] font-bold text-[#0F6E56] tracking-tight">{isLifetimeFree ? 'Free' : `$${(finalTotal / 100).toFixed(2)}`}</span>
             </div>
           </div>
 
@@ -497,6 +544,14 @@ function EnhanceContent() {
             {selectedAddOns.length === 0 ? (
               <button disabled className="w-full h-[48px] bg-[#E8E8E4] text-[#A8A8A4] text-[14px] font-semibold rounded-lg cursor-not-allowed">
                 Select Add-Ons to Continue
+              </button>
+            ) : isLifetimeFree ? (
+              <button
+                onClick={applyFreeAddons}
+                disabled={loading}
+                className="w-full h-[48px] bg-[#0F6E56] hover:bg-[#0D5E49] active:scale-[0.98] text-white text-[14px] font-semibold rounded-lg transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {loading ? <><Loader2 className="w-4 h-4 animate-spin" /> Applying…</> : 'Apply for Free'}
               </button>
             ) : !clientSecret ? (
               <button
@@ -522,15 +577,17 @@ function EnhanceContent() {
           </div>
 
           {/* Footer */}
-          <div className="px-5 py-3.5 bg-[#FAFAF6] border-t border-[#E8E8E4] text-center">
-            <div className="flex items-center justify-center gap-1.5 mb-1">
-              <svg className="w-3 h-3 text-[#737370]" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-              </svg>
-              <span className="text-[12px] text-[#737370]">Secured by Stripe</span>
+          {!isLifetimeFree && (
+            <div className="px-5 py-3.5 bg-[#FAFAF6] border-t border-[#E8E8E4] text-center">
+              <div className="flex items-center justify-center gap-1.5 mb-1">
+                <svg className="w-3 h-3 text-[#737370]" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                </svg>
+                <span className="text-[12px] text-[#737370]">Secured by Stripe</span>
+              </div>
+              <p className="text-[11px] text-[#A8A8A4]">No subscription · No auto-renewal</p>
             </div>
-            <p className="text-[11px] text-[#A8A8A4]">No subscription · No auto-renewal</p>
-          </div>
+          )}
         </div>
       </div>
     </div>

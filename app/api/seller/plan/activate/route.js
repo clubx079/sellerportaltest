@@ -22,6 +22,17 @@ export async function POST(request) {
     const meta = sub.metadata || {}
     const customerId = typeof sub.customer === 'string' ? sub.customer : sub.customer?.id
 
+    // Block activation for lifetime-free accounts
+    const { data: appCheck } = await supabase
+      .from('seller_applications')
+      .select('admin_notes')
+      .eq('id', seller_id)
+      .maybeSingle()
+
+    if (appCheck?.admin_notes === 'LIFETIME_FREE') {
+      return NextResponse.json({ success: true, lifetime_free: true })
+    }
+
     // Check if a plan row already exists for this seller
     const { data: existing, error: selectErr } = await supabase
       .from('seller_plans')

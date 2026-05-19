@@ -14,6 +14,8 @@ const ADD_ON_PRICES = {
   bundle:    { label: 'Full Visibility Bundle (Highlight + Boost)', amount: 2200 },
 }
 
+const ADDON_DAYS = { highlight: 30, boost: 7, homepage: 7, bundle: 30 }
+
 export async function POST(request) {
   const { supabase, stripe } = getClients()
   try {
@@ -23,6 +25,32 @@ export async function POST(request) {
 
     const validAddOns = add_ons.filter(id => ADD_ON_PRICES[id])
     if (validAddOns.length === 0) return NextResponse.json({ error: 'No valid add-ons provided' }, { status: 400 })
+
+    // Lifetime-free accounts get addons at no charge — record directly, skip Stripe
+    const { data: appCheck } = await supabase
+      .from('seller_applications')
+      .select('admin_notes')
+      .eq('id', seller_id)
+      .maybeSingle()
+
+    if (appCheck?.admin_notes === 'LIFETIME_FREE') {
+      const now = new Date()
+      for (const addonId of validAddOns) {
+        const days = ADDON_DAYS[addonId] || 7
+        await supabase.from('listing_addons').insert({
+          property_id:              property_id || null,
+          seller_id,
+          addon_type:               addonId,
+          stripe_payment_intent_id: null,
+          amount_paid:              0,
+          days_purchased:           days,
+          starts_at:                now.toISOString(),
+          ends_at:                  new Date(now.getTime() + days * 24 * 60 * 60 * 1000).toISOString(),
+          status:                   'active',
+        })
+      }
+      return NextResponse.json({ free: true, add_ons: validAddOns })
+    }
 
     const baseAmount = validAddOns.reduce((sum, id) => sum + ADD_ON_PRICES[id].amount, 0)
 

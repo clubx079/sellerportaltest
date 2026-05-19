@@ -12,14 +12,22 @@ export async function POST(request) {
     const { seller_id } = await request.json()
     if (!seller_id) return NextResponse.json({ error: 'seller_id required' }, { status: 400 })
 
+    const { data: appCheck } = await supabase
+      .from('seller_applications')
+      .select('admin_notes')
+      .eq('id', seller_id)
+      .maybeSingle()
+
+    const isLifetimeFree = appCheck?.admin_notes === 'LIFETIME_FREE'
+
     const { data: plan } = await supabase
       .from('seller_plans')
       .select('*')
       .eq('seller_id', seller_id)
       .maybeSingle()
 
-    if (!plan?.stripe_subscription_id) {
-      return NextResponse.json({ plan, pending: null })
+    if (isLifetimeFree || !plan?.stripe_subscription_id) {
+      return NextResponse.json({ plan, pending: null, lifetime_free: isLifetimeFree })
     }
 
     // Verify live subscription status against Stripe (catches any webhook delays)

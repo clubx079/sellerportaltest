@@ -26,6 +26,10 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Seller not found' }, { status: 404 })
     }
 
+    if (appRow.admin_notes === 'LIFETIME_FREE') {
+      return NextResponse.json({ synced: false, reason: 'Lifetime free account' })
+    }
+
     let customerId = appRow.stripe_customer_id
 
     // If no customer ID saved yet, search Stripe by email
