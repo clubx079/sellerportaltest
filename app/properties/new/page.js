@@ -53,6 +53,7 @@ export default function NewPropertyPage() {
   const [userId, setUserId] = useState(null);
   const [workspaceRole, setWorkspaceRole] = useState('admin');
   const [trialPlan, setTrialPlan] = useState(null);
+  const [isLifetimeFree, setIsLifetimeFree] = useState(false);
   const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
   const [upgradeLoading, setUpgradeLoading] = useState(false);
   const endTrialCalledRef = useRef(false);
@@ -115,6 +116,12 @@ export default function NewPropertyPage() {
           .eq('seller_id', effectiveId)
           .maybeSingle()
           .then(({ data }) => { if (data) setTrialPlan(data) });
+        supabase
+          .from('seller_applications')
+          .select('admin_notes')
+          .eq('id', effectiveId)
+          .maybeSingle()
+          .then(({ data }) => { if (data?.admin_notes === 'LIFETIME_FREE') setIsLifetimeFree(true) });
       })
       .catch(() => {
         setUserId(user.id);
@@ -124,6 +131,12 @@ export default function NewPropertyPage() {
           .eq('seller_id', user.id)
           .maybeSingle()
           .then(({ data }) => { if (data) setTrialPlan(data) });
+        supabase
+          .from('seller_applications')
+          .select('admin_notes')
+          .eq('id', user.id)
+          .maybeSingle()
+          .then(({ data }) => { if (data?.admin_notes === 'LIFETIME_FREE') setIsLifetimeFree(true) });
       });
   }, []);
 
@@ -1430,7 +1443,7 @@ export default function NewPropertyPage() {
               images={imageUploadStatus.images}
               trialPlan={trialPlan}
               onShowUpgradePrompt={() => setShowUpgradePrompt(true)}
-              isLifetimeFree={!trialPlan?.stripe_subscription_id && trialPlan?.status === 'active'}
+              isLifetimeFree={isLifetimeFree}
             />
           )}
 
