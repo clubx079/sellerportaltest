@@ -274,6 +274,18 @@ const PropertiesManagement = () => {
           .eq('temp_seller_id', tempSellerId);
         if (error) throw error;
       }
+      // Decrement listings_used_this_period when moved to trash
+      const { data: planRow } = await supabase
+        .from('seller_plans')
+        .select('id, listings_used_this_period')
+        .eq('seller_id', effectiveUserId)
+        .maybeSingle()
+      if (planRow && planRow.listings_used_this_period > 0) {
+        await supabase
+          .from('seller_plans')
+          .update({ listings_used_this_period: planRow.listings_used_this_period - 1 })
+          .eq('id', planRow.id)
+      }
       setProperties(prev => prev.filter(p => p.id !== selectedProperty.id));
       setShowArchiveModal(false);
       setSelectedProperty(null);
@@ -309,6 +321,18 @@ const PropertiesManagement = () => {
           .eq('id', property.id)
           .eq('temp_seller_id', tempSellerId);
         if (error) throw error;
+      }
+      // Increment listings_used_this_period when restored from trash
+      const { data: planRow } = await supabase
+        .from('seller_plans')
+        .select('id, listings_used_this_period')
+        .eq('seller_id', effectiveUserId)
+        .maybeSingle()
+      if (planRow) {
+        await supabase
+          .from('seller_plans')
+          .update({ listings_used_this_period: (planRow.listings_used_this_period ?? 0) + 1 })
+          .eq('id', planRow.id)
       }
       setProperties(prev => prev.filter(p => p.id !== property.id));
     } catch (error) {
