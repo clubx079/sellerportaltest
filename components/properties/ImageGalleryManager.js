@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { Upload, X, Image as ImageIcon, Star, Loader } from 'lucide-react';
 import imageCompression from 'browser-image-compression';
 
-const MAX_CONCURRENT_UPLOADS = 10;
+const MAX_CONCURRENT_UPLOADS = 15;
 
 const ALLOWED_PHOTO_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
 const checkHeic = f => f.type === 'image/heic' || f.type === 'image/heif' || /\.(heic|heif)$/i.test(f.name)
