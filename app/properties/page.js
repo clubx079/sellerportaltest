@@ -300,7 +300,7 @@ const PropertiesManagement = () => {
       if (property._source === 'manual') {
         const { error } = await supabase
           .from('properties')
-          .update({ status: 'draft', property_status: 'available' })
+          .update({ status: 'active', property_status: 'available' })
           .eq('id', property.id)
           .eq('seller_id', effectiveUserId);
         if (error) throw error;
