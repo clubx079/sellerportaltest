@@ -614,15 +614,11 @@ export default function NewPropertyPage() {
         }).catch(() => {});
       }
 
-      setSuccess(
-        publishStatus === 'active'
-          ? 'Property submitted for review! You\'ll be notified when it\'s approved.'
-          : 'Property saved as draft!'
-      );
-
-      setTimeout(() => {
-        router.push('/properties');
-      }, 1500);
+      const successMsg = publishStatus === 'active'
+        ? 'Property submitted for review! You\'ll be notified when it\'s approved.'
+        : 'Property saved as draft!';
+      sessionStorage.setItem('listingSuccess', successMsg);
+      router.push('/properties');
 
     } catch (err) {
       console.error('Save failed:', err);

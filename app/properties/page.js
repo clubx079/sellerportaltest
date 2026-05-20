@@ -35,6 +35,7 @@ const PropertiesManagement = () => {
   const [propertyForUTM, setPropertyForUTM] = useState(null);
   const [selectedPropertyRaw, setSelectedPropertyRaw] = useState(null); // raw property for UTM (slug/id)
   const [subBlockMsg, setSubBlockMsg] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
   const searchParams = useSearchParams();
   const viewFromUrl = searchParams.get('view') === 'trash' ? 'trash' : 'active';
   const [viewMode, setViewMode] = useState(viewFromUrl); // 'active' or 'trash'
@@ -43,6 +44,14 @@ const PropertiesManagement = () => {
   useEffect(() => {
     setViewMode(viewFromUrl);
   }, [viewFromUrl]);
+
+  useEffect(() => {
+    const msg = sessionStorage.getItem('listingSuccess');
+    if (msg) {
+      setSuccessMsg(msg);
+      sessionStorage.removeItem('listingSuccess');
+    }
+  }, []);
 
   useEffect(() => {
     const userStr = localStorage.getItem('seller_user');
@@ -664,6 +673,14 @@ const PropertiesManagement = () => {
       ) : (
         <div className="bg-white rounded border border-[#E8E8E4] px-4 py-3">
           <p className="text-sm text-[#444441]"><span className="font-semibold text-[#1A1816]">{totalProperties}</span> {totalProperties === 1 ? 'listing' : 'listings'} in trash</p>
+        </div>
+      )}
+
+      {/* Publish success banner */}
+      {successMsg && (
+        <div className="flex items-center justify-between p-3 bg-[#E4F5EC] border border-[#A3D9B8] rounded text-[13px] text-[#0F6E56]">
+          <span>{successMsg}</span>
+          <button onClick={() => setSuccessMsg('')} className="ml-3 text-[#0F6E56] hover:opacity-70"><X size={14} /></button>
         </div>
       )}
 

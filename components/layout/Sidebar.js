@@ -48,7 +48,7 @@ export default function Sidebar({ isOpen, setIsOpen, activeItem, setActiveItem }
       try {
         const { createClient } = await import('@supabase/supabase-js')
         const sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
-        const { count: lCount } = await sb.from('properties').select('*', { count: 'exact', head: true }).eq('seller_id', effectiveId)
+        const { count: lCount } = await sb.from('properties').select('*', { count: 'exact', head: true }).eq('seller_id', effectiveId).neq('status', 'archived')
         if (mounted && lCount != null) setListingsCount(lCount)
       } catch {}
       try {
