@@ -26,6 +26,15 @@ export async function POST(request) {
       .eq('seller_id', seller_id)
       .maybeSingle()
 
+    // Real-time count of non-archived listings (source of truth for display)
+    const { count: activeListings } = await supabase
+      .from('properties')
+      .select('id', { count: 'exact', head: true })
+      .eq('seller_id', seller_id)
+      .neq('status', 'archived')
+
+    if (plan) plan.listings_used_this_period = activeListings ?? 0
+
     if (isLifetimeFree || !plan?.stripe_subscription_id) {
       return NextResponse.json({ plan, pending: null, lifetime_free: isLifetimeFree })
     }
