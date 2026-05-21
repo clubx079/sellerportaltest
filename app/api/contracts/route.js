@@ -74,20 +74,20 @@ export async function POST(request) {
       body: JSON.stringify({
         template_id: Number(templateId),
         name: property || '',
-        metadata: {
-          assigneeEmail: buyerEmail,
-          assigneeName: buyerName || buyerEmail,
-        },
         submitters: [
           {
-            role: 'Assignor',
+            role: 'First Party',
             email: sellerEmail,
             name: sellerName || sellerEmail,
             send_email: false,
             application_key: `seller:${sellerEmail}`,
+            metadata: {
+              assigneeEmail: buyerEmail,
+              assigneeName: buyerName || buyerEmail,
+            },
           },
           {
-            role: 'Assignee',
+            role: 'Second Party',
             email: assigneePlaceholder,
             name: buyerName || buyerEmail,
             send_email: false,
@@ -99,7 +99,7 @@ export async function POST(request) {
     const json = await res.json()
     if (!Array.isArray(json) || !json[0]) return NextResponse.json({ error: 'DocuSeal error' }, { status: 500 })
 
-    const assignorSubmitter = json.find(s => s.role === 'Assignor') || json[0]
+    const assignorSubmitter = json.find(s => s.role === 'First Party') || json[0]
     return NextResponse.json({ submission_id: assignorSubmitter.submission_id, assignor_slug: assignorSubmitter.slug })
   } catch {
     return NextResponse.json({ error: 'Failed to create contract' }, { status: 500 })
