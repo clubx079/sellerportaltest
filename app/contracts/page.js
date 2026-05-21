@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
-import { FileText, CheckCircle, ExternalLink, Plus, X, Send, Loader2 } from 'lucide-react'
+import { FileText, CheckCircle, ExternalLink, Plus, X, Send, Loader2, Eye, Download } from 'lucide-react'
 
 const STATUS = {
   completed: { label: 'Completed', cls: 'text-[#16A34A] bg-[#DCFCE7]' },
@@ -319,38 +319,62 @@ export default function ContractsPage() {
                   </div>
                 </div>
 
-                {c.status === 'completed' ? (
-                  <span className="shrink-0 text-[12px] text-[#16A34A] font-medium flex items-center gap-1">
-                    <CheckCircle className="w-3.5 h-3.5" /> Signed
-                  </span>
-                ) : url ? (
-                  <a
-                    href={url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="shrink-0 h-8 px-4 bg-[#D03839] hover:bg-[#E0493B] text-white text-[13px] font-semibold rounded transition-colors flex items-center gap-1.5"
-                  >
-                    Sign Now <ExternalLink className="w-3 h-3" />
-                  </a>
-                ) : needsSending(c) ? (
-                  <div className="shrink-0 flex flex-col items-end gap-1">
-                    <button
-                      onClick={() => sendToAssignee(c.id)}
-                      disabled={sending === c.id}
-                      className="h-8 px-4 bg-[#1A1816] hover:bg-[#2a2826] text-white text-[13px] font-semibold rounded transition-colors flex items-center gap-1.5 disabled:opacity-50"
+                <div className="shrink-0 flex items-center gap-2">
+                  {c.url && (
+                    <a
+                      href={c.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      title="View contract"
+                      className="h-8 w-8 flex items-center justify-center border border-[#E8E8E4] rounded hover:border-[#1A1816] hover:bg-[#FAFAF8] text-[#737370] hover:text-[#1A1816] transition-colors"
                     >
-                      {sending === c.id
-                        ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Sending...</>
-                        : <><Send className="w-3 h-3" /> Send to Buyer</>}
-                    </button>
-                    {sendResult[c.id] === 'sent' && (
-                      <span className="text-[11px] text-[#0F6E56] font-medium">Email sent ✓</span>
-                    )}
-                    {sendResult[c.id] && sendResult[c.id] !== 'sent' && (
-                      <span className="text-[11px] text-[#D03839]">{sendResult[c.id]}</span>
-                    )}
-                  </div>
-                ) : null}
+                      <Eye className="w-4 h-4" />
+                    </a>
+                  )}
+                  {c.combined_document_url && (
+                    <a
+                      href={c.combined_document_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      title="Download signed PDF"
+                      className="h-8 w-8 flex items-center justify-center border border-[#E8E8E4] rounded hover:border-[#1A1816] hover:bg-[#FAFAF8] text-[#737370] hover:text-[#1A1816] transition-colors"
+                    >
+                      <Download className="w-4 h-4" />
+                    </a>
+                  )}
+                  {c.status === 'completed' ? (
+                    <span className="text-[12px] text-[#16A34A] font-medium flex items-center gap-1">
+                      <CheckCircle className="w-3.5 h-3.5" /> Signed
+                    </span>
+                  ) : url ? (
+                    <a
+                      href={url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="h-8 px-4 bg-[#D03839] hover:bg-[#E0493B] text-white text-[13px] font-semibold rounded transition-colors flex items-center gap-1.5"
+                    >
+                      Sign Now <ExternalLink className="w-3 h-3" />
+                    </a>
+                  ) : needsSending(c) ? (
+                    <div className="flex flex-col items-end gap-1">
+                      <button
+                        onClick={() => sendToAssignee(c.id)}
+                        disabled={sending === c.id}
+                        className="h-8 px-4 bg-[#1A1816] hover:bg-[#2a2826] text-white text-[13px] font-semibold rounded transition-colors flex items-center gap-1.5 disabled:opacity-50"
+                      >
+                        {sending === c.id
+                          ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Sending...</>
+                          : <><Send className="w-3 h-3" /> Send to Buyer</>}
+                      </button>
+                      {sendResult[c.id] === 'sent' && (
+                        <span className="text-[11px] text-[#0F6E56] font-medium">Email sent ✓</span>
+                      )}
+                      {sendResult[c.id] && sendResult[c.id] !== 'sent' && (
+                        <span className="text-[11px] text-[#D03839]">{sendResult[c.id]}</span>
+                      )}
+                    </div>
+                  ) : null}
+                </div>
               </div>
             )
           })}
