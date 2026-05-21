@@ -150,6 +150,7 @@ export default function ContractsPage() {
   const [showModal, setShowModal] = useState(false)
   const [sending, setSending] = useState(null)
   const [sendResult, setSendResult] = useState({})
+  const [downloadingId, setDownloadingId] = useState(null)
   const [sellerName, setSellerName] = useState('')
   const [effectiveEmail, setEffectiveEmail] = useState(null)
   const [effectiveName, setEffectiveName] = useState('')
@@ -222,6 +223,17 @@ export default function ContractsPage() {
       setSendResult(r => ({ ...r, [submissionId]: 'error' }))
     } finally {
       setSending(null)
+    }
+  }
+
+  async function handleDownload(contractId) {
+    setDownloadingId(contractId)
+    try {
+      const res = await fetch(`/api/contracts?type=document&id=${contractId}`)
+      const data = await res.json()
+      if (data.url) window.open(data.url, '_blank')
+    } finally {
+      setDownloadingId(null)
     }
   }
 
@@ -320,32 +332,22 @@ export default function ContractsPage() {
                 </div>
 
                 <div className="shrink-0 flex items-center gap-2">
-                  {c.url && (
-                    <a
-                      href={c.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      title="View contract"
-                      className="h-8 w-8 flex items-center justify-center border border-[#E8E8E4] rounded hover:border-[#1A1816] hover:bg-[#FAFAF8] text-[#737370] hover:text-[#1A1816] transition-colors"
-                    >
-                      <Eye className="w-4 h-4" />
-                    </a>
-                  )}
-                  {c.combined_document_url && (
-                    <a
-                      href={c.combined_document_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      title="Download signed PDF"
-                      className="h-8 w-8 flex items-center justify-center border border-[#E8E8E4] rounded hover:border-[#1A1816] hover:bg-[#FAFAF8] text-[#737370] hover:text-[#1A1816] transition-colors"
-                    >
-                      <Download className="w-4 h-4" />
-                    </a>
-                  )}
                   {c.status === 'completed' ? (
-                    <span className="text-[12px] text-[#16A34A] font-medium flex items-center gap-1">
-                      <CheckCircle className="w-3.5 h-3.5" /> Signed
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[12px] text-[#16A34A] font-medium flex items-center gap-1">
+                        <CheckCircle className="w-3.5 h-3.5" /> Signed
+                      </span>
+                      <button
+                        onClick={() => handleDownload(c.id)}
+                        disabled={downloadingId === c.id}
+                        title="Download signed PDF"
+                        className="h-8 w-8 flex items-center justify-center border border-[#E8E8E4] rounded hover:border-[#1A1816] hover:bg-[#FAFAF8] text-[#737370] hover:text-[#1A1816] transition-colors disabled:opacity-50"
+                      >
+                        {downloadingId === c.id
+                          ? <span className="w-3.5 h-3.5 border-2 border-[#A8A8A4] border-t-transparent rounded-full animate-spin" />
+                          : <Download className="w-4 h-4" />}
+                      </button>
+                    </div>
                   ) : url ? (
                     <a
                       href={url}
