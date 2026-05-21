@@ -173,7 +173,9 @@ export default function EditPropertyPage() {
           seo_description: data.seo_description || '',
           social_title: data.social_title || '',
           social_description: data.social_description || '',
-          social_image_url: data.social_image_url || ''
+          social_image_url: data.social_image_url || '',
+          contact_name: data.contact_name || '',
+          contact_phone: data.contact_phone || ''
         });
 
         // Set rejection reason and auto-navigate to the first tab with issues
@@ -421,6 +423,10 @@ export default function EditPropertyPage() {
     if (sellerType) saveData.seller_type = sellerType;
     if (contractUpload.url) saveData.contract_url = contractUpload.url;
     if (contractUpload.key) saveData.contract_key = contractUpload.key;
+
+    // Contact info
+    saveData.contact_name = formData.contact_name || null;
+    saveData.contact_phone = formData.contact_phone || null;
 
     try {
       if (sourceType === 'scraped') {
@@ -926,6 +932,34 @@ export default function EditPropertyPage() {
                   </select>
                 </div>
               )}
+
+              {/* Contact Info */}
+              <div>
+                <h3 className="text-[15px] font-semibold text-[#1A1816] mb-1">Contact Info</h3>
+                <p className="text-[13px] text-[#737370] mb-4">How buyers can reach you about this listing.</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[13px] font-semibold text-[#1A1816] mb-2">Contact Name</label>
+                    <input
+                      type="text"
+                      value={formData.contact_name || ''}
+                      onChange={(e) => handleInputChange('contact_name', e.target.value)}
+                      placeholder="Your name or company"
+                      className="w-full px-4 py-3 border border-[#E8E8E4] rounded focus:border-[#D03839] focus:outline-none transition-colors text-[13px] text-[#1A1816]"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[13px] font-semibold text-[#1A1816] mb-2">Contact Phone</label>
+                    <input
+                      type="tel"
+                      value={formData.contact_phone || ''}
+                      onChange={(e) => handleInputChange('contact_phone', e.target.value)}
+                      placeholder="+1 (555) 000-0000"
+                      className="w-full px-4 py-3 border border-[#E8E8E4] rounded focus:border-[#D03839] focus:outline-none transition-colors text-[13px] text-[#1A1816]"
+                    />
+                  </div>
+                </div>
+              </div>
 
               {/* Featured Image Preview */}
               {imageUploadStatus.images.length > 0 && (

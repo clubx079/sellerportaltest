@@ -517,6 +517,10 @@ export default function NewPropertyPage() {
     if (sellerType) saveData.seller_type = sellerType;
     if (contractUpload.url) saveData.contract_url = contractUpload.url;
 
+    // Add contact info
+    if (formData.contact_name) saveData.contact_name = formData.contact_name;
+    if (formData.contact_phone) saveData.contact_phone = formData.contact_phone;
+
     try {
       // Update existing draft or create new property
       let data;
@@ -1099,6 +1103,34 @@ export default function NewPropertyPage() {
                     <option key={status.value} value={status.value}>{status.label}</option>
                   ))}
                 </select>
+              </div>
+
+              {/* Contact Info */}
+              <div>
+                <h3 className="text-[15px] font-semibold text-[#1A1816] mb-1">Contact Info</h3>
+                <p className="text-[13px] text-[#737370] mb-4">How buyers can reach you about this listing.</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[13px] font-semibold text-[#1A1816] mb-2">Contact Name</label>
+                    <input
+                      type="text"
+                      value={formData.contact_name || ''}
+                      onChange={(e) => handleInputChange('contact_name', e.target.value)}
+                      placeholder="Your name or company"
+                      className="w-full px-4 py-3 border border-[#E8E8E4] rounded focus:border-[#D03839] focus:outline-none transition-colors text-[13px] text-[#1A1816]"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[13px] font-semibold text-[#1A1816] mb-2">Contact Phone</label>
+                    <input
+                      type="tel"
+                      value={formData.contact_phone || ''}
+                      onChange={(e) => handleInputChange('contact_phone', e.target.value)}
+                      placeholder="+1 (555) 000-0000"
+                      className="w-full px-4 py-3 border border-[#E8E8E4] rounded focus:border-[#D03839] focus:outline-none transition-colors text-[13px] text-[#1A1816]"
+                    />
+                  </div>
+                </div>
               </div>
 
               {/* Featured Image Preview */}
