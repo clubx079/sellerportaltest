@@ -100,6 +100,19 @@ export async function POST(request) {
     if (!Array.isArray(json) || !json[0]) return NextResponse.json({ error: 'DocuSeal error' }, { status: 500 })
 
     const assignorSubmitter = json.find(s => s.role === 'First Party') || json[0]
+
+    // PATCH the First Party submitter to explicitly set metadata (POST body metadata is ignored by DocuSeal)
+    await fetch(`${DOCUSEAL_BASE}/submitters/${assignorSubmitter.id}`, {
+      method: 'PATCH',
+      headers: dsHeaders(),
+      body: JSON.stringify({
+        metadata: {
+          assigneeEmail: buyerEmail,
+          assigneeName: buyerName || buyerEmail,
+        },
+      }),
+    })
+
     return NextResponse.json({ submission_id: assignorSubmitter.submission_id, assignor_slug: assignorSubmitter.slug })
   } catch {
     return NextResponse.json({ error: 'Failed to create contract' }, { status: 500 })
