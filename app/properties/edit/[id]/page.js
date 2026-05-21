@@ -977,13 +977,13 @@ export default function EditPropertyPage() {
                         setFormData(prev => ({ ...prev, contact_name: '', contact_phone: '' }));
                       }
                     }}
-                    className={`text-[12px] font-medium px-3 py-1.5 rounded border transition-colors ${
+                    className={`text-[13px] font-semibold px-4 py-2 rounded border transition-all duration-200 active:scale-[0.98] ${
                       useCustomContact
-                        ? 'bg-[#FEF0EF] border-[#F5C4C0] text-[#D03839]'
-                        : 'bg-[#FAFAF8] border-[#E8E8E4] text-[#737370] hover:border-[#1A1816]'
+                        ? 'bg-[#D03839] border-[#D03839] text-white hover:bg-[#E0493B] hover:border-[#E0493B]'
+                        : 'bg-white border-[#D03839] text-[#D03839] hover:bg-[#FEF0EF]'
                     }`}
                   >
-                    {useCustomContact ? 'Using custom contact' : 'Use different contact'}
+                    {useCustomContact ? 'Use profile contact' : 'Edit contact info'}
                   </button>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
