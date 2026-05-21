@@ -93,6 +93,8 @@ export default function EditPropertyPage() {
   });
 
   const [sellerType, setSellerType] = useState('owner');
+  const [sellerProfileContact, setSellerProfileContact] = useState({ name: '', phone: '' });
+  const [useCustomContact, setUseCustomContact] = useState(false);
   const [contractUpload, setContractUpload] = useState({
     url: null,
     key: null,
@@ -109,6 +111,14 @@ export default function EditPropertyPage() {
     if (userStr) {
       const user = JSON.parse(userStr);
       setUserId(user.id);
+      supabase.from('users').select('first_name, last_name, phone').eq('id', user.id).maybeSingle()
+        .then(({ data: profile }) => {
+          if (profile) {
+            const name = [profile.first_name, profile.last_name].filter(Boolean).join(' ');
+            const phone = profile.phone || '';
+            setSellerProfileContact({ name, phone });
+          }
+        });
     }
   }, []);
 
@@ -175,8 +185,13 @@ export default function EditPropertyPage() {
           social_description: data.social_description || '',
           social_image_url: data.social_image_url || '',
           contact_name: data.contact_name || '',
-          contact_phone: data.contact_phone || ''
+          contact_phone: data.contact_phone || '',
+          _savedContactName: data.contact_name || '',
+          _savedContactPhone: data.contact_phone || '',
         });
+
+        // If listing has contact info saved, treat it as custom until we know the seller's profile
+        if (data.contact_name || data.contact_phone) setUseCustomContact(true);
 
         // Set rejection reason and auto-navigate to the first tab with issues
         if (data.status === 'rejected' && data.rejection_reason) {
@@ -311,6 +326,22 @@ export default function EditPropertyPage() {
       setLoadingProperty(false);
     }
   };
+
+  // When seller profile loads, check if saved contact matches profile → if so, switch to "seller data" mode
+  useEffect(() => {
+    if (!sellerProfileContact.name && !sellerProfileContact.phone) return;
+    setFormData(prev => {
+      const savedName = prev._savedContactName || '';
+      const savedPhone = prev._savedContactPhone || '';
+      const matchesProfile = savedName === sellerProfileContact.name && savedPhone === sellerProfileContact.phone;
+      const isEmpty = !savedName && !savedPhone;
+      if (matchesProfile || isEmpty) {
+        setUseCustomContact(false);
+        return { ...prev, contact_name: sellerProfileContact.name, contact_phone: sellerProfileContact.phone };
+      }
+      return prev;
+    });
+  }, [sellerProfileContact.name, sellerProfileContact.phone]);
 
   const handleInputChange = (field, value) => {
     setFormData(prev => ({
@@ -935,8 +966,31 @@ export default function EditPropertyPage() {
 
               {/* Contact Info */}
               <div>
-                <h3 className="text-[15px] font-semibold text-[#1A1816] mb-1">Contact Info</h3>
-                <p className="text-[13px] text-[#737370] mb-4">How buyers can reach you about this listing.</p>
+                <div className="flex items-center justify-between mb-3">
+                  <div>
+                    <h3 className="text-[15px] font-semibold text-[#1A1816]">Contact Info</h3>
+                    <p className="text-[13px] text-[#737370] mt-0.5">How buyers can reach you about this listing.</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const next = !useCustomContact;
+                      setUseCustomContact(next);
+                      if (!next) {
+                        setFormData(prev => ({ ...prev, contact_name: sellerProfileContact.name, contact_phone: sellerProfileContact.phone }));
+                      } else {
+                        setFormData(prev => ({ ...prev, contact_name: '', contact_phone: '' }));
+                      }
+                    }}
+                    className={`text-[12px] font-medium px-3 py-1.5 rounded border transition-colors ${
+                      useCustomContact
+                        ? 'bg-[#FEF0EF] border-[#F5C4C0] text-[#D03839]'
+                        : 'bg-[#FAFAF8] border-[#E8E8E4] text-[#737370] hover:border-[#1A1816]'
+                    }`}
+                  >
+                    {useCustomContact ? 'Using custom contact' : 'Use different contact'}
+                  </button>
+                </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-[13px] font-semibold text-[#1A1816] mb-2">Contact Name</label>
@@ -944,8 +998,13 @@ export default function EditPropertyPage() {
                       type="text"
                       value={formData.contact_name || ''}
                       onChange={(e) => handleInputChange('contact_name', e.target.value)}
+                      readOnly={!useCustomContact}
                       placeholder="Your name or company"
-                      className="w-full px-4 py-3 border border-[#E8E8E4] rounded focus:border-[#D03839] focus:outline-none transition-colors text-[13px] text-[#1A1816]"
+                      className={`w-full px-4 py-3 border rounded text-[13px] text-[#1A1816] transition-colors ${
+                        useCustomContact
+                          ? 'border-[#E8E8E4] focus:border-[#D03839] focus:outline-none'
+                          : 'border-[#E8E8E4] bg-[#FAFAF8] text-[#737370] cursor-default outline-none'
+                      }`}
                     />
                   </div>
                   <div>
@@ -954,8 +1013,13 @@ export default function EditPropertyPage() {
                       type="tel"
                       value={formData.contact_phone || ''}
                       onChange={(e) => handleInputChange('contact_phone', e.target.value)}
+                      readOnly={!useCustomContact}
                       placeholder="+1 (555) 000-0000"
-                      className="w-full px-4 py-3 border border-[#E8E8E4] rounded focus:border-[#D03839] focus:outline-none transition-colors text-[13px] text-[#1A1816]"
+                      className={`w-full px-4 py-3 border rounded text-[13px] text-[#1A1816] transition-colors ${
+                        useCustomContact
+                          ? 'border-[#E8E8E4] focus:border-[#D03839] focus:outline-none'
+                          : 'border-[#E8E8E4] bg-[#FAFAF8] text-[#737370] cursor-default outline-none'
+                      }`}
                     />
                   </div>
                 </div>
