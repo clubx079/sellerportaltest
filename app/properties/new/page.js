@@ -106,16 +106,11 @@ export default function NewPropertyPage() {
     if (!userStr) return;
     const user = JSON.parse(userStr);
 
-    // Fetch seller's profile to pre-fill contact fields
-    supabase.from('users').select('first_name, last_name, phone').eq('id', user.id).maybeSingle()
-      .then(({ data: profile }) => {
-        if (profile) {
-          const name = [profile.first_name, profile.last_name].filter(Boolean).join(' ');
-          const phone = profile.phone || '';
-          setSellerProfileContact({ name, phone });
-          setFormData(prev => ({ ...prev, contact_name: name, contact_phone: phone }));
-        }
-      });
+    // Pre-fill contact fields from login data
+    const name = user.contactPersonName || user.businessName || '';
+    const phone = user.phone || '';
+    setSellerProfileContact({ name, phone });
+    setFormData(prev => ({ ...prev, contact_name: name, contact_phone: phone }));
 
     // Resolve effective seller_id (org owner when in team workspace)
     fetch('/api/team/workspaces', { headers: { Authorization: `Bearer ${user.id}` } })

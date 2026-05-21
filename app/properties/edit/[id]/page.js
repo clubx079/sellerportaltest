@@ -111,14 +111,9 @@ export default function EditPropertyPage() {
     if (userStr) {
       const user = JSON.parse(userStr);
       setUserId(user.id);
-      supabase.from('users').select('first_name, last_name, phone').eq('id', user.id).maybeSingle()
-        .then(({ data: profile }) => {
-          if (profile) {
-            const name = [profile.first_name, profile.last_name].filter(Boolean).join(' ');
-            const phone = profile.phone || '';
-            setSellerProfileContact({ name, phone });
-          }
-        });
+      const name = user.contactPersonName || user.businessName || '';
+      const phone = user.phone || '';
+      setSellerProfileContact({ name, phone });
     }
   }, []);
 
