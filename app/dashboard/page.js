@@ -102,11 +102,26 @@ export default function DashboardPage() {
       const currentUser = JSON.parse(userStr);
       const currentUserId = currentUser.id;
 
-      const { data: sellerData } = await supabase.from("seller_applications").select("temp_seller_id").eq("id", currentUserId).maybeSingle();
-      const tempSellerId = sellerData?.temp_seller_id ?? null;
+      // Resolve effective seller_id for active workspace
+      let effectiveUserId = currentUserId;
+      try {
+        const wsRes = await fetch('/api/team/workspace', { headers: { Authorization: `Bearer ${currentUserId}` } });
+        const wsData = await wsRes.json();
+        if (wsData?.effectiveId) effectiveUserId = wsData.effectiveId;
+      } catch {}
+
+      const { data: sellerData } = await supabase.from("seller_applications").select("temp_seller_id, contact_person_name").eq("id", effectiveUserId).maybeSingle();
+      const tempSellerId = sellerData?.temp_seller_id;
+
+      // Backfill contactPersonName if missing (e.g. users who signed up via onboarding)
+      if (sellerData?.contact_person_name && !currentUser.contactPersonName) {
+        const updated = { ...currentUser, contactPersonName: sellerData.contact_person_name };
+        localStorage.setItem("seller_user", JSON.stringify(updated));
+        setUser(updated);
+      }
 
       // Manual properties
-      const { data: manualList = [] } = await supabase.from("properties").select("*").eq("seller_id", currentUserId).order("created_at", { ascending: false });
+      const { data: manualList = [] } = await supabase.from("properties").select("*").eq("seller_id", effectiveUserId).order("created_at", { ascending: false });
       let manualWithImages = manualList || [];
       if (manualWithImages.length > 0) {
         const ids = manualWithImages.map(p => p.id);
@@ -139,7 +154,7 @@ export default function DashboardPage() {
       // Views
       let totalViews = 0, viewsThisWeek = 0;
       try {
-        const res = await fetch(`/api/seller/dashboard-stats?userId=${encodeURIComponent(currentUserId)}`);
+        const res = await fetch(`/api/seller/dashboard-stats?userId=${encodeURIComponent(effectiveUserId)}`);
         const data = await res.json();
         totalViews = Number(data.totalViews) || 0;
         viewsThisWeek = Number(data.viewsLast7Days || data.viewsLast30Days) || 0;
@@ -148,7 +163,7 @@ export default function DashboardPage() {
       // Conversations
       let totalInquiries = 0;
       try {
-        const res = await fetch("/api/seller/chat?action=get_conversations", { headers: { Authorization: `Bearer ${currentUserId}` } });
+        const res = await fetch("/api/seller/chat?action=get_conversations", { headers: { Authorization: `Bearer ${effectiveUserId}` } });
         const data = await res.json();
         const conversations = data.conversations || [];
         totalInquiries = conversations.length;
@@ -158,7 +173,7 @@ export default function DashboardPage() {
       // Offers
       let offersReceived = 0, offersThisWeek = 0;
       try {
-        const oRes = await fetch('/api/seller/offers', { headers: { Authorization: `Bearer ${currentUserId}` } });
+        const oRes = await fetch('/api/seller/offers', { headers: { Authorization: `Bearer ${effectiveUserId}` } });
         const oData = await oRes.json();
         const allOffers = oData.offers || [];
         offersReceived = allOffers.length;
@@ -176,7 +191,29 @@ export default function DashboardPage() {
         closedThisMonth: 0,
         trashProperties: combined.filter(p => p._normalizedStatus === "archived").length,
       });
-      setRecentProperties(activeList.slice(0, 8));
+
+      // Enrich top 8 listings with per-property views, saves, offers
+      const top8 = activeList.slice(0, 8);
+      let enrichedListings = top8;
+      if (top8.length > 0) {
+        const ids = top8.map(p => p.id);
+        const [analyticsRes, favRes, offersRes] = await Promise.all([
+          supabase.from('property_analytics').select('property_id, page_views').in('property_id', ids),
+          supabase.from('user_favorites').select('property_id').in('property_id', ids),
+          supabase.from('offers').select('property_id').in('property_id', ids),
+        ]);
+        const viewsMap = {}, savesMap = {}, offersMap = {};
+        for (const r of analyticsRes.data || []) viewsMap[r.property_id] = (viewsMap[r.property_id] || 0) + (Number(r.page_views) || 0);
+        for (const r of favRes.data || []) savesMap[r.property_id] = (savesMap[r.property_id] || 0) + 1;
+        for (const r of offersRes.data || []) offersMap[r.property_id] = (offersMap[r.property_id] || 0) + 1;
+        enrichedListings = top8.map(p => ({
+          ...p,
+          view_count: viewsMap[p.id] || 0,
+          saves_count: savesMap[p.id] || 0,
+          offers_count: offersMap[p.id] || 0,
+        }));
+      }
+      setRecentProperties(enrichedListings);
     } catch (error) { console.error("Error fetching dashboard data:", error); }
     finally { setLoading(false); }
   };
@@ -252,8 +289,8 @@ export default function DashboardPage() {
             <p className="text-[14px] text-[#737370] mt-0.5">{getCurrentDate()}</p>
           </div>
           <div className="flex items-center gap-3">
-            {/* Notification Bell */}
-            <div className="relative" ref={notifRef}>
+            {/* Notification Bell — desktop only (mobile bell is in DashboardLayout navbar) */}
+            <div className="relative hidden lg:block" ref={notifRef}>
               <button
                 onClick={() => setNotifOpen(prev => !prev)}
                 className="relative p-2.5 rounded border border-[#E8E8E4] hover:bg-[#FAFAF8] transition-colors duration-200"
@@ -266,7 +303,7 @@ export default function DashboardPage() {
                 )}
               </button>
               {notifOpen && (
-                <div className="fixed top-[70px] left-3 right-3 lg:absolute lg:top-full lg:left-auto lg:right-0 lg:mt-2 lg:w-[380px] bg-white border border-[#E8E8E4] rounded-lg shadow-xl z-[200] overflow-hidden">
+                <div className="fixed top-[70px] left-3 right-3 lg:absolute lg:top-full lg:left-auto lg:right-0 lg:mt-2 lg:w-[380px] bg-white border border-[#E8E8E4] rounded shadow-xl z-[200] overflow-hidden">
                   <div className="flex items-center justify-between px-4 py-3 border-b border-[#E8E8E4]">
                     <span className="text-[13px] font-semibold text-[#1A1816]">Notifications</span>
                     {notifUnread > 0 && (
@@ -290,7 +327,9 @@ export default function DashboardPage() {
                     ) : (
                       notifications.map(n => {
                         const convNumeric = uuidToNumericConvId(n.related_conversation_id);
-                        const href = convNumeric ? `/messages?conversation=${convNumeric}` : '/messages';
+                        const href = (n.type === 'listing_approved' || n.type === 'listing_rejected')
+                          ? '/properties'
+                          : convNumeric ? `/messages?conversation=${convNumeric}` : '/messages';
                         return (
                           <Link
                             key={n.id}
@@ -322,9 +361,9 @@ export default function DashboardPage() {
                 </div>
               )}
             </div>
-            <Link href="/properties/new" className="flex items-center gap-2 px-4 py-2.5 bg-[#1A1816] text-white text-[14px] font-semibold rounded hover:bg-[#2a2826] transition-colors duration-200">
+            <Link href="/properties/new" className="hidden lg:flex items-center gap-2 px-4 py-2.5 bg-[#1A1816] text-white text-[14px] font-semibold rounded hover:bg-[#2a2826] transition-colors duration-200">
               <PlusCircle className="w-4 h-4" />
-              Post a deal
+              Post a Deal
             </Link>
           </div>
         </div>
@@ -366,7 +405,7 @@ export default function DashboardPage() {
           <div className="xl:col-span-3 bg-white rounded border border-[#E8E8E4] overflow-hidden">
             {/* Header */}
             <div className="flex items-center justify-between px-4 py-3 border-b border-[#E8E8E4]">
-              <h2 className="text-[14px] font-normal text-[#1A1816]">My listings</h2>
+              <h2 className="text-[14px] font-normal text-[#1A1816]">My Listings</h2>
               <Link href="/properties" className="text-[13px] font-medium text-[#737370] hover:text-[#1A1816] transition-colors duration-200">View all</Link>
             </div>
 
@@ -380,7 +419,7 @@ export default function DashboardPage() {
                 <Building2 className="w-8 h-8 text-[#A8A8A4] mx-auto mb-3" />
                 <p className="text-[14px] font-medium text-[#444441] mb-3">No listings yet</p>
                 <Link href="/properties/new" className="inline-flex items-center gap-2 px-4 py-2 bg-[#D03839] text-white text-[13px] font-semibold rounded hover:bg-[#E0493B] transition-colors duration-200">
-                  <PlusCircle className="w-4 h-4" /> Post a deal
+                  <PlusCircle className="w-4 h-4" /> Post a Deal
                 </Link>
               </div>
             ) : (

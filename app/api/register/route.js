@@ -102,7 +102,7 @@ export async function POST(request) {
         deals_per_month: 'not_specified',
         primary_markets: property_address || '',
         property_types: ['residential'],
-        status: 'approved',
+        status: 'onboarding',
         temp_seller_id: tokenRecord.temp_seller_id, // Link to temp seller
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
@@ -116,20 +116,6 @@ export async function POST(request) {
         success: false,
         error: 'Failed to create seller application'
       }, { status: 500 })
-    }
-
-    // Mark magic link token as used directly in Supabase
-    const { error: updateError } = await supabase
-      .from('magic_link_tokens')
-      .update({
-        used: true,
-        used_at: new Date().toISOString()
-      })
-      .eq('token', token)
-
-    if (updateError) {
-      console.error('Failed to mark token as used:', updateError)
-      // Don't fail the registration if this fails
     }
 
     // Return success with user data (without password)

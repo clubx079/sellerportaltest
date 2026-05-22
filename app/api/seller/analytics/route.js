@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { getWorkspaceSellerId } from '@/lib/workspace';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -87,10 +88,11 @@ function buildDailyMap(period) {
 export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId');
+    const rawUserId = searchParams.get('userId');
     const period = searchParams.get('period') || 'last30days';
 
-    if (!userId) return NextResponse.json({ error: 'Missing userId' }, { status: 400 });
+    if (!rawUserId) return NextResponse.json({ error: 'Missing userId' }, { status: 400 });
+    const { effectiveId: userId } = await getWorkspaceSellerId(rawUserId);
 
     // Get all property IDs for this seller
     const [{ data: manualRows, error: manualErr }, { data: sellerRow }] = await Promise.all([

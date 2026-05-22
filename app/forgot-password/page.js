@@ -115,95 +115,108 @@ export default function ForgotPasswordPage() {
     }
   }
 
+  const inputCls = "block w-full min-h-[44px] sm:h-12 px-4 rounded border border-[#D4D4CF] bg-white text-[#1A1816] placeholder:text-[#A8A8A4] text-base focus:outline-none focus:ring-2 focus:ring-[#D03839]/20 focus:border-[#D03839] transition-colors"
+  const btnPrimaryCls = "w-full min-h-[44px] sm:h-12 rounded bg-[#D03839] hover:bg-[#E0493B] text-white text-sm font-semibold disabled:opacity-50 transition-colors focus:outline-none focus:ring-2 focus:ring-[#D03839] focus:ring-offset-2"
+  const labelCls = "block text-sm font-medium text-[#444441] mb-1.5 sm:mb-2"
+
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col relative">
+    <div className="min-h-screen bg-[#FAFAF8] flex flex-col relative">
       {/* Logo top left – same as login */}
       <Link
         href="/"
         className="absolute top-6 left-6 sm:left-8 z-20 flex items-center gap-2 transition-opacity hover:opacity-80"
       >
-        <div className="h-9 w-[120px] flex items-center justify-center shrink-0">
+        <div className="h-14 w-[160px] flex items-center justify-center shrink-0">
           {!logoError ? (
             <Image
               src="/assets/logo.svg"
               alt="DeelMap"
-              width={120}
-              height={36}
-              className="h-9 w-auto object-contain"
+              width={160}
+              height={56}
+              className="h-14 w-auto object-contain"
               priority
               onError={() => setLogoError(true)}
             />
           ) : (
-            <div className="w-10 h-10 rounded-xl bg-slate-900 flex items-center justify-center">
+            <div className="w-10 h-10 rounded bg-[#1A1816] flex items-center justify-center">
               <MapPin className="w-5 h-5 text-white" />
             </div>
           )}
         </div>
-        <span className="text-xl font-bold text-slate-900 uppercase tracking-wide -translate-y-0.5">Seller</span>
       </Link>
 
       <div className="flex-1 flex items-center justify-center px-4 py-10 pt-24">
         <div className="w-full max-w-md">
-          <Link href="/login" className="inline-flex items-center gap-2 text-slate-600 hover:text-slate-900 mb-4">
+          <Link href="/login" className="inline-flex items-center gap-2 text-sm text-[#444441] hover:text-[#1A1816] mb-5 transition-colors">
             <ArrowLeft className="w-4 h-4" />
             Back to login
           </Link>
 
-          <div className="bg-white border border-slate-200 rounded-2xl p-7 shadow-sm">
+          <div className="bg-white border-2 border-[#E8E8E4] rounded p-6 sm:p-8 shadow-lg">
             <div className="text-center mb-6">
-              <div className="w-14 h-14 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-3">
-                <Lock className="w-7 h-7 text-slate-700" />
+              <div className="w-12 h-12 rounded bg-[#F3F3F1] border border-[#E8E8E4] flex items-center justify-center mx-auto mb-4">
+                <Lock className="w-5 h-5 text-[#444441]" />
               </div>
-              <h1 className="text-2xl font-semibold text-slate-900">Forgot Password</h1>
-              <p className="text-sm text-slate-600 mt-1">
+              <h1 className="text-2xl font-bold text-[#1A1816]">Forgot Password</h1>
+              <p className="text-sm text-[#737370] mt-1">
                 {step === "request" && "Enter your seller email to get a verification code."}
                 {step === "verify" && "Enter the 6-digit code sent to your email."}
                 {step === "reset" && "Set your new password."}
               </p>
             </div>
 
-            {error && <div className="mb-4 text-sm text-red-700 bg-red-50 border border-red-100 rounded-lg px-3 py-2">{error}</div>}
-            {message && <div className="mb-4 text-sm text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-lg px-3 py-2">{message}</div>}
+            {error && (
+              <div className="mb-4 text-sm text-red-600 bg-red-50 border border-red-200 rounded px-3 py-2.5">
+                {error}
+              </div>
+            )}
+            {message && (
+              <div className="mb-4 text-sm text-[#0F6E56] bg-[#E4F5EC] border border-[#9FDBB8] rounded px-3 py-2.5">
+                {message}
+              </div>
+            )}
 
             {step === "request" && (
-              <form onSubmit={requestCode} className="space-y-4">
+              <form onSubmit={requestCode} className="space-y-4 sm:space-y-5">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Email</label>
+                  <label className={labelCls}>Email address</label>
                   <input
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary"
+                    placeholder="Enter your email"
+                    className={inputCls}
                     required
                   />
                 </div>
-                <button type="submit" disabled={loading} className="w-full py-3 rounded-xl bg-primary text-white font-medium hover:bg-primary-700 disabled:opacity-60">
+                <button type="submit" disabled={loading} className={btnPrimaryCls}>
                   {loading ? "Sending..." : "Send verification code"}
                 </button>
               </form>
             )}
 
             {step === "verify" && (
-              <form onSubmit={verifyCode} className="space-y-4">
+              <form onSubmit={verifyCode} className="space-y-4 sm:space-y-5">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Verification code</label>
+                  <label className={labelCls}>Verification code</label>
                   <input
                     type="text"
                     value={otp}
                     onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                    className="w-full px-4 py-3 border border-slate-300 rounded-xl text-center tracking-[0.35em] text-xl focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary"
+                    placeholder="000000"
+                    className={`${inputCls} text-center tracking-[0.35em] text-xl`}
                     maxLength={6}
                     required
                   />
                 </div>
-                <button type="submit" disabled={loading || otp.length !== 6} className="w-full py-3 rounded-xl bg-primary text-white font-medium hover:bg-primary-700 disabled:opacity-60">
+                <button type="submit" disabled={loading || otp.length !== 6} className={btnPrimaryCls}>
                   {loading ? "Verifying..." : "Verify code"}
                 </button>
                 <button
                   type="button"
                   onClick={handleResendCode}
                   disabled={resendLoading || resendCooldown > 0}
-                  className="w-full text-sm font-medium text-slate-600 hover:text-slate-900 disabled:opacity-50 disabled:cursor-not-allowed py-2"
+                  className="w-full text-sm font-medium text-[#444441] hover:text-[#1A1816] disabled:opacity-50 disabled:cursor-not-allowed py-2 transition-colors"
                 >
                   {resendLoading ? "Sending..." : resendCooldown > 0 ? `Resend code in ${resendCooldown}s` : "Resend code"}
                 </button>
@@ -211,30 +224,32 @@ export default function ForgotPasswordPage() {
             )}
 
             {step === "reset" && (
-              <form onSubmit={resetPassword} className="space-y-4">
+              <form onSubmit={resetPassword} className="space-y-4 sm:space-y-5">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">New password</label>
+                  <label className={labelCls}>New password</label>
                   <input
                     type="password"
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
-                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary"
+                    placeholder="Min. 6 characters"
+                    className={inputCls}
                     minLength={6}
                     required
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Confirm new password</label>
+                  <label className={labelCls}>Confirm new password</label>
                   <input
                     type="password"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary"
+                    placeholder="Re-enter your password"
+                    className={inputCls}
                     minLength={6}
                     required
                   />
                 </div>
-                <button type="submit" disabled={loading} className="w-full py-3 rounded-xl bg-primary text-white font-medium hover:bg-primary-700 disabled:opacity-60">
+                <button type="submit" disabled={loading} className={btnPrimaryCls}>
                   {loading ? "Resetting..." : "Reset password"}
                 </button>
               </form>

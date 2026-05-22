@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { Plus, Edit2, Trash2, Eye, Search, X, Building2, ChevronLeft, ChevronRight, MapPin, DollarSign, RotateCcw, BarChart2, Link2, Home, FileEdit } from 'lucide-react';
+import { Plus, Edit2, Trash2, Search, X, Building2, ChevronLeft, ChevronRight, ChevronDown, MapPin, DollarSign, RotateCcw, BarChart2, Link2, Home, FileEdit, Eye, Zap } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import DeleteConfirmModal from '@/components/properties/DeleteConfirmModal';
 import PropertyViewModal from '@/components/properties/PropertyViewModal';
@@ -28,9 +28,14 @@ const PropertiesManagement = () => {
   const [filterPropertyStatus, setFilterPropertyStatus] = useState('');
   const [statusUpdatingId, setStatusUpdatingId] = useState(null);
   const [userId, setUserId] = useState(null);
+  const [effectiveUserId, setEffectiveUserId] = useState(null);
+  const [workspaceRole, setWorkspaceRole] = useState(null);
+  const [workspacePerms, setWorkspacePerms] = useState(null);
   const [showUTMModal, setShowUTMModal] = useState(false);
   const [propertyForUTM, setPropertyForUTM] = useState(null);
   const [selectedPropertyRaw, setSelectedPropertyRaw] = useState(null); // raw property for UTM (slug/id)
+  const [subBlockMsg, setSubBlockMsg] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
   const searchParams = useSearchParams();
   const viewFromUrl = searchParams.get('view') === 'trash' ? 'trash' : 'active';
   const [viewMode, setViewMode] = useState(viewFromUrl); // 'active' or 'trash'
@@ -41,18 +46,35 @@ const PropertiesManagement = () => {
   }, [viewFromUrl]);
 
   useEffect(() => {
-    const userStr = localStorage.getItem('seller_user');
-    if (userStr) {
-      const user = JSON.parse(userStr);
-      setUserId(user.id);
+    const msg = sessionStorage.getItem('listingSuccess');
+    if (msg) {
+      setSuccessMsg(msg);
+      sessionStorage.removeItem('listingSuccess');
     }
   }, []);
 
   useEffect(() => {
-    if (userId) {
+    const userStr = localStorage.getItem('seller_user');
+    if (userStr) {
+      const user = JSON.parse(userStr);
+      setUserId(user.id);
+      // Resolve workspace effective ID and role
+      fetch('/api/team/workspaces', { headers: { Authorization: `Bearer ${user.id}` } })
+        .then(r => r.json())
+        .then(data => {
+          setEffectiveUserId(data.current?.effectiveSellerId || user.id)
+          setWorkspaceRole(data.current?.role || 'admin')
+          setWorkspacePerms(data.current?.permissions || null)
+        })
+        .catch(() => { setEffectiveUserId(user.id); setWorkspaceRole('admin'); });
+    }
+  }, []);
+
+  useEffect(() => {
+    if (effectiveUserId) {
       fetchProperties();
     }
-  }, [userId, viewMode]);
+  }, [effectiveUserId, viewMode]);
 
   const fetchProperties = async () => {
     try {
@@ -62,14 +84,14 @@ const PropertiesManagement = () => {
       const { data: sellerData } = await supabase
         .from('seller_applications')
         .select('temp_seller_id')
-        .eq('id', userId)
+        .eq('id', effectiveUserId)
         .maybeSingle();
 
       // 1) Manual listings: from properties table (seller_id = current seller)
       const { data: manualList, error: manualError } = await supabase
         .from('properties')
         .select('*')
-        .eq('seller_id', userId)
+        .eq('seller_id', effectiveUserId)
         .order('created_at', { ascending: false });
 
       if (manualError) {
@@ -144,6 +166,25 @@ const PropertiesManagement = () => {
 
       // Sort by created_at descending
       filteredData.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+
+      // Auto-clear expired add-ons for manual properties
+      const now = new Date()
+      const expiredIds = filteredData
+        .filter(p => p._source === 'manual')
+        .filter(p =>
+          (p.is_highlighted && p.highlight_ends_at && new Date(p.highlight_ends_at) < now) ||
+          (p.is_boosted && p.boost_ends_at && new Date(p.boost_ends_at) < now) ||
+          (p.is_homepage_featured && p.homepage_feature_ends_at && new Date(p.homepage_feature_ends_at) < now)
+        )
+      for (const p of expiredIds) {
+        const clears = {}
+        if (p.is_highlighted && p.highlight_ends_at && new Date(p.highlight_ends_at) < now) { clears.is_highlighted = false; clears.highlight_ends_at = null }
+        if (p.is_boosted && p.boost_ends_at && new Date(p.boost_ends_at) < now) { clears.is_boosted = false; clears.boost_ends_at = null }
+        if (p.is_homepage_featured && p.homepage_feature_ends_at && new Date(p.homepage_feature_ends_at) < now) { clears.is_homepage_featured = false; clears.homepage_feature_ends_at = null }
+        supabase.from('properties').update(clears).eq('id', p.id).then(() => {})
+        Object.assign(p, clears)
+      }
+
       setProperties(filteredData);
     } catch (error) {
       console.error('Error fetching properties:', error);
@@ -222,13 +263,13 @@ const PropertiesManagement = () => {
           .from('properties')
           .update({ status: 'archived', property_status: 'unavailable' })
           .eq('id', selectedProperty.id)
-          .eq('seller_id', userId);
+          .eq('seller_id', effectiveUserId);
         if (error) throw error;
       } else {
         const { data: sellerRow } = await supabase
           .from('seller_applications')
           .select('temp_seller_id')
-          .eq('id', userId)
+          .eq('id', effectiveUserId)
           .maybeSingle();
         const tempSellerId = sellerRow?.temp_seller_id;
         if (!tempSellerId) {
@@ -241,6 +282,18 @@ const PropertiesManagement = () => {
           .eq('id', selectedProperty.id)
           .eq('temp_seller_id', tempSellerId);
         if (error) throw error;
+      }
+      // Decrement listings_used_this_period when moved to trash
+      const { data: planRow } = await supabase
+        .from('seller_plans')
+        .select('id, listings_used_this_period')
+        .eq('seller_id', effectiveUserId)
+        .maybeSingle()
+      if (planRow && planRow.listings_used_this_period > 0) {
+        await supabase
+          .from('seller_plans')
+          .update({ listings_used_this_period: planRow.listings_used_this_period - 1 })
+          .eq('id', planRow.id)
       }
       setProperties(prev => prev.filter(p => p.id !== selectedProperty.id));
       setShowArchiveModal(false);
@@ -256,15 +309,15 @@ const PropertiesManagement = () => {
       if (property._source === 'manual') {
         const { error } = await supabase
           .from('properties')
-          .update({ status: 'draft', property_status: 'available' })
+          .update({ status: 'inactive', property_status: 'unavailable' })
           .eq('id', property.id)
-          .eq('seller_id', userId);
+          .eq('seller_id', effectiveUserId);
         if (error) throw error;
       } else {
         const { data: sellerRow } = await supabase
           .from('seller_applications')
           .select('temp_seller_id')
-          .eq('id', userId)
+          .eq('id', effectiveUserId)
           .maybeSingle();
         const tempSellerId = sellerRow?.temp_seller_id;
         if (!tempSellerId) {
@@ -277,6 +330,18 @@ const PropertiesManagement = () => {
           .eq('id', property.id)
           .eq('temp_seller_id', tempSellerId);
         if (error) throw error;
+      }
+      // Increment listings_used_this_period when restored from trash
+      const { data: planRow } = await supabase
+        .from('seller_plans')
+        .select('id, listings_used_this_period')
+        .eq('seller_id', effectiveUserId)
+        .maybeSingle()
+      if (planRow) {
+        await supabase
+          .from('seller_plans')
+          .update({ listings_used_this_period: (planRow.listings_used_this_period ?? 0) + 1 })
+          .eq('id', planRow.id)
       }
       setProperties(prev => prev.filter(p => p.id !== property.id));
     } catch (error) {
@@ -303,13 +368,25 @@ const PropertiesManagement = () => {
           .from('properties')
           .delete()
           .eq('id', selectedProperty.id)
-          .eq('seller_id', userId);
+          .eq('seller_id', effectiveUserId);
         if (error) throw error;
+        // Decrement listings_used_this_period
+        const { data: planRow } = await supabase
+          .from('seller_plans')
+          .select('id, listings_used_this_period')
+          .eq('seller_id', effectiveUserId)
+          .maybeSingle()
+        if (planRow && planRow.listings_used_this_period > 0) {
+          await supabase
+            .from('seller_plans')
+            .update({ listings_used_this_period: planRow.listings_used_this_period - 1 })
+            .eq('id', planRow.id)
+        }
       } else {
         const { data: sellerRow } = await supabase
           .from('seller_applications')
           .select('temp_seller_id')
-          .eq('id', userId)
+          .eq('id', effectiveUserId)
           .maybeSingle();
         const tempSellerId = sellerRow?.temp_seller_id;
         if (!tempSellerId) {
@@ -337,12 +414,32 @@ const PropertiesManagement = () => {
     }
   };
 
-  const handleToggleActive = async (property) => {
+  const handleToggleActive = async (property, forceStatus) => {
     if (!property) return;
     const current = (property.status || 'active').toLowerCase();
-    const nextStatus = current === 'inactive' ? 'active' : 'inactive';
+    const nextStatus = forceStatus || (current === 'inactive' ? 'active' : 'inactive');
     const isManual = property._source === 'manual';
     const nextPropertyStatus = nextStatus === 'inactive' ? 'unavailable' : 'available';
+
+    // Block activation if subscription has ended
+    if (nextStatus === 'active') {
+      const { data: plan } = await supabase
+        .from('seller_plans')
+        .select('status')
+        .eq('seller_id', effectiveUserId)
+        .maybeSingle()
+
+      if (!plan || plan.status === 'canceled') {
+        setSubBlockMsg('Your subscription has ended. Renew your subscription to activate listings.')
+        setTimeout(() => setSubBlockMsg(''), 5000)
+        return
+      }
+      if (plan.status === 'past_due') {
+        setSubBlockMsg('Your payment is overdue. Update your payment method on the Billing page to activate listings.')
+        setTimeout(() => setSubBlockMsg(''), 5000)
+        return
+      }
+    }
 
     try {
       setStatusUpdatingId(`${property._source}-${property.id}`);
@@ -351,13 +448,13 @@ const PropertiesManagement = () => {
           .from('properties')
           .update({ status: nextStatus, property_status: nextPropertyStatus })
           .eq('id', property.id)
-          .eq('seller_id', userId);
+          .eq('seller_id', effectiveUserId);
         if (error) throw error;
       } else {
         const { data: sellerRow } = await supabase
           .from('seller_applications')
           .select('temp_seller_id')
-          .eq('id', userId)
+          .eq('id', effectiveUserId)
           .maybeSingle();
         const tempSellerId = sellerRow?.temp_seller_id;
         if (!tempSellerId) {
@@ -395,11 +492,15 @@ const PropertiesManagement = () => {
       case 'draft':
       case 'pending':
         return 'bg-yellow-50 text-yellow-700 border-yellow-200';
+      case 'under_review':
+        return 'bg-orange-50 text-orange-700 border-orange-200';
+      case 'rejected':
+        return 'bg-[#FEF3E2] text-[#B5620A] border-[#F3C97D]';
       case 'archived':
       case 'inactive':
-        return 'bg-red-50 text-red-700 border-red-200';
+        return 'bg-[#E8E8E4] text-[#737370] border-[#E8E8E4]';
       default:
-        return 'bg-gray-100 text-gray-700 border-gray-200';
+        return 'bg-[#E8E8E4] text-[#444441] border-[#E8E8E4]';
     }
   };
 
@@ -414,7 +515,7 @@ const PropertiesManagement = () => {
       case 'under_contract':
         return 'bg-purple-50 text-purple-700 border-purple-200';
       default:
-        return 'bg-gray-100 text-gray-700 border-gray-200';
+        return 'bg-[#E8E8E4] text-[#444441] border-[#E8E8E4]';
     }
   };
 
@@ -434,6 +535,45 @@ const PropertiesManagement = () => {
     const sorted = (property.property_photos || []).sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0));
     return sorted[0]?.photo_url || null;
   };
+
+  const daysLeft = (endsAt) => {
+    if (!endsAt) return null
+    const diff = Math.ceil((new Date(endsAt) - new Date()) / (1000 * 60 * 60 * 24))
+    return diff > 0 ? diff : 0
+  }
+
+  const AddonTags = ({ property }) => {
+    if (property._source !== 'manual') return null
+    const isBundle = property.is_highlighted && property.is_boosted
+    const tags = []
+    if (isBundle) {
+      const days = daysLeft(property.highlight_ends_at || property.boost_ends_at)
+      tags.push({ label: days != null ? `Bundle · ${days}d` : 'Bundle', cls: 'bg-purple-50 text-purple-700 border-purple-200' })
+    } else {
+      if (property.is_highlighted) {
+        const days = daysLeft(property.highlight_ends_at)
+        tags.push({ label: days != null ? `Highlighted · ${days}d` : 'Highlighted', cls: 'bg-[#FEF0EF] text-[#D03839] border-[#F5C0BF]' })
+      }
+      if (property.is_boosted) {
+        const days = daysLeft(property.boost_ends_at)
+        tags.push({ label: days != null ? `Boosted · ${days}d` : 'Boosted', cls: 'bg-[#EEF2FF] text-[#4F46E5] border-[#C7D2FE]' })
+      }
+    }
+    if (property.is_homepage_featured) {
+      const days = daysLeft(property.homepage_feature_ends_at)
+      tags.push({ label: days != null ? `Featured · ${days}d` : 'Featured', cls: 'bg-[#E4F5EC] text-[#0F6E56] border-[#B6E4CE]' })
+    }
+    if (!tags.length) return <span className="text-[10px] text-[#A8A8A4]">—</span>
+    return (
+      <div className="flex flex-wrap gap-1">
+        {tags.map(t => (
+          <span key={t.label} className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium border ${t.cls}`}>
+            {t.label}
+          </span>
+        ))}
+      </div>
+    )
+  }
 
   // Calculate stats (active = active or published)
   const totalProperties = properties.length;
@@ -455,42 +595,44 @@ const PropertiesManagement = () => {
       {/* Top row: Title (left) | Active/Trash (center) | Add Property (right) — same on mobile and desktop */}
       <div className="grid grid-cols-3 items-center gap-3 md:gap-4">
         <div className="min-w-0">
-          <h1 className="text-lg md:text-xl font-semibold tracking-tight text-gray-900 truncate">Properties</h1>
+          <h1 className="text-lg md:text-xl font-semibold tracking-tight text-[#1A1816] truncate">Properties</h1>
         </div>
         <div className="flex justify-center">
-          <div className="flex items-center gap-0.5 p-1 rounded-xl bg-gray-100 border border-gray-200/80">
+          <div className="flex items-center gap-0.5 p-1 rounded bg-[#E8E8E4] border border-[#E8E8E4]/80">
             <button
               onClick={() => setViewModeAndUrl('active')}
-              className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all duration-200 ${
+              className={`px-3 py-1.5 text-xs font-semibold rounded transition-all duration-200 ${
                 viewMode === 'active'
-                  ? 'bg-white text-primary shadow-sm border border-gray-200/80'
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50/80'
+                  ? 'bg-white text-primary shadow-sm border border-[#E8E8E4]/80'
+                  : 'text-[#444441] hover:text-[#1A1816] hover:bg-[#FAFAF8]/80'
               }`}
             >
               Active
             </button>
             <button
               onClick={() => setViewModeAndUrl('trash')}
-              className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all duration-200 ${
+              className={`px-3 py-1.5 text-xs font-semibold rounded transition-all duration-200 ${
                 viewMode === 'trash'
-                  ? 'bg-white text-brandRed shadow-sm border border-gray-200/80'
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50/80'
+                  ? 'bg-white text-brandRed shadow-sm border border-[#E8E8E4]/80'
+                  : 'text-[#444441] hover:text-[#1A1816] hover:bg-[#FAFAF8]/80'
               }`}
             >
               Trash
             </button>
           </div>
         </div>
-        <div className="flex justify-end">
-          <button
-            onClick={() => router.push('/properties/new')}
-            className="flex items-center gap-1.5 bg-[#D03839] hover:bg-[#E0493B] text-white px-3 py-2 rounded text-[13px] font-semibold transition-colors shrink-0"
-          >
-            <Plus size={14} />
-            <span className="hidden sm:inline">Add Property</span>
-            <span className="sm:hidden">Add</span>
-          </button>
-        </div>
+        {(workspaceRole === 'admin' || workspacePerms?.listings_create) && (
+          <div className="flex justify-end">
+            <button
+              onClick={() => router.push('/properties/new')}
+              className="flex items-center gap-1.5 bg-[#D03839] hover:bg-[#E0493B] text-white px-3 py-2 rounded text-[13px] font-semibold transition-colors shrink-0"
+            >
+              <Plus size={14} />
+              <span className="hidden sm:inline">Post a Deal</span>
+              <span className="sm:hidden">Post</span>
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Stats: only on Active view; minimal and professional. Trash view shows a single summary line. */}
@@ -529,138 +671,189 @@ const PropertiesManagement = () => {
           </button>
         </div>
       ) : (
-        <div className="bg-white rounded-lg border border-gray-200 px-4 py-3">
-          <p className="text-sm text-gray-600"><span className="font-semibold text-gray-900">{totalProperties}</span> {totalProperties === 1 ? 'listing' : 'listings'} in trash</p>
+        <div className="bg-white rounded border border-[#E8E8E4] px-4 py-3">
+          <p className="text-sm text-[#444441]"><span className="font-semibold text-[#1A1816]">{totalProperties}</span> {totalProperties === 1 ? 'listing' : 'listings'} in trash</p>
+        </div>
+      )}
+
+      {/* Publish success banner */}
+      {successMsg && (
+        <div className="flex items-center justify-between p-3 bg-[#E4F5EC] border border-[#A3D9B8] rounded text-[13px] text-[#0F6E56]">
+          <span>{successMsg}</span>
+          <button onClick={() => setSuccessMsg('')} className="ml-3 text-[#0F6E56] hover:opacity-70"><X size={14} /></button>
+        </div>
+      )}
+
+      {/* Subscription block message */}
+      {subBlockMsg && (
+        <div className="p-3 bg-[#FEF3E2] border border-[#F3C97D] rounded text-[13px] text-[#B5620A]">
+          {subBlockMsg}
         </div>
       )}
 
       {/* Table Card */}
-      <div className="bg-white rounded-lg border border-gray-200 overflow-hidden shadow-card">
-        {/* Controls — single row */}
-        <div className="px-4 py-3 border-b border-gray-200 flex items-center gap-2 flex-wrap">
-          <div className="relative flex-1 min-w-[160px]">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+      <div className="bg-white rounded border border-[#E8E8E4] overflow-hidden shadow-card">
+        {/* Controls */}
+        <div className="px-4 py-3 border-b border-[#E8E8E4] flex flex-col md:flex-row md:items-center gap-2">
+          {/* Search — full width on mobile */}
+          <div className="relative w-full md:flex-1 md:min-w-[160px]">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#A8A8A4]" />
             <input
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-8 pr-8 py-1.5 text-xs border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-gray-400 bg-white"
+              className="w-full pl-8 pr-8 py-1.5 text-xs border border-[#E8E8E4] rounded focus:outline-none focus:ring-1 focus:ring-[#D4D4CF] bg-white"
               placeholder="Search by title or location..."
             />
             {searchTerm && (
               <button
                 onClick={() => setSearchTerm('')}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#A8A8A4] hover:text-[#444441]"
               >
                 <X className="w-3.5 h-3.5" />
               </button>
             )}
           </div>
-          <select
-            value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value)}
-            className="text-xs border border-[#E8E8E4] rounded px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-[#D03839]/20 focus:border-[#D03839] bg-white text-[#1A1816] shrink-0"
-          >
-            <option value="">Status</option>
-            <option value="draft">Draft</option>
-            <option value="active">Active</option>
-            <option value="published">Published</option>
-            <option value="incomplete">Incomplete</option>
-            <option value="inactive">Inactive</option>
-          </select>
-          <select
-            value={filterPropertyStatus}
-            onChange={(e) => setFilterPropertyStatus(e.target.value)}
-            className="text-xs border border-[#E8E8E4] rounded px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-[#D03839]/20 focus:border-[#D03839] bg-white text-[#1A1816] shrink-0"
-          >
-            <option value="">Property Status</option>
-            <option value="available">Available</option>
-            <option value="pending">Pending</option>
-            <option value="sold">Sold</option>
-            <option value="under_contract">Under Contract</option>
-          </select>
-          <select
-            value={entriesPerPage}
-            onChange={(e) => {
-              setEntriesPerPage(Number(e.target.value));
-              setCurrentPage(1);
-            }}
-            className="text-xs border border-gray-200 rounded px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-gray-400 bg-white text-gray-700 shrink-0"
-          >
-            <option value={10}>10 rows</option>
-            <option value={25}>25 rows</option>
-            <option value={50}>50 rows</option>
-            <option value={100}>100 rows</option>
-          </select>
-          <button
-            onClick={clearFilters}
-            className="text-xs bg-[#FEF0EF] hover:bg-[#FEE4E3] text-[#D03839] rounded px-3 py-1.5 transition-colors font-medium shrink-0"
-          >
-            Clear
-          </button>
+          {/* Filters row */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <select
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+              className="text-xs border border-[#E8E8E4] rounded px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-[#D03839]/20 focus:border-[#D03839] bg-white text-[#1A1816] shrink-0"
+            >
+              <option value="">Status</option>
+              <option value="active">Active</option>
+              <option value="under_review">Under Review</option>
+              <option value="rejected">Update Required</option>
+              <option value="draft">Draft</option>
+              <option value="inactive">Inactive</option>
+            </select>
+            <select
+              value={filterPropertyStatus}
+              onChange={(e) => setFilterPropertyStatus(e.target.value)}
+              className="text-xs border border-[#E8E8E4] rounded px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-[#D03839]/20 focus:border-[#D03839] bg-white text-[#1A1816] shrink-0"
+            >
+              <option value="">Property Status</option>
+              <option value="available">Available</option>
+              <option value="pending">Pending</option>
+              <option value="sold">Sold</option>
+              <option value="under_contract">Under Contract</option>
+            </select>
+            <button
+              onClick={clearFilters}
+              className="text-xs bg-[#FEF0EF] hover:bg-[#FEE4E3] text-[#D03839] rounded px-3 py-1.5 transition-colors font-medium shrink-0"
+            >
+              Clear
+            </button>
+          </div>
         </div>
 
         {/* Desktop: Table */}
         <div className="hidden md:block overflow-x-auto scrollbar-thin">
-          <table className="w-full min-w-[900px]">
-            <thead className="bg-gray-50 border-b border-gray-200">
+          <table className="w-full min-w-[800px] table-auto">
+            <thead className="bg-[#FAFAF8] border-b border-[#E8E8E4]">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">#</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">Property</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">Source</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">Location</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">Price</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">Type</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">Status</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">Property Status</th>
-                <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap min-w-[240px]">Actions</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-[#444441] uppercase tracking-wider whitespace-nowrap w-[44px]">#</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-[#444441] uppercase tracking-wider whitespace-nowrap">Property</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-[#444441] uppercase tracking-wider whitespace-nowrap">Price</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-[#444441] uppercase tracking-wider whitespace-nowrap">Type</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-[#444441] uppercase tracking-wider whitespace-nowrap">Status</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-[#444441] uppercase tracking-wider whitespace-nowrap">Source</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-[#444441] uppercase tracking-wider whitespace-nowrap">Enhancements</th>
+                <th className="px-4 py-3 text-right text-xs font-semibold text-[#444441] uppercase tracking-wider whitespace-nowrap">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100 bg-white">
+            <tbody className="divide-y divide-[#E8E8E4] bg-white">
               {loading ? (
                 [...Array(3)].map((_, i) => (
                   <tr key={i} className="animate-pulse">
-                    <td className="px-4 py-3"><div className="h-4 w-6 bg-gray-100 rounded"></div></td>
-                    <td className="px-4 py-3"><div className="h-4 w-32 bg-gray-100 rounded"></div></td>
-                    <td className="px-4 py-3"><div className="h-4 w-14 bg-gray-100 rounded"></div></td>
-                    <td className="px-4 py-3"><div className="h-4 w-24 bg-gray-100 rounded"></div></td>
-                    <td className="px-4 py-3"><div className="h-4 w-16 bg-gray-100 rounded"></div></td>
-                    <td className="px-4 py-3"><div className="h-4 w-20 bg-gray-100 rounded"></div></td>
-                    <td className="px-4 py-3"><div className="h-4 w-16 bg-gray-100 rounded"></div></td>
-                    <td className="px-4 py-3"><div className="h-4 w-16 bg-gray-100 rounded"></div></td>
-                    <td className="px-4 py-3"><div className="h-4 w-16 bg-gray-100 rounded ml-auto"></div></td>
+                    <td className="px-4 py-3"><div className="h-4 w-5 bg-[#E8E8E4] rounded" /></td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        <div className="w-10 h-10 rounded bg-[#E8E8E4] shrink-0" />
+                        <div className="space-y-1.5 flex-1">
+                          <div className="h-3 w-3/4 bg-[#E8E8E4] rounded" />
+                          <div className="h-2.5 w-1/2 bg-[#E8E8E4] rounded" />
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3"><div className="h-5 w-16 bg-[#E8E8E4] rounded" /></td>
+                    <td className="px-4 py-3"><div className="h-3 w-3/4 bg-[#E8E8E4] rounded" /></td>
+                    <td className="px-4 py-3"><div className="h-3 w-3/4 bg-[#E8E8E4] rounded" /></td>
+                    <td className="px-4 py-3"><div className="h-3 w-3/4 bg-[#E8E8E4] rounded" /></td>
+                    <td className="px-4 py-3"><div className="h-5 w-16 bg-[#E8E8E4] rounded" /></td>
+                    <td className="px-4 py-3"><div className="h-5 w-20 bg-[#E8E8E4] rounded" /></td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center justify-end gap-0.5">
+                        {[...Array(5)].map((_, j) => (
+                          <div key={j} className="w-8 h-8 rounded bg-[#E8E8E4]" />
+                        ))}
+                      </div>
+                    </td>
                   </tr>
                 ))
               ) : currentEntries.length === 0 ? (
                 <tr>
-                  <td colSpan="9" className="px-6 py-10 text-center">
-                    <Building2 className="w-10 h-10 text-gray-300 mx-auto mb-2" />
-                    <p className="text-gray-500 text-sm font-medium">
+                  <td colSpan="10" className="px-6 py-10 text-center">
+                    <Building2 className="w-10 h-10 text-[#D4D4CF] mx-auto mb-2" />
+                    <p className="text-[#737370] text-sm font-medium">
                       {viewMode === 'active' ? 'No properties found' : 'No properties in trash'}
                     </p>
-                    <p className="text-xs text-gray-400 mt-1">
+                    <p className="text-xs text-[#A8A8A4] mt-1">
                       {viewMode === 'active' ? 'Try adjusting your search or add a new property' : 'Deleted properties will appear here'}
                     </p>
                   </td>
                 </tr>
               ) : (
                 currentEntries.map((property, index) => (
-                  <tr key={`${property._source}-${property.id}`} className="hover:bg-gray-50 transition-colors">
+                  <tr key={`${property._source}-${property.id}`} className="hover:bg-[#FAFAF8] transition-colors">
                     <td className="px-4 py-3 whitespace-nowrap">
-                      <span className="text-xs font-medium text-gray-400">{indexOfFirstEntry + index + 1}</span>
+                      <span className="text-xs font-medium text-[#A8A8A4]">{indexOfFirstEntry + index + 1}</span>
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
                         {getFeaturedImage(property) && (
-                          <div className="w-10 h-10 rounded-lg bg-gray-100 overflow-hidden shrink-0">
+                          <div className="w-10 h-10 rounded bg-[#E8E8E4] overflow-hidden shrink-0">
                             <img src={getFeaturedImage(property)} alt={property.full_address || property.address} className="w-full h-full object-cover" />
                           </div>
                         )}
                         <div>
-                          <p className="text-xs font-medium text-gray-900 line-clamp-1">{property.full_address || property.address || property.slug?.replace(/-/g, ' ') || 'N/A'}</p>
-                          <p className="text-[10px] text-gray-400">ID: {String(property.id).split('-')[0]}</p>
+                          <p className="text-xs font-medium text-[#1A1816] line-clamp-1">{property.full_address || property.address || property.slug?.replace(/-/g, ' ') || 'N/A'}</p>
+                          <p className="text-[10px] text-[#A8A8A4]">ID: {String(property.id).split('-')[0]}</p>
                         </div>
                       </div>
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <span className="text-xs font-semibold text-[#1A1816]">${parseFloat(property.price || 0).toLocaleString()}</span>
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <span className="text-xs text-[#444441]">{property.property_type || 'N/A'}</span>
+                    </td>
+                    <td className={`px-4 py-3 ${property._source === 'manual' && property.status === 'rejected' ? '' : 'whitespace-nowrap'}`}>
+                      {viewMode === 'active' && ['active', 'inactive'].includes((property.status || '').toLowerCase()) ? (
+                        <div className="relative inline-flex items-center">
+                          <span className={`absolute left-2.5 w-1.5 h-1.5 rounded-full pointer-events-none ${(property.status || '').toLowerCase() === 'active' ? 'bg-green-500' : 'bg-amber-400'}`} />
+                          <select
+                            value={(property.status || 'inactive').toLowerCase()}
+                            disabled={statusUpdatingId === `${property._source}-${property.id}`}
+                            onChange={(e) => handleToggleActive(property, e.target.value)}
+                            className="appearance-none bg-white border border-[#E8E8E4] rounded-md pl-6 pr-7 py-1.5 text-[12px] font-medium text-[#1A1816] cursor-pointer focus:outline-none focus:border-[#D03839]/40 focus:ring-1 focus:ring-[#D03839]/10 hover:border-[#D4D4CF] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                          >
+                            <option value="active">Active</option>
+                            <option value="inactive">Inactive</option>
+                          </select>
+                          <ChevronDown className="absolute right-2 w-3 h-3 text-[#A8A8A4] pointer-events-none" strokeWidth={2} />
+                        </div>
+                      ) : (
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium border ${getStatusColor(property.status)}`}>
+                          {property.status === 'under_review' ? 'Under Review' : property.status === 'rejected' ? 'Update Required' : (property.status || 'draft')?.charAt(0).toUpperCase() + (property.status || '').slice(1) || 'Draft'}
+                        </span>
+                      )}
+                      {property._source === 'manual' && property.status === 'rejected' && property.rejection_reason && (
+                        <p className="text-[10px] text-[#B5620A] mt-1 max-w-[140px] leading-tight line-clamp-2">
+                          {property.rejection_reason.length > 70 ? property.rejection_reason.slice(0, 70) + '…' : property.rejection_reason}
+                        </p>
+                      )}
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
                       <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium border ${property._source === 'manual' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-amber-50 text-amber-700 border-amber-200'}`}>
@@ -668,71 +861,66 @@ const PropertiesManagement = () => {
                       </span>
                     </td>
                     <td className="px-4 py-3">
-                      <div className="flex items-center gap-1.5">
-                        <MapPin className="w-3 h-3 text-gray-400" />
-                        <span className="text-xs text-gray-700 line-clamp-1">{property.city && property.state ? `${property.city}, ${property.state}` : property.address || 'N/A'}</span>
-                      </div>
+                      <AddonTags property={property} />
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
-                      <span className="text-xs font-semibold text-gray-900">${parseFloat(property.price || 0).toLocaleString()}</span>
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      <span className="text-xs text-gray-700">{property.property_type || 'N/A'}</span>
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      <div className="flex items-center gap-2">
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium border ${getStatusColor(property.status)}`}>
-                          {(property.status || 'draft')?.charAt(0).toUpperCase() + (property.status || '').slice(1) || 'Draft'}
-                        </span>
-                        {viewMode === 'active' && (property.status || '').toLowerCase() !== 'archived' && (
-                          <button
-                            type="button"
-                            disabled={statusUpdatingId === `${property._source}-${property.id}`}
-                            onClick={() => handleToggleActive(property)}
-                            className={`text-[10px] font-medium px-2 py-0.5 rounded border transition-colors ${
-                              (property.status || 'active').toLowerCase() === 'inactive'
-                                ? 'border-green-200 text-green-700 bg-green-50 hover:bg-green-100'
-                                : 'border-amber-200 text-amber-700 bg-amber-50 hover:bg-amber-100'
-                            } disabled:opacity-50 disabled:cursor-not-allowed`}
-                          >
-                            {statusUpdatingId === `${property._source}-${property.id}` ? 'Saving...' : (property.status || 'active').toLowerCase() === 'inactive' ? 'Activate' : 'Deactivate'}
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium border ${getPropertyStatusColor(property.property_status)}`}>
-                        {(property.property_status || 'available')?.replace('_', ' ').split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') || 'Available'}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap min-w-[240px]">
-                      <div className="flex items-center justify-end gap-0.5">
+                      <div className="flex items-center justify-end gap-2">
                         {viewMode === 'trash' ? (
                           <>
-                            <button onClick={() => handleRestore(property)} className="flex items-center justify-center w-8 h-8 rounded-lg text-gray-400 hover:text-primary hover:bg-gray-100 transition-colors" title="Restore">
+                            <button onClick={() => handleRestore(property)} className="flex items-center justify-center w-8 h-8 rounded text-[#A8A8A4] hover:text-primary hover:bg-[#E8E8E4] transition-colors" title="Restore">
                               <RotateCcw className="w-4 h-4" strokeWidth={2} />
                             </button>
-                            <button onClick={() => handleDeleteClick(property)} className="flex items-center justify-center w-8 h-8 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors" title="Delete Permanently">
-                              <Trash2 className="w-4 h-4" strokeWidth={2} />
-                            </button>
+                            {(workspaceRole === 'admin' || workspacePerms?.listings_delete) && (
+                              <button onClick={() => handleDeleteClick(property)} className="flex items-center justify-center w-8 h-8 rounded text-[#A8A8A4] hover:text-red-600 hover:bg-red-50 transition-colors" title="Delete Permanently">
+                                <Trash2 className="w-4 h-4" strokeWidth={2} />
+                              </button>
+                            )}
                           </>
                         ) : (
                           <>
-                            <a href={`${DEELMAP_VIEW_BASE_URL.replace(/\/$/, '')}/${property.slug || property.id}`} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center w-8 h-8 rounded-lg text-gray-400 hover:text-primary hover:bg-gray-100 transition-colors" title="View on site">
+                            {(workspaceRole === 'admin' || workspacePerms?.listings_create) && property._source === 'manual' && property.status === 'draft' && (
+                              <button
+                                onClick={() => router.push(`/properties/new?draft_id=${property.id}`)}
+                                className="h-7 px-3 text-[11px] font-semibold bg-[#D03839] hover:bg-[#E0493B] text-white rounded transition-colors"
+                              >
+                                Complete
+                              </button>
+                            )}
+                            {(workspaceRole === 'admin' || workspacePerms?.listings_update) && property._source === 'manual' && property.status === 'rejected' && (
+                              <button
+                                onClick={() => router.push(`/properties/edit/${property.id}`)}
+                                className="h-7 px-3 text-[11px] font-semibold bg-[#D03839] hover:bg-[#E0493B] text-white rounded transition-colors"
+                              >
+                                Fix Issues
+                              </button>
+                            )}
+                            {workspaceRole === 'admin' && property._source === 'manual' && ['active', 'published'].includes((property.status || '').toLowerCase()) && (
+                              <button
+                                onClick={() => router.push(`/properties/enhance?id=${property.id}`)}
+                                className="h-7 px-3 text-[11px] font-semibold bg-[#D03839] hover:bg-[#E0493B] text-white rounded transition-colors"
+                              >
+                                Enhance
+                              </button>
+                            )}
+                            <button onClick={() => router.push(`/properties/preview/${property.id}`)} className="flex items-center justify-center w-8 h-8 rounded text-[#A8A8A4] hover:text-primary hover:bg-[#E8E8E4] transition-colors" title="View">
                               <Eye className="w-4 h-4" strokeWidth={2} />
-                            </a>
-                            <button onClick={() => { setPropertyForUTM({ ...property, slug: property.slug || property.id, id: property.id }); setShowUTMModal(true); }} className="flex items-center justify-center w-8 h-8 rounded-lg text-gray-400 hover:text-primary hover:bg-gray-100 transition-colors" title="Share links (UTM)">
+                            </button>
+                            <button onClick={() => { setPropertyForUTM({ ...property, slug: property.slug || property.id, id: property.id }); setShowUTMModal(true); }} className="flex items-center justify-center w-8 h-8 rounded text-[#A8A8A4] hover:text-primary hover:bg-[#E8E8E4] transition-colors" title="Share links (UTM)">
                               <Link2 className="w-4 h-4" strokeWidth={2} />
                             </button>
-                            <button onClick={() => router.push(`/properties/edit/${property.id}`)} className="flex items-center justify-center w-8 h-8 rounded-lg text-gray-400 hover:text-primary hover:bg-gray-100 transition-colors" title="Edit">
-                              <Edit2 className="w-4 h-4" strokeWidth={2} />
-                            </button>
-                            <button onClick={() => { setPropertyForAnalytics(property); setShowAnalyticsSidebar(true); }} className="flex items-center justify-center w-8 h-8 rounded-lg text-gray-400 hover:text-primary hover:bg-gray-100 transition-colors" title="Analytics">
+                            {(workspaceRole === 'admin' || workspacePerms?.listings_update) && property.status !== 'rejected' && property.status !== 'draft' && (
+                              <button onClick={() => router.push(`/properties/edit/${property.id}`)} className="flex items-center justify-center w-8 h-8 rounded text-[#A8A8A4] hover:text-primary hover:bg-[#E8E8E4] transition-colors" title="Edit">
+                                <Edit2 className="w-4 h-4" strokeWidth={2} />
+                              </button>
+                            )}
+                            <button onClick={() => { setPropertyForAnalytics(property); setShowAnalyticsSidebar(true); }} className="flex items-center justify-center w-8 h-8 rounded text-[#A8A8A4] hover:text-primary hover:bg-[#E8E8E4] transition-colors" title="Analytics">
                               <BarChart2 className="w-4 h-4" strokeWidth={2} />
                             </button>
-                            <button onClick={() => handleArchiveClick(property)} className="flex items-center justify-center w-8 h-8 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors" title="Move to Trash">
-                              <Trash2 className="w-4 h-4" strokeWidth={2} />
-                            </button>
+                            {(workspaceRole === 'admin' || workspacePerms?.listings_delete) && (
+                              <button onClick={() => handleArchiveClick(property)} className="flex items-center justify-center w-8 h-8 rounded text-[#A8A8A4] hover:text-red-600 hover:bg-red-50 transition-colors" title="Move to Trash">
+                                <Trash2 className="w-4 h-4" strokeWidth={2} />
+                              </button>
+                            )}
                           </>
                         )}
                       </div>
@@ -745,93 +933,149 @@ const PropertiesManagement = () => {
         </div>
 
         {/* Mobile: Property cards */}
-        <div className="md:hidden divide-y divide-gray-100">
+        <div className="md:hidden divide-y divide-[#E8E8E4]">
           {loading ? (
             [...Array(3)].map((_, i) => (
               <div key={i} className="p-4 animate-pulse">
                 <div className="flex gap-3">
-                  <div className="w-20 h-20 rounded-xl bg-gray-100 shrink-0" />
+                  <div className="w-20 h-20 rounded bg-[#E8E8E4] shrink-0" />
                   <div className="flex-1 space-y-2">
-                    <div className="h-4 w-3/4 bg-gray-100 rounded" />
-                    <div className="h-3 w-1/2 bg-gray-100 rounded" />
-                    <div className="h-4 w-16 bg-gray-100 rounded" />
+                    <div className="h-4 w-3/4 bg-[#E8E8E4] rounded" />
+                    <div className="h-3 w-1/2 bg-[#E8E8E4] rounded" />
+                    <div className="h-4 w-16 bg-[#E8E8E4] rounded" />
+                    <div className="h-3 w-1/3 bg-[#E8E8E4] rounded" />
                   </div>
+                </div>
+                <div className="flex items-center justify-end gap-1 mt-3 pt-3 border-t border-[#E8E8E4]">
+                  {[...Array(5)].map((_, j) => (
+                    <div key={j} className="w-9 h-9 rounded bg-[#E8E8E4]" />
+                  ))}
                 </div>
               </div>
             ))
           ) : currentEntries.length === 0 ? (
             <div className="px-4 py-10 text-center">
-              <Building2 className="w-10 h-10 text-gray-300 mx-auto mb-2" />
-              <p className="text-gray-500 text-sm font-medium">
+              <Building2 className="w-10 h-10 text-[#D4D4CF] mx-auto mb-2" />
+              <p className="text-[#737370] text-sm font-medium">
                 {viewMode === 'active' ? 'No properties found' : 'No properties in trash'}
               </p>
-              <p className="text-xs text-gray-400 mt-1">
+              <p className="text-xs text-[#A8A8A4] mt-1">
                 {viewMode === 'active' ? 'Try adjusting your search or add a new property' : 'Deleted properties will appear here'}
               </p>
             </div>
           ) : (
             currentEntries.map((property, index) => (
-              <div key={`${property._source}-${property.id}`} className="p-4 hover:bg-gray-50/50 transition-colors">
+              <div key={`${property._source}-${property.id}`} className="p-4 hover:bg-[#FAFAF8]/50 transition-colors">
                 <div className="flex gap-3">
                   {getFeaturedImage(property) ? (
-                    <div className="w-20 h-20 rounded-xl bg-gray-100 overflow-hidden shrink-0">
+                    <div className="w-20 h-20 rounded bg-[#E8E8E4] overflow-hidden shrink-0">
                       <img src={getFeaturedImage(property)} alt={property.full_address || property.address} className="w-full h-full object-cover" />
                     </div>
                   ) : (
-                    <div className="w-20 h-20 rounded-xl bg-gray-100 shrink-0 flex items-center justify-center">
-                      <Building2 className="w-8 h-8 text-gray-400" />
+                    <div className="w-20 h-20 rounded bg-[#E8E8E4] shrink-0 flex items-center justify-center">
+                      <Building2 className="w-8 h-8 text-[#A8A8A4]" />
                     </div>
                   )}
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900 line-clamp-2">{property.full_address || property.address || property.slug?.replace(/-/g, ' ') || 'N/A'}</p>
+                    <p className="text-sm font-medium text-[#1A1816] line-clamp-2">{property.full_address || property.address || property.slug?.replace(/-/g, ' ') || 'N/A'}</p>
                     <div className="flex flex-wrap items-center gap-1.5 mt-1">
                       <span className={`inline-flex px-2 py-0.5 rounded text-[10px] font-medium border ${property._source === 'manual' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-amber-50 text-amber-700 border-amber-200'}`}>
                         {property._source === 'manual' ? 'Manual' : 'DeelScout'}
                       </span>
-                      <span className={`inline-flex px-2 py-0.5 rounded text-[10px] font-medium border ${getStatusColor(property.status)}`}>
-                        {(property.status || 'draft')?.charAt(0).toUpperCase() + (property.status || '').slice(1) || 'Draft'}
-                      </span>
-                      <span className={`inline-flex px-2 py-0.5 rounded text-[10px] font-medium border ${getPropertyStatusColor(property.property_status)}`}>
-                        {(property.property_status || 'available')?.replace('_', ' ').split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') || 'Available'}
-                      </span>
+                      {viewMode === 'active' && ['active', 'inactive'].includes((property.status || '').toLowerCase()) ? (
+                        <select
+                          value={(property.status || 'inactive').toLowerCase()}
+                          disabled={statusUpdatingId === `${property._source}-${property.id}`}
+                          onChange={(e) => handleToggleActive(property, e.target.value)}
+                          className={`text-[10px] font-medium px-2 py-0.5 rounded border cursor-pointer focus:outline-none disabled:opacity-50 ${
+                            (property.status || '').toLowerCase() === 'active'
+                              ? 'bg-green-50 text-green-700 border-green-200'
+                              : 'bg-amber-50 text-amber-700 border-amber-200'
+                          }`}
+                        >
+                          <option value="active">Active</option>
+                          <option value="inactive">Inactive</option>
+                        </select>
+                      ) : (
+                        <span className={`inline-flex px-2 py-0.5 rounded text-[10px] font-medium border ${getStatusColor(property.status)}`}>
+                          {property.status === 'under_review' ? 'Under Review' : property.status === 'rejected' ? 'Update Required' : (property.status || 'draft')?.charAt(0).toUpperCase() + (property.status || '').slice(1) || 'Draft'}
+                        </span>
+                      )}
+                      <AddonTags property={property} />
                     </div>
-                    <p className="text-xs text-gray-600 mt-1 flex items-center gap-1">
-                      <MapPin className="w-3 h-3 text-gray-400 shrink-0" />
+                    <p className="text-xs text-[#444441] mt-1 flex items-center gap-1">
+                      <MapPin className="w-3 h-3 text-[#A8A8A4] shrink-0" />
                       <span className="truncate">{property.city && property.state ? `${property.city}, ${property.state}` : property.address || 'N/A'}</span>
                     </p>
-                    <p className="text-sm font-semibold text-gray-900 mt-0.5">
+                    <p className="text-sm font-semibold text-[#1A1816] mt-0.5">
                       ${parseFloat(property.price || 0).toLocaleString()}
-                      {property.property_type && <span className="text-gray-500 font-normal text-xs ml-1">· {property.property_type}</span>}
+                      {property.property_type && <span className="text-[#737370] font-normal text-xs ml-1">· {property.property_type}</span>}
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center justify-end gap-1 mt-3 pt-3 border-t border-gray-100">
+                {property._source === 'manual' && property.status === 'rejected' && property.rejection_reason && (
+                  <div className="mb-3 px-3 py-2.5 bg-[#FEF3E2] border border-[#F3C97D] rounded">
+                    <p className="text-[10px] font-semibold text-[#B5620A] uppercase tracking-wide mb-1">Issues to fix</p>
+                    <p className="text-[11px] text-[#B5620A] leading-relaxed">
+                      {property.rejection_reason.length > 140 ? property.rejection_reason.slice(0, 140) + '…' : property.rejection_reason}
+                    </p>
+                  </div>
+                )}
+                <div className="flex items-center justify-around mt-3 pt-3 border-t border-[#E8E8E4]">
                   {viewMode === 'trash' ? (
                     <>
-                      <button onClick={() => handleRestore(property)} className="flex items-center justify-center w-9 h-9 rounded-lg text-gray-500 hover:text-primary hover:bg-gray-100 transition-colors" title="Restore">
+                      <button onClick={() => handleRestore(property)} className="flex-1 flex items-center justify-center h-9 rounded text-[#737370] hover:text-primary hover:bg-[#E8E8E4] transition-colors" title="Restore">
                         <RotateCcw className="w-4 h-4" strokeWidth={2} />
                       </button>
-                      <button onClick={() => handleDeleteClick(property)} className="flex items-center justify-center w-9 h-9 rounded-lg text-gray-500 hover:text-red-600 hover:bg-red-50 transition-colors" title="Delete Permanently">
-                        <Trash2 className="w-4 h-4" strokeWidth={2} />
-                      </button>
+                      {(workspaceRole === 'admin' || workspacePerms?.listings_delete) && (
+                        <button onClick={() => handleDeleteClick(property)} className="flex-1 flex items-center justify-center h-9 rounded text-[#737370] hover:text-red-600 hover:bg-red-50 transition-colors" title="Delete Permanently">
+                          <Trash2 className="w-4 h-4" strokeWidth={2} />
+                        </button>
+                      )}
                     </>
                   ) : (
                     <>
-                      <a href={`${DEELMAP_VIEW_BASE_URL.replace(/\/$/, '')}/${property.slug || property.id}`} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center w-9 h-9 rounded-lg text-gray-500 hover:text-primary hover:bg-gray-100 transition-colors" title="View on site">
+                      {(workspaceRole === 'admin' || workspacePerms?.listings_create) && property._source === 'manual' && property.status === 'draft' && (
+                        <button
+                          onClick={() => router.push(`/properties/new?draft_id=${property.id}`)}
+                          className="flex-1 flex flex-col items-center gap-1 py-1 text-white bg-[#D03839] hover:bg-[#E0493B] rounded transition-colors"
+                        >
+                          <span className="text-[10px] font-semibold">Complete</span>
+                        </button>
+                      )}
+                      {(workspaceRole === 'admin' || workspacePerms?.listings_update) && property._source === 'manual' && property.status === 'rejected' && (
+                        <button
+                          onClick={() => router.push(`/properties/edit/${property.id}`)}
+                          className="flex-1 flex flex-col items-center gap-1 py-1 text-[#D03839] bg-[#FEF0EF] hover:bg-[#FCDEDE] rounded transition-colors"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                          <span className="text-[10px] font-medium">Fix Issues</span>
+                        </button>
+                      )}
+                      {workspaceRole === 'admin' && property._source === 'manual' && ['active', 'published'].includes((property.status || '').toLowerCase()) && (
+                        <button onClick={() => router.push(`/properties/enhance?id=${property.id}`)} className="flex-1 flex items-center justify-center h-9 rounded text-[#737370] hover:text-[#D03839] hover:bg-[#FEF0EF] transition-colors" title="Enhance listing">
+                          <Zap className="w-4 h-4" strokeWidth={2} />
+                        </button>
+                      )}
+                      <button onClick={() => router.push(`/properties/preview/${property.id}`)} className="flex-1 flex items-center justify-center h-9 rounded text-[#737370] hover:text-primary hover:bg-[#E8E8E4] transition-colors" title="View">
                         <Eye className="w-4 h-4" strokeWidth={2} />
-                      </a>
-                      <button onClick={() => { setPropertyForUTM({ ...property, slug: property.slug || property.id, id: property.id }); setShowUTMModal(true); }} className="flex items-center justify-center w-9 h-9 rounded-lg text-gray-500 hover:text-primary hover:bg-gray-100 transition-colors" title="Share links">
+                      </button>
+                      <button onClick={() => { setPropertyForUTM({ ...property, slug: property.slug || property.id, id: property.id }); setShowUTMModal(true); }} className="flex-1 flex items-center justify-center h-9 rounded text-[#737370] hover:text-primary hover:bg-[#E8E8E4] transition-colors" title="Share links">
                         <Link2 className="w-4 h-4" strokeWidth={2} />
                       </button>
-                      <button onClick={() => router.push(`/properties/edit/${property.id}`)} className="flex items-center justify-center w-9 h-9 rounded-lg text-gray-500 hover:text-primary hover:bg-gray-100 transition-colors" title="Edit">
-                        <Edit2 className="w-4 h-4" strokeWidth={2} />
-                      </button>
-                      <button onClick={() => { setPropertyForAnalytics(property); setShowAnalyticsSidebar(true); }} className="flex items-center justify-center w-9 h-9 rounded-lg text-gray-500 hover:text-primary hover:bg-gray-100 transition-colors" title="Analytics">
+                      {(workspaceRole === 'admin' || workspacePerms?.listings_update) && property.status !== 'rejected' && property.status !== 'draft' && (
+                        <button onClick={() => router.push(`/properties/edit/${property.id}`)} className="flex-1 flex items-center justify-center h-9 rounded text-[#737370] hover:text-primary hover:bg-[#E8E8E4] transition-colors" title="Edit">
+                          <Edit2 className="w-4 h-4" strokeWidth={2} />
+                        </button>
+                      )}
+                      <button onClick={() => { setPropertyForAnalytics(property); setShowAnalyticsSidebar(true); }} className="flex-1 flex items-center justify-center h-9 rounded text-[#737370] hover:text-primary hover:bg-[#E8E8E4] transition-colors" title="Analytics">
                         <BarChart2 className="w-4 h-4" strokeWidth={2} />
                       </button>
-                      <button onClick={() => handleArchiveClick(property)} className="flex items-center justify-center w-9 h-9 rounded-lg text-gray-500 hover:text-red-600 hover:bg-red-50 transition-colors" title="Move to Trash">
-                        <Trash2 className="w-4 h-4" strokeWidth={2} />
-                      </button>
+                      {(workspaceRole === 'admin' || workspacePerms?.listings_delete) && (
+                        <button onClick={() => handleArchiveClick(property)} className="flex-1 flex items-center justify-center h-9 rounded text-[#737370] hover:text-red-600 hover:bg-red-50 transition-colors" title="Move to Trash">
+                          <Trash2 className="w-4 h-4" strokeWidth={2} />
+                        </button>
+                      )}
                     </>
                   )}
                 </div>
@@ -841,11 +1085,11 @@ const PropertiesManagement = () => {
         </div>
 
         {/* Footer - Pagination */}
-        <div className="px-4 py-3 bg-gray-50 border-t border-gray-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-          <div className="text-xs text-gray-500">
-            Showing <span className="font-medium text-gray-700">{filteredProperties.length > 0 ? indexOfFirstEntry + 1 : 0}</span> to{' '}
-            <span className="font-medium text-gray-700">{Math.min(indexOfLastEntry, filteredProperties.length)}</span> of{' '}
-            <span className="font-medium text-gray-700">{filteredProperties.length}</span> entries
+        <div className="px-4 py-3 bg-[#FAFAF8] border-t border-[#E8E8E4] flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div className="text-xs text-[#737370]">
+            Showing <span className="font-medium text-[#444441]">{filteredProperties.length > 0 ? indexOfFirstEntry + 1 : 0}</span> to{' '}
+            <span className="font-medium text-[#444441]">{Math.min(indexOfLastEntry, filteredProperties.length)}</span> of{' '}
+            <span className="font-medium text-[#444441]">{filteredProperties.length}</span> entries
           </div>
 
           {totalPages > 1 && (
@@ -853,7 +1097,7 @@ const PropertiesManagement = () => {
               <button
                 onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                 disabled={currentPage === 1}
-                className="p-1.5 rounded-lg border border-gray-200 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                className="p-1.5 rounded border border-[#E8E8E4] hover:bg-[#E8E8E4] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                 title="Previous"
               >
                 <ChevronLeft className="w-3.5 h-3.5" />
@@ -875,9 +1119,9 @@ const PropertiesManagement = () => {
                   <button
                     key={pageNum}
                     onClick={() => setCurrentPage(pageNum)}
-                    className={`min-w-[28px] h-7 px-2 text-xs font-medium rounded-lg transition-colors ${currentPage === pageNum
+                    className={`min-w-[28px] h-7 px-2 text-xs font-medium rounded transition-colors ${currentPage === pageNum
                       ? 'bg-primary text-white'
-                      : 'border border-gray-200 text-gray-600 hover:bg-gray-100'
+                      : 'border border-[#E8E8E4] text-[#444441] hover:bg-[#E8E8E4]'
                       }`}
                   >
                     {pageNum}
@@ -888,7 +1132,7 @@ const PropertiesManagement = () => {
               <button
                 onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                 disabled={currentPage === totalPages}
-                className="p-1.5 rounded-lg border border-gray-200 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                className="p-1.5 rounded border border-[#E8E8E4] hover:bg-[#E8E8E4] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                 title="Next"
               >
                 <ChevronRight className="w-3.5 h-3.5" />

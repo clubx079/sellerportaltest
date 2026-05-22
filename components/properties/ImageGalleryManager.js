@@ -5,11 +5,16 @@ import { supabase } from '@/lib/supabase';
 import { Upload, X, Image as ImageIcon, Star, Loader } from 'lucide-react';
 import imageCompression from 'browser-image-compression';
 
-const MAX_CONCURRENT_UPLOADS = 4;
+const MAX_CONCURRENT_UPLOADS = 15;
+
+const ALLOWED_PHOTO_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
+const checkHeic = f => f.type === 'image/heic' || f.type === 'image/heif' || /\.(heic|heif)$/i.test(f.name)
+const isPhoto = f => ALLOWED_PHOTO_TYPES.includes(f.type) || checkHeic(f)
 
 export default function ImageGalleryManager({ images = [], onImagesChange, sellerId, storageBucket = 'sellerpropertyimages', uploadPathPrefix = null }) {
   const [localImages, setLocalImages] = useState(images);
   const [dragActive, setDragActive] = useState(false);
+  const [uploadError, setUploadError] = useState(null);
 
   const inFlightIdsRef = useRef(new Set());
   const imagesRef = useRef(localImages);
@@ -64,14 +69,25 @@ export default function ImageGalleryManager({ images = [], onImagesChange, selle
       // Wait a frame for state to update
       await new Promise(resolve => setTimeout(resolve, 10));
 
+      // Convert HEIC if needed
+      let uploadFile = image.file
+      if (checkHeic(image.file)) {
+        const fd = new FormData()
+        fd.append('file', image.file)
+        const heicRes = await fetch('/api/convert-heic', { method: 'POST', body: fd })
+        if (!heicRes.ok) throw new Error('HEIC conversion failed')
+        const blob = await heicRes.blob()
+        uploadFile = new File([blob], image.file.name.replace(/\.(heic|heif)$/i, '.jpg'), { type: 'image/jpeg' })
+      }
+
       // Compress image
       console.log('Compressing image...');
-      const compressedFile = await compressImage(image.file);
+      const compressedFile = await compressImage(uploadFile);
       console.log('Compression complete');
 
       // Generate unique filename (sellerId may be undefined for scraped until loaded; use fallback)
       const uploadDir = sellerId != null && String(sellerId).trim() ? String(sellerId) : 'deals';
-      const fileExt = (image.file.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, 'jpg');
+      const fileExt = (uploadFile.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, 'jpg');
       const pathSegment = uploadPathPrefix ? `${uploadPathPrefix}/${uploadDir}` : uploadDir;
       const fileName = `${pathSegment}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
 
@@ -79,7 +95,7 @@ export default function ImageGalleryManager({ images = [], onImagesChange, selle
       console.log('Uploading to Supabase:', storageBucket, fileName);
       const { data, error } = await supabase.storage
         .from(storageBucket)
-        .upload(fileName, compressedFile, {
+        .upload(fileName, compressedFile ?? uploadFile, {
           cacheControl: '3600',
           upsert: false
         });
@@ -161,11 +177,15 @@ export default function ImageGalleryManager({ images = [], onImagesChange, selle
 
   const handleFileSelect = async (files) => {
     const fileArray = Array.from(files);
+    setUploadError(null);
 
-    // Filter only image files
-    const imageFiles = fileArray.filter(file =>
-      file.type.startsWith('image/')
-    );
+    const imageFiles = fileArray.filter(file => isPhoto(file));
+    const rejectedFiles = fileArray.filter(file => !isPhoto(file));
+
+    if (rejectedFiles.length > 0) {
+      const names = rejectedFiles.map(f => f.name).join(', ');
+      setUploadError(`Only property photos are allowed (JPEG, PNG, WebP). Rejected: ${names}`);
+    }
 
     if (imageFiles.length === 0) return;
 
@@ -173,10 +193,11 @@ export default function ImageGalleryManager({ images = [], onImagesChange, selle
     const newImages = imageFiles.map((file, index) => ({
       id: `temp-${Date.now()}-${Math.random()}-${index}`,
       file,
-      preview: URL.createObjectURL(file),
+      preview: checkHeic(file) ? null : URL.createObjectURL(file),
       status: 'queued',
       progress: 0,
-      originalSize: file.size
+      originalSize: file.size,
+      converting: checkHeic(file)
     }));
 
     setLocalImages(prev => [...prev, ...newImages]);
@@ -251,20 +272,26 @@ export default function ImageGalleryManager({ images = [], onImagesChange, selle
 
   return (
     <div className="space-y-4">
+      {uploadError && (
+        <div className="flex items-start gap-2 p-3 bg-[#FEF0EF] border border-[#F5C4C0] rounded text-[13px] text-[#D03839]">
+          <span className="flex-1">{uploadError}</span>
+          <button type="button" onClick={() => setUploadError(null)} className="flex-shrink-0 text-[#D03839] hover:text-[#B02020]"><X size={14} /></button>
+        </div>
+      )}
       {/* Upload Area */}
       <div
         onDragEnter={handleDrag}
         onDragLeave={handleDrag}
         onDragOver={handleDrag}
         onDrop={handleDrop}
-        className={`border-2 border-dashed rounded-xl p-8 text-center transition-all ${
+        className={`border-2 border-dashed rounded p-8 text-center transition-all ${
           dragActive
-            ? 'border-[#472F97] bg-[#F5F3FF]'
+            ? 'border-[#D03839] bg-[#FEF0EF]'
             : 'border-neutral-300 hover:border-neutral-400'
         }`}
       >
         <div className="flex flex-col items-center">
-          <div className="w-16 h-16 rounded-xl flex items-center justify-center mb-4 bg-[#472F97]">
+          <div className="w-16 h-16 rounded flex items-center justify-center mb-4 bg-[#D03839]">
             {totalUploading > 0 ? (
               <Loader className="w-8 h-8 text-white animate-spin" />
             ) : (
@@ -278,7 +305,7 @@ export default function ImageGalleryManager({ images = [], onImagesChange, selle
           </p>
           <p className="text-sm text-neutral-600 mb-1">
             {totalUploading > 0
-              ? `Processing ${uploadingCount} • ${queuedCount} in queue`
+              ? `Processing ${totalUploading} image${totalUploading > 1 ? 's' : ''}...`
               : 'Click to select or drag and drop multiple images'}
           </p>
           <p className="text-xs text-neutral-500 mb-4">
@@ -288,14 +315,14 @@ export default function ImageGalleryManager({ images = [], onImagesChange, selle
             type="file"
             id="image-upload"
             multiple
-            accept="image/*"
+            accept="image/jpeg,image/jpg,image/png,image/webp,.heic,.heif"
             onChange={(e) => handleFileSelect(e.target.files)}
             className="hidden"
             disabled={totalUploading > 0}
           />
           <label
             htmlFor="image-upload"
-            className={`inline-flex items-center gap-2 px-4 py-2 bg-[#472F97] hover:bg-[#3a2578] text-white rounded-lg text-sm font-medium transition-colors cursor-pointer ${
+            className={`inline-flex items-center gap-2 px-4 py-2 bg-[#D03839] hover:bg-[#E0493B] text-white rounded text-sm font-medium transition-colors cursor-pointer ${
               totalUploading > 0 ? 'opacity-50 cursor-not-allowed' : ''
             }`}
           >
@@ -307,11 +334,11 @@ export default function ImageGalleryManager({ images = [], onImagesChange, selle
 
       {/* Stats Bar */}
       {localImages.length > 0 && (
-        <div className="flex items-center justify-between text-xs text-neutral-600 bg-neutral-50 border border-neutral-200 rounded-xl p-3">
+        <div className="flex items-center justify-between text-xs text-neutral-600 bg-neutral-50 border border-neutral-200 rounded p-3">
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
               {totalUploading > 0 ? (
-                <Loader size={14} className="text-[#472F97] animate-spin" />
+                <Loader size={14} className="text-[#D03839] animate-spin" />
               ) : (
                 <div className="w-2 h-2 bg-green-500 rounded-full"></div>
               )}
@@ -320,11 +347,6 @@ export default function ImageGalleryManager({ images = [], onImagesChange, selle
             {uploadingCount > 0 && (
               <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
                 Uploading: {uploadingCount}
-              </span>
-            )}
-            {queuedCount > 0 && (
-              <span className="px-2 py-1 bg-yellow-100 text-yellow-700 rounded-full text-xs font-medium">
-                Queue: {queuedCount}
               </span>
             )}
             {completedCount > 0 && (
@@ -342,16 +364,16 @@ export default function ImageGalleryManager({ images = [], onImagesChange, selle
           {localImages.map((image, index) => (
             <div
               key={image.id}
-              className="relative group bg-neutral-100 rounded-xl overflow-hidden aspect-square transition-all duration-300"
+              className="relative group bg-neutral-100 rounded overflow-hidden aspect-square transition-all duration-300"
             >
               {/* Image Preview */}
               {image.status === 'queued' || image.status === 'uploading' ? (
                 <div className="w-full h-full relative group">
-                  <img
+                  {image.preview && <img
                     src={image.preview}
                     alt={`Preview ${index + 1}`}
                     className="w-full h-full object-cover opacity-50"
-                  />
+                  />}
                   <div className="absolute inset-0 flex items-center justify-center bg-black/20">
                     <div className="text-center">
                       <Loader className="w-8 h-8 text-white animate-spin mx-auto mb-2" />
@@ -364,7 +386,7 @@ export default function ImageGalleryManager({ images = [], onImagesChange, selle
                   <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button
                       onClick={() => handleRemove(image.id, null)}
-                      className="p-1.5 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors"
+                      className="p-1.5 bg-red-500 hover:bg-red-600 text-white rounded transition-colors"
                       title="Cancel upload"
                     >
                       <X size={14} />
@@ -383,7 +405,7 @@ export default function ImageGalleryManager({ images = [], onImagesChange, selle
                     <p className="text-xs text-red-600 mb-2">Upload failed</p>
                     <button
                       onClick={() => handleRetry(image.id)}
-                      className="px-3 py-1.5 bg-[#472F97] hover:bg-[#3a2578] text-white text-xs rounded-lg transition-colors"
+                      className="px-3 py-1.5 bg-[#D03839] hover:bg-[#E0493B] text-white text-xs rounded transition-colors"
                     >
                       Retry Upload
                     </button>
@@ -401,7 +423,7 @@ export default function ImageGalleryManager({ images = [], onImagesChange, selle
                   <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
                     <button
                       onClick={() => handleSetFeatured(image.id)}
-                      className={`p-2 rounded-lg transition-colors ${
+                      className={`p-2 rounded transition-colors ${
                         image.isFeatured
                           ? 'bg-yellow-500 text-white'
                           : 'bg-white text-neutral-700 hover:bg-yellow-500 hover:text-white'
@@ -412,7 +434,7 @@ export default function ImageGalleryManager({ images = [], onImagesChange, selle
                     </button>
                     <button
                       onClick={() => handleRemove(image.id, image.imageKey)}
-                      className="p-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors"
+                      className="p-2 bg-red-500 hover:bg-red-600 text-white rounded transition-colors"
                       title="Remove"
                     >
                       <X size={16} />
@@ -421,7 +443,7 @@ export default function ImageGalleryManager({ images = [], onImagesChange, selle
 
                   {/* Featured Badge */}
                   {image.isFeatured && (
-                    <div className="absolute top-2 left-2 px-2 py-1 bg-yellow-500 text-white text-xs font-medium rounded-lg flex items-center gap-1">
+                    <div className="absolute top-2 left-2 px-2 py-1 bg-yellow-500 text-white text-xs font-medium rounded flex items-center gap-1">
                       <Star size={12} fill="currentColor" />
                       Featured
                     </div>

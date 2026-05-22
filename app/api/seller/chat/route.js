@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { Resend } from 'resend';
+import { getWorkspaceSellerId } from '@/lib/workspace';
 
 // Single shared DB for sellers, buyers, admins. Use service role key so we can read users (e.g. buyer email); anon + RLS would block cross-user lookups.
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -210,10 +211,11 @@ export async function GET(request) {
         { status: 503 }
       );
     }
-    const sellerId = getSellerId(request);
-    if (!sellerId) {
+    const rawSellerId = getSellerId(request);
+    if (!rawSellerId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+    const { effectiveId: sellerId } = await getWorkspaceSellerId(rawSellerId);
 
     const { searchParams } = new URL(request.url);
     const action = searchParams.get('action');
@@ -432,10 +434,11 @@ export async function POST(request) {
         { status: 503 }
       );
     }
-    const sellerId = getSellerId(request);
-    if (!sellerId) {
+    const rawSellerId = getSellerId(request);
+    if (!rawSellerId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+    const { effectiveId: sellerId } = await getWorkspaceSellerId(rawSellerId);
 
     const body = await request.json().catch(() => ({}));
     const { action, conversationId, messageText, buyerId, propertyId, propertyAddress } = body;

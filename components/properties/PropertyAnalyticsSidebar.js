@@ -137,7 +137,7 @@ export default function PropertyAnalyticsSidebar({ propertyId, propertyName, onC
 
       {/* Sidebar */}
       <aside
-        className={`fixed top-0 right-0 bottom-0 w-[480px] min-w-[320px] max-w-full z-50 flex flex-col overflow-hidden bg-white border-l border-[#E8E8E4] transition-transform duration-300 ease-out ${mounted ? 'translate-x-0' : 'translate-x-full'}`}
+        className={`fixed top-0 right-0 bottom-0 w-[480px] min-w-[320px] max-w-full z-50 flex flex-col overflow-hidden bg-white transition-transform duration-300 ease-out ${mounted ? 'translate-x-0' : 'translate-x-full'}`}
         style={{ boxShadow: '-12px 0 40px rgba(0,0,0,0.10)' }}
         aria-label="Property analytics"
       >
@@ -145,9 +145,6 @@ export default function PropertyAnalyticsSidebar({ propertyId, propertyName, onC
         <div className="flex-shrink-0 bg-[#D03839] px-5 py-4">
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-center gap-3 min-w-0">
-              <div className="w-9 h-9 rounded bg-white/20 flex items-center justify-center flex-shrink-0">
-                <BarChart2 className="w-4.5 h-4.5 text-white" />
-              </div>
               <div className="min-w-0">
                 <p className="text-[11px] font-semibold text-white/70 uppercase tracking-[1.1px] mb-0.5">Property Analytics</p>
                 {propertyName && (
@@ -235,8 +232,7 @@ export default function PropertyAnalyticsSidebar({ propertyId, propertyName, onC
               {/* ── Row 2: Device breakdown (full width) ── */}
               {(() => {
                 const desktop = sessions.filter(s => !s.device_type || s.device_type.toLowerCase() === 'desktop').length;
-                const mobile = sessions.filter(s => s.device_type?.toLowerCase() === 'mobile').length;
-                const tablet = sessions.filter(s => s.device_type?.toLowerCase() === 'tablet').length;
+                const mobileAll = sessions.filter(s => s.device_type?.toLowerCase() === 'mobile' || s.device_type?.toLowerCase() === 'tablet').length;
                 const total = sessions.length || 1;
                 return (
                   <div className="bg-white border border-[#E8E8E4] rounded p-4">
@@ -253,25 +249,14 @@ export default function PropertyAnalyticsSidebar({ propertyId, propertyName, onC
                         </div>
                       </div>
                       <div className="w-px h-8 bg-[#E8E8E4]" />
-                      {/* Mobile */}
+                      {/* Mobile (phone + tablet) */}
                       <div className="flex items-center gap-2 flex-1">
                         <div className="w-7 h-7 rounded bg-[#E4F5EC] flex items-center justify-center flex-shrink-0">
                           <Smartphone className="w-3.5 h-3.5 text-[#0F6E56]" />
                         </div>
                         <div className="min-w-0">
-                          <p className="text-[18px] font-bold text-[#1A1816] leading-none">{mobile}</p>
+                          <p className="text-[18px] font-bold text-[#1A1816] leading-none">{mobileAll}</p>
                           <p className="text-[11px] text-[#737370] mt-0.5">Mobile</p>
-                        </div>
-                      </div>
-                      <div className="w-px h-8 bg-[#E8E8E4]" />
-                      {/* Tablet */}
-                      <div className="flex items-center gap-2 flex-1">
-                        <div className="w-7 h-7 rounded bg-[#FEF3E2] flex items-center justify-center flex-shrink-0">
-                          <Tablet className="w-3.5 h-3.5 text-[#B5620A]" />
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-[18px] font-bold text-[#1A1816] leading-none">{tablet}</p>
-                          <p className="text-[11px] text-[#737370] mt-0.5">Tablet</p>
                         </div>
                       </div>
                     </div>
@@ -279,8 +264,7 @@ export default function PropertyAnalyticsSidebar({ propertyId, propertyName, onC
                     {sessions.length > 0 && (
                       <div className="mt-3 flex h-1.5 rounded-full overflow-hidden gap-0.5">
                         {desktop > 0 && <div className="bg-[#0369A1] rounded-full" style={{ width: `${(desktop / total) * 100}%` }} />}
-                        {mobile > 0 && <div className="bg-[#0F6E56] rounded-full" style={{ width: `${(mobile / total) * 100}%` }} />}
-                        {tablet > 0 && <div className="bg-[#B5620A] rounded-full" style={{ width: `${(tablet / total) * 100}%` }} />}
+                        {mobileAll > 0 && <div className="bg-[#0F6E56] rounded-full" style={{ width: `${(mobileAll / total) * 100}%` }} />}
                       </div>
                     )}
                   </div>

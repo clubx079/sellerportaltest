@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import {
-  Eye, Users, Clock, TrendingUp, TrendingDown, Smartphone, Monitor, Tablet,
+  Eye, Users, Clock, TrendingUp, TrendingDown, Smartphone, Monitor,
   BarChart2, Link2, MapPin, ArrowUpRight, Minus, Activity, Image, FileText,
   ChevronDown, Loader2, Check
 } from 'lucide-react';
@@ -95,7 +95,7 @@ function BarChart({ data, valueKey = 'count', labelKey = 'date', height = 120 })
 
 function StatCard({ title, value, sub, subUp, icon, iconBg, loading }) {
   return (
-    <div className="bg-white border border-[#E8E8E4] rounded-lg px-4 py-5 flex flex-col">
+    <div className="bg-white border border-[#E8E8E4] rounded px-4 py-5 flex flex-col">
       <div className="flex items-start justify-between mb-5">
         <p className="text-[13px] font-medium text-[#737370]">{title}</p>
         <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0" style={{ backgroundColor: iconBg }}>
@@ -140,13 +140,25 @@ export default function SellerAnalyticsPage() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState(null);
+  const [accessDenied, setAccessDenied] = useState(false);
 
   useEffect(() => {
     try {
       const s = localStorage.getItem('seller_user');
       if (s) {
         const parsed = JSON.parse(s);
-        if (parsed?.id) { setUserId(parsed.id); return; }
+        if (parsed?.id) {
+          fetch('/api/team/workspaces', { headers: { Authorization: `Bearer ${parsed.id}` } })
+            .then(r => r.json())
+            .then(ws => {
+              const isOwner = !ws?.current?.id || ws?.current?.role === 'admin'
+              const hasAccess = isOwner || ws?.current?.permissions?.analytics_view
+              if (!hasAccess) { setAccessDenied(true); setLoading(false); return }
+              setUserId(parsed.id)
+            })
+            .catch(() => setUserId(parsed.id))
+          return
+        }
       }
     } catch {}
     setLoading(false);
@@ -178,7 +190,8 @@ export default function SellerAnalyticsPage() {
   const eng = data?.engagement || {};
   const recent = data?.recentViewers || [];
 
-  const totalDevice = (devices.mobile || 0) + (devices.desktop || 0) + (devices.tablet || 0);
+  const mobileCount = (devices.mobile || 0) + (devices.tablet || 0);
+  const totalDevice = mobileCount + (devices.desktop || 0);
   const devicePct = (n) => totalDevice > 0 ? Math.round((n / totalDevice) * 100) : 0;
 
   const trendLabel = s.viewTrend != null
@@ -187,6 +200,20 @@ export default function SellerAnalyticsPage() {
   const trendUp = s.viewTrend != null ? s.viewTrend >= 0 : null;
 
   const maxPropViews = topProps[0]?.views || 1;
+
+  if (accessDenied) {
+    return (
+      <div className="min-h-screen bg-[#FAFAF8] flex items-center justify-center p-6">
+        <div className="bg-white border border-[#E8E8E4] rounded p-10 text-center max-w-sm">
+          <div className="w-12 h-12 bg-[#F3F3F0] rounded flex items-center justify-center mx-auto mb-4">
+            <BarChart2 className="w-6 h-6 text-[#A8A8A4]" />
+          </div>
+          <h2 className="text-[16px] font-bold text-[#1A1816] mb-2">Admin access required</h2>
+          <p className="text-[13px] text-[#737370] leading-relaxed">Analytics is only available to workspace admins. Contact your team admin for access.</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-[#FAFAF8] p-4 lg:p-6" style={{ fontFamily: 'var(--font-dm-sans), sans-serif' }}>
@@ -223,7 +250,7 @@ export default function SellerAnalyticsPage() {
               <ChevronDown className={`w-3.5 h-3.5 text-[#A8A8A4] shrink-0 transition-transform ${periodOpen ? 'rotate-180' : ''}`} />
             </button>
             {periodOpen && (
-              <div className="absolute right-0 top-full mt-1 bg-white border border-[#E8E8E4] rounded-lg shadow-lg z-20 overflow-hidden min-w-[180px]">
+              <div className="absolute right-0 top-full mt-1 bg-white border border-[#E8E8E4] rounded shadow-lg z-20 overflow-hidden min-w-[180px]">
                 {PERIOD_OPTIONS.map(o => {
                   const range = getPeriodDateRange(o.value);
                   return (
@@ -295,7 +322,7 @@ export default function SellerAnalyticsPage() {
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 mb-4">
 
         {/* Daily views chart */}
-        <div className="lg:col-span-3 bg-white border border-[#E8E8E4] rounded-lg overflow-hidden">
+        <div className="lg:col-span-3 bg-white border border-[#E8E8E4] rounded overflow-hidden">
           <div className="px-4 py-3 border-b border-[#E8E8E4] flex items-center justify-between">
             <div>
               <h2 className="text-[13px] font-semibold text-[#1A1816]">Views over time</h2>
@@ -333,7 +360,7 @@ export default function SellerAnalyticsPage() {
         </div>
 
         {/* Top properties */}
-        <div className="lg:col-span-2 bg-white border border-[#E8E8E4] rounded-lg overflow-hidden">
+        <div className="lg:col-span-2 bg-white border border-[#E8E8E4] rounded overflow-hidden">
           <div className="px-4 py-3 border-b border-[#E8E8E4]">
             <h2 className="text-[13px] font-semibold text-[#1A1816]">Top listings</h2>
             <p className="text-[11px] text-[#A8A8A4]">By views this period</p>
@@ -373,7 +400,7 @@ export default function SellerAnalyticsPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
 
         {/* Device breakdown */}
-        <div className="bg-white border border-[#E8E8E4] rounded-lg overflow-hidden">
+        <div className="bg-white border border-[#E8E8E4] rounded overflow-hidden">
           <div className="px-4 py-3 border-b border-[#E8E8E4]">
             <h2 className="text-[13px] font-semibold text-[#1A1816]">Devices</h2>
           </div>
@@ -385,21 +412,20 @@ export default function SellerAnalyticsPage() {
             ) : (
               <>
                 {[
-                  { label: 'Mobile', key: 'mobile', icon: <Smartphone className="w-3.5 h-3.5 text-[#737370]" /> },
-                  { label: 'Desktop', key: 'desktop', icon: <Monitor className="w-3.5 h-3.5 text-[#737370]" /> },
-                  { label: 'Tablet', key: 'tablet', icon: <Tablet className="w-3.5 h-3.5 text-[#737370]" /> },
-                ].map(({ label, key, icon }) => (
-                  <div key={key} className="flex items-center gap-3">
+                  { label: 'Mobile', count: mobileCount, icon: <Smartphone className="w-3.5 h-3.5 text-[#737370]" /> },
+                  { label: 'Desktop', count: devices.desktop || 0, icon: <Monitor className="w-3.5 h-3.5 text-[#737370]" /> },
+                ].map(({ label, count, icon }) => (
+                  <div key={label} className="flex items-center gap-3">
                     <div className="flex items-center gap-1.5 w-20 shrink-0">
                       {icon}
                       <span className="text-[12px] text-[#737370]">{label}</span>
                     </div>
                     <div className="flex-1 h-2 bg-[#F0F0EE] rounded-full overflow-hidden">
-                      <div className="h-full bg-[#D03839] rounded-full" style={{ width: `${devicePct(devices[key] || 0)}%` }} />
+                      <div className="h-full bg-[#D03839] rounded-full" style={{ width: `${devicePct(count)}%` }} />
                     </div>
                     <div className="text-right shrink-0 w-14">
-                      <span className="text-[12px] font-semibold text-[#1A1816]">{devicePct(devices[key] || 0)}%</span>
-                      <span className="text-[11px] text-[#A8A8A4] ml-1">({devices[key] || 0})</span>
+                      <span className="text-[12px] font-semibold text-[#1A1816]">{devicePct(count)}%</span>
+                      <span className="text-[11px] text-[#A8A8A4] ml-1">({count})</span>
                     </div>
                   </div>
                 ))}
@@ -409,7 +435,7 @@ export default function SellerAnalyticsPage() {
         </div>
 
         {/* UTM sources */}
-        <div className="bg-white border border-[#E8E8E4] rounded-lg overflow-hidden">
+        <div className="bg-white border border-[#E8E8E4] rounded overflow-hidden">
           <div className="px-4 py-3 border-b border-[#E8E8E4] flex items-center gap-2">
             <Link2 className="w-3.5 h-3.5 text-[#D03839]" />
             <h2 className="text-[13px] font-semibold text-[#1A1816]">Traffic sources</h2>
@@ -443,7 +469,7 @@ export default function SellerAnalyticsPage() {
         </div>
 
         {/* Buyer engagement */}
-        <div className="bg-white border border-[#E8E8E4] rounded-lg overflow-hidden">
+        <div className="bg-white border border-[#E8E8E4] rounded overflow-hidden">
           <div className="px-4 py-3 border-b border-[#E8E8E4]">
             <h2 className="text-[13px] font-semibold text-[#1A1816]">Buyer engagement</h2>
             <p className="text-[11px] text-[#A8A8A4]">% of sessions where buyers</p>
@@ -464,7 +490,7 @@ export default function SellerAnalyticsPage() {
       </div>
 
       {/* Recent viewers table */}
-      <div className="bg-white border border-[#E8E8E4] rounded-lg overflow-hidden">
+      <div className="bg-white border border-[#E8E8E4] rounded overflow-hidden">
         <div className="px-4 py-3 border-b border-[#E8E8E4]">
           <h2 className="text-[13px] font-semibold text-[#1A1816]">Recent buyer activity</h2>
           <p className="text-[11px] text-[#A8A8A4]">Most recent sessions across all listings</p>
@@ -521,10 +547,9 @@ export default function SellerAnalyticsPage() {
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-1 text-[12px] text-[#737370]">
-                          {r.device?.toLowerCase() === 'mobile' && <Smartphone className="w-3 h-3" />}
+                          {(r.device?.toLowerCase() === 'mobile' || r.device?.toLowerCase() === 'tablet') && <Smartphone className="w-3 h-3" />}
                           {r.device?.toLowerCase() === 'desktop' && <Monitor className="w-3 h-3" />}
-                          {r.device?.toLowerCase() === 'tablet' && <Tablet className="w-3 h-3" />}
-                          <span className="capitalize">{r.device || '—'}</span>
+                          <span className="capitalize">{r.device?.toLowerCase() === 'tablet' ? 'Mobile' : (r.device || '—')}</span>
                         </div>
                       </td>
                       <td className="px-4 py-3">

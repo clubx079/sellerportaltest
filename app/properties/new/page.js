@@ -1,12 +1,25 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import { Save, Eye, ArrowLeft, Upload, X, AlertCircle } from 'lucide-react';
+import { Save, Eye, ArrowLeft, Upload, X, AlertCircle, Home, FileText, Zap, Star, TrendingUp, Package, Check, Lock, ChevronRight, ChevronDown } from 'lucide-react';
 import ImageGalleryManager from '@/components/properties/ImageGalleryManager';
 import TextEditor from '@/components/forms/TextEditor';
 import GooglePlacesAutocomplete from '@/components/forms/GooglePlacesAutocomplete';
+import { loadStripe } from '@stripe/stripe-js';
+import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
+
+const stripePromise = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
+  ? loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY)
+  : null
+
+const ADD_ONS = [
+  { id: 'highlight', label: 'Highlight Listing',         desc: 'Red-bordered card in search results.',                                          price: 999,  duration: '30 Days', icon: Star },
+  { id: 'boost',     label: 'Boost Listing',             desc: 'Top of search results.',                                                        price: 1499, duration: '7 Days',  icon: TrendingUp },
+  { id: 'homepage',  label: 'Feature on Homepage',       desc: 'Shown to all visitors in the featured section.',                               price: 2900, duration: '7 Days',  icon: Zap },
+  { id: 'bundle',    label: 'Search Visibility Bundle',  desc: 'Highlight Listing and Boost Listing together at a discount.',                   price: 2200, duration: 'Highlight 30d + Boost 7d', strikePrice: 2498, savings: 298, icon: Package },
+]
 
 const PROPERTY_STATUSES = [
   { value: 'available', label: 'Available - Ready for sale' },
@@ -29,12 +42,27 @@ const PROPERTY_TYPES = [
 
 export default function NewPropertyPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const draftId = searchParams.get('draft_id') || null;
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
   const [activeTab, setActiveTab] = useState('basic');
+  const [continuedTabs, setContinuedTabs] = useState(new Set());
   const [showAllPreviewImages, setShowAllPreviewImages] = useState(false);
   const [userId, setUserId] = useState(null);
+  const [workspaceRole, setWorkspaceRole] = useState('admin');
+  const [trialPlan, setTrialPlan] = useState(null);
+  const [isLifetimeFree, setIsLifetimeFree] = useState(false);
+  const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
+  const [upgradeLoading, setUpgradeLoading] = useState(false);
+  const endTrialCalledRef = useRef(false);
+  const [upgradeError, setUpgradeError] = useState(null);
+  const [selectedAddOns, setSelectedAddOns] = useState([]);
+  const [addOnClientSecret, setAddOnClientSecret] = useState(null);
+  const [addOnLoading, setAddOnLoading] = useState(false);
+  const [addOnError, setAddOnError] = useState(null);
+  const [pendingPublishData, setPendingPublishData] = useState(null);
 
   const descRef = useRef(null);
   const repairsRef = useRef(null);
@@ -56,6 +84,17 @@ export default function NewPropertyPage() {
     key: null,
     uploading: false
   });
+
+  const [sellerType, setSellerType] = useState('');
+  const [ownershipConfirmed, setOwnershipConfirmed] = useState(false);
+  const [sellerProfileContact, setSellerProfileContact] = useState({ name: '', phone: '' });
+  const [useCustomContact, setUseCustomContact] = useState(false);
+  const [contractUpload, setContractUpload] = useState({
+    url: null,
+    key: null,
+    filename: null,
+    uploading: false
+  });
   const [featuredImageModal, setFeaturedImageModal] = useState({
     open: false,
     publishStatus: 'draft',
@@ -64,11 +103,111 @@ export default function NewPropertyPage() {
 
   useEffect(() => {
     const userStr = localStorage.getItem('seller_user');
-    if (userStr) {
-      const user = JSON.parse(userStr);
-      setUserId(user.id);
-    }
+    if (!userStr) return;
+    const user = JSON.parse(userStr);
+
+    // Pre-fill contact fields from login data
+    const name = user.contactPersonName || user.businessName || '';
+    const phone = user.phone || '';
+    setSellerProfileContact({ name, phone });
+    setFormData(prev => ({ ...prev, contact_name: name, contact_phone: phone }));
+
+    // Resolve effective seller_id (org owner when in team workspace)
+    fetch('/api/team/workspaces', { headers: { Authorization: `Bearer ${user.id}` } })
+      .then(r => r.json())
+      .then(ws => {
+        const effectiveId = ws?.current?.effectiveSellerId || user.id;
+        setWorkspaceRole(ws?.current?.role || 'admin');
+        setUserId(effectiveId);
+        supabase
+          .from('seller_plans')
+          .select('status, plan_type, billing_cycle, listings_used_this_period, trial_ends_at, current_period_end')
+          .eq('seller_id', effectiveId)
+          .maybeSingle()
+          .then(({ data }) => { if (data) setTrialPlan(data) });
+        supabase
+          .from('seller_applications')
+          .select('admin_notes')
+          .eq('id', effectiveId)
+          .maybeSingle()
+          .then(({ data }) => { if (data?.admin_notes === 'LIFETIME_FREE') setIsLifetimeFree(true) });
+      })
+      .catch(() => {
+        setUserId(user.id);
+        supabase
+          .from('seller_plans')
+          .select('status, plan_type, billing_cycle, listings_used_this_period, trial_ends_at, current_period_end')
+          .eq('seller_id', user.id)
+          .maybeSingle()
+          .then(({ data }) => { if (data) setTrialPlan(data) });
+        supabase
+          .from('seller_applications')
+          .select('admin_notes')
+          .eq('id', user.id)
+          .maybeSingle()
+          .then(({ data }) => { if (data?.admin_notes === 'LIFETIME_FREE') setIsLifetimeFree(true) });
+      });
   }, []);
+
+  // Pre-fill form from draft when draft_id is present
+  useEffect(() => {
+    if (!draftId) return;
+    const userStr = localStorage.getItem('seller_user');
+    if (!userStr) return;
+    const user = JSON.parse(userStr);
+
+    supabase
+      .from('properties')
+      .select('*, property_images(id, image_url, image_key, sort_order)')
+      .eq('id', draftId)
+      .eq('seller_id', user.id)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (!data) return;
+        setFormData(prev => ({
+          ...prev,
+          location: data.address || '',
+          price: data.price ?? '',
+          bedrooms: data.bedrooms ?? '',
+          bathrooms: data.bathrooms ?? '',
+          floor_area: data.floor_area ?? '',
+          property_type: data.property_type || '',
+          property_status: data.property_status || 'available',
+          latitude: data.latitude ?? '',
+          longitude: data.longitude ?? '',
+          county: data.county ?? '',
+          city: data.city ?? '',
+          zipcode: data.zipcode ?? '',
+          state: data.state ?? '',
+          description: data.description || '',
+          repairs: data.repairs || '',
+          seo_title: data.seo_title || '',
+          seo_description: data.seo_description || '',
+          social_title: data.social_title || '',
+          social_description: data.social_description || '',
+          social_image_url: data.social_image_url || '',
+        }));
+        if (data.property_images?.length > 0) {
+          const sorted = [...data.property_images].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
+          setImageUploadStatus({
+            isUploading: false,
+            uploadingCount: 0,
+            images: sorted.map((img, i) => ({
+              id: img.id || `existing-${i}`,
+              status: 'completed',
+              imageUrl: img.image_url,
+              imageKey: img.image_key,
+              preview: img.image_url,
+              isFeatured: i === 0,
+            })),
+          });
+        }
+        if (data.seller_type) setSellerType(data.seller_type);
+        if (data.inspection_report_url) setInspectionReport({ url: data.inspection_report_url, key: data.inspection_report_key || null, uploading: false });
+        if (data.contract_url) setContractUpload({ url: data.contract_url, key: null, filename: 'Contract', uploading: false });
+        if (data.seller_type === 'owner') setOwnershipConfirmed(true);
+      });
+  }, [draftId]);
 
   const handleInputChange = (field, value) => {
     setFormData(prev => ({
@@ -90,8 +229,56 @@ export default function NewPropertyPage() {
     }));
   };
 
+  const buildSeoDefaults = (data) => {
+    const addr = data.location || '';
+    const beds = data.bedrooms ? `${data.bedrooms} bed` : '';
+    const baths = data.bathrooms ? `${data.bathrooms} bath` : '';
+    const type = data.property_type || '';
+    const price = data.price ? `$${Number(data.price).toLocaleString()}` : '';
+    const parts = [beds, baths, type].filter(Boolean).join(', ');
+    const title = addr ? addr.slice(0, 60) : '';
+    const rawDesc = [
+      addr ? `${type || 'Property'} for sale at ${addr}.` : '',
+      parts ? `${parts}.` : '',
+      price ? `Asking ${price}.` : '',
+      'Contact seller for more details on this wholesale deal.'
+    ].filter(Boolean).join(' ');
+    const desc = rawDesc.length <= 160 ? rawDesc : rawDesc.slice(0, 160).replace(/\s+\S*$/, '');
+    return { title, desc };
+  };
+
+  const TAB_ORDER = workspaceRole === 'member'
+    ? ['basic', 'images', 'ownership', 'content', 'seo']
+    : ['basic', 'images', 'ownership', 'content', 'seo', 'addons'];
+
+  // ── Step completion ──────────────────────────────────────────────────────────
+  const isBasicComplete = !!(formData.location && formData.price && formData.property_type && formData.bedrooms && formData.bathrooms && formData.floor_area);
+  const isImagesComplete = imageUploadStatus.images.filter(img => img.status === 'completed').length > 0 && !imageUploadStatus.isUploading;
+  const isOwnershipComplete = !!(sellerType && (sellerType === 'wholesaler' ? contractUpload.url : ownershipConfirmed));
+
+  const isTabAccessible = (tabId) => {
+    const idx = TAB_ORDER.indexOf(tabId);
+    if (idx <= 0) return true;
+    if (!isBasicComplete) return false;
+    if (idx <= 1) return true;
+    if (!isImagesComplete) return false;
+    if (idx <= 2) return true;
+    if (!isOwnershipComplete) return false;
+    return true;
+  };
+
+  const isTabComplete = (tabId) => {
+    if (tabId === 'basic') return isBasicComplete;
+    if (tabId === 'images') return isImagesComplete;
+    if (tabId === 'ownership') return isOwnershipComplete;
+    if (tabId === 'content') return continuedTabs.has('content');
+    if (tabId === 'seo') return continuedTabs.has('seo');
+    if (tabId === 'addons') return continuedTabs.has('addons');
+    return false;
+  };
+
   const handleTabChange = (tabId) => {
-    // Save editor content before switching tabs
+    if (!isTabAccessible(tabId)) return;
     if (descRef.current) {
       const cleanDescription = descRef.current.getCleanHTML?.() || descRef.current.getHTML?.() || '';
       setFormData(prev => ({ ...prev, description: cleanDescription }));
@@ -100,13 +287,125 @@ export default function NewPropertyPage() {
       const cleanRepairs = repairsRef.current.getCleanHTML?.() || repairsRef.current.getHTML?.() || '';
       setFormData(prev => ({ ...prev, repairs: cleanRepairs }));
     }
+    setError(null);
+    // Auto-fill SEO fields when entering the SEO tab for the first time
+    if (tabId === 'seo') {
+      setFormData(prev => {
+        const { title, desc } = buildSeoDefaults(prev);
+        return {
+          ...prev,
+          seo_title: prev.seo_title || title,
+          seo_description: prev.seo_description || desc,
+          social_title: prev.social_title || title,
+          social_description: prev.social_description || desc,
+        };
+      });
+    }
     setActiveTab(tabId);
   };
 
+  const handleContinue = () => {
+    // Validate required fields before advancing
+    if (activeTab === 'basic') {
+      if (!formData.location)      { setError('Please enter the property location.'); return; }
+      if (!formData.price)         { setError('Please enter the property price.'); return; }
+      if (!formData.property_type) { setError('Please select a property type.'); return; }
+      if (!formData.bedrooms)      { setError('Please enter the number of bedrooms.'); return; }
+      if (!formData.bathrooms)     { setError('Please enter the number of bathrooms.'); return; }
+      if (!formData.floor_area)    { setError('Please enter the floor area.'); return; }
+    }
+    setError(null);
+    setContinuedTabs(prev => new Set([...prev, activeTab]));
+    const nextTab = TAB_ORDER[TAB_ORDER.indexOf(activeTab) + 1];
+    if (nextTab) handleTabChange(nextTab);
+  };
+
   const handleSave = async (publishStatus = 'draft', options = {}) => {
-    const { skipFeaturedPrompt = false, forceAutoSelectFeatured = false } = options;
-    if (!formData.title || !formData.location) {
-      setError('Please fill in Title and Address before saving.');
+    const { skipFeaturedPrompt = false, forceAutoSelectFeatured = false, addOnFlags = null, bypassLimit = false, addonPaymentIntentId = null } = options;
+
+    if (!bypassLimit) {
+      // Block publishing if subscription has ended
+      if (publishStatus === 'active' && trialPlan?.status === 'canceled') {
+        setError('Your subscription has ended. Please renew your subscription on the Plans page to publish listings.');
+        return;
+      }
+
+      // Block publishing if payment is overdue
+      if (publishStatus === 'active' && trialPlan?.status === 'past_due') {
+        setError('Your payment is overdue. Please update your payment method on the Billing page to publish listings.');
+        return;
+      }
+
+      // Trial limit: only 1 published listing allowed during free trial
+      if (publishStatus === 'active' && trialPlan?.status === 'trialing') {
+        if ((trialPlan.listings_used_this_period ?? 0) >= 1) {
+          setShowUpgradePrompt(true);
+          return;
+        }
+      }
+      // Pro plan: max 5 listings per billing period
+      if (publishStatus === 'active' && trialPlan?.plan_type === 'pro' && trialPlan?.status === 'active') {
+        if ((trialPlan.listings_used_this_period ?? 0) >= 5) {
+          setShowUpgradePrompt(true);
+          return;
+        }
+      }
+    }
+
+    if (!formData.location) {
+      setError('Please fill in the property address.');
+      setActiveTab('basic');
+      return;
+    }
+
+    if (publishStatus === 'active' && !formData.price) {
+      setError('Please enter the asking price.');
+      setActiveTab('basic');
+      return;
+    }
+
+    if (publishStatus === 'active' && !formData.property_type) {
+      setError('Please select a property type.');
+      setActiveTab('basic');
+      return;
+    }
+
+    if (publishStatus === 'active' && !formData.bedrooms) {
+      setError('Please enter the number of beds.');
+      setActiveTab('basic');
+      return;
+    }
+
+    if (publishStatus === 'active' && !formData.bathrooms) {
+      setError('Please enter the number of baths.');
+      setActiveTab('basic');
+      return;
+    }
+
+    if (publishStatus === 'active' && !formData.floor_area) {
+      setError('Please enter the floor area.');
+      setActiveTab('basic');
+      return;
+    }
+
+    if (publishStatus === 'active') {
+      const completed = imageUploadStatus.images.filter(img => img.status === 'completed');
+      if (completed.length === 0) {
+        setError('Please upload at least one image.');
+        setActiveTab('images');
+        return;
+      }
+    }
+
+    if (publishStatus === 'active' && !sellerType) {
+      setError('Please select your relationship to this property in the Ownership tab.');
+      setActiveTab('ownership');
+      return;
+    }
+
+    if (publishStatus === 'active' && sellerType === 'wholesaler' && !contractUpload.url) {
+      setError('A signed contract is required for wholesaler listings. Please upload it in the Ownership tab.');
+      setActiveTab('ownership');
       return;
     }
 
@@ -177,20 +476,26 @@ export default function NewPropertyPage() {
     setError(null);
     setSuccess(null);
 
-    // Short unique slug: 7 alphabets + 2 numerics (e.g. kxmnpqr29) — more readable, less numeric
-    const alpha = 'abcdefghjkmnpqrstuvwxyz';
-    const nums = '23456789';
-    const part1 = Array.from({ length: 7 }, () => alpha[Math.floor(Math.random() * alpha.length)]).join('');
-    const part2 = Array.from({ length: 2 }, () => nums[Math.floor(Math.random() * nums.length)]).join('');
-    const shortSlug = part1 + part2;
+    // Short unique slug — reuse existing slug for drafts, generate new for fresh properties
+    let shortSlug;
+    if (!draftId) {
+      const alpha = 'abcdefghjkmnpqrstuvwxyz';
+      const nums = '23456789';
+      const part1 = Array.from({ length: 7 }, () => alpha[Math.floor(Math.random() * alpha.length)]).join('');
+      const part2 = Array.from({ length: 2 }, () => nums[Math.floor(Math.random() * nums.length)]).join('');
+      shortSlug = part1 + part2;
+    }
 
     // Create save data object matching the actual database schema
+    // When publishing, set under_review so AI moderation can run first
+    const actualStatus = publishStatus === 'active' ? 'under_review' : publishStatus;
     const saveData = {
       seller_id: sellerId,
-      status: publishStatus,
-      slug: shortSlug,
+      status: actualStatus,
+      ...(shortSlug ? { slug: shortSlug } : {}),
       address: formData.location || '', // 'location' in form maps to 'address' in DB
       property_status: formData.property_status || 'available',
+      property_type: formData.property_type || null,
       description: formData.description || '',
       repairs: formData.repairs || ''
     };
@@ -201,13 +506,15 @@ export default function NewPropertyPage() {
     if (formData.bathrooms) saveData.bathrooms = parseFloat(formData.bathrooms);
     if (formData.floor_area) saveData.floor_area = parseInt(formData.floor_area);
 
-    // Add location coordinates from Google Places
+    // Add location coordinates and parsed fields from Google Places
     if (formData.latitude) saveData.latitude = formData.latitude;
     if (formData.longitude) saveData.longitude = formData.longitude;
     if (formData.state) saveData.state = formData.state;
+    if (formData.city) saveData.city = formData.city;
+    if (formData.zipcode) saveData.zipcode = formData.zipcode;
 
     // Add SEO fields (using correct column names from schema)
-    if (formData.meta_title) saveData.seo_title = formData.meta_title;
+    saveData.seo_title = formData.seo_title || formData.meta_title || formData.location || '';
     if (formData.meta_description) saveData.seo_description = formData.meta_description;
     if (formData.social_share_image) saveData.social_image_url = formData.social_share_image;
 
@@ -215,17 +522,38 @@ export default function NewPropertyPage() {
     if (inspectionReport.url) saveData.inspection_report_url = inspectionReport.url;
     if (inspectionReport.key) saveData.inspection_report_key = inspectionReport.key;
 
-    console.log('Saving property with data:', saveData);
+    // Add ownership info
+    if (sellerType) saveData.seller_type = sellerType;
+    if (contractUpload.url) saveData.contract_url = contractUpload.url;
+
+    // Add contact info
+    if (formData.contact_name) saveData.contact_name = formData.contact_name;
+    if (formData.contact_phone) saveData.contact_phone = formData.contact_phone;
 
     try {
-      // Create property
-      const { data, error: saveErr } = await supabase
-        .from('properties')
-        .insert([saveData])
-        .select()
-        .single();
-
-      if (saveErr) throw saveErr;
+      // Update existing draft or create new property
+      let data;
+      if (draftId) {
+        const { data: updated, error: updateErr } = await supabase
+          .from('properties')
+          .update({ ...saveData, updated_at: new Date().toISOString() })
+          .eq('id', draftId)
+          .eq('seller_id', sellerId)
+          .select()
+          .single();
+        if (updateErr) throw updateErr;
+        data = updated;
+        // Remove old images so we can replace with current set
+        await supabase.from('property_images').delete().eq('property_id', draftId);
+      } else {
+        const { data: inserted, error: saveErr } = await supabase
+          .from('properties')
+          .insert([saveData])
+          .select()
+          .single();
+        if (saveErr) throw saveErr;
+        data = inserted;
+      }
 
       // Save images to database
       if (completedImagesForSave.length > 0) {
@@ -253,15 +581,57 @@ export default function NewPropertyPage() {
         }
       }
 
-      setSuccess(
-        publishStatus === 'active'
-          ? 'Property published successfully!'
-          : 'Property saved as draft!'
-      );
+      // Increment listing counter on publish (trial OR active)
+      const shouldIncrementCounter = publishStatus === 'active' &&
+        ['trialing', 'active'].includes(trialPlan?.status);
+      if (shouldIncrementCounter) {
+        await supabase
+          .from('seller_plans')
+          .update({ listings_used_this_period: (trialPlan.listings_used_this_period ?? 0) + 1 })
+          .eq('seller_id', sellerId);
+        setTrialPlan(prev => prev ? { ...prev, listings_used_this_period: (prev.listings_used_this_period ?? 0) + 1 } : prev);
+      }
 
-      setTimeout(() => {
-        router.push('/properties');
-      }, 1500);
+      // Apply add-on flags if paid — use addOnFlags from options directly (not state,
+      // which is async and would still be stale at this point in the same call)
+      if (publishStatus === 'active' && addOnFlags && Object.keys(addOnFlags).length > 0) {
+        const now = new Date()
+        const ms  = (d) => d * 24 * 60 * 60 * 1000
+
+        // Include expiry timestamps alongside the boolean flags
+        const flagsWithExpiry = { ...addOnFlags }
+        if (addOnFlags.is_highlighted)      flagsWithExpiry.highlight_ends_at          = new Date(now.getTime() + ms(30)).toISOString()
+        if (addOnFlags.is_boosted)          flagsWithExpiry.boost_ends_at              = new Date(now.getTime() + ms(7)).toISOString()
+        if (addOnFlags.is_homepage_featured) flagsWithExpiry.homepage_feature_ends_at  = new Date(now.getTime() + ms(7)).toISOString()
+
+        await supabase
+          .from('properties')
+          .update(flagsWithExpiry)
+          .eq('id', data.id)
+          .eq('seller_id', sellerId);
+
+        // Record each add-on in listing_addons via server route (uses service role key)
+        fetch('/api/seller/listing-addons/record', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ seller_id: sellerId, property_id: data.id, add_ons: selectedAddOns, stripe_payment_intent_id: addonPaymentIntentId }),
+        }).catch(() => {})
+      }
+
+      // Kick off AI moderation in background for published listings
+      if (publishStatus === 'active') {
+        fetch('/api/seller/moderate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ property_id: data.id }),
+        }).catch(() => {});
+      }
+
+      const successMsg = publishStatus === 'active'
+        ? 'Property submitted for review! You\'ll be notified when it\'s approved.'
+        : 'Property saved as draft!';
+      sessionStorage.setItem('listingSuccess', successMsg);
+      router.push('/properties');
 
     } catch (err) {
       console.error('Save failed:', err);
@@ -346,53 +716,197 @@ export default function NewPropertyPage() {
     setInspectionReport({ url: null, key: null, uploading: false });
   };
 
+  const handleContractUpload = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const allowedTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+    if (!allowedTypes.includes(file.type)) {
+      setError('Please upload a PDF or DOC file');
+      return;
+    }
+
+    setContractUpload(prev => ({ ...prev, uploading: true }));
+    setError(null);
+
+    try {
+      const fileName = `contracts/${Date.now()}-${file.name}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('scraperpropertyphotos')
+        .upload(fileName, file, { cacheControl: '3600', upsert: false });
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('scraperpropertyphotos')
+        .getPublicUrl(fileName);
+
+      setContractUpload({ url: publicUrl, key: fileName, filename: file.name, uploading: false });
+    } catch (err) {
+      console.error('Contract upload failed:', err);
+      setError('Failed to upload contract');
+      setContractUpload(prev => ({ ...prev, uploading: false }));
+    }
+  };
+
+  const handleRemoveContract = async () => {
+    if (contractUpload.key) {
+      try {
+        await supabase.storage.from('scraperpropertyphotos').remove([contractUpload.key]);
+      } catch (err) {
+        console.error('Failed to delete contract:', err);
+      }
+    }
+    setContractUpload({ url: null, key: null, filename: null, uploading: false });
+  };
+
   return (
     <div className="space-y-3 md:space-y-4" style={{ fontFamily: 'var(--font-dm-sans), sans-serif' }}>
+
+      {/* Trial banner */}
+      {trialPlan?.status === 'trialing' && (trialPlan.listings_used_this_period ?? 0) < 1 && (
+        <div className="flex items-start gap-3 px-4 py-3 bg-[#FEF3E2] border border-[#F3C97D] rounded text-[13px] text-[#B5620A]">
+          <AlertCircle size={16} className="flex-shrink-0 mt-0.5" />
+          <span>During your free trial, your listing will only be live for 7 days.</span>
+        </div>
+      )}
+
+      {/* Upgrade modal */}
+      {showUpgradePrompt && (() => {
+        const isTrialLimit = trialPlan?.status === 'trialing';
+        const planLabel = trialPlan?.plan_type === 'enterprise' ? 'Enterprise' : 'Pro Seller';
+        const planPrice = trialPlan?.plan_type === 'enterprise'
+          ? (trialPlan?.billing_cycle === 'annual' ? '$239/mo' : '$299/mo')
+          : (trialPlan?.billing_cycle === 'annual' ? '$79/mo' : '$99/mo');
+        const resetDate = trialPlan?.current_period_end
+          ? new Date(trialPlan.current_period_end).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+          : null;
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+            <div className="bg-white rounded shadow-2xl w-full max-w-sm p-6 space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-[15px] font-bold text-[#1A1816]">
+                  {isTrialLimit ? 'Start your subscription' : 'Listing limit reached'}
+                </h3>
+                <button onClick={() => { setShowUpgradePrompt(false); setUpgradeError(null); endTrialCalledRef.current = false; }} className="p-1.5 rounded hover:bg-[#F0F0EE] transition-colors">
+                  <X size={16} className="text-[#737370]" />
+                </button>
+              </div>
+
+              {isTrialLimit ? (
+                <>
+                  <p className="text-[13px] text-[#737370]">
+                    Your free trial allows 1 published listing. To publish more, your trial will end now and your <strong>{planLabel}</strong> subscription ({planPrice}) will begin immediately.{selectedAddOns.length > 0 ? ' You\'ll then be taken back to complete your add-on payment.' : ''}
+                  </p>
+                  <div className="bg-[#FAFAF8] border border-[#E8E8E4] rounded p-3 flex items-center justify-between">
+                    <span className="text-[13px] font-medium text-[#1A1816]">{planLabel}</span>
+                    <span className="text-[13px] font-bold text-[#1A1816]">{planPrice}</span>
+                  </div>
+                  {upgradeError && <p className="text-[12px] text-red-600">{upgradeError}</p>}
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => { setShowUpgradePrompt(false); setUpgradeError(null); endTrialCalledRef.current = false; }}
+                      className="flex-1 h-[40px] border border-[#E8E8E4] rounded text-[13px] font-medium text-[#1A1816] hover:border-[#1A1816] transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      disabled={upgradeLoading}
+                      onClick={async () => {
+                        if (endTrialCalledRef.current) return;
+                        endTrialCalledRef.current = true;
+                        setUpgradeLoading(true);
+                        setUpgradeError(null);
+                        try {
+                          const res = await fetch('/api/seller/plan/end-trial', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ seller_id: userId }),
+                          });
+                          const data = await res.json();
+                          if (!res.ok) throw new Error(data.error || 'Failed to start subscription');
+                          setTrialPlan(prev => prev ? { ...prev, status: 'active' } : prev);
+                          setShowUpgradePrompt(false);
+                          if (selectedAddOns.length > 0) {
+                            setAddOnClientSecret(null);
+                            setAddOnError(null);
+                            setActiveTab('addons');
+                          } else {
+                            handleSave('active', { bypassLimit: true });
+                          }
+                        } catch (err) {
+                          endTrialCalledRef.current = false;
+                          setUpgradeError(err.message);
+                        } finally {
+                          setUpgradeLoading(false);
+                        }
+                      }}
+                      className="flex-1 h-[40px] bg-[#D03839] hover:bg-[#E0493B] rounded text-[13px] font-semibold text-white transition-colors disabled:opacity-50"
+                    >
+                      {upgradeLoading ? 'Processing…' : 'Confirm & Publish'}
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <p className="text-[13px] text-[#737370]">
+                    Your Pro plan includes 5 published listings per billing period. You've used all 5 this period.
+                    {resetDate ? ` Your limit resets on ${resetDate}.` : ''} Upgrade to Enterprise for unlimited listings.
+                  </p>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => setShowUpgradePrompt(false)}
+                      className="flex-1 h-[40px] border border-[#E8E8E4] rounded text-[13px] font-medium text-[#1A1816] hover:border-[#1A1816] transition-colors"
+                    >
+                      Close
+                    </button>
+                    <button
+                      onClick={() => { setShowUpgradePrompt(false); router.push('/plans'); }}
+                      className="flex-1 h-[40px] bg-[#D03839] hover:bg-[#E0493B] rounded text-[13px] font-semibold text-white transition-colors"
+                    >
+                      Upgrade to Enterprise
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <button
-            onClick={() => router.back()}
+            onClick={async () => { await handleSave('draft'); router.back() }}
             className="p-2 rounded hover:bg-[#F0F0EE] transition-colors"
           >
             <ArrowLeft size={20} className="text-[#737370]" />
           </button>
           <div>
-            <h1 className="text-[18px] md:text-[20px] font-bold tracking-[-0.4px] text-[#1A1816]">Add New Property</h1>
-            <p className="text-[12px] text-[#737370] mt-0.5">Create a new wholesale property listing</p>
+            <h1 className="text-[18px] md:text-[20px] font-bold tracking-[-0.4px] text-[#1A1816]">
+              {draftId ? 'Complete Your Listing' : 'Post a Deal'}
+            </h1>
+            <p className="text-[12px] text-[#737370] mt-0.5">
+              {draftId ? 'Your saved draft has been pre-filled — review and submit when ready' : 'Create a new wholesale property listing'}
+            </p>
           </div>
         </div>
-        <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={() => handleSave('draft')}
-            disabled={saving || imageUploadStatus.isUploading}
-            className="flex items-center justify-center gap-2 bg-[#FAFAF8] hover:bg-[#E8E8E4] text-[#1A1816] px-3 py-2 rounded text-[13px] font-medium border border-[#E8E8E4] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <Save size={16} />
-            <span>
-              {imageUploadStatus.isUploading
-                ? `Uploading ${imageUploadStatus.uploadingCount}...`
-                : saving ? 'Saving…' : 'Save Draft'
-              }
-            </span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => handleSave('active')}
-            disabled={saving || imageUploadStatus.isUploading}
-            className="flex items-center justify-center gap-2 bg-[#D03839] hover:bg-[#E0493B] text-white px-3 py-2 rounded text-[13px] font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <Eye size={16} />
-            <span>
-              {imageUploadStatus.isUploading
-                ? 'Please wait...'
-                : saving ? 'Publishing…' : 'Publish'
-              }
-            </span>
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={() => handleSave('draft')}
+          disabled={saving || imageUploadStatus.isUploading}
+          className="flex items-center justify-center gap-2 bg-[#FAFAF8] hover:bg-[#E8E8E4] text-[#1A1816] px-3 py-2 rounded text-[13px] font-medium border border-[#E8E8E4] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <Save size={16} />
+          <span>
+            {imageUploadStatus.isUploading
+              ? `Uploading ${imageUploadStatus.uploadingCount}...`
+              : saving ? 'Saving…' : 'Save Draft'
+            }
+          </span>
+        </button>
       </div>
 
       {/* Notifications */}
@@ -422,7 +936,7 @@ export default function NewPropertyPage() {
 
       {featuredImageModal.open && (
         <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-[1px] flex items-center justify-center p-4">
-          <div className="w-full max-w-md bg-white border border-[#E8E8E4] rounded-lg shadow-2xl overflow-hidden">
+          <div className="w-full max-w-md bg-white border border-[#E8E8E4] rounded shadow-2xl overflow-hidden">
             <div className="px-5 py-4 border-b border-[#E8E8E4] bg-[#FAFAF8]">
               <h3 className="text-[15px] font-semibold text-[#1A1816]">Select featured image</h3>
               <p className="text-[12px] text-[#737370] mt-1">
@@ -469,27 +983,42 @@ export default function NewPropertyPage() {
 
       {/* Tabs */}
       <div className="bg-white rounded border border-[#E8E8E4] overflow-hidden">
-        <div className="flex border-b border-[#E8E8E4] overflow-x-auto scrollbar-hide">
+        {/* Step indicator */}
+        <div className="flex border-b border-[#E8E8E4]">
           {[
-            { id: 'basic', label: 'Basic Info' },
-            { id: 'images', label: 'Images' },
-            { id: 'inspection', label: 'Inspection Report' },
-            { id: 'content', label: 'Content' },
-            { id: 'seo', label: 'SEO & Social' },
-            { id: 'preview', label: 'Preview' }
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => handleTabChange(tab.id)}
-              className={`px-4 md:px-6 py-3 md:py-4 font-medium transition-colors whitespace-nowrap text-[12px] md:text-[13px] ${
-                activeTab === tab.id
-                  ? 'text-[#D03839] border-b-2 border-[#D03839] bg-[#FEF0EF]/30'
-                  : 'text-[#737370] hover:text-[#1A1816]'
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
+            { id: 'basic',     label: 'Basic Info' },
+            { id: 'images',    label: 'Images' },
+            { id: 'ownership', label: 'Ownership' },
+            { id: 'content',   label: 'Content' },
+            { id: 'seo',       label: 'SEO & Social' },
+            { id: 'addons',    label: 'Add-Ons' },
+          ].map((tab, idx) => {
+            const accessible = isTabAccessible(tab.id);
+            const complete   = isTabComplete(tab.id);
+            const active     = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => accessible && handleTabChange(tab.id)}
+                disabled={!accessible}
+                className={`flex-1 flex items-center justify-center gap-1.5 px-1 md:px-5 py-3.5 text-[12px] font-medium transition-colors border-b-2
+                  ${active    ? 'border-[#D03839] text-[#D03839] bg-[#FEF0EF]/30'
+                  : complete  ? 'border-transparent text-[#0F6E56] hover:bg-[#FAFAF8]'
+                  : accessible ? 'border-transparent text-[#737370] hover:text-[#1A1816] hover:bg-[#FAFAF8]'
+                  : 'border-transparent text-[#C4C4C0] cursor-not-allowed'}`}
+              >
+                <span className={`w-[18px] h-[18px] rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0
+                  ${active    ? 'bg-[#D03839] text-white'
+                  : complete  ? 'bg-[#0F6E56] text-white'
+                  : accessible ? 'bg-[#E8E8E4] text-[#737370]'
+                  : 'bg-[#F0F0EE] text-[#C4C4C0]'}`}
+                >
+                  {complete ? <Check className="w-2.5 h-2.5" /> : !accessible ? <Lock className="w-2.5 h-2.5" /> : idx + 1}
+                </span>
+                <span className="hidden sm:inline">{tab.label}</span>
+              </button>
+            );
+          })}
         </div>
 
         {/* Tab Content */}
@@ -497,18 +1026,6 @@ export default function NewPropertyPage() {
           {/* Basic Info Tab */}
           {activeTab === 'basic' && (
             <div className="space-y-6">
-              <div>
-                <label className="block text-[13px] font-semibold text-[#1A1816] mb-2">Property Title *</label>
-                <input
-                  type="text"
-                  value={formData.title || ''}
-                  onChange={(e) => handleInputChange('title', e.target.value)}
-                  className="w-full px-4 py-3 border border-[#E8E8E4] rounded focus:border-[#D03839] focus:outline-none transition-colors text-[13px] text-[#1A1816] placeholder:text-[#A8A8A4]"
-                  placeholder="Luxury Beachfront Hotel in Miami"
-                  required
-                />
-              </div>
-
               <div>
                 <label className="block text-[13px] font-semibold text-[#1A1816] mb-2">Location *</label>
                 <GooglePlacesAutocomplete
@@ -522,7 +1039,7 @@ export default function NewPropertyPage() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-[13px] font-semibold text-[#1A1816] mb-2">Price ($)</label>
+                  <label className="block text-[13px] font-semibold text-[#1A1816] mb-2">Price ($) *</label>
                   <input
                     type="number"
                     value={formData.price || ''}
@@ -532,7 +1049,7 @@ export default function NewPropertyPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-[13px] font-semibold text-[#1A1816] mb-2">Property Type</label>
+                  <label className="block text-[13px] font-semibold text-[#1A1816] mb-2">Property Type *</label>
                   <select
                     value={formData.property_type ?? ''}
                     onChange={(e) => handleInputChange('property_type', e.target.value)}
@@ -548,30 +1065,37 @@ export default function NewPropertyPage() {
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-[13px] font-semibold text-[#1A1816] mb-2">Rooms/Units</label>
-                  <input
-                    type="number"
-                    value={formData.bedrooms || ''}
-                    onChange={(e) => handleInputChange('bedrooms', e.target.value)}
-                    className="w-full px-4 py-3 border border-[#E8E8E4] rounded focus:border-[#D03839] focus:outline-none transition-colors text-[13px] text-[#1A1816] placeholder:text-[#A8A8A4]"
-                    placeholder="50"
-                    min="0"
-                  />
+                  <label className="block text-[13px] font-semibold text-[#1A1816] mb-2">Beds *</label>
+                  <div className="relative">
+                    <select
+                      value={formData.bedrooms || ''}
+                      onChange={(e) => handleInputChange('bedrooms', e.target.value)}
+                      className="w-full px-3 py-2.5 pr-8 border border-[#E8E8E4] rounded bg-white focus:border-[#1A1816] focus:outline-none transition-colors text-[13px] text-[#1A1816] appearance-none"
+                    >
+                      <option value="">Select</option>
+                      {[1,2,3,4].map(n => <option key={n} value={n}>{n}</option>)}
+                      <option value="5">5+</option>
+                    </select>
+                    <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none text-[#737370]" />
+                  </div>
                 </div>
                 <div>
-                  <label className="block text-[13px] font-semibold text-[#1A1816] mb-2">Bathrooms</label>
-                  <input
-                    type="number"
-                    step="0.5"
-                    value={formData.bathrooms || ''}
-                    onChange={(e) => handleInputChange('bathrooms', e.target.value)}
-                    className="w-full px-4 py-3 border border-[#E8E8E4] rounded focus:border-[#D03839] focus:outline-none transition-colors text-[13px] text-[#1A1816] placeholder:text-[#A8A8A4]"
-                    placeholder="50"
-                    min="0"
-                  />
+                  <label className="block text-[13px] font-semibold text-[#1A1816] mb-2">Baths *</label>
+                  <div className="relative">
+                    <select
+                      value={formData.bathrooms || ''}
+                      onChange={(e) => handleInputChange('bathrooms', e.target.value)}
+                      className="w-full px-3 py-2.5 pr-8 border border-[#E8E8E4] rounded bg-white focus:border-[#1A1816] focus:outline-none transition-colors text-[13px] text-[#1A1816] appearance-none"
+                    >
+                      <option value="">Select</option>
+                      {[1,1.5,2,2.5,3,3.5,4,4.5].map(n => <option key={n} value={n}>{n}</option>)}
+                      <option value="5">5+</option>
+                    </select>
+                    <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none text-[#737370]" />
+                  </div>
                 </div>
                 <div>
-                  <label className="block text-[13px] font-semibold text-[#1A1816] mb-2">Floor Area (sqft)</label>
+                  <label className="block text-[13px] font-semibold text-[#1A1816] mb-2">Floor Area (sqft) *</label>
                   <input
                     type="number"
                     value={formData.floor_area || ''}
@@ -594,6 +1118,67 @@ export default function NewPropertyPage() {
                     <option key={status.value} value={status.value}>{status.label}</option>
                   ))}
                 </select>
+              </div>
+
+              {/* Contact Info */}
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <div>
+                    <h3 className="text-[15px] font-semibold text-[#1A1816]">Contact Info</h3>
+                    <p className="text-[13px] text-[#737370] mt-0.5">How buyers can reach you about this listing.</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const next = !useCustomContact;
+                      setUseCustomContact(next);
+                      if (!next) {
+                        setFormData(prev => ({ ...prev, contact_name: sellerProfileContact.name, contact_phone: sellerProfileContact.phone }));
+                      } else {
+                        setFormData(prev => ({ ...prev, contact_name: '', contact_phone: '' }));
+                      }
+                    }}
+                    className={`text-[13px] font-semibold px-4 py-2 rounded border transition-all duration-200 active:scale-[0.98] ${
+                      useCustomContact
+                        ? 'bg-[#D03839] border-[#D03839] text-white hover:bg-[#E0493B] hover:border-[#E0493B]'
+                        : 'bg-white border-[#D03839] text-[#D03839] hover:bg-[#FEF0EF]'
+                    }`}
+                  >
+                    {useCustomContact ? 'Use profile contact' : 'Edit contact info'}
+                  </button>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[13px] font-semibold text-[#1A1816] mb-2">Contact Name</label>
+                    <input
+                      type="text"
+                      value={formData.contact_name || ''}
+                      onChange={(e) => handleInputChange('contact_name', e.target.value)}
+                      readOnly={!useCustomContact}
+                      placeholder="Your name or company"
+                      className={`w-full px-4 py-3 border rounded text-[13px] text-[#1A1816] transition-colors ${
+                        useCustomContact
+                          ? 'border-[#E8E8E4] focus:border-[#D03839] focus:outline-none'
+                          : 'border-[#E8E8E4] bg-[#FAFAF8] text-[#737370] cursor-default outline-none'
+                      }`}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[13px] font-semibold text-[#1A1816] mb-2">Contact Phone</label>
+                    <input
+                      type="tel"
+                      value={formData.contact_phone || ''}
+                      onChange={(e) => handleInputChange('contact_phone', e.target.value)}
+                      readOnly={!useCustomContact}
+                      placeholder="+1 (555) 000-0000"
+                      className={`w-full px-4 py-3 border rounded text-[13px] text-[#1A1816] transition-colors ${
+                        useCustomContact
+                          ? 'border-[#E8E8E4] focus:border-[#D03839] focus:outline-none'
+                          : 'border-[#E8E8E4] bg-[#FAFAF8] text-[#737370] cursor-default outline-none'
+                      }`}
+                    />
+                  </div>
+                </div>
               </div>
 
               {/* Featured Image Preview */}
@@ -639,63 +1224,120 @@ export default function NewPropertyPage() {
             />
           </div>
 
-          {/* Inspection Report Tab */}
-          {activeTab === 'inspection' && (
-            <div>
-              <h3 className="text-[15px] font-semibold text-[#1A1816] mb-2">Inspection Report</h3>
-              <p className="text-[13px] text-[#737370] mb-6">
-                Upload the inspection report for this property (PDF or DOC format)
-              </p>
-
-              {!inspectionReport.url ? (
-                <div className="border border-dashed border-[#E8E8E4] rounded p-8 text-center">
-                  <Upload className="w-12 h-12 text-[#A8A8A4] mx-auto mb-4" />
-                  <p className="text-[13px] text-[#737370] mb-4">
-                    Upload PDF or DOC file
-                  </p>
-                  <input
-                    type="file"
-                    id="inspection-upload"
-                    accept=".pdf,.doc,.docx"
-                    onChange={handleInspectionUpload}
-                    className="hidden"
-                    disabled={inspectionReport.uploading}
-                  />
-                  <label
-                    htmlFor="inspection-upload"
-                    className={`inline-flex items-center gap-2 px-4 py-2 bg-[#D03839] hover:bg-[#E0493B] text-white rounded text-[13px] font-medium transition-colors cursor-pointer ${
-                      inspectionReport.uploading ? 'opacity-50 cursor-not-allowed' : ''
+          {/* Ownership Tab */}
+          {activeTab === 'ownership' && (
+            <div className="space-y-6">
+              <div>
+                <h3 className="text-[15px] font-semibold text-[#1A1816] mb-1">Your relationship to this property</h3>
+                <p className="text-[13px] text-[#737370] mb-5">This helps buyers understand the deal structure.</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => { setSellerType('owner'); setOwnershipConfirmed(false) }}
+                    className={`flex flex-col items-center gap-3 p-5 rounded border-2 transition-all ${
+                      sellerType === 'owner'
+                        ? 'border-[#D03839] bg-[#FEF0EF]'
+                        : 'border-[#E8E8E4] bg-white hover:border-[#1A1816]'
                     }`}
                   >
-                    {inspectionReport.uploading ? 'Uploading...' : 'Choose File'}
+                    <Home className={`w-7 h-7 ${sellerType === 'owner' ? 'text-[#D03839]' : 'text-[#737370]'}`} />
+                    <div className="text-center">
+                      <p className={`text-[13px] font-semibold ${sellerType === 'owner' ? 'text-[#D03839]' : 'text-[#1A1816]'}`}>I&apos;m the Owner</p>
+                      <p className="text-[11px] text-[#737370] mt-0.5">I own this property directly</p>
+                    </div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSellerType('wholesaler')}
+                    className={`flex flex-col items-center gap-3 p-5 rounded border-2 transition-all ${
+                      sellerType === 'wholesaler'
+                        ? 'border-[#D03839] bg-[#FEF0EF]'
+                        : 'border-[#E8E8E4] bg-white hover:border-[#1A1816]'
+                    }`}
+                  >
+                    <FileText className={`w-7 h-7 ${sellerType === 'wholesaler' ? 'text-[#D03839]' : 'text-[#737370]'}`} />
+                    <div className="text-center">
+                      <p className={`text-[13px] font-semibold ${sellerType === 'wholesaler' ? 'text-[#D03839]' : 'text-[#1A1816]'}`}>I&apos;m a Wholesaler</p>
+                      <p className="text-[11px] text-[#737370] mt-0.5">I have a contract to assign</p>
+                    </div>
+                  </button>
+                </div>
+              </div>
+
+              {sellerType === 'owner' && (
+                <div className="rounded border border-[#E8E8E4] bg-[#FAFAF8] p-4">
+                  <label className="flex items-start gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={ownershipConfirmed}
+                      onChange={e => setOwnershipConfirmed(e.target.checked)}
+                      className="mt-0.5 w-4 h-4 accent-[#D03839] shrink-0"
+                    />
+                    <span className="text-[13px] text-[#444441] leading-snug">
+                      I confirm that I am the legal owner of this property and have the authority to list it for sale. I understand that providing false ownership information may result in listing removal and account suspension.
+                    </span>
                   </label>
                 </div>
-              ) : (
-                <div className="bg-[#FAFAF8] border border-[#E8E8E4] rounded p-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-[#D03839]/10 rounded flex items-center justify-center">
-                        <Upload className="w-5 h-5 text-[#D03839]" />
-                      </div>
-                      <div>
-                        <p className="text-[13px] font-medium text-[#1A1816]">Inspection Report</p>
-                        <a
-                          href={inspectionReport.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-[12px] text-[#D03839] hover:underline"
+              )}
+
+              {sellerType === 'wholesaler' && (
+                <div>
+                  <h3 className="text-[15px] font-semibold text-[#1A1816] mb-1">
+                    Purchase Contract / Agreement <span className="text-[#D03839]">*</span>
+                  </h3>
+                  <p className="text-[13px] text-[#737370] mb-4">
+                    Upload your signed purchase contract or agreement. Required before publishing. (PDF or DOC)
+                  </p>
+
+                  {!contractUpload.url ? (
+                    <div className="border border-dashed border-[#E8E8E4] rounded p-8 text-center">
+                      <FileText className="w-12 h-12 text-[#A8A8A4] mx-auto mb-4" />
+                      <p className="text-[13px] text-[#737370] mb-4">Upload PDF or DOC file</p>
+                      <input
+                        type="file"
+                        id="contract-upload"
+                        accept=".pdf,.doc,.docx"
+                        onChange={handleContractUpload}
+                        className="hidden"
+                        disabled={contractUpload.uploading}
+                      />
+                      <label
+                        htmlFor="contract-upload"
+                        className={`inline-flex items-center gap-2 px-4 py-2 bg-[#D03839] hover:bg-[#E0493B] text-white rounded text-[13px] font-medium transition-colors cursor-pointer ${
+                          contractUpload.uploading ? 'opacity-50 cursor-not-allowed' : ''
+                        }`}
+                      >
+                        {contractUpload.uploading ? 'Uploading...' : 'Choose File'}
+                      </label>
+                    </div>
+                  ) : (
+                    <div className="bg-[#FAFAF8] border border-[#E8E8E4] rounded p-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-[#D03839]/10 rounded flex items-center justify-center">
+                            <FileText className="w-5 h-5 text-[#D03839]" />
+                          </div>
+                          <div>
+                            <p className="text-[13px] font-medium text-[#1A1816]">{contractUpload.filename || 'Contract'}</p>
+                            <a
+                              href={contractUpload.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-[12px] text-[#D03839] hover:underline"
+                            >
+                              View Document
+                            </a>
+                          </div>
+                        </div>
+                        <button
+                          onClick={handleRemoveContract}
+                          className="p-2 rounded hover:bg-[#E8E8E4] text-[#737370] transition-colors"
                         >
-                          View Document
-                        </a>
+                          <X className="w-4 h-4" />
+                        </button>
                       </div>
                     </div>
-                    <button
-                      onClick={handleRemoveInspection}
-                      className="p-2 rounded hover:bg-[#E8E8E4] text-[#737370] transition-colors"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
+                  )}
                 </div>
               )}
             </div>
@@ -715,13 +1357,60 @@ export default function NewPropertyPage() {
               </div>
 
               <div>
-                <label className="block text-[13px] font-semibold text-[#1A1816] mb-2">Repairs & Renovation</label>
+                <label className="block text-[13px] font-semibold text-[#1A1816] mb-1">Repairs & Renovation <span className="text-[#A8A8A4] font-normal">(optional)</span></label>
                 <TextEditor
                   ref={repairsRef}
                   id="repairs-editor"
                   content={formData.repairs || ''}
                   placeholder="Detail any repairs needed, recent renovations, or planned improvements..."
                 />
+              </div>
+
+              {/* Inspection Report (optional) */}
+              <div>
+                <label className="block text-[13px] font-semibold text-[#1A1816] mb-1">Inspection Report <span className="text-[#A8A8A4] font-normal">(optional)</span></label>
+                <p className="text-[12px] text-[#737370] mb-3">Upload the inspection report for this property (PDF or DOC)</p>
+                {!inspectionReport.url ? (
+                  <div className="border border-dashed border-[#E8E8E4] rounded p-6 text-center">
+                    <Upload className="w-8 h-8 text-[#A8A8A4] mx-auto mb-3" />
+                    <p className="text-[13px] text-[#737370] mb-3">PDF or DOC file</p>
+                    <input
+                      type="file"
+                      id="inspection-upload"
+                      accept=".pdf,.doc,.docx"
+                      onChange={handleInspectionUpload}
+                      className="hidden"
+                      disabled={inspectionReport.uploading}
+                    />
+                    <label
+                      htmlFor="inspection-upload"
+                      className={`inline-flex items-center gap-2 px-4 py-2 bg-[#D03839] hover:bg-[#E0493B] text-white rounded text-[13px] font-medium transition-colors cursor-pointer ${
+                        inspectionReport.uploading ? 'opacity-50 cursor-not-allowed' : ''
+                      }`}
+                    >
+                      {inspectionReport.uploading ? 'Uploading...' : 'Choose File'}
+                    </label>
+                  </div>
+                ) : (
+                  <div className="bg-[#FAFAF8] border border-[#E8E8E4] rounded p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 bg-[#D03839]/10 rounded flex items-center justify-center">
+                          <Upload className="w-4 h-4 text-[#D03839]" />
+                        </div>
+                        <div>
+                          <p className="text-[13px] font-medium text-[#1A1816]">Inspection Report</p>
+                          <a href={inspectionReport.url} target="_blank" rel="noopener noreferrer" className="text-[12px] text-[#D03839] hover:underline">
+                            View Document
+                          </a>
+                        </div>
+                      </div>
+                      <button onClick={handleRemoveInspection} className="p-2 rounded hover:bg-[#E8E8E4] text-[#737370] transition-colors">
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -809,98 +1498,508 @@ export default function NewPropertyPage() {
             </div>
           )}
 
-          {/* Preview Tab */}
-          {activeTab === 'preview' && (
-            <div className="space-y-6">
-              <div className="bg-[#FAFAF8] border border-[#E8E8E4] rounded p-6">
-                <h3 className="text-[15px] font-semibold text-[#1A1816] mb-4">Property Preview</h3>
-                <div className="space-y-4">
-                  <div>
-                    <p className="text-[12px] text-[#737370] mb-1">Title</p>
-                    <p className="text-[15px] font-semibold text-[#1A1816]">{formData.title || 'No title'}</p>
-                  </div>
-                  <div>
-                    <p className="text-[12px] text-[#737370] mb-1">Location</p>
-                    <p className="text-[13px] text-[#1A1816]">{formData.location || 'No location'}</p>
-                  </div>
-                  <div className="grid grid-cols-3 gap-4">
-                    <div>
-                      <p className="text-[12px] text-[#737370] mb-1">Price</p>
-                      <p className="text-[13px] font-semibold text-[#1A1816]">${parseFloat(formData.price || 0).toLocaleString()}</p>
-                    </div>
-                    <div>
-                      <p className="text-[12px] text-[#737370] mb-1">Rooms</p>
-                      <p className="text-[13px] text-[#1A1816]">{formData.bedrooms || 0}</p>
-                    </div>
-                    <div>
-                      <p className="text-[12px] text-[#737370] mb-1">Area</p>
-                      <p className="text-[13px] text-[#1A1816]">{formData.floor_area ? `${formData.floor_area} sqft` : 'N/A'}</p>
-                    </div>
-                  </div>
-                  {formData.description && (
-                    <div>
-                      <p className="text-[12px] text-[#737370] mb-2">Description</p>
-                      <div
-                        className="text-[13px] text-[#1A1816] prose prose-sm max-w-none"
-                        dangerouslySetInnerHTML={{ __html: formData.description }}
-                      />
-                    </div>
-                  )}
-                  {formData.repairs && (
-                    <div>
-                      <p className="text-[12px] text-[#737370] mb-2">Repairs & Renovation</p>
-                      <div
-                        className="text-[13px] text-[#1A1816] prose prose-sm max-w-none"
-                        dangerouslySetInnerHTML={{ __html: formData.repairs }}
-                      />
-                    </div>
-                  )}
-                  {imageUploadStatus.images.filter(img => img.status === 'completed').length > 0 && (
-                    <div>
-                      <p className="text-[12px] text-[#737370] mb-2">
-                        Images ({imageUploadStatus.images.filter(img => img.status === 'completed').length})
-                        {imageUploadStatus.images.filter(img => img.status === 'completed').length > 8 &&
-                          <span className="text-[#A8A8A4]">
-                            {showAllPreviewImages ? ' • Showing all' : ' • Showing first 8'}
-                          </span>
-                        }
-                      </p>
-                      {imageUploadStatus.images.filter(img => img.status === 'completed').length > 8 && (
-                        <button
-                          type="button"
-                          onClick={() => setShowAllPreviewImages(prev => !prev)}
-                          className="text-[12px] font-medium text-[#D03839] hover:text-[#E0493B] mb-3"
-                        >
-                          {showAllPreviewImages ? 'Show first 8' : 'Show all'}
-                        </button>
-                      )}
-                      <div className="grid grid-cols-4 gap-3">
-                        {imageUploadStatus.images
-                          .filter(img => img.status === 'completed')
-                          .slice(0, showAllPreviewImages ? undefined : 8)
-                          .map((img, idx) => (
-                            <div key={idx} className="relative group">
-                              <img
-                                src={img.imageUrl}
-                                alt={`Preview ${idx + 1}`}
-                                className="w-full h-32 object-cover rounded border border-[#E8E8E4]"
-                              />
-                              {img.isFeatured && (
-                                <div className="absolute top-1 left-1 px-1.5 py-0.5 bg-yellow-500 text-white text-[10px] font-medium rounded">
-                                  Featured
-                                </div>
-                              )}
-                            </div>
-                          ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
+          {/* Add-Ons Tab */}
+          {activeTab === 'addons' && (
+            <AddOnsTab
+              selectedAddOns={selectedAddOns}
+              setSelectedAddOns={setSelectedAddOns}
+              addOnClientSecret={addOnClientSecret}
+              setAddOnClientSecret={setAddOnClientSecret}
+              addOnLoading={addOnLoading}
+              setAddOnLoading={setAddOnLoading}
+              addOnError={addOnError}
+              setAddOnError={setAddOnError}
+              pendingPublishData={pendingPublishData}
+              setPendingPublishData={setPendingPublishData}
+              userId={userId}
+              onPublish={handleSave}
+              saving={saving}
+              onBack={() => handleTabChange('seo')}
+              formData={formData}
+              images={imageUploadStatus.images}
+              trialPlan={trialPlan}
+              onShowUpgradePrompt={() => setShowUpgradePrompt(true)}
+              isLifetimeFree={isLifetimeFree}
+            />
+          )}
+
+          {/* ── Step footer ──────────────────────────────────────────────── */}
+          {activeTab !== 'addons' && (
+            <div className="flex items-center justify-between pt-6 mt-6 border-t border-[#E8E8E4]">
+              <button
+                type="button"
+                onClick={() => {
+                  const prevIdx = TAB_ORDER.indexOf(activeTab) - 1;
+                  if (prevIdx >= 0) handleTabChange(TAB_ORDER[prevIdx]);
+                }}
+                className={`flex items-center gap-1.5 px-4 py-2 rounded border border-[#E8E8E4] text-[13px] font-medium text-[#737370] hover:border-[#1A1816] hover:text-[#1A1816] transition-colors ${activeTab === 'basic' ? 'invisible' : ''}`}
+              >
+                <ArrowLeft className="w-4 h-4" /> Back
+              </button>
+              <button
+                type="button"
+                onClick={handleContinue}
+                className="flex items-center gap-1.5 px-5 py-2 bg-[#D03839] hover:bg-[#E0493B] text-white text-[13px] font-semibold rounded transition-colors"
+              >
+                Continue <ChevronRight className="w-4 h-4" />
+              </button>
             </div>
           )}
+
         </div>
       </div>
     </div>
   );
+}
+
+// ─── Add-Ons Checkout Form (Stripe) ──────────────────────────────────────────
+function AddOnsCheckoutForm({ amount, onSuccess, onError, onBack }) {
+  const stripe = useStripe()
+  const elements = useElements()
+  const [processing, setProcessing] = React.useState(false)
+
+  const handlePay = async (e) => {
+    e.preventDefault()
+    if (!stripe || !elements) return
+    setProcessing(true)
+    const { error: submitErr } = await elements.submit()
+    if (submitErr) { onError(submitErr.message); setProcessing(false); return }
+    const { error: confirmErr, paymentIntent } = await stripe.confirmPayment({
+      elements,
+      redirect: 'if_required',
+    })
+    if (confirmErr) {
+      onError(confirmErr.message)
+    } else {
+      onSuccess(paymentIntent?.id || null)
+    }
+    setProcessing(false)
+  }
+
+  return (
+    <form onSubmit={handlePay} className="space-y-4">
+      <PaymentElement />
+      <button
+        type="submit"
+        disabled={!stripe || processing}
+        className="w-full h-[46px] bg-[#D03839] hover:bg-[#E0493B] active:scale-[0.98] text-white text-[14px] font-semibold rounded transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+      >
+        {processing
+          ? <><span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" /> Processing…</>
+          : `Pay $${(amount / 100).toFixed(2)} & Publish`}
+      </button>
+      {onBack && (
+        <button type="button" onClick={onBack} className="w-full text-[12px] text-[#737370] hover:text-[#1A1816] transition-colors text-center">
+          ← Change add-ons
+        </button>
+      )}
+    </form>
+  )
+}
+
+// ─── Add-Ons Tab ──────────────────────────────────────────────────────────────
+function AddOnsTab({
+  selectedAddOns, setSelectedAddOns,
+  addOnClientSecret, setAddOnClientSecret,
+  addOnLoading, setAddOnLoading,
+  addOnError, setAddOnError,
+  userId, onPublish, saving, onBack,
+  formData, images, trialPlan, onShowUpgradePrompt,
+  isLifetimeFree,
+}) {
+  const [promoCode, setPromoCode] = React.useState('')
+  const [promoValidating, setPromoValidating] = React.useState(false)
+  const [promoError, setPromoError] = React.useState(null)
+  const [appliedPromo, setAppliedPromo] = React.useState(null)
+  const [finalAmount, setFinalAmount] = React.useState(null)
+
+  const toggleAddOn = (id) => {
+    setSelectedAddOns(prev => {
+      if (prev.includes(id)) return prev.filter(a => a !== id)
+      let next = [...prev, id]
+      if (id === 'bundle') next = next.filter(a => a !== 'highlight' && a !== 'boost')
+      if (id === 'highlight' || id === 'boost') next = next.filter(a => a !== 'bundle')
+      return next
+    })
+    setAddOnClientSecret(null)
+    setAddOnError(null)
+    setAppliedPromo(null)
+    setFinalAmount(null)
+  }
+
+  const total = selectedAddOns.reduce((sum, id) => {
+    const ao = ADD_ONS.find(a => a.id === id)
+    return sum + (ao?.price || 0)
+  }, 0)
+
+  const validatePromo = async () => {
+    if (!promoCode.trim()) return
+    setPromoValidating(true)
+    setPromoError(null)
+    try {
+      const res = await fetch(`/api/coupons/validate?code=${encodeURIComponent(promoCode.trim())}`)
+      const data = await res.json()
+      if (!res.ok || !data.valid) {
+        setPromoError(data.error || 'Invalid promo code')
+        setAppliedPromo(null)
+      } else {
+        setAppliedPromo(data)
+        setPromoError(null)
+      }
+    } catch {
+      setPromoError('Failed to validate code')
+    } finally {
+      setPromoValidating(false)
+    }
+  }
+
+  const handleInitPayment = async () => {
+    if (!userId || selectedAddOns.length === 0) return
+
+    // If trial limit exceeded, show upgrade prompt BEFORE taking any payment.
+    // After the trial ends the user comes back here with status='active' and pays once.
+    if (trialPlan?.status === 'trialing' && (trialPlan.listings_used_this_period ?? 0) >= 1) {
+      onShowUpgradePrompt()
+      return
+    }
+
+    setAddOnLoading(true)
+    setAddOnError(null)
+    try {
+      const res = await fetch('/api/seller/listing-addons', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          seller_id: userId,
+          add_ons: selectedAddOns,
+          promo_code_id: appliedPromo?.promo_code_id || null,
+        }),
+      })
+      const d = await res.json()
+      if (!res.ok) throw new Error(d.error || 'Failed to initialize payment')
+      if (d.free) {
+        onPublish('active', { skipFeaturedPrompt: true, forceAutoSelectFeatured: true, addOnFlags })
+        return
+      }
+      setAddOnClientSecret(d.clientSecret)
+      setFinalAmount(d.amount)
+    } catch (err) {
+      setAddOnError(err.message)
+    } finally {
+      setAddOnLoading(false)
+    }
+  }
+
+  const addOnFlags = {}
+  if (selectedAddOns.includes('highlight') || selectedAddOns.includes('bundle')) addOnFlags.is_highlighted = true
+  if (selectedAddOns.includes('boost') || selectedAddOns.includes('bundle')) addOnFlags.is_boosted = true
+  if (selectedAddOns.includes('homepage')) addOnFlags.is_homepage_featured = true
+
+  const featuredImage = (images || []).find(img => img.isFeatured && img.status === 'completed')
+    || (images || []).find(img => img.status === 'completed')
+
+  const estimatedDiscount = appliedPromo
+    ? (appliedPromo.discount.type === 'percent'
+        ? Math.round(total * appliedPromo.discount.value / 100)
+        : Math.min(total, Math.round(appliedPromo.discount.value * 100)))
+    : 0
+  const discountLineAmount = finalAmount != null ? total - finalAmount : estimatedDiscount
+  const displayTotal = finalAmount != null ? finalAmount : Math.max(0, total - estimatedDiscount)
+
+  return (
+    <div className="space-y-6" style={{ fontFamily: 'var(--font-dm-sans), sans-serif' }}>
+
+      {/* ── Two-column: add-ons (left) + order summary (right) ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-6 items-start">
+
+        {/* Left: base plan card + add-on cards */}
+        <div className="space-y-5">
+
+          {/* What you're paying for */}
+          <div>
+            <p className="text-[11px] font-medium tracking-[0.12em] uppercase text-[#737370] mb-3">What you&apos;re getting</p>
+            <div className="relative border border-[#E8E8E4] rounded bg-[#FAFAF8] p-5 overflow-hidden">
+              <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-[#D03839]" />
+              <div className="flex justify-between items-baseline mb-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-[15px] font-bold text-[#1A1816]">Basic Listing</span>
+                  <span className="font-mono text-[10px] font-medium tracking-[0.08em] uppercase text-[#737370] bg-white border border-[#E8E8E4] px-2 py-0.5 rounded">30 Days</span>
+                </div>
+                <span className="text-[16px] font-bold text-[#0F6E56]">FREE</span>
+              </div>
+              <ul className="flex flex-wrap gap-x-5 gap-y-1.5">
+                {['Public marketplace listing', 'Full photo gallery', 'Buyer inquiry inbox', 'Listing analytics'].map(feat => (
+                  <li key={feat} className="flex items-center gap-1.5 text-[12px] text-[#737370]">
+                    <Check className="w-3 h-3 text-[#0F6E56] flex-shrink-0" />
+                    {feat}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+
+          {/* Optional add-ons */}
+          <div>
+            <p className="text-[14px] font-semibold text-[#1A1816] mb-0.5">
+              Add extras to get more visibility and close faster.{' '}
+              <span className="text-[13px] font-normal italic text-[#737370]">(optional)</span>
+            </p>
+            <div className="mt-3 space-y-2.5">
+              {ADD_ONS.map((ao) => {
+                const selected = selectedAddOns.includes(ao.id)
+                const isDisabled = addOnClientSecret != null
+                  || (ao.id === 'bundle' && (selectedAddOns.includes('highlight') || selectedAddOns.includes('boost')))
+                  || ((ao.id === 'highlight' || ao.id === 'boost') && selectedAddOns.includes('bundle'))
+                const Icon = ao.icon
+                return (
+                  <button
+                    key={ao.id}
+                    type="button"
+                    onClick={() => !isDisabled && toggleAddOn(ao.id)}
+                    disabled={isDisabled}
+                    className={`w-full grid grid-cols-[44px_1fr_auto_22px] gap-4 items-center p-[18px_20px] border rounded text-left transition-all
+                      ${selected ? 'border-[#D03839] bg-gradient-to-b from-[#FEF8F9] to-white shadow-[0_0_0_1px_#D03839]'
+                      : isDisabled ? 'border-[#E8E8E4] bg-white opacity-40 cursor-not-allowed'
+                      : 'border-[#E8E8E4] bg-white hover:border-[#C8C8C4] hover:-translate-y-px hover:shadow-sm'}`}
+                  >
+                    <div className={`w-11 h-11 rounded flex items-center justify-center flex-shrink-0 ${selected ? 'bg-[#FEF0EF] text-[#D03839]' : 'bg-[#F3F3F0] text-[#444441]'}`}>
+                      <Icon className="w-5 h-5" />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="flex items-center flex-wrap gap-2 mb-0.5">
+                        <span className="text-[14px] font-semibold text-[#1A1816]">{ao.label}</span>
+                        <span className="font-mono text-[10px] font-medium tracking-[0.08em] uppercase text-[#737370] bg-[#F3F3F0] border border-[#E8E8E4] px-1.5 py-0.5 rounded">
+                          {ao.duration}
+                        </span>
+                        {ao.savings && (
+                          <span className="font-mono text-[10px] font-semibold tracking-[0.06em] uppercase text-[#0F6E56] bg-[#E4F5EC] px-1.5 py-0.5 rounded">
+                            Save ${(ao.savings / 100).toFixed(2)}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[13px] text-[#737370]">{ao.desc}</p>
+                    </div>
+                    <div className="text-right flex-shrink-0">
+                      {!isLifetimeFree && ao.strikePrice && (
+                        <p className="text-[12px] text-[#A8A8A4] line-through">${(ao.strikePrice / 100).toFixed(2)}</p>
+                      )}
+                      <p className={`text-[15px] font-bold ${isLifetimeFree ? 'text-[#0F6E56]' : selected ? 'text-[#D03839]' : 'text-[#1A1816]'}`}>
+                        {isLifetimeFree ? 'Free' : `+$${(ao.price / 100).toFixed(2)}`}
+                      </p>
+                    </div>
+                    <div className={`w-[22px] h-[22px] rounded-full border flex items-center justify-center flex-shrink-0 transition-all
+                      ${selected ? 'bg-[#D03839] border-[#D03839]' : 'border-[#D4D4CF]'}`}>
+                      {selected && <Check className="w-3 h-3 text-white" />}
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          <div className="pt-1">
+            <button
+              type="button"
+              onClick={onBack}
+              className="flex items-center gap-1.5 px-4 py-2 rounded border border-[#E8E8E4] text-[13px] font-medium text-[#737370] hover:border-[#1A1816] hover:text-[#1A1816] transition-colors"
+            >
+              <ArrowLeft className="w-4 h-4" /> Back
+            </button>
+          </div>
+        </div>
+
+        {/* Right: sticky order summary */}
+        <div className="lg:sticky lg:top-6 border border-[#E8E8E4] rounded overflow-hidden bg-white flex flex-col">
+
+          {/* Property preview */}
+          <div className="p-5 border-b border-[#E8E8E4] flex gap-3.5">
+            {featuredImage?.imageUrl ? (
+              <img src={featuredImage.imageUrl} alt="" className="w-16 h-16 rounded object-cover flex-shrink-0 border border-[#E8E8E4]" />
+            ) : (
+              <div className="w-16 h-16 rounded bg-gradient-to-br from-[#3A4A5C] to-[#1E2830] flex-shrink-0 flex items-center justify-center border border-[#E8E8E4]">
+                <Home className="w-6 h-6 text-white/60" />
+              </div>
+            )}
+            <div className="min-w-0">
+              <p className="font-mono text-[10px] font-medium tracking-[0.12em] uppercase text-[#737370] mb-1">Your Listing</p>
+              <p className="text-[14px] font-bold text-[#1A1816] truncate leading-snug">{formData?.location || 'Untitled Property'}</p>
+              {formData?.property_type && (
+                <p className="text-[12px] text-[#737370] truncate mt-0.5">{formData.property_type}</p>
+              )}
+            </div>
+          </div>
+
+          {/* Order lines */}
+          <div className="p-5 flex-1 border-b border-[#E8E8E4]">
+            <div className="flex justify-between items-baseline mb-3.5">
+              <p className="font-mono text-[10px] font-medium tracking-[0.12em] uppercase text-[#737370]">Order Summary</p>
+              <p className="text-[11px] text-[#737370] font-medium">{1 + selectedAddOns.length} item{selectedAddOns.length !== 0 ? 's' : ''}</p>
+            </div>
+            <div className="divide-y divide-[#F0F0EE]">
+              <div className="flex justify-between items-baseline py-2">
+                <span className="text-[13px] font-medium text-[#1A1816]">Basic Listing <span className="font-normal text-[#737370]">· 30 days</span></span>
+                <span className="text-[13px] font-bold text-[#0F6E56]">FREE</span>
+              </div>
+              {selectedAddOns.map(id => {
+                const ao = ADD_ONS.find(a => a.id === id)
+                if (!ao) return null
+                return (
+                  <div key={id} className="flex justify-between items-baseline py-2">
+                    <span className="text-[13px] text-[#444441]">
+                      <span className="text-[11px] text-[#A8A8A4] mr-1">+</span>{ao.label}
+                    </span>
+                    <span className="text-[13px] font-bold text-[#0F6E56]">{isLifetimeFree ? 'Free' : `+$${(ao.price / 100).toFixed(2)}`}</span>
+                  </div>
+                )
+              })}
+              {discountLineAmount > 0 && (
+                <div className="flex justify-between items-baseline py-2">
+                  <span className="text-[13px] text-[#0F6E56] flex items-center gap-1">
+                    <span className="text-[11px]">↓</span>{appliedPromo?.name || 'Promo discount'}
+                  </span>
+                  <span className="text-[13px] font-bold text-[#0F6E56]">−${(discountLineAmount / 100).toFixed(2)}</span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Promo code — hidden for lifetime free accounts */}
+          {total > 0 && !isLifetimeFree && (
+            <div className="px-5 py-4 border-b border-[#E8E8E4]">
+              {appliedPromo ? (
+                <div className="flex items-center justify-between gap-2">
+                  <div>
+                    <p className="text-[12px] font-semibold text-[#0F6E56]">{appliedPromo.name} applied</p>
+                    <p className="text-[11px] text-[#737370]">
+                      {appliedPromo.discount.type === 'percent'
+                        ? `${appliedPromo.discount.value}% off`
+                        : `$${appliedPromo.discount.value.toFixed(2)} off`}
+                    </p>
+                  </div>
+                  {!addOnClientSecret && (
+                    <button
+                      type="button"
+                      onClick={() => { setAppliedPromo(null); setPromoCode(''); setFinalAmount(null) }}
+                      className="text-[11px] text-[#D03839] font-medium hover:underline"
+                    >Remove</button>
+                  )}
+                </div>
+              ) : addOnClientSecret ? (
+                <p className="text-[12px] text-[#A8A8A4]">No promo code applied</p>
+              ) : (
+                <div>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={promoCode}
+                      onChange={e => setPromoCode(e.target.value.toUpperCase())}
+                      onKeyDown={e => e.key === 'Enter' && validatePromo()}
+                      placeholder="Promo code"
+                      className="flex-1 h-9 px-3 text-[13px] border border-[#E8E8E4] rounded outline-none focus:border-[#1A1816] bg-white"
+                      style={{ fontFamily: 'var(--font-dm-sans), sans-serif' }}
+                    />
+                    <button
+                      type="button"
+                      onClick={validatePromo}
+                      disabled={promoValidating || !promoCode.trim()}
+                      className="h-9 px-3 text-[13px] font-semibold text-white bg-[#1A1816] rounded disabled:opacity-40 hover:bg-[#333] transition-colors flex items-center gap-1.5"
+                    >
+                      {promoValidating ? <span className="animate-spin w-3 h-3 border-2 border-white/30 border-t-white rounded-full" /> : 'Apply'}
+                    </button>
+                  </div>
+                  {promoError && <p className="text-[11px] text-[#D03839] mt-1.5">{promoError}</p>}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Total */}
+          <div className="px-5 py-4 flex justify-between items-baseline border-b border-[#E8E8E4]">
+            <div>
+              <p className="text-[15px] font-bold text-[#1A1816]">Total</p>
+              <p className="text-[11px] text-[#737370] mt-0.5">{isLifetimeFree ? 'Complimentary — Ableman account' : total === 0 ? 'Included in your subscription' : 'One-time charge'}</p>
+            </div>
+            <div className="text-right">
+              {!isLifetimeFree && discountLineAmount > 0 && (
+                <p className="text-[13px] text-[#A8A8A4] line-through">${(total / 100).toFixed(2)}</p>
+              )}
+              <span className={`text-[28px] font-bold tracking-tight ${isLifetimeFree ? 'text-[#0F6E56]' : 'text-[#1A1816]'}`}>
+                {isLifetimeFree ? 'Free' : `$${(displayTotal / 100).toFixed(2)}`}
+              </span>
+            </div>
+          </div>
+
+          {/* CTA */}
+          {!addOnClientSecret && (
+            <div className="px-5 py-4">
+              {selectedAddOns.length > 0 ? (
+                <button
+                  type="button"
+                  onClick={handleInitPayment}
+                  disabled={addOnLoading}
+                  className={`w-full h-[48px] text-white text-[14px] font-semibold rounded transition-all disabled:opacity-50 flex items-center justify-center gap-2 ${isLifetimeFree ? 'bg-[#0F6E56] hover:bg-[#0D5E49]' : 'bg-[#D03839] hover:bg-[#E0493B]'}`}
+                >
+                  {addOnLoading
+                    ? <><span className="animate-spin w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full" />Preparing…</>
+                    : isLifetimeFree ? 'Publish Listing' : 'Proceed to Payment'}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => onPublish('active', { skipFeaturedPrompt: true, forceAutoSelectFeatured: true })}
+                  disabled={saving}
+                  className="w-full h-[48px] bg-[#D03839] hover:bg-[#E0493B] text-white text-[14px] font-semibold rounded transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {saving
+                    ? <><span className="animate-spin w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full" />Publishing…</>
+                    : <>Publish for Free <Eye className="w-4 h-4" /></>}
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Secured footer */}
+          {!isLifetimeFree && (
+            <div className="px-5 py-3.5 bg-[#FAFAF6] border-t border-[#E8E8E4] text-center">
+              <div className="flex items-center justify-center gap-1.5 mb-1">
+                <svg className="w-3 h-3 text-[#737370]" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                </svg>
+                <span className="text-[12px] text-[#737370]">Secured by Stripe</span>
+              </div>
+              <p className="text-[11px] text-[#A8A8A4]">No subscription · No auto-renewal</p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ── Payment form — full width below, shown after "Proceed to Payment" ── */}
+      {addOnClientSecret && stripePromise && (
+        <div className="border border-[#E8E8E4] rounded p-6 bg-white">
+          <p className="text-[14px] font-semibold text-[#1A1816] mb-1">Payment Details</p>
+          <p className="text-[13px] text-[#737370] mb-5">
+            Your card will be charged <span className="font-semibold text-[#1A1816]">${((finalAmount ?? total) / 100).toFixed(2)}</span> upon publishing.
+          </p>
+          {addOnError && (
+            <div className="mb-4 p-3 bg-[#FEF0EF] border border-[#F5C4C0] rounded text-[13px] text-[#D03839]">{addOnError}</div>
+          )}
+          <Elements stripe={stripePromise} options={{ clientSecret: addOnClientSecret }}>
+            <AddOnsCheckoutForm
+              amount={finalAmount ?? total}
+              onSuccess={(piId) => {
+                onPublish('active', { skipFeaturedPrompt: true, forceAutoSelectFeatured: true, addOnFlags, addonPaymentIntentId: piId })
+              }}
+              onError={(msg) => setAddOnError(msg)}
+              onBack={() => { setAddOnClientSecret(null); setAddOnError(null) }}
+            />
+          </Elements>
+        </div>
+      )}
+
+      {addOnError && !addOnClientSecret && (
+        <div className="p-3 bg-[#FEF0EF] border border-[#F5C4C0] rounded text-[13px] text-[#D03839]">{addOnError}</div>
+      )}
+
+    </div>
+  )
 }

@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { getCurrentCurrencySymbol } from '@/lib/currency';
-import { Eye, EyeOff, User, Building, Globe, Linkedin, Save, Building2, ShieldBan } from 'lucide-react';
+import { Eye, EyeOff, User, Building, Globe, Linkedin, Save, Building2, ShieldBan, LogOut, AlertTriangle, ChevronDown, ChevronUp } from 'lucide-react';
 
 const businessTypes = [
   { value: 'individual', label: 'Individual Seller' },
@@ -52,6 +52,14 @@ export default function SettingsPage() {
   const [passwordForm, setPasswordForm] = useState({ current_password: '', new_password: '', confirm_password: '' });
   const [showPasswords, setShowPasswords] = useState({ current: false, new: false, confirm: false });
 
+  // Subscription management (cancel flow)
+  const [planInfo, setPlanInfo] = useState(null);
+  const [showCancelSection, setShowCancelSection] = useState(false);
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [cancelLoading, setCancelLoading] = useState(false);
+  const [cancelError, setCancelError] = useState('');
+  const [cancelDone, setCancelDone] = useState(false);
+
   useEffect(() => {
     const t = searchParams.get('tab');
     if (t === 'activities' || t === 'security' || t === 'profile' || t === 'blocked') setActiveTab(t);
@@ -91,6 +99,15 @@ export default function SettingsPage() {
           property_types: data.property_types || [], website: data.website || '', linkedin: data.linkedin || '', description: data.description || ''
         });
       }
+
+      // Load plan info for subscription management
+      const { data: plan } = await supabase
+        .from('seller_plans')
+        .select('status, plan_type, billing_cycle, current_period_end')
+        .eq('seller_id', currentUser.id)
+        .maybeSingle();
+      if (plan) setPlanInfo(plan);
+
     } catch (error) { setMessage({ type: 'error', text: 'Failed to load user data.' }); }
     finally { setLoading(false); }
   };
@@ -324,6 +341,7 @@ export default function SettingsPage() {
 
       {/* Security Tab */}
       {activeTab === 'security' && (
+        <>
         <div className="bg-white rounded border border-[#E8E8E4] p-6">
           <form onSubmit={handlePasswordSubmit} className="space-y-5">
             <h2 className="text-[14px] font-normal text-[#1A1816] mb-4">Change Password</h2>
@@ -356,6 +374,109 @@ export default function SettingsPage() {
             </div>
           </form>
         </div>
+
+        {/* Subscription management — buried at bottom of security tab */}
+        {planInfo && ['trialing', 'active', 'canceling'].includes(planInfo.status) && (
+          <div className="bg-white rounded border border-[#E8E8E4] overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setShowCancelSection(v => !v)}
+              className="w-full flex items-center justify-between px-5 py-3 text-left hover:bg-[#FAFAF8] transition-colors"
+            >
+              <span className="text-[14px] font-normal text-[#1A1816]">Subscription management</span>
+              {showCancelSection ? <ChevronUp className="w-4 h-4 text-[#737370]" /> : <ChevronDown className="w-4 h-4 text-[#737370]" />}
+            </button>
+
+            {showCancelSection && (
+              <div className="px-5 pb-5 pt-1 border-t border-[#E8E8E4] space-y-3">
+                {planInfo.status === 'canceling' ? (
+                  <div className="p-3 bg-[#FEF3E2] border border-[#F3C97D] rounded text-[13px] text-[#B5620A]">
+                    Cancellation pending — your subscription remains active until{' '}
+                    <strong>{planInfo.current_period_end ? new Date(planInfo.current_period_end).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'your next billing date'}</strong>.
+                    After that, all your listings will be deactivated.
+                  </div>
+                ) : (
+                  <>
+                    <p className="text-[13px] text-[#737370]">
+                      Canceling will keep your account active until the end of the current billing period. After that, all listings will be deactivated and you won&apos;t be charged again.
+                    </p>
+                    {cancelDone ? (
+                      <div className="p-3 bg-[#FEF3E2] border border-[#F3C97D] rounded text-[13px] text-[#B5620A]">
+                        Subscription scheduled for cancellation. Your access continues until{' '}
+                        <strong>{planInfo.current_period_end ? new Date(planInfo.current_period_end).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'your next billing date'}</strong>.
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => { setShowCancelConfirm(true); setCancelError(''); }}
+                        className="px-4 py-2 rounded border border-[#E8E8E4] text-[13px] font-medium text-[#D03839] hover:bg-[#FEF0EF] hover:border-[#F5C4C0] transition-colors duration-200"
+                      >
+                        Cancel subscription
+                      </button>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Cancel confirmation modal */}
+        {showCancelConfirm && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
+            <div className="bg-white rounded shadow-2xl w-full max-w-sm p-6 space-y-4">
+              <div className="flex items-center gap-2 mb-1">
+                <AlertTriangle className="w-5 h-5 text-[#B5620A] flex-shrink-0" />
+                <h3 className="text-[15px] font-semibold text-[#1A1816]">Cancel subscription?</h3>
+              </div>
+              <p className="text-[13px] text-[#737370]">
+                Your subscription will remain active until{' '}
+                <strong className="text-[#1A1816]">{planInfo?.current_period_end ? new Date(planInfo.current_period_end).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'the end of your billing period'}</strong>.
+                After that date, all your listings will be automatically deactivated and you will not be able to publish new listings without an active subscription.
+              </p>
+              {cancelError && (
+                <p className="text-[12px] text-[#D03839]">{cancelError}</p>
+              )}
+              <div className="flex gap-3 pt-1">
+                <button
+                  type="button"
+                  onClick={() => { setShowCancelConfirm(false); setCancelError(''); }}
+                  className="flex-1 h-[40px] border border-[#E8E8E4] rounded text-[13px] font-medium text-[#1A1816] hover:border-[#1A1816] transition-colors"
+                >
+                  Keep subscription
+                </button>
+                <button
+                  type="button"
+                  disabled={cancelLoading}
+                  onClick={async () => {
+                    setCancelLoading(true);
+                    setCancelError('');
+                    try {
+                      const res = await fetch('/api/seller/plan/cancel', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ seller_id: user.id }),
+                      });
+                      const data = await res.json();
+                      if (!res.ok) throw new Error(data.error || 'Failed to cancel subscription');
+                      setPlanInfo(prev => ({ ...prev, status: 'canceling' }));
+                      setCancelDone(true);
+                      setShowCancelConfirm(false);
+                    } catch (err) {
+                      setCancelError(err.message);
+                    } finally {
+                      setCancelLoading(false);
+                    }
+                  }}
+                  className="flex-1 h-[40px] border border-[#E8E8E4] rounded text-[13px] font-medium text-[#737370] hover:border-[#D03839] hover:text-[#D03839] transition-colors disabled:opacity-50"
+                >
+                  {cancelLoading ? 'Processing…' : 'Yes, cancel'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+        </>
       )}
 
       {/* Activities Tab */}
@@ -394,6 +515,24 @@ export default function SettingsPage() {
           </div>
         </div>
       )}
+
+      {/* Logout — profile tab only */}
+      {activeTab === 'profile' && <div className="bg-white rounded border border-[#E8E8E4] p-5">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-[14px] font-medium text-[#1A1816]">Sign out</p>
+            <p className="text-[12px] text-[#737370] mt-0.5">You will be returned to the login page</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => { localStorage.removeItem('seller_user'); router.push('/login'); }}
+            className="flex items-center gap-2 px-4 py-2.5 rounded border border-[#E8E8E4] text-[13px] font-medium text-[#D03839] hover:bg-[#FEF0EF] hover:border-[#F5C4C0] transition-colors duration-200"
+          >
+            <LogOut className="w-4 h-4" />
+            Sign out
+          </button>
+        </div>
+      </div>}
 
       {/* Blocked Tab */}
       {activeTab === 'blocked' && (

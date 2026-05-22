@@ -103,6 +103,7 @@ export default function MessagesPage() {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState(null);
+  const [accessDenied, setAccessDenied] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [contextAddress, setContextAddress] = useState('');
   const [contextConversationId, setContextConversationId] = useState(null);
@@ -156,6 +157,20 @@ export default function MessagesPage() {
     const close = () => setContextMenu(null);
     window.addEventListener('click', close);
     return () => window.removeEventListener('click', close);
+  }, []);
+
+  // Access gate
+  useEffect(() => {
+    const raw = localStorage.getItem('seller_user');
+    if (!raw) return;
+    const user = JSON.parse(raw);
+    fetch('/api/team/workspaces', { headers: { Authorization: `Bearer ${user.id}` } })
+      .then(r => r.json())
+      .then(ws => {
+        const isOwner = ws?.current?.role === 'admin'
+        if (!isOwner && !ws?.current?.permissions?.inbox_access) setAccessDenied(true)
+      })
+      .catch(() => {})
   }, []);
 
   // Initial load
@@ -442,6 +457,16 @@ export default function MessagesPage() {
     return acc;
   }, {});
 
+  if (accessDenied) return (
+    <div className="flex flex-col items-center justify-center h-full py-20 text-center" style={{ fontFamily: FONT }}>
+      <div className="w-12 h-12 bg-[#FEF0EF] rounded-full flex items-center justify-center mb-4">
+        <Shield className="w-6 h-6 text-[#D03839]" />
+      </div>
+      <h3 className="text-[16px] font-bold text-[#1A1816] mb-2">Access Restricted</h3>
+      <p className="text-[13px] text-[#737370] max-w-xs">You don't have permission to access messages. Contact your team owner to request access.</p>
+    </div>
+  )
+
   return (
     <div className="flex flex-col h-full min-h-0 flex-1 overflow-hidden -m-4 lg:-m-6" style={{ fontFamily: FONT }}>
       {error && (
@@ -590,7 +615,7 @@ export default function MessagesPage() {
                                     : <p className="text-[12px] font-medium text-[#444441] mb-1">{buyerDisplayName}</p>
                                   }
                                   <div className={`flex ${isSeller ? 'justify-end' : 'justify-start'}`}>
-                                    <div className="bg-white border border-[#E8E8E4] rounded-lg px-4 py-3 shadow-sm w-full max-w-[300px]">
+                                    <div className="bg-white border border-[#E8E8E4] rounded px-4 py-3 shadow-sm w-full max-w-[300px]">
                                       <div className="flex items-center justify-between mb-2">
                                         <span className="inline-block text-[11px] font-semibold px-2 py-0.5 rounded-full bg-[#EBF3FC] text-[#4A90E2]">
                                           {isCounter ? 'Counter offer' : 'Offer submitted'}
@@ -621,7 +646,7 @@ export default function MessagesPage() {
                                 {!isSeller && <p className="text-[12px] font-medium text-[#444441] mb-1">{buyerDisplayName}</p>}
                                 <div className={`flex ${isSeller ? 'justify-end' : 'justify-start'}`}>
                                   <div className="max-w-[70%]">
-                                    <div className={`rounded-lg px-4 py-3 ${isSeller ? 'bg-[#FEF0EF] text-[#1A1816] border border-[#F5C4C0]' : 'bg-[#FAFAF8] text-[#1A1816] border border-[#E8E8E4]'}`}>
+                                    <div className={`rounded px-4 py-3 ${isSeller ? 'bg-[#FEF0EF] text-[#1A1816] border border-[#F5C4C0]' : 'bg-[#FAFAF8] text-[#1A1816] border border-[#E8E8E4]'}`}>
                                       {m.message_text && <p className="text-[14px] leading-relaxed whitespace-pre-wrap break-words">{m.message_text}</p>}
                                     </div>
                                     <div className={`flex items-center gap-1 mt-1 ${isSeller ? 'justify-end' : 'justify-start'}`}>
@@ -876,7 +901,7 @@ export default function MessagesPage() {
                 {/* Post-action states */}
                 {offer && offer.status === 'accepted' && (
                   <div className="px-5 py-4">
-                    <div className="bg-[#E4F5EC] border border-[#A8DFBA] rounded-lg px-4 py-3">
+                    <div className="bg-[#E4F5EC] border border-[#A8DFBA] rounded px-4 py-3">
                       <p className="text-[13px] font-semibold text-[#0F6E56] mb-1">Next Steps</p>
                       <p className="text-[12px] text-[#0F6E56]">Coordinate with the buyer to proceed to contract signing.</p>
                     </div>
@@ -884,7 +909,7 @@ export default function MessagesPage() {
                 )}
                 {offer && offer.status === 'rejected' && (
                   <div className="px-5 py-4">
-                    <div className="bg-[#FEF0EF] border border-[#F5C4C0] rounded-lg px-4 py-3">
+                    <div className="bg-[#FEF0EF] border border-[#F5C4C0] rounded px-4 py-3">
                       <p className="text-[13px] font-semibold text-[#D03839]">Offer rejected</p>
                       <p className="text-[12px] text-[#D03839] mt-1">You can still continue the conversation.</p>
                     </div>
@@ -892,7 +917,7 @@ export default function MessagesPage() {
                 )}
                 {offer && offer.status === 'countered' && (
                   <div className="px-5 py-4">
-                    <div className="bg-[#EBF3FC] border border-[#B0CFF0] rounded-lg px-4 py-3">
+                    <div className="bg-[#EBF3FC] border border-[#B0CFF0] rounded px-4 py-3">
                       <p className="text-[13px] font-semibold text-[#4A90E2]">Counter offer sent</p>
                       <p className="text-[12px] text-[#4A90E2] mt-1">Waiting for buyer's response.</p>
                     </div>
@@ -969,7 +994,7 @@ export default function MessagesPage() {
         {/* Accept Offer Modal */}
         {showAcceptModal && offer && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50" onClick={() => setShowAcceptModal(false)}>
-            <div className="bg-white rounded-xl w-full max-w-[400px] p-6 shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className="bg-white rounded w-full max-w-[400px] p-6 shadow-2xl" onClick={e => e.stopPropagation()}>
               <div className="flex items-center justify-center w-12 h-12 rounded-full bg-[#E4F5EC] mx-auto mb-4">
                 <Check className="w-6 h-6 text-[#0F6E56]" />
               </div>
@@ -977,17 +1002,17 @@ export default function MessagesPage() {
               <p className="text-[14px] text-[#444441] text-center mb-4">
                 You're about to accept {formatCurrency(offer.offer_price)} from {buyerDisplayName}. This action cannot be undone.
               </p>
-              <div className="flex items-start gap-2 bg-[#FEF9EC] border border-[#F5D78E] rounded-lg px-3 py-2.5 mb-5">
+              <div className="flex items-start gap-2 bg-[#FEF9EC] border border-[#F5D78E] rounded px-3 py-2.5 mb-5">
                 <AlertCircle className="w-4 h-4 text-[#B5620A] flex-shrink-0 mt-0.5" />
                 <p className="text-[12px] text-[#B5620A]">Both parties will be notified and next steps will begin automatically</p>
               </div>
               <div className="flex gap-3">
                 <button onClick={() => setShowAcceptModal(false)}
-                  className="flex-1 py-3 border border-[#E8E8E4] text-[#444441] text-[14px] font-medium rounded-lg hover:bg-[#FAFAF8] transition-colors">
+                  className="flex-1 py-3 border border-[#E8E8E4] text-[#444441] text-[14px] font-medium rounded hover:bg-[#FAFAF8] transition-colors">
                   Cancel
                 </button>
                 <button onClick={() => handleOfferAction('accept')} disabled={offerActionLoading}
-                  className="flex-1 py-3 bg-[#D03839] text-white text-[14px] font-semibold rounded-lg hover:bg-[#E0493B] transition-colors disabled:opacity-50">
+                  className="flex-1 py-3 bg-[#D03839] text-white text-[14px] font-semibold rounded hover:bg-[#E0493B] transition-colors disabled:opacity-50">
                   {offerActionLoading ? 'Accepting...' : 'Accept Offer'}
                 </button>
               </div>
@@ -998,22 +1023,22 @@ export default function MessagesPage() {
         {/* Reject Offer Modal */}
         {showRejectModal && offer && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50" onClick={() => setShowRejectModal(false)}>
-            <div className="bg-white rounded-xl w-full max-w-[400px] p-6 shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className="bg-white rounded w-full max-w-[400px] p-6 shadow-2xl" onClick={e => e.stopPropagation()}>
               <h3 className="text-[18px] font-bold text-[#1A1816] text-center mb-2">Reject this offer?</h3>
               <p className="text-[14px] text-[#444441] text-center mb-4">
                 This action will decline {buyerDisplayName}'s offer of {formatCurrency(offer.offer_price)}. You can still continue the conversation after rejecting.
               </p>
-              <div className="flex items-start gap-2 bg-[#FEF9EC] border border-[#F5D78E] rounded-lg px-3 py-2.5 mb-5">
+              <div className="flex items-start gap-2 bg-[#FEF9EC] border border-[#F5D78E] rounded px-3 py-2.5 mb-5">
                 <AlertCircle className="w-4 h-4 text-[#B5620A] flex-shrink-0 mt-0.5" />
                 <p className="text-[12px] text-[#B5620A]">Both parties will be notified and next steps will begin automatically</p>
               </div>
               <div className="flex gap-3">
                 <button onClick={() => setShowRejectModal(false)}
-                  className="flex-1 py-3 border border-[#E8E8E4] text-[#444441] text-[14px] font-medium rounded-lg hover:bg-[#FAFAF8] transition-colors">
+                  className="flex-1 py-3 border border-[#E8E8E4] text-[#444441] text-[14px] font-medium rounded hover:bg-[#FAFAF8] transition-colors">
                   Cancel
                 </button>
                 <button onClick={() => handleOfferAction('reject')} disabled={offerActionLoading}
-                  className="flex-1 py-3 bg-[#D03839] text-white text-[14px] font-semibold rounded-lg hover:bg-[#E0493B] transition-colors disabled:opacity-50">
+                  className="flex-1 py-3 bg-[#D03839] text-white text-[14px] font-semibold rounded hover:bg-[#E0493B] transition-colors disabled:opacity-50">
                   {offerActionLoading ? 'Rejecting...' : 'Reject Offer'}
                 </button>
               </div>

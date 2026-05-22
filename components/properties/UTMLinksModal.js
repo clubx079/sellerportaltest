@@ -5,9 +5,9 @@ import { X, Copy, Check, ExternalLink, Link2, Users, Info } from 'lucide-react';
 
 const PLATFORMS = [
   { name: 'Facebook', code: 'facebook', utm: 'fb', icon: 'https://cdn.simpleicons.org/facebook/1877F2' },
-  { name: 'Mailchimp', code: 'mailchimp', utm: 'mc', icon: 'https://cdn.simpleicons.org/mailchimp/FFE01B' },
   { name: 'Twitter', code: 'twitter', utm: 'x', icon: 'https://cdn.simpleicons.org/x/000000' },
   { name: 'Instagram', code: 'instagram', utm: 'ig', icon: 'https://cdn.simpleicons.org/instagram/E4405F' },
+  { name: 'Email', code: 'email', utm: 'email', icon: 'https://cdn.simpleicons.org/gmail/EA4335' },
 ];
 
 const DEELMAP_VIEW_BASE_URL = typeof window !== 'undefined'
@@ -62,7 +62,7 @@ export function UTMLinksModal({ isOpen, onClose, property, baseUrl, userId }) {
       aria-labelledby="utm-modal-title"
     >
       <div
-        className="bg-white rounded-lg shadow-xl w-full max-w-xl max-h-[90vh] overflow-hidden flex flex-col border border-[#E8E8E4]"
+        className="bg-white rounded shadow-xl w-full max-w-xl max-h-[90vh] overflow-hidden flex flex-col border border-[#E8E8E4]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -94,7 +94,7 @@ export function UTMLinksModal({ isOpen, onClose, property, baseUrl, userId }) {
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-4 min-h-0 bg-[#FAFAF8]">
           {!hasValidSlug && (
-            <div className="rounded-lg border border-[#F5D78E] bg-[#FEF9EC] p-3 mb-3">
+            <div className="rounded border border-[#F5D78E] bg-[#FEF9EC] p-3 mb-3">
               <p className="text-[12px] text-[#B5620A]">
                 No shareable link yet. Save or publish this property first so a link can be generated.
               </p>
@@ -110,7 +110,7 @@ export function UTMLinksModal({ isOpen, onClose, property, baseUrl, userId }) {
               return (
                 <div
                   key={platform.code}
-                  className="rounded-lg border border-[#E8E8E4] bg-white overflow-hidden"
+                  className="rounded border border-[#E8E8E4] bg-white overflow-hidden"
                 >
                   <div className="p-3">
                     {/* Row 1: platform name left, viewer count right */}
@@ -167,7 +167,7 @@ export function UTMLinksModal({ isOpen, onClose, property, baseUrl, userId }) {
             })}
           </div>
 
-          <div className="mt-4 flex items-start gap-2 rounded-lg bg-white border border-[#E8E8E4] p-3">
+          <div className="mt-4 flex items-start gap-2 rounded bg-white border border-[#E8E8E4] p-3">
             <Info className="w-3.5 h-3.5 text-[#A8A8A4] shrink-0 mt-0.5" />
             <p className="text-[11px] text-[#737370] leading-relaxed">
               Share each link on the matching platform. Visitors who click through will be counted by source.

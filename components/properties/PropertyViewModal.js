@@ -15,7 +15,7 @@ export default function PropertyViewModal({ property, onClose, onOpenUTMLinks })
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
       <div
-        className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto"
+        className="bg-white rounded max-w-4xl w-full max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -28,7 +28,7 @@ export default function PropertyViewModal({ property, onClose, onOpenUTMLinks })
           </div>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-neutral-100 rounded-lg transition-colors"
+            className="p-2 hover:bg-neutral-100 rounded transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
@@ -38,13 +38,13 @@ export default function PropertyViewModal({ property, onClose, onOpenUTMLinks })
         <div className="p-6 space-y-6">
           {/* Featured Image */}
           {getFeaturedImage() && (
-            <div className="relative rounded-xl overflow-hidden h-80">
+            <div className="relative rounded overflow-hidden h-80">
               <img
                 src={getFeaturedImage()}
                 alt="Featured"
                 className="w-full h-full object-cover"
               />
-              <div className="absolute top-4 left-4 px-3 py-1.5 bg-yellow-500 text-white text-sm font-medium rounded-lg flex items-center gap-1.5">
+              <div className="absolute top-4 left-4 px-3 py-1.5 bg-yellow-500 text-white text-sm font-medium rounded flex items-center gap-1.5">
                 <Star size={14} fill="currentColor" />
                 Featured Image
               </div>
@@ -53,7 +53,7 @@ export default function PropertyViewModal({ property, onClose, onOpenUTMLinks })
 
           {/* Basic Info Grid */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="bg-neutral-50 rounded-xl p-4">
+            <div className="bg-neutral-50 rounded p-4">
               <div className="flex items-center gap-2 mb-2">
                 <DollarSign className="w-4 h-4 text-neutral-500" />
                 <p className="text-xs font-medium text-neutral-500 uppercase">Price</p>
@@ -63,7 +63,7 @@ export default function PropertyViewModal({ property, onClose, onOpenUTMLinks })
               </p>
             </div>
 
-            <div className="bg-neutral-50 rounded-xl p-4">
+            <div className="bg-neutral-50 rounded p-4">
               <div className="flex items-center gap-2 mb-2">
                 <Home className="w-4 h-4 text-neutral-500" />
                 <p className="text-xs font-medium text-neutral-500 uppercase">Bedrooms</p>
@@ -71,7 +71,7 @@ export default function PropertyViewModal({ property, onClose, onOpenUTMLinks })
               <p className="text-lg font-bold text-neutral-900">{property.bedrooms || 0}</p>
             </div>
 
-            <div className="bg-neutral-50 rounded-xl p-4">
+            <div className="bg-neutral-50 rounded p-4">
               <div className="flex items-center gap-2 mb-2">
                 <Home className="w-4 h-4 text-neutral-500" />
                 <p className="text-xs font-medium text-neutral-500 uppercase">Bathrooms</p>
@@ -79,7 +79,7 @@ export default function PropertyViewModal({ property, onClose, onOpenUTMLinks })
               <p className="text-lg font-bold text-neutral-900">{property.bathrooms || 0}</p>
             </div>
 
-            <div className="bg-neutral-50 rounded-xl p-4">
+            <div className="bg-neutral-50 rounded p-4">
               <div className="flex items-center gap-2 mb-2">
                 <Maximize className="w-4 h-4 text-neutral-500" />
                 <p className="text-xs font-medium text-neutral-500 uppercase">Area</p>
@@ -93,7 +93,7 @@ export default function PropertyViewModal({ property, onClose, onOpenUTMLinks })
           {/* Address */}
           <div>
             <label className="block text-sm font-semibold text-neutral-700 mb-2">Address</label>
-            <div className="flex items-start gap-2 p-4 bg-neutral-50 rounded-xl">
+            <div className="flex items-start gap-2 p-4 bg-neutral-50 rounded">
               <MapPin className="w-5 h-5 text-neutral-400 flex-shrink-0 mt-0.5" />
               <p className="text-sm text-neutral-700">{property.address || 'N/A'}</p>
             </div>
@@ -103,7 +103,7 @@ export default function PropertyViewModal({ property, onClose, onOpenUTMLinks })
           <div className="flex flex-wrap gap-3">
             <div>
               <label className="block text-xs font-medium text-neutral-500 mb-2">Status</label>
-              <span className={`inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium border ${
+              <span className={`inline-flex items-center px-3 py-1.5 rounded text-sm font-medium border ${
                 property.status === 'draft'
                   ? 'bg-yellow-50 text-yellow-700 border-yellow-200'
                   : property.status === 'published'
@@ -116,7 +116,7 @@ export default function PropertyViewModal({ property, onClose, onOpenUTMLinks })
 
             <div>
               <label className="block text-xs font-medium text-neutral-500 mb-2">Property Status</label>
-              <span className={`inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium border ${
+              <span className={`inline-flex items-center px-3 py-1.5 rounded text-sm font-medium border ${
                 property.property_status === 'available'
                   ? 'bg-green-50 text-green-700 border-green-200'
                   : property.property_status === 'sold'
@@ -140,7 +140,7 @@ export default function PropertyViewModal({ property, onClose, onOpenUTMLinks })
               <button
                 type="button"
                 onClick={() => onOpenUTMLinks(property)}
-                className="inline-flex items-center gap-2 px-3 py-2 bg-primary text-white text-sm font-medium rounded-lg hover:opacity-90 transition-opacity"
+                className="inline-flex items-center gap-2 px-3 py-2 bg-primary text-white text-sm font-medium rounded hover:opacity-90 transition-opacity"
               >
                 <Link2 className="w-4 h-4" />
                 Open UTM links
@@ -153,7 +153,7 @@ export default function PropertyViewModal({ property, onClose, onOpenUTMLinks })
             <div>
               <label className="block text-sm font-semibold text-neutral-700 mb-2">Description</label>
               <div
-                className="prose prose-sm max-w-none p-4 bg-neutral-50 rounded-xl"
+                className="prose prose-sm max-w-none p-4 bg-neutral-50 rounded"
                 dangerouslySetInnerHTML={{ __html: property.description }}
               />
             </div>
@@ -164,7 +164,7 @@ export default function PropertyViewModal({ property, onClose, onOpenUTMLinks })
             <div>
               <label className="block text-sm font-semibold text-neutral-700 mb-2">Repairs & Renovation</label>
               <div
-                className="prose prose-sm max-w-none p-4 bg-neutral-50 rounded-xl"
+                className="prose prose-sm max-w-none p-4 bg-neutral-50 rounded"
                 dangerouslySetInnerHTML={{ __html: property.repairs }}
               />
             </div>
@@ -182,7 +182,7 @@ export default function PropertyViewModal({ property, onClose, onOpenUTMLinks })
                     <img
                       src={img.image_url}
                       alt={`Property image ${idx + 1}`}
-                      className="w-full h-32 object-cover rounded-lg border-2 border-neutral-200"
+                      className="w-full h-32 object-cover rounded border-2 border-neutral-200"
                     />
                     {idx === 0 && (
                       <div className="absolute top-2 left-2 px-2 py-0.5 bg-yellow-500 text-white text-xs font-medium rounded">
