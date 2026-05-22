@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import { Save, Eye, ArrowLeft, Upload, X, AlertCircle, Home, FileText, Zap, Star, TrendingUp, Package, Check, Lock, ChevronRight } from 'lucide-react';
+import { Save, Eye, ArrowLeft, Upload, X, AlertCircle, Home, FileText, Zap, Star, TrendingUp, Package, Check, Lock, ChevronRight, ChevronDown } from 'lucide-react';
 import ImageGalleryManager from '@/components/properties/ImageGalleryManager';
 import TextEditor from '@/components/forms/TextEditor';
 import GooglePlacesAutocomplete from '@/components/forms/GooglePlacesAutocomplete';
@@ -1066,27 +1066,33 @@ export default function NewPropertyPage() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-[13px] font-semibold text-[#1A1816] mb-2">Beds *</label>
-                  <select
-                    value={formData.bedrooms || ''}
-                    onChange={(e) => handleInputChange('bedrooms', e.target.value)}
-                    className="w-full px-4 py-3 border border-[#E8E8E4] rounded focus:border-[#D03839] focus:outline-none transition-colors text-[13px] text-[#1A1816]"
-                  >
-                    <option value="">Select</option>
-                    {[1,2,3,4].map(n => <option key={n} value={n}>{n}</option>)}
-                    <option value="5">5+</option>
-                  </select>
+                  <div className="relative">
+                    <select
+                      value={formData.bedrooms || ''}
+                      onChange={(e) => handleInputChange('bedrooms', e.target.value)}
+                      className="w-full px-3 py-2.5 pr-8 border border-[#E8E8E4] rounded bg-white focus:border-[#1A1816] focus:outline-none transition-colors text-[13px] text-[#1A1816] appearance-none"
+                    >
+                      <option value="">Select</option>
+                      {[1,2,3,4].map(n => <option key={n} value={n}>{n}</option>)}
+                      <option value="5">5+</option>
+                    </select>
+                    <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none text-[#737370]" />
+                  </div>
                 </div>
                 <div>
                   <label className="block text-[13px] font-semibold text-[#1A1816] mb-2">Baths *</label>
-                  <select
-                    value={formData.bathrooms || ''}
-                    onChange={(e) => handleInputChange('bathrooms', e.target.value)}
-                    className="w-full px-4 py-3 border border-[#E8E8E4] rounded focus:border-[#D03839] focus:outline-none transition-colors text-[13px] text-[#1A1816]"
-                  >
-                    <option value="">Select</option>
-                    {[1,1.5,2,2.5,3,3.5,4,4.5].map(n => <option key={n} value={n}>{n}</option>)}
-                    <option value="5">5+</option>
-                  </select>
+                  <div className="relative">
+                    <select
+                      value={formData.bathrooms || ''}
+                      onChange={(e) => handleInputChange('bathrooms', e.target.value)}
+                      className="w-full px-3 py-2.5 pr-8 border border-[#E8E8E4] rounded bg-white focus:border-[#1A1816] focus:outline-none transition-colors text-[13px] text-[#1A1816] appearance-none"
+                    >
+                      <option value="">Select</option>
+                      {[1,1.5,2,2.5,3,3.5,4,4.5].map(n => <option key={n} value={n}>{n}</option>)}
+                      <option value="5">5+</option>
+                    </select>
+                    <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none text-[#737370]" />
+                  </div>
                 </div>
                 <div>
                   <label className="block text-[13px] font-semibold text-[#1A1816] mb-2">Floor Area (sqft) *</label>
