@@ -40,6 +40,36 @@ const PROPERTY_TYPES = [
   'Other'
 ];
 
+function PropertySelect({ value, onChange, options }) {
+  const [open, setOpen] = React.useState(false)
+  const ref = React.useRef(null)
+  React.useEffect(() => {
+    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+  const label = options.find(o => String(o.value) === String(value))?.label || 'Select'
+  return (
+    <div className="relative" ref={ref}>
+      <button type="button" onClick={() => setOpen(o => !o)}
+        className="w-full px-3 py-2.5 pr-8 border border-[#E8E8E4] rounded bg-white text-[13px] text-left text-[#1A1816] cursor-pointer hover:border-[#1A1816] transition-colors flex items-center justify-between">
+        <span className={value === '' ? 'text-[#A8A8A4]' : ''}>{label}</span>
+        <ChevronDown className={`absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none text-[#737370] transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+      {open && (
+        <div className="absolute z-30 top-full left-0 mt-1 w-full bg-white border border-[#E8E8E4] rounded shadow-lg overflow-hidden">
+          {options.map(opt => (
+            <div key={opt.value} onClick={() => { onChange(String(opt.value)); setOpen(false) }}
+              className={`px-3 py-2 text-[13px] cursor-pointer transition-colors ${String(value) === String(opt.value) ? 'bg-[#1A1816] text-white' : 'text-[#1A1816] hover:bg-[#FAFAF8]'}`}>
+              {opt.label}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function NewPropertyPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -1066,33 +1096,19 @@ export default function NewPropertyPage() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-[13px] font-semibold text-[#1A1816] mb-2">Beds *</label>
-                  <div className="relative">
-                    <select
-                      value={formData.bedrooms || ''}
-                      onChange={(e) => handleInputChange('bedrooms', e.target.value)}
-                      className="w-full px-3 py-2.5 pr-8 border border-[#E8E8E4] rounded bg-white focus:border-[#1A1816] focus:outline-none transition-colors text-[13px] text-[#1A1816] appearance-none"
-                    >
-                      <option value="">Select</option>
-                      {[1,2,3,4].map(n => <option key={n} value={n}>{n}</option>)}
-                      <option value="5">5+</option>
-                    </select>
-                    <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none text-[#737370]" />
-                  </div>
+                  <PropertySelect
+                    value={formData.bedrooms || ''}
+                    onChange={(v) => handleInputChange('bedrooms', v)}
+                    options={[{ value: '', label: 'Select' }, ...[1,2,3,4].map(n => ({ value: n, label: String(n) })), { value: '5', label: '5+' }]}
+                  />
                 </div>
                 <div>
                   <label className="block text-[13px] font-semibold text-[#1A1816] mb-2">Baths *</label>
-                  <div className="relative">
-                    <select
-                      value={formData.bathrooms || ''}
-                      onChange={(e) => handleInputChange('bathrooms', e.target.value)}
-                      className="w-full px-3 py-2.5 pr-8 border border-[#E8E8E4] rounded bg-white focus:border-[#1A1816] focus:outline-none transition-colors text-[13px] text-[#1A1816] appearance-none"
-                    >
-                      <option value="">Select</option>
-                      {[1,1.5,2,2.5,3,3.5,4,4.5].map(n => <option key={n} value={n}>{n}</option>)}
-                      <option value="5">5+</option>
-                    </select>
-                    <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none text-[#737370]" />
-                  </div>
+                  <PropertySelect
+                    value={formData.bathrooms || ''}
+                    onChange={(v) => handleInputChange('bathrooms', v)}
+                    options={[{ value: '', label: 'Select' }, ...[1,1.5,2,2.5,3,3.5,4,4.5].map(n => ({ value: n, label: String(n) })), { value: '5', label: '5+' }]}
+                  />
                 </div>
                 <div>
                   <label className="block text-[13px] font-semibold text-[#1A1816] mb-2">Floor Area (sqft) *</label>
