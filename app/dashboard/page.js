@@ -191,7 +191,29 @@ export default function DashboardPage() {
         closedThisMonth: 0,
         trashProperties: combined.filter(p => p._normalizedStatus === "archived").length,
       });
-      setRecentProperties(activeList.slice(0, 8));
+
+      // Enrich top 8 listings with per-property views, saves, offers
+      const top8 = activeList.slice(0, 8);
+      let enrichedListings = top8;
+      if (top8.length > 0) {
+        const ids = top8.map(p => p.id);
+        const [analyticsRes, favRes, offersRes] = await Promise.all([
+          supabase.from('property_analytics').select('property_id, page_views').in('property_id', ids),
+          supabase.from('user_favorites').select('property_id').in('property_id', ids),
+          supabase.from('offers').select('property_id').in('property_id', ids),
+        ]);
+        const viewsMap = {}, savesMap = {}, offersMap = {};
+        for (const r of analyticsRes.data || []) viewsMap[r.property_id] = (viewsMap[r.property_id] || 0) + (Number(r.page_views) || 0);
+        for (const r of favRes.data || []) savesMap[r.property_id] = (savesMap[r.property_id] || 0) + 1;
+        for (const r of offersRes.data || []) offersMap[r.property_id] = (offersMap[r.property_id] || 0) + 1;
+        enrichedListings = top8.map(p => ({
+          ...p,
+          view_count: viewsMap[p.id] || 0,
+          saves_count: savesMap[p.id] || 0,
+          offers_count: offersMap[p.id] || 0,
+        }));
+      }
+      setRecentProperties(enrichedListings);
     } catch (error) { console.error("Error fetching dashboard data:", error); }
     finally { setLoading(false); }
   };
