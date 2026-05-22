@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
-import { FileText, CheckCircle, ExternalLink, Plus, X, Send, Loader2, Eye, Download } from 'lucide-react'
+import { FileText, CheckCircle, ExternalLink, Plus, X, Send, Loader2, Eye, Download, Trash2 } from 'lucide-react'
 
 const STATUS = {
   completed: { label: 'Completed', cls: 'text-[#16A34A] bg-[#DCFCE7]' },
@@ -151,6 +151,14 @@ export default function ContractsPage() {
   const [sending, setSending] = useState(null)
   const [sendResult, setSendResult] = useState({})
   const [downloadingId, setDownloadingId] = useState(null)
+  const [deletingId, setDeletingId] = useState(null)
+
+  async function handleDelete(id) {
+    setDeletingId(id)
+    await fetch('/api/contracts', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) })
+    setContracts(prev => prev.filter(c => c.id !== id))
+    setDeletingId(null)
+  }
   const [sellerName, setSellerName] = useState('')
   const [effectiveEmail, setEffectiveEmail] = useState(null)
   const [effectiveName, setEffectiveName] = useState('')
@@ -376,6 +384,15 @@ export default function ContractsPage() {
                       )}
                     </div>
                   ) : null}
+                  <button
+                    onClick={() => handleDelete(c.id)}
+                    disabled={deletingId === c.id}
+                    className="h-8 w-8 flex items-center justify-center border border-[#E8E8E4] rounded hover:border-[#D03839] hover:text-[#D03839] text-[#A8A8A4] transition-colors disabled:opacity-50"
+                  >
+                    {deletingId === c.id
+                      ? <span className="w-3.5 h-3.5 border-2 border-[#A8A8A4] border-t-transparent rounded-full animate-spin" />
+                      : <Trash2 className="w-3.5 h-3.5" />}
+                  </button>
                 </div>
               </div>
             )

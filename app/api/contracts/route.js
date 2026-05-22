@@ -56,7 +56,7 @@ export async function GET(request) {
 
     const allRes = await fetch(`${DOCUSEAL_BASE}/submissions?limit=100`, { headers: dsHeaders(), cache: 'no-store' })
     const allJson = await allRes.json()
-    const submissions = (allJson.data || []).filter(s => sellerSubmissionIds.has(s.id))
+    const submissions = (allJson.data || []).filter(s => sellerSubmissionIds.has(s.id) && !s.archived_at)
 
     return NextResponse.json(submissions)
   } catch {
@@ -125,5 +125,17 @@ export async function POST(request) {
     return NextResponse.json({ submission_id: assignorSubmitter.submission_id, assignor_slug: assignorSubmitter.slug })
   } catch {
     return NextResponse.json({ error: 'Failed to create contract' }, { status: 500 })
+  }
+}
+
+export async function DELETE(request) {
+  try {
+    const { id } = await request.json()
+    if (!id) return NextResponse.json({ error: 'Missing id' }, { status: 400 })
+    const res = await fetch(`${DOCUSEAL_BASE}/submissions/${id}`, { method: 'DELETE', headers: dsHeaders() })
+    if (!res.ok) return NextResponse.json({ error: 'Failed to delete' }, { status: res.status })
+    return NextResponse.json({ success: true })
+  } catch {
+    return NextResponse.json({ error: 'Internal error' }, { status: 500 })
   }
 }
