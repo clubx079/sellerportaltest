@@ -122,7 +122,11 @@ export async function POST(request) {
       }),
     })
 
-    return NextResponse.json({ submission_id: assignorSubmitter.submission_id, assignor_slug: assignorSubmitter.slug })
+    return NextResponse.json({
+      submission_id: assignorSubmitter.submission_id,
+      assignor_slug: assignorSubmitter.slug,
+      embed_src: assignorSubmitter.embed_src,
+    })
   } catch {
     return NextResponse.json({ error: 'Failed to create contract' }, { status: 500 })
   }

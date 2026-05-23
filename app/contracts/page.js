@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
-import { FileText, CheckCircle, ExternalLink, Plus, X, Send, Loader2, Eye, Download, Trash2 } from 'lucide-react'
+import { FileText, CheckCircle, Plus, X, Download, Trash2, ChevronLeft, PenLine } from 'lucide-react'
+import { DocusealForm } from '@docuseal/react'
 
 const STATUS = {
   completed: { label: 'Completed', cls: 'text-[#16A34A] bg-[#DCFCE7]' },
@@ -16,153 +17,28 @@ function fmtDate(d) {
   return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
-function NewContractModal({ email, sellerName, onClose, onCreated }) {
-  const [templates, setTemplates] = useState([])
-  const [form, setForm] = useState({ buyerName: '', buyerEmail: '', property: '', templateId: '' })
-  const [submitting, setSubmitting] = useState(false)
-  const [error, setError] = useState('')
-
-  useEffect(() => {
-    fetch('/api/contracts?type=templates')
-      .then(r => r.json())
-      .then(data => {
-        setTemplates(data)
-        if (data.length > 0) setForm(f => ({ ...f, templateId: String(data[0].id) }))
-      })
-      .catch(() => {})
-  }, [])
-
-  async function handleSubmit(e) {
-    e.preventDefault()
-    if (!form.buyerEmail || !form.templateId) return
-    setSubmitting(true)
-    setError('')
-    try {
-      const res = await fetch('/api/contracts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...form, sellerEmail: email, sellerName: sellerName }),
-      })
-      const data = await res.json()
-      if (!res.ok || data.error) { setError(data.error || 'Failed to create contract'); return }
-      if (data.assignor_slug) window.open(`https://docuseal.com/s/${data.assignor_slug}`, '_blank')
-      onCreated()
-    } catch {
-      setError('Something went wrong. Please try again.')
-    } finally {
-      setSubmitting(false)
-    }
-  }
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4">
-      <div className="bg-white rounded w-full max-w-[480px] shadow-xl">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-[#E8E8E4]">
-          <h2 className="text-[16px] font-bold text-[#1A1816]">New Contract</h2>
-          <button onClick={onClose} className="p-1.5 rounded hover:bg-[#FAFAF8] text-[#737370] transition-colors">
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
-          {/* Template */}
-          <div>
-            <label className="block text-[12px] font-semibold text-[#444441] mb-1.5">Contract Template</label>
-            <select
-              value={form.templateId}
-              onChange={e => setForm(f => ({ ...f, templateId: e.target.value }))}
-              className="w-full h-9 px-3 border border-[#E8E8E4] rounded text-[13px] text-[#1A1816] bg-white focus:outline-none focus:border-[#1A1816]"
-              required
-            >
-              {templates.length === 0 && <option value="">Loading templates...</option>}
-              {templates.map(t => (
-                <option key={t.id} value={String(t.id)}>{t.name}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* Buyer name */}
-          <div>
-            <label className="block text-[12px] font-semibold text-[#444441] mb-1.5">Buyer Full Name</label>
-            <input
-              type="text"
-              placeholder="John Smith"
-              value={form.buyerName}
-              onChange={e => setForm(f => ({ ...f, buyerName: e.target.value }))}
-              className="w-full h-9 px-3 border border-[#E8E8E4] rounded text-[13px] text-[#1A1816] placeholder:text-[#A8A8A4] focus:outline-none focus:border-[#1A1816]"
-            />
-          </div>
-
-          {/* Buyer email */}
-          <div>
-            <label className="block text-[12px] font-semibold text-[#444441] mb-1.5">Buyer Email <span className="text-[#D03839]">*</span></label>
-            <input
-              type="email"
-              placeholder="buyer@example.com"
-              value={form.buyerEmail}
-              onChange={e => setForm(f => ({ ...f, buyerEmail: e.target.value }))}
-              className="w-full h-9 px-3 border border-[#E8E8E4] rounded text-[13px] text-[#1A1816] placeholder:text-[#A8A8A4] focus:outline-none focus:border-[#1A1816]"
-              required
-            />
-          </div>
-
-          {/* Property */}
-          <div>
-            <label className="block text-[12px] font-semibold text-[#444441] mb-1.5">Property Address <span className="text-[#A8A8A4] font-normal">(optional)</span></label>
-            <input
-              type="text"
-              placeholder="123 Main St, Dallas, TX"
-              value={form.property}
-              onChange={e => setForm(f => ({ ...f, property: e.target.value }))}
-              className="w-full h-9 px-3 border border-[#E8E8E4] rounded text-[13px] text-[#1A1816] placeholder:text-[#A8A8A4] focus:outline-none focus:border-[#1A1816]"
-            />
-          </div>
-
-          {error && <p className="text-[12px] text-[#D03839]">{error}</p>}
-
-          <div className="flex gap-2 pt-1">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 h-9 border border-[#E8E8E4] text-[#444441] text-[13px] font-medium rounded hover:border-[#1A1816] transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={submitting || !form.buyerEmail || !form.templateId}
-              className="flex-1 h-9 bg-[#D03839] hover:bg-[#E0493B] text-white text-[13px] font-semibold rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {submitting ? 'Sending...' : 'Send Contract'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  )
-}
-
 export default function ContractsPage() {
   const [contracts, setContracts] = useState([])
   const [loading, setLoading] = useState(true)
   const [email, setEmail] = useState(null)
   const [userId, setUserId] = useState(null)
-  const [showModal, setShowModal] = useState(false)
-  const [sending, setSending] = useState(null)
-  const [sendResult, setSendResult] = useState({})
-  const [downloadingId, setDownloadingId] = useState(null)
-  const [deletingId, setDeletingId] = useState(null)
-
-  async function handleDelete(id) {
-    setDeletingId(id)
-    await fetch('/api/contracts', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) })
-    setContracts(prev => prev.filter(c => c.id !== id))
-    setDeletingId(null)
-  }
   const [sellerName, setSellerName] = useState('')
   const [effectiveEmail, setEffectiveEmail] = useState(null)
   const [effectiveName, setEffectiveName] = useState('')
   const [canCreateContract, setCanCreateContract] = useState(null)
+  const [deletingId, setDeletingId] = useState(null)
+  const [downloadingId, setDownloadingId] = useState(null)
+
+  // Signing view
+  const [signingEmbedSrc, setSigningEmbedSrc] = useState(null)
+  const [signingTitle, setSigningTitle] = useState('')
+
+  // New contract form
+  const [showForm, setShowForm] = useState(false)
+  const [templates, setTemplates] = useState([])
+  const [form, setForm] = useState({ buyerName: '', buyerEmail: '', property: '', templateId: '' })
+  const [submitting, setSubmitting] = useState(false)
+  const [formError, setFormError] = useState('')
 
   useEffect(() => {
     const raw = localStorage.getItem('seller_user')
@@ -198,6 +74,17 @@ export default function ContractsPage() {
     fetchContracts()
   }, [email])
 
+  useEffect(() => {
+    if (!showForm) return
+    fetch('/api/contracts?type=templates')
+      .then(r => r.json())
+      .then(data => {
+        setTemplates(data)
+        if (data.length > 0) setForm(f => ({ ...f, templateId: String(data[0].id) }))
+      })
+      .catch(() => {})
+  }, [showForm])
+
   function fetchContracts() {
     setLoading(true)
     fetch(`/api/contracts?email=${encodeURIComponent(email)}`, {
@@ -209,29 +96,58 @@ export default function ContractsPage() {
       .finally(() => setLoading(false))
   }
 
-  function signUrl(contract) {
-    const sub = contract.submitters?.find(s => s.email?.toLowerCase() === email?.toLowerCase())
-    if (!sub || sub.status === 'completed' || sub.status === 'declined') return null
-    return `https://docuseal.com/s/${sub.slug}`
-  }
-
-  async function sendToAssignee(submissionId) {
-    setSending(submissionId)
-    setSendResult(r => ({ ...r, [submissionId]: null }))
+  async function handleFormSubmit(e) {
+    e.preventDefault()
+    if (!form.buyerEmail || !form.templateId) return
+    setSubmitting(true)
+    setFormError('')
     try {
-      const res = await fetch('/api/contracts/send', {
+      const res = await fetch('/api/contracts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ submission_id: submissionId }),
+        body: JSON.stringify({
+          ...form,
+          sellerEmail: effectiveEmail || email,
+          sellerName: effectiveName || sellerName,
+        }),
       })
       const data = await res.json()
-      setSendResult(r => ({ ...r, [submissionId]: data.ok ? 'sent' : (data.error || 'error') }))
-      if (data.ok) fetchContracts()
+      if (!res.ok || data.error) { setFormError(data.error || 'Failed to create contract'); return }
+
+      setShowForm(false)
+      setForm({ buyerName: '', buyerEmail: '', property: '', templateId: '' })
+
+      if (data.embed_src) {
+        setSigningTitle(form.property || 'New Contract')
+        setSigningEmbedSrc(data.embed_src)
+      } else {
+        fetchContracts()
+      }
     } catch {
-      setSendResult(r => ({ ...r, [submissionId]: 'error' }))
+      setFormError('Something went wrong. Please try again.')
     } finally {
-      setSending(null)
+      setSubmitting(false)
     }
+  }
+
+  function handleSignInline(contract) {
+    const sub = contract.submitters?.find(s => s.email?.toLowerCase() === email?.toLowerCase())
+    if (!sub || sub.status === 'completed' || sub.status === 'declined') return
+    setSigningTitle(contract.name || contract.template?.name || `Contract #${contract.id}`)
+    setSigningEmbedSrc(`https://docuseal.com/s/${sub.slug}`)
+  }
+
+  function handleSigningComplete() {
+    setSigningEmbedSrc(null)
+    setSigningTitle('')
+    fetchContracts()
+  }
+
+  async function handleDelete(id) {
+    setDeletingId(id)
+    await fetch('/api/contracts', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) })
+    setContracts(prev => prev.filter(c => c.id !== id))
+    setDeletingId(null)
   }
 
   async function handleDownload(contractId) {
@@ -245,12 +161,122 @@ export default function ContractsPage() {
     }
   }
 
-  function needsSending(contract) {
-    const assignor = contract.submitters?.find(s => s.role === 'Assignor')
-    const assignee = contract.submitters?.find(s => s.role === 'Assignee')
-    return assignor?.status === 'completed' && assignee?.email?.includes('@noreply.deelmap.com')
+  // ── Inline signing view ─────────────────────────────────────────
+  if (signingEmbedSrc) {
+    return (
+      <div className="p-4 lg:p-6">
+        <div className="flex items-center gap-3 mb-6">
+          <button
+            onClick={() => { setSigningEmbedSrc(null); fetchContracts() }}
+            className="flex items-center gap-1.5 text-[13px] text-[#737370] hover:text-[#1A1816] transition-colors"
+          >
+            <ChevronLeft className="w-4 h-4" /> Back to Contracts
+          </button>
+        </div>
+        <div className="flex items-center gap-3 mb-5">
+          <div className="w-9 h-9 bg-[#D03839]/10 rounded flex items-center justify-center shrink-0">
+            <PenLine className="w-4 h-4 text-[#D03839]" />
+          </div>
+          <div>
+            <h1 className="text-[18px] font-bold text-[#1A1816] leading-tight">{signingTitle}</h1>
+            <p className="text-[13px] text-[#737370]">Review and sign below</p>
+          </div>
+        </div>
+        <div className="bg-white border border-[#E8E8E4] rounded overflow-hidden">
+          <DocusealForm
+            src={signingEmbedSrc}
+            email={email}
+            withTitle={false}
+            withDownloadButton={false}
+            customCss={`
+              body { font-family: 'DM Sans', -apple-system, sans-serif !important; }
+              .base-button { background: #D03839 !important; border-color: #D03839 !important; border-radius: 4px !important; }
+              .base-button:hover { background: #E0493B !important; }
+            `}
+            onComplete={handleSigningComplete}
+          />
+        </div>
+      </div>
+    )
   }
 
+  // ── New contract form modal ─────────────────────────────────────
+  const formModal = showForm && (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4">
+      <div className="bg-white rounded w-full max-w-[480px] shadow-xl">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-[#E8E8E4]">
+          <h2 className="text-[16px] font-bold text-[#1A1816]">New Contract</h2>
+          <button onClick={() => setShowForm(false)} className="p-1.5 rounded hover:bg-[#FAFAF8] text-[#737370] transition-colors">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        <form onSubmit={handleFormSubmit} className="px-6 py-5 space-y-4">
+          <div>
+            <label className="block text-[12px] font-semibold text-[#444441] mb-1.5">Contract Template</label>
+            <select
+              value={form.templateId}
+              onChange={e => setForm(f => ({ ...f, templateId: e.target.value }))}
+              className="w-full h-9 px-3 border border-[#E8E8E4] rounded text-[13px] text-[#1A1816] bg-white focus:outline-none focus:border-[#1A1816]"
+              required
+            >
+              {templates.length === 0 && <option value="">Loading templates...</option>}
+              {templates.map(t => <option key={t.id} value={String(t.id)}>{t.name}</option>)}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-[12px] font-semibold text-[#444441] mb-1.5">Buyer Full Name</label>
+            <input
+              type="text"
+              placeholder="John Smith"
+              value={form.buyerName}
+              onChange={e => setForm(f => ({ ...f, buyerName: e.target.value }))}
+              className="w-full h-9 px-3 border border-[#E8E8E4] rounded text-[13px] text-[#1A1816] placeholder:text-[#A8A8A4] focus:outline-none focus:border-[#1A1816]"
+            />
+          </div>
+
+          <div>
+            <label className="block text-[12px] font-semibold text-[#444441] mb-1.5">Buyer Email <span className="text-[#D03839]">*</span></label>
+            <input
+              type="email"
+              placeholder="buyer@example.com"
+              value={form.buyerEmail}
+              onChange={e => setForm(f => ({ ...f, buyerEmail: e.target.value }))}
+              className="w-full h-9 px-3 border border-[#E8E8E4] rounded text-[13px] text-[#1A1816] placeholder:text-[#A8A8A4] focus:outline-none focus:border-[#1A1816]"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-[12px] font-semibold text-[#444441] mb-1.5">Property Address <span className="text-[#A8A8A4] font-normal">(optional)</span></label>
+            <input
+              type="text"
+              placeholder="123 Main St, Dallas, TX"
+              value={form.property}
+              onChange={e => setForm(f => ({ ...f, property: e.target.value }))}
+              className="w-full h-9 px-3 border border-[#E8E8E4] rounded text-[13px] text-[#1A1816] placeholder:text-[#A8A8A4] focus:outline-none focus:border-[#1A1816]"
+            />
+          </div>
+
+          {formError && <p className="text-[12px] text-[#D03839]">{formError}</p>}
+
+          <div className="flex gap-2 pt-1">
+            <button type="button" onClick={() => setShowForm(false)}
+              className="flex-1 h-9 border border-[#E8E8E4] text-[#444441] text-[13px] font-medium rounded hover:border-[#1A1816] transition-colors">
+              Cancel
+            </button>
+            <button type="submit" disabled={submitting || !form.buyerEmail || !form.templateId}
+              className="flex-1 h-9 bg-[#D03839] hover:bg-[#E0493B] text-white text-[13px] font-semibold rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+              {submitting ? 'Sending...' : 'Continue to Sign'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+
+  // ── Main list view ──────────────────────────────────────────────
   if (loading) {
     return (
       <div className="p-4 lg:p-6 space-y-3 animate-pulse">
@@ -263,14 +289,7 @@ export default function ContractsPage() {
 
   return (
     <div className="p-4 lg:p-6">
-      {showModal && (
-        <NewContractModal
-          email={effectiveEmail || email}
-          sellerName={effectiveName || sellerName}
-          onClose={() => setShowModal(false)}
-          onCreated={() => { setShowModal(false); fetchContracts() }}
-        />
-      )}
+      {formModal}
 
       <div className="flex items-start justify-between mb-6">
         <div>
@@ -279,7 +298,7 @@ export default function ContractsPage() {
         </div>
         {canCreateContract && (
           <button
-            onClick={() => setShowModal(true)}
+            onClick={() => setShowForm(true)}
             className="flex items-center gap-1.5 h-9 px-4 bg-[#D03839] hover:bg-[#E0493B] text-white text-[13px] font-semibold rounded transition-colors shrink-0"
           >
             <Plus className="w-4 h-4" /> New Contract
@@ -297,10 +316,8 @@ export default function ContractsPage() {
             Send your first contract to a buyer to get started.
           </p>
           {canCreateContract && (
-            <button
-              onClick={() => setShowModal(true)}
-              className="inline-flex items-center gap-1.5 h-9 px-4 bg-[#D03839] hover:bg-[#E0493B] text-white text-[13px] font-semibold rounded transition-colors"
-            >
+            <button onClick={() => setShowForm(true)}
+              className="inline-flex items-center gap-1.5 h-9 px-4 bg-[#D03839] hover:bg-[#E0493B] text-white text-[13px] font-semibold rounded transition-colors">
               <Plus className="w-4 h-4" /> New Contract
             </button>
           )}
@@ -309,9 +326,10 @@ export default function ContractsPage() {
         <div className="space-y-2">
           {contracts.map(c => {
             const { label, cls } = badge(c.status)
-            const url = signUrl(c)
-            const others = c.submitters?.filter(s => s.email?.toLowerCase() !== email?.toLowerCase()) ?? []
-            const property = c.metadata?.property
+            const mySubmitter = c.submitters?.find(s => s.email?.toLowerCase() === email?.toLowerCase())
+            const canSign = mySubmitter && mySubmitter.status !== 'completed' && mySubmitter.status !== 'declined'
+            const others = c.submitters?.filter(s => s.email?.toLowerCase() !== email?.toLowerCase() && !s.email?.includes('@noreply.deelmap.com')) ?? []
+            const property = c.name
 
             return (
               <div key={c.id} className="bg-white border border-[#E8E8E4] rounded p-4 flex items-center gap-4">
@@ -333,61 +351,40 @@ export default function ContractsPage() {
                     {others.length > 0 && (
                       <span>Buyer: {others.map(s => s.name || s.email).join(', ')}</span>
                     )}
-                    {property && c.template?.name && (
-                      <span className="text-[#A8A8A4]">{c.template.name}</span>
-                    )}
                   </div>
                 </div>
 
                 <div className="shrink-0 flex items-center gap-2">
                   {c.status === 'completed' ? (
-                    <div className="flex items-center gap-2">
+                    <>
                       <span className="text-[12px] text-[#16A34A] font-medium flex items-center gap-1">
                         <CheckCircle className="w-3.5 h-3.5" /> Signed
                       </span>
                       <button
                         onClick={() => handleDownload(c.id)}
                         disabled={downloadingId === c.id}
-                        title="Download signed PDF"
-                        className="h-8 w-8 flex items-center justify-center border border-[#E8E8E4] rounded hover:border-[#1A1816] hover:bg-[#FAFAF8] text-[#737370] hover:text-[#1A1816] transition-colors disabled:opacity-50"
+                        className="h-8 px-3 border border-[#E8E8E4] hover:bg-[#FAFAF8] text-[#444441] text-[12px] font-semibold rounded transition-colors flex items-center gap-1.5 disabled:opacity-50"
                       >
                         {downloadingId === c.id
                           ? <span className="w-3.5 h-3.5 border-2 border-[#A8A8A4] border-t-transparent rounded-full animate-spin" />
-                          : <Download className="w-4 h-4" />}
+                          : <Download className="w-3.5 h-3.5" />}
+                        Download
                       </button>
-                    </div>
-                  ) : url ? (
-                    <a
-                      href={url}
-                      target="_blank"
-                      rel="noopener noreferrer"
+                    </>
+                  ) : canSign ? (
+                    <button
+                      onClick={() => handleSignInline(c)}
                       className="h-8 px-4 bg-[#D03839] hover:bg-[#E0493B] text-white text-[13px] font-semibold rounded transition-colors flex items-center gap-1.5"
                     >
-                      Sign Now <ExternalLink className="w-3 h-3" />
-                    </a>
-                  ) : needsSending(c) ? (
-                    <div className="flex flex-col items-end gap-1">
-                      <button
-                        onClick={() => sendToAssignee(c.id)}
-                        disabled={sending === c.id}
-                        className="h-8 px-4 bg-[#1A1816] hover:bg-[#2a2826] text-white text-[13px] font-semibold rounded transition-colors flex items-center gap-1.5 disabled:opacity-50"
-                      >
-                        {sending === c.id
-                          ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Sending...</>
-                          : <><Send className="w-3 h-3" /> Send to Buyer</>}
-                      </button>
-                      {sendResult[c.id] === 'sent' && (
-                        <span className="text-[11px] text-[#0F6E56] font-medium">Email sent ✓</span>
-                      )}
-                      {sendResult[c.id] && sendResult[c.id] !== 'sent' && (
-                        <span className="text-[11px] text-[#D03839]">{sendResult[c.id]}</span>
-                      )}
-                    </div>
-                  ) : null}
+                      <PenLine className="w-3.5 h-3.5" /> Sign Now
+                    </button>
+                  ) : (
+                    <span className="text-[12px] text-[#737370]">Awaiting buyer</span>
+                  )}
                   <button
                     onClick={() => handleDelete(c.id)}
                     disabled={deletingId === c.id}
-                    className="h-8 w-8 flex items-center justify-center border border-[#E8E8E4] rounded hover:border-[#D03839] hover:text-[#D03839] text-[#A8A8A4] transition-colors disabled:opacity-50"
+                    className="h-8 w-8 flex items-center justify-center border border-[#E8E8E4] hover:border-[#D03839] hover:text-[#D03839] text-[#A8A8A4] rounded transition-colors disabled:opacity-50"
                   >
                     {deletingId === c.id
                       ? <span className="w-3.5 h-3.5 border-2 border-[#A8A8A4] border-t-transparent rounded-full animate-spin" />
