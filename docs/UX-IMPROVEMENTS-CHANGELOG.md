@@ -4,6 +4,31 @@ A running log of every UX/UI change made to the seller portal as part of the ent
 
 ---
 
+## 2026-05-25 — Team-member contact picker for enterprise listings (`553ab36`)
+
+**Files:** `database/add_phone_to_team_members.sql` (new), `app/api/team/[id]/route.js`, `app/team/page.js`, `app/properties/edit/[id]/page.js`, `app/properties/new/page.js`
+
+**Summary**
+Enterprise sellers can now pick a team member from a dropdown in a listing's Contact Info section and have both Contact Name + Contact Phone auto-filled, instead of re-typing them on every new listing.
+
+**Changes**
+- **New `phone` column on `org_members`.** Migration file lives at `database/add_phone_to_team_members.sql` (`ALTER TABLE org_members ADD COLUMN IF NOT EXISTS phone TEXT;`). Must be run manually in the Supabase SQL Editor before this code deploys — PostgREST doesn't support DDL, and there's no `exec_sql` RPC on this project. The code is defensive: `GET /api/team` uses `select('*')` so a missing column is invisible; `PATCH /api/team/[id]` catches the column-missing error and reports `phoneSkipped: true` so the UI surfaces "Migration pending" instead of silently failing.
+- **`/team` page — phone field per member.** Owners see a phone input below each member's email row. Saves on blur (or Enter), matches the existing form-input styling (`h-7 px-2 border-[#E8E8E4] rounded`). Inline `MemberPhoneField` component handles the optimistic save + error state. Hidden for non-owners.
+- **`PATCH /api/team/[id]` extended.** Now accepts `permissions` and/or `phone` in the body. Permission update path unchanged. Phone update only changes the phone column; owner-only authorization is identical.
+- **`/properties/new` and `/properties/edit/[id]` — "Pick a team member" dropdown.** Appears above Contact Name + Phone, **only** when the seller's `seller_plans.plan_type === 'enterprise'` AND they have at least one team member. Default option is `Custom (fill in below)`. Selecting a member fills `formData.contact_name` (name or email fallback) and `formData.contact_phone` (member's phone, blank if not set). Free-typing into the inputs afterwards is preserved — we never override what the seller typed. Non-enterprise sellers see no change (existing always-editable Contact Name + Phone behavior preserved).
+
+**Why**
+Enterprise sellers asked for this — when their team handles inbound calls on listings, the person on the listing should be the one taking the call, not the account owner. The old "always your profile name + phone" flow forced them to type the right person's info on every new listing. This makes the right thing a one-click choice while keeping a full custom-typed escape hatch.
+
+**Pattern note**
+Followed the same defensive-column pattern already in `app/api/team/workspaces/route.js` (try, catch the schema error, fall back). Confirmed locally that `select('*')` against `org_members` without the phone column returns the existing columns and no error, so the team page and dropdown both work pre-migration — they just won't show a phone value.
+
+**Verified end-to-end (2026-05-25):** `/team` returns 200, `/properties/new` returns 200, no errors in `/tmp/seller_dev.log`. Migration SQL written and committed; user must execute it in the Supabase SQL Editor before the dropdown will populate real phone numbers.
+
+**Status:** Code shipped. Migration awaiting manual SQL run.
+
+---
+
 ## 2026-05-25 — Audit sweep: sticky-flush fix, contact UX, click-to-scroll, auto-featured, counter-offer preview, concrete timelines
 
 **Files:** `components/properties/SaveStatus.js`, `components/properties/StickyActionBar.js`, `app/properties/edit/[id]/page.js`, `app/properties/new/page.js`, `app/messages/page.js`
