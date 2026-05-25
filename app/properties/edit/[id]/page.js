@@ -8,6 +8,7 @@ import ImageGalleryManager from '@/components/properties/ImageGalleryManager';
 import TextEditor from '@/components/forms/TextEditor';
 import GooglePlacesAutocomplete from '@/components/forms/GooglePlacesAutocomplete';
 import SaveStatus from '@/components/properties/SaveStatus';
+import StickyActionBar from '@/components/properties/StickyActionBar';
 
 const PROPERTY_STATUSES = [
   { value: 'available', label: 'Available - Ready for sale' },
@@ -1417,7 +1418,7 @@ export default function EditPropertyPage() {
 
       {/* Sticky action footer — single source of truth for actions.
           Drafts auto-save; this button publishes (which queues moderation review). */}
-      <div className="sticky bottom-0 -mb-4 md:-mb-6 -mx-4 md:-mx-6 px-4 md:px-6 py-3 bg-white/95 backdrop-blur border-t border-[#E8E8E4] shadow-[0_-2px_8px_rgba(0,0,0,0.04)] flex items-center justify-between gap-3 z-10">
+      <StickyActionBar>
         <div className="min-w-0">
           <SaveStatus
             autoSaving={autoSaving}
@@ -1437,7 +1438,7 @@ export default function EditPropertyPage() {
             ? 'Please wait…'
             : saving ? 'Publishing…' : 'Publish'}
         </button>
-      </div>
+      </StickyActionBar>
     </div>
   );
 }

@@ -4,6 +4,31 @@ A running log of every UX/UI change made to the seller portal as part of the ent
 
 ---
 
+## 2026-05-25 — Shared `<StickyActionBar>` primitive
+
+**Files:** `components/properties/StickyActionBar.js` (new), `app/properties/edit/[id]/page.js`
+
+**Summary**
+Extracted the sticky bottom action footer from the edit page into a reusable component. Any future long form in the seller portal can drop in a `<StickyActionBar>` and slot in a status indicator + action buttons without copy-pasting the positioning gymnastics.
+
+**Changes**
+- New component: `components/properties/StickyActionBar.js`. Bakes in:
+  - `sticky bottom-0` for in-scroll-container stickiness
+  - `-mx-4 md:-mx-6` and `-mb-4 md:-mb-6` to cancel DashboardLayout `<main>`'s padding (edge-to-edge, no bottom gap)
+  - White bg with subtle backdrop-blur + 1px top border + faint shadow above
+  - `flex items-center justify-between gap-3` — first child anchors left, last child anchors right
+- Edit page now uses `<StickyActionBar>` instead of an inline `<div>`. Same visual result, less repetition.
+- API is intentionally minimal — `children` slotted via flexbox. For multiple actions, wrap them in a `<div className="flex gap-2">`. A `className` prop is exposed for the rare case where the standard padding cancellation doesn't apply (e.g. outside DashboardLayout).
+
+**Why**
+This pattern (sticky footer with status on the left + primary action on the right) will be used on many more pages — contracts editor, messages composer, settings forms, etc. Extracting now means every page picks up future improvements (e.g. mobile behavior, keyboard shortcuts) for free.
+
+**Verified end-to-end (2026-05-25):** Reloaded the edit page, made a price edit (142000 → 99000), auto-save fired and indicator went to `Saved just now`. Publish button still present and disabled while auto-saving. Visually identical to the pre-refactor sticky footer.
+
+**Status:** Done. Two primitives now in the library: `<SaveStatus>` and `<StickyActionBar>`. When we reach 3+, we should migrate them to a dedicated `components/ui/` directory.
+
+---
+
 ## 2026-05-25 — Auto-save + canonical action footer (Edit Listing page)
 
 **Files:** `app/properties/edit/[id]/page.js`
@@ -71,7 +96,7 @@ Same logic as the edit page: long forms with manual save are a data-loss risk; a
 The following improvements are planned next, derived from the meeting feedback (2026-05-22) and the UX audit (2026-05-25):
 
 - ~~**Apply auto-save + sticky footer pattern to `/properties/new`**~~ Done 2026-05-25.
-- **Extract shared component primitives** so the SaveStatus and StickyActionBar are reusable across the rest of the portal. SaveStatus done 2026-05-25 (`components/properties/SaveStatus.js`); StickyActionBar pending.
+- ~~**Extract shared component primitives**~~ Done 2026-05-25: `<SaveStatus>` and `<StickyActionBar>` both live at `components/properties/`. Migrate to `components/ui/` when we have 3+ primitives.
 - **Scope under-review trigger.** Currently any edit sends the entire listing back through moderation. Should only trigger for fields where bad content could appear (photos, description, free-text). Numeric/structured fields should save immediately without re-review.
 - **Dispo rep dropdown** on the listing contact picker. Preload sellers' saved reps from their profile; user picks one and the phone auto-fills.
 - **Rename contract templates** to plain user-friendly labels (e.g. "Assignment of Sale Contract", "Purchase Contract"); reorder so Purchase Contract appears first.
