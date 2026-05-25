@@ -142,6 +142,7 @@ export default function EditPropertyPage() {
   const [useCustomContact, setUseCustomContact] = useState(false);
   const [sellerPlanType, setSellerPlanType] = useState(null);
   const [teamMembers, setTeamMembers] = useState([]);
+  const [teamLoaded, setTeamLoaded] = useState(false);
   const [selectedTeamMemberId, setSelectedTeamMemberId] = useState('');
   const [contractUpload, setContractUpload] = useState({
     url: null,
@@ -172,31 +173,32 @@ export default function EditPropertyPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId, id]);
 
-  // Load seller plan + team members (for enterprise contact-picker dropdown)
+  // Load seller plan + team members for the enterprise contact-picker.
+  // One round-trip via /api/team (it already returns isEnterprise + members),
+  // and we seed sellerPlanType from a localStorage cache so the picker slot is
+  // reserved on first paint for repeat enterprise visitors.
   useEffect(() => {
     const userStr = typeof window !== 'undefined' ? localStorage.getItem('seller_user') : null;
     if (!userStr) return;
     const user = JSON.parse(userStr);
     if (!user?.id) return;
 
-    supabase
-      .from('seller_plans')
-      .select('plan_type, status')
-      .eq('seller_id', user.id)
-      .maybeSingle()
-      .then(({ data }) => {
-        const planType = data?.plan_type || null;
+    try {
+      const cached = localStorage.getItem('seller_plan_type');
+      if (cached) setSellerPlanType(cached);
+    } catch {}
+
+    fetch('/api/team', { headers: { Authorization: `Bearer ${user.id}` } })
+      .then(r => r.json())
+      .then(json => {
+        const planType = json?.isEnterprise ? 'enterprise' : null;
         setSellerPlanType(planType);
-        if (planType === 'enterprise') {
-          fetch('/api/team', { headers: { Authorization: `Bearer ${user.id}` } })
-            .then(r => r.json())
-            .then(json => {
-              const members = (json?.members || []).filter(m => m.name || m.email);
-              setTeamMembers(members);
-            })
-            .catch(() => {});
-        }
-      });
+        try { localStorage.setItem('seller_plan_type', planType || ''); } catch {}
+        const members = (json?.members || []).filter(m => m.name || m.email);
+        setTeamMembers(members);
+        setTeamLoaded(true);
+      })
+      .catch(() => setTeamLoaded(true));
   }, []);
 
   const fetchProperty = async () => {
@@ -1175,31 +1177,35 @@ export default function EditPropertyPage() {
                   <h3 className="text-[15px] font-semibold text-[#1A1816]">Contact Info</h3>
                   <p className="text-[13px] text-[#737370] mt-0.5">How buyers can reach you about this listing. Pre-filled from your profile — edit if you want different contact info on this listing.</p>
                 </div>
-                {sellerPlanType === 'enterprise' && teamMembers.length > 0 && (
+                {sellerPlanType === 'enterprise' && (teamMembers.length > 0 || !teamLoaded) && (
                   <div className="mb-4">
                     <label className="block text-[13px] font-semibold text-[#1A1816] mb-2">Pick a team member</label>
-                    <select
-                      value={selectedTeamMemberId}
-                      onChange={(e) => {
-                        const memberId = e.target.value;
-                        setSelectedTeamMemberId(memberId);
-                        if (!memberId) return;
-                        const m = teamMembers.find(tm => String(tm.id) === String(memberId));
-                        if (!m) return;
-                        const memberName = m.name || m.email || '';
-                        const memberPhone = m.phone || '';
-                        setFormData(prev => ({ ...prev, contact_name: memberName, contact_phone: memberPhone }));
-                        setDirty(true);
-                      }}
-                      className="w-full px-4 py-3 border border-[#E8E8E4] rounded text-[13px] text-[#1A1816] focus:border-[#D03839] focus:outline-none transition-colors bg-white"
-                    >
-                      <option value="">Custom (fill in below)</option>
-                      {teamMembers.map(m => (
-                        <option key={m.id} value={m.id}>
-                          {(m.name || m.email)}{m.phone ? ` — ${m.phone}` : ' (no phone)'}
-                        </option>
-                      ))}
-                    </select>
+                    {teamLoaded ? (
+                      <select
+                        value={selectedTeamMemberId}
+                        onChange={(e) => {
+                          const memberId = e.target.value;
+                          setSelectedTeamMemberId(memberId);
+                          if (!memberId) return;
+                          const m = teamMembers.find(tm => String(tm.id) === String(memberId));
+                          if (!m) return;
+                          const memberName = m.name || m.email || '';
+                          const memberPhone = m.phone || '';
+                          setFormData(prev => ({ ...prev, contact_name: memberName, contact_phone: memberPhone }));
+                          setDirty(true);
+                        }}
+                        className="w-full px-4 py-3 border border-[#E8E8E4] rounded text-[13px] text-[#1A1816] focus:border-[#D03839] focus:outline-none transition-colors bg-white"
+                      >
+                        <option value="">Custom (fill in below)</option>
+                        {teamMembers.map(m => (
+                          <option key={m.id} value={m.id}>
+                            {(m.name || m.email)}{m.phone ? ` — ${m.phone}` : ' (no phone)'}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <div className="w-full h-[46px] rounded bg-[#F4F4F0] animate-pulse" aria-hidden="true" />
+                    )}
                   </div>
                 )}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
