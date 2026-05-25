@@ -126,6 +126,7 @@ export default function MessagesPage() {
   const [counterTimeline, setCounterTimeline] = useState('30 days');
   const [counterFinancing, setCounterFinancing] = useState('Cash');
   const [counterNotes, setCounterNotes] = useState('');
+  const [showCounterPreview, setShowCounterPreview] = useState(false);
   const [offerActionLoading, setOfferActionLoading] = useState(false);
   const [showMobilePropPanel, setShowMobilePropPanel] = useState(false);
 
@@ -469,6 +470,70 @@ export default function MessagesPage() {
 
   return (
     <div className="flex flex-col h-full min-h-0 flex-1 overflow-hidden -m-4 lg:-m-6" style={{ fontFamily: FONT }}>
+      {/* Counter-offer preview/confirm modal — gate the send so sellers
+          see the full terms before committing. */}
+      {showCounterPreview && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4" onClick={() => setShowCounterPreview(false)}>
+          <div onClick={e => e.stopPropagation()} className="w-full max-w-[460px] bg-white border border-[#E8E8E4] rounded shadow-2xl overflow-hidden">
+            <div className="px-5 py-4 border-b border-[#E8E8E4] flex items-center justify-between">
+              <div>
+                <h3 className="text-[16px] font-bold text-[#1A1816]">Review counter offer</h3>
+                <p className="text-[12px] text-[#737370] mt-0.5">Confirm the terms before sending.</p>
+              </div>
+              <button onClick={() => setShowCounterPreview(false)} className="p-1 rounded hover:bg-[#FAFAF8] -mr-1" aria-label="Close">
+                <X className="w-4 h-4 text-[#737370]" />
+              </button>
+            </div>
+            <div className="px-5 py-4 space-y-3">
+              <div className="flex items-baseline justify-between">
+                <span className="text-[12px] font-semibold text-[#A8A8A4] uppercase tracking-wide">Counter price</span>
+                <span className="text-[22px] font-bold text-[#1A1816]">${counterAmount ? Number(counterAmount).toLocaleString() : '0'}</span>
+              </div>
+              <div className="flex items-center justify-between py-2 border-t border-[#F0F0EE]">
+                <span className="text-[12px] text-[#737370]">Closing timeline</span>
+                <span className="text-[13px] font-medium text-[#1A1816]">{counterTimeline}</span>
+              </div>
+              <div className="flex items-center justify-between py-2 border-t border-[#F0F0EE]">
+                <span className="text-[12px] text-[#737370]">Financing</span>
+                <span className="text-[13px] font-medium text-[#1A1816]">{counterFinancing}</span>
+              </div>
+              {counterNotes && (
+                <div className="py-2 border-t border-[#F0F0EE]">
+                  <span className="block text-[12px] text-[#737370] mb-1">Notes to buyer</span>
+                  <p className="text-[13px] text-[#1A1816] whitespace-pre-wrap leading-relaxed">{counterNotes}</p>
+                </div>
+              )}
+              <div className="flex items-start gap-2 bg-[#FEF9EC] border border-[#F5D78E] rounded px-3 py-2.5 mt-2">
+                <AlertCircle className="w-3.5 h-3.5 text-[#B5620A] flex-shrink-0 mt-0.5" />
+                <p className="text-[12px] text-[#B5620A]">The buyer will be notified immediately and can accept, counter, or decline.</p>
+              </div>
+            </div>
+            <div className="px-5 py-3 border-t border-[#E8E8E4] bg-[#FAFAF8] flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setShowCounterPreview(false)}
+                className="h-9 px-3 border border-[#E8E8E4] text-[#444441] hover:border-[#1A1816] hover:text-[#1A1816] text-[13px] font-semibold rounded transition-colors"
+              >
+                Edit
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  await handleOfferAction('counter', {
+                    counter_data: { amount: Number(counterAmount), closing_timeline: counterTimeline, financing_type: counterFinancing, notes: counterNotes }
+                  });
+                  setShowCounterPreview(false);
+                }}
+                disabled={offerActionLoading}
+                className="h-9 px-5 bg-[#D03839] hover:bg-[#E0493B] text-white text-[13px] font-semibold rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {offerActionLoading ? 'Sending…' : 'Send counter offer'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {error && (
         <div className="rounded bg-[#FEF0EF] border border-[#F5C4C0] p-3 mb-3 shrink-0">
           <p className="text-[13px] text-[#D03839]">{error}</p>
@@ -758,13 +823,11 @@ export default function MessagesPage() {
                     <p className="text-[12px] text-[#B5620A]">The buyer will be notified immediately and can accept, counter, or decline your offer</p>
                   </div>
                   <button
-                    onClick={() => handleOfferAction('counter', {
-                      counter_data: { amount: Number(counterAmount), closing_timeline: counterTimeline, financing_type: counterFinancing, notes: counterNotes }
-                    })}
+                    onClick={() => setShowCounterPreview(true)}
                     disabled={offerActionLoading || !counterAmount}
                     className="w-full py-3 bg-[#D03839] text-white text-[14px] font-semibold rounded hover:bg-[#E0493B] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    {offerActionLoading ? 'Sending...' : 'Send counter'}
+                    Review &amp; Send
                   </button>
                 </div>
               </>
