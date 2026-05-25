@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { getWorkspaceSellerId } from '@/lib/workspace'
-import { mapFieldValues } from '@/lib/contract-templates'
+import { mapFieldValues, decorateTemplates } from '@/lib/contract-templates'
 
 const DOCUSEAL_BASE = 'https://api.docuseal.com'
 
@@ -31,7 +31,9 @@ export async function GET(request) {
     if (type === 'templates') {
       const res = await fetch(`${DOCUSEAL_BASE}/templates?limit=50`, { headers: dsHeaders(), cache: 'no-store' })
       const json = await res.json()
-      return NextResponse.json(json.data || [])
+      // Decorate with friendly labels + sortOrder from TEMPLATE_CONFIG so the
+      // wizard can show "Purchase Contract" instead of "(A to B) Deelmap…".
+      return NextResponse.json(decorateTemplates(json.data || []))
     }
 
     if (type === 'document') {
@@ -93,8 +95,17 @@ export async function POST(request) {
     const assigneePlaceholder = `pending-${Date.now()}@noreply.deelmap.com`
 
     // Translate normalized wizard fields → DocuSeal field names defined on the template.
-    const mappedValues = field_values ? mapFieldValues(templateId, field_values) : null
-    const hasValues = mappedValues && Object.keys(mappedValues).length > 0
+    // ctx provides derived values (today's date, the assignor's name from profile)
+    // that the wizard doesn't collect explicitly but the contract template needs.
+    const today = new Date()
+    const ctx = {
+      sellerName: sellerName || sellerEmail,
+      sellerEmail,
+      today,
+      todayISO: today.toISOString().slice(0, 10),
+    }
+    const mappedValues = mapFieldValues(templateId, field_values || {}, ctx)
+    const hasValues = !!mappedValues && Object.keys(mappedValues).length > 0
 
     const submitters = [
       {
