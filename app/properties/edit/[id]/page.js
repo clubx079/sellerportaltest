@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import { Save, ArrowLeft, Upload, X, AlertCircle, AlertTriangle, Home, FileText, ChevronDown, Check } from 'lucide-react';
+import { Save, ArrowLeft, Upload, X, AlertCircle, AlertTriangle, Home, FileText, ChevronDown, ChevronRight, Check } from 'lucide-react';
 import ImageGalleryManager from '@/components/properties/ImageGalleryManager';
 import TextEditor from '@/components/forms/TextEditor';
 import GooglePlacesAutocomplete from '@/components/forms/GooglePlacesAutocomplete';
@@ -95,6 +95,8 @@ export default function EditPropertyPage() {
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
   const [activeTab, setActiveTab] = useState('basic');
+  // Same tab order as the tab strip below; used by the Previous/Continue buttons in the sticky footer.
+  const TAB_ORDER = ['basic', 'images', 'ownership', 'content', 'seo'];
   const [rejectionReason, setRejectionReason] = useState(null);
   const [userId, setUserId] = useState(null);
   const [sourceType, setSourceType] = useState(null); // 'manual' | 'scraped'
@@ -1542,8 +1544,8 @@ export default function EditPropertyPage() {
         )
       })()}
 
-      {/* Sticky action footer — single source of truth for actions.
-          Drafts auto-save; this button publishes (which queues moderation review). */}
+      {/* Sticky action footer — Previous / Continue navigate between tabs,
+          Publish commits the listing (drafts auto-save in the background). */}
       <StickyActionBar>
         <div className="min-w-0">
           <SaveStatus
@@ -1554,16 +1556,43 @@ export default function EditPropertyPage() {
             status={formData.status}
           />
         </div>
-        <button
-          type="button"
-          onClick={() => handleSave('active')}
-          disabled={saving || autoSaving || imageUploadStatus.isUploading}
-          className="flex items-center justify-center gap-2 bg-[#D03839] hover:bg-[#B82F30] text-white px-6 py-2.5 rounded text-sm font-semibold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
-        >
-          {imageUploadStatus.isUploading
-            ? 'Please wait…'
-            : saving ? 'Publishing…' : 'Publish'}
-        </button>
+        {(() => {
+          const currentIdx = TAB_ORDER.indexOf(activeTab);
+          const hasPrev = currentIdx > 0;
+          const hasNext = currentIdx >= 0 && currentIdx < TAB_ORDER.length - 1;
+          const goPrev = () => { if (hasPrev) handleTabChange(TAB_ORDER[currentIdx - 1]); };
+          const goNext = () => { if (hasNext) handleTabChange(TAB_ORDER[currentIdx + 1]); };
+          return (
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={goPrev}
+                disabled={!hasPrev}
+                className="inline-flex items-center gap-1.5 px-3 py-2 rounded border border-[#E8E8E4] text-[13px] font-medium text-[#444441] hover:border-[#1A1816] hover:text-[#1A1816] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <ArrowLeft className="w-4 h-4" /> Previous
+              </button>
+              <button
+                type="button"
+                onClick={goNext}
+                disabled={!hasNext}
+                className="inline-flex items-center gap-1.5 px-3 py-2 rounded border border-[#E8E8E4] text-[13px] font-medium text-[#444441] hover:border-[#1A1816] hover:text-[#1A1816] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                Continue <ChevronRight className="w-4 h-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSave('active')}
+                disabled={saving || autoSaving || imageUploadStatus.isUploading}
+                className="inline-flex items-center justify-center gap-2 bg-[#D03839] hover:bg-[#B82F30] text-white px-5 py-2 rounded text-[13px] font-semibold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+              >
+                {imageUploadStatus.isUploading
+                  ? 'Please wait…'
+                  : saving ? 'Publishing…' : 'Publish'}
+              </button>
+            </div>
+          );
+        })()}
       </StickyActionBar>
     </div>
   );
