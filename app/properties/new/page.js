@@ -501,16 +501,9 @@ export default function NewPropertyPage() {
     let completedImagesForSave = completedImages;
     const hasFeaturedImage = completedImages.some((img) => !!img.isFeatured);
 
-    if (completedImages.length > 0 && !hasFeaturedImage && !skipFeaturedPrompt) {
-      setFeaturedImageModal({
-        open: true,
-        publishStatus,
-        imageCount: completedImages.length
-      });
-      return;
-    }
-
-    if (completedImages.length > 0 && !hasFeaturedImage && forceAutoSelectFeatured) {
+    // Auto-select the first image as featured if none picked. The seller can
+    // still re-pick from the gallery; no modal interruption.
+    if (completedImages.length > 0 && !hasFeaturedImage) {
       const firstCompletedId = completedImages[0].id;
       completedImagesForSave = completedImages.map((img, index) => ({
         ...img,
@@ -718,7 +711,7 @@ export default function NewPropertyPage() {
         return true;
       }
       const successMsg = publishStatus === 'active'
-        ? 'Listing published — it\'ll be live shortly.'
+        ? 'Listing submitted — typically live within ~10 minutes once our review completes. We\'ll email you if anything needs attention.'
         : 'Property saved as draft!';
       sessionStorage.setItem('listingSuccess', successMsg);
       router.push('/properties');
@@ -1019,39 +1012,6 @@ export default function NewPropertyPage() {
         </div>
       )}
 
-      {featuredImageModal.open && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-[1px] flex items-center justify-center p-4">
-          <div className="w-full max-w-md bg-white border border-[#E8E8E4] rounded shadow-2xl overflow-hidden">
-            <div className="px-5 py-4 border-b border-[#E8E8E4] bg-[#FAFAF8]">
-              <h3 className="text-[15px] font-semibold text-[#1A1816]">Select featured image</h3>
-              <p className="text-[12px] text-[#737370] mt-1">
-                Your listing has {featuredImageModal.imageCount} uploaded image{featuredImageModal.imageCount > 1 ? 's' : ''} but no featured one selected.
-              </p>
-            </div>
-            <div className="px-5 py-4">
-              <p className="text-[13px] text-[#1A1816] leading-6">
-                Featured image is used as the main thumbnail on listings. You can choose one manually, or continue and automatically use the first uploaded image.
-              </p>
-            </div>
-            <div className="px-5 py-4 border-t border-[#E8E8E4] bg-white flex items-center justify-end gap-2">
-              <button
-                type="button"
-                onClick={handleFeaturedModalSelectManually}
-                className="px-3.5 py-2 text-[13px] font-medium rounded border border-[#E8E8E4] text-[#1A1816] hover:bg-[#FAFAF8] transition-colors"
-              >
-                Select manually
-              </button>
-              <button
-                type="button"
-                onClick={handleFeaturedModalAutoSelect}
-                className="px-3.5 py-2 text-[13px] font-medium rounded bg-[#D03839] text-white hover:bg-[#E0493B] transition-colors"
-              >
-                Use first image
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Upload Warning */}
       {imageUploadStatus.isUploading && (

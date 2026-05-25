@@ -580,7 +580,7 @@ export default function EditPropertyPage() {
         if (!silent) {
           setSuccess(
             publishStatus === 'active'
-              ? 'Listing published — it\'ll be live shortly.'
+              ? 'Listing submitted — typically live within ~10 minutes once our review completes. We\'ll email you if anything needs attention.'
               : 'Property updated successfully!'
           );
         }
@@ -643,7 +643,7 @@ export default function EditPropertyPage() {
       if (!silent) {
         setSuccess(
           publishStatus === 'active'
-            ? 'Listing published — it\'ll be live shortly.'
+            ? 'Listing submitted — typically live within ~10 minutes once our review completes. We\'ll email you if anything needs attention.'
             : 'Property updated successfully!'
         );
       }
@@ -885,9 +885,31 @@ export default function EditPropertyPage() {
         </div>
       )}
 
-      {/* Rejection Banner */}
+      {/* Rejection Banner — each issue is a clickable shortcut to the offending field */}
       {rejectionReason && (() => {
         const rMap = parseRejectionReasons(rejectionReason)
+        const REJECTION_TARGETS = {
+          photo:       { tab: 'images',    elId: 'rejection-target-photo' },
+          description: { tab: 'content',   elId: 'rejection-target-description' },
+          repairs:     { tab: 'content',   elId: 'rejection-target-repairs' },
+          inspection:  { tab: 'content',   elId: 'rejection-target-inspection' },
+          contract:    { tab: 'ownership', elId: 'rejection-target-contract' },
+        }
+        const goToIssue = (key) => {
+          const target = REJECTION_TARGETS[key]
+          if (!target) return
+          setActiveTab(target.tab)
+          // wait for the tab content to render, then scroll
+          setTimeout(() => {
+            const el = document.getElementById(target.elId)
+            if (el) {
+              el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+              // brief highlight pulse so the user sees what they jumped to
+              el.classList.add('ring-2', 'ring-[#B42318]', 'ring-offset-2', 'rounded')
+              setTimeout(() => el.classList.remove('ring-2', 'ring-[#B42318]', 'ring-offset-2', 'rounded'), 1500)
+            }
+          }, 60)
+        }
         return (
           <div className="bg-[#FEF3F2] border border-[#FECDCA] rounded p-4">
             <div className="flex items-start gap-3">
@@ -896,15 +918,21 @@ export default function EditPropertyPage() {
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-[14px] font-semibold text-[#B42318] mb-1">Your listing wasn&apos;t approved</p>
-                <p className="text-[13px] text-[#B42318]/80 mb-3">Fix the issues below and click &quot;Send for Review&quot; — your listing will go back under review automatically.</p>
-                <div className="space-y-1.5">
+                <p className="text-[13px] text-[#B42318]/80 mb-3">Click an issue to jump to it. Fix it and click <span className="font-semibold">Publish</span> to send back for review.</p>
+                <div className="space-y-1">
                   {Object.entries(rMap).map(([key, reason]) => (
-                    <div key={key} className="flex items-start gap-2">
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => goToIssue(key)}
+                      className="flex items-start gap-2 text-left w-full px-2 py-1.5 -mx-2 rounded hover:bg-[#FEE4E2] transition-colors group"
+                    >
                       <span className="w-1.5 h-1.5 rounded-full bg-[#B42318] flex-shrink-0 mt-1.5" />
-                      <p className="text-[12px] text-[#B42318]">
+                      <p className="text-[12px] text-[#B42318] flex-1">
                         <span className="font-semibold capitalize">{key === 'inspection' ? 'Inspection Report' : key}:</span> {reason}
                       </p>
-                    </div>
+                      <span className="text-[11px] text-[#B42318]/60 font-medium opacity-0 group-hover:opacity-100 transition-opacity shrink-0 mt-0.5">Jump to field →</span>
+                    </button>
                   ))}
                 </div>
               </div>
@@ -1097,7 +1125,7 @@ export default function EditPropertyPage() {
           )}
 
           {/* Images Tab */}
-          <div className={activeTab === 'images' ? '' : 'hidden'}>
+          <div id="rejection-target-photo" className={activeTab === 'images' ? '' : 'hidden'}>
             <h3 className="text-lg font-semibold text-neutral-900 mb-2">Property Images</h3>
             <p className="text-sm text-neutral-600 mb-4">
               Upload property images. They will be automatically compressed and uploaded immediately. The first image will be set as the featured image.
@@ -1158,7 +1186,7 @@ export default function EditPropertyPage() {
               </div>
 
               {sellerType === 'wholesaler' && (
-                <div>
+                <div id="rejection-target-contract">
                   <h3 className="text-[15px] font-semibold text-[#1A1816] mb-1">Assignment Contract</h3>
                   <p className="text-[13px] text-[#737370] mb-3">Upload your signed assignment contract. (PDF or DOC)</p>
                   {rejectionReason && parseRejectionReasons(rejectionReason).contract && (
@@ -1214,7 +1242,7 @@ export default function EditPropertyPage() {
           {/* Content Tab */}
           {activeTab === 'content' && (
             <div className="space-y-6">
-              <div>
+              <div id="rejection-target-description">
                 <label className="block text-sm font-semibold text-neutral-700 mb-2">Property Description</label>
                 {rejectionReason && parseRejectionReasons(rejectionReason).description && (
                   <div className="flex items-start gap-2.5 bg-[#FEF3F2] border border-[#FECDCA] rounded px-3 py-2.5 mb-2">
@@ -1230,7 +1258,7 @@ export default function EditPropertyPage() {
                 />
               </div>
 
-              <div>
+              <div id="rejection-target-repairs">
                 <label className="block text-sm font-semibold text-neutral-700 mb-2">Repairs & Renovation</label>
                 {rejectionReason && parseRejectionReasons(rejectionReason).repairs && (
                   <div className="flex items-start gap-2.5 bg-[#FEF3F2] border border-[#FECDCA] rounded px-3 py-2.5 mb-2">
@@ -1246,7 +1274,7 @@ export default function EditPropertyPage() {
                 />
               </div>
 
-              <div>
+              <div id="rejection-target-inspection">
                 <label className="block text-[13px] font-semibold text-[#1A1816] mb-1">Inspection Report <span className="text-[#A8A8A4] font-normal">(optional)</span></label>
                 {rejectionReason && parseRejectionReasons(rejectionReason).inspection && (
                   <div className="flex items-start gap-2.5 bg-[#FEF3F2] border border-[#FECDCA] rounded px-3 py-2.5 mb-2">
