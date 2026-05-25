@@ -195,7 +195,10 @@ export default function ContractsPage() {
           </div>
           <div className="space-y-2">
             {drafts.map(d => {
-              const address = d.field_values?.property_address || '—'
+              const tplLabel = String(d.template_id) === '3801788' || String(d.template_id) === '3802120' ? 'Purchase Contract'
+                              : String(d.template_id) === '3706747' || String(d.template_id) === '3759339' ? 'Assignment Contract'
+                              : 'Contract'
+              const address = d.field_values?.property_address || `Untitled ${tplLabel}`
               const buyer = d.buyer_name || d.buyer_email || 'Buyer not set'
               return (
                 <div key={d.id} className="bg-white border border-dashed border-[#E8E8E4] rounded p-4 flex items-center gap-4">

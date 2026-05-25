@@ -293,6 +293,18 @@ export default function NewContractWizardPage() {
           const json = await res.json()
           if (!res.ok || json.error) throw new Error(json.error || 'Save failed')
         } else {
+          // Only create a NEW draft row once the user has filled in at least a
+          // property or buyer email — otherwise just picking a template would
+          // litter the drafts list with empty rows.
+          const hasMeaningfulInput =
+            !!payload.property_id ||
+            !!(payload.field_values && payload.field_values.property_address) ||
+            !!payload.buyer_name ||
+            !!payload.buyer_email
+          if (!hasMeaningfulInput) {
+            setDirty(false)
+            return
+          }
           const res = await fetch('/api/contracts/drafts', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
