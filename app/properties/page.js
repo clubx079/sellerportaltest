@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Plus, Edit2, Trash2, Search, X, Building2, ChevronLeft, ChevronRight, ChevronDown, MapPin, DollarSign, RotateCcw, BarChart2, Link2, Home, FileEdit, Eye, Zap } from 'lucide-react';
+import ToggleSwitch from '@/components/properties/ToggleSwitch';
 import { useRouter, useSearchParams } from 'next/navigation';
 import DeleteConfirmModal from '@/components/properties/DeleteConfirmModal';
 import PropertyViewModal from '@/components/properties/PropertyViewModal';
@@ -831,19 +832,14 @@ const PropertiesManagement = () => {
                     </td>
                     <td className={`px-4 py-3 ${property._source === 'manual' && property.status === 'rejected' ? '' : 'whitespace-nowrap'}`}>
                       {viewMode === 'active' && ['active', 'inactive'].includes((property.status || '').toLowerCase()) ? (
-                        <div className="relative inline-flex items-center">
-                          <span className={`absolute left-2.5 w-1.5 h-1.5 rounded-full pointer-events-none ${(property.status || '').toLowerCase() === 'active' ? 'bg-green-500' : 'bg-amber-400'}`} />
-                          <select
-                            value={(property.status || 'inactive').toLowerCase()}
-                            disabled={statusUpdatingId === `${property._source}-${property.id}`}
-                            onChange={(e) => handleToggleActive(property, e.target.value)}
-                            className="appearance-none bg-white border border-[#E8E8E4] rounded-md pl-6 pr-7 py-1.5 text-[12px] font-medium text-[#1A1816] cursor-pointer focus:outline-none focus:border-[#D03839]/40 focus:ring-1 focus:ring-[#D03839]/10 hover:border-[#D4D4CF] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                          >
-                            <option value="active">Active</option>
-                            <option value="inactive">Inactive</option>
-                          </select>
-                          <ChevronDown className="absolute right-2 w-3 h-3 text-[#A8A8A4] pointer-events-none" strokeWidth={2} />
-                        </div>
+                        <ToggleSwitch
+                          value={(property.status || '').toLowerCase() === 'active'}
+                          onChange={(next) => handleToggleActive(property, next ? 'active' : 'inactive')}
+                          disabled={statusUpdatingId === `${property._source}-${property.id}`}
+                          label="Listing visible to buyers"
+                          onLabel="Active"
+                          offLabel="Inactive"
+                        />
                       ) : (
                         <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium border ${getStatusColor(property.status)}`}>
                           {property.status === 'under_review' ? 'Under Review' : property.status === 'rejected' ? 'Update Required' : (property.status || 'draft')?.charAt(0).toUpperCase() + (property.status || '').slice(1) || 'Draft'}
@@ -983,19 +979,15 @@ const PropertiesManagement = () => {
                         {property._source === 'manual' ? 'Manual' : 'DeelScout'}
                       </span>
                       {viewMode === 'active' && ['active', 'inactive'].includes((property.status || '').toLowerCase()) ? (
-                        <select
-                          value={(property.status || 'inactive').toLowerCase()}
+                        <ToggleSwitch
+                          value={(property.status || '').toLowerCase() === 'active'}
+                          onChange={(next) => handleToggleActive(property, next ? 'active' : 'inactive')}
                           disabled={statusUpdatingId === `${property._source}-${property.id}`}
-                          onChange={(e) => handleToggleActive(property, e.target.value)}
-                          className={`text-[10px] font-medium px-2 py-0.5 rounded border cursor-pointer focus:outline-none disabled:opacity-50 ${
-                            (property.status || '').toLowerCase() === 'active'
-                              ? 'bg-green-50 text-green-700 border-green-200'
-                              : 'bg-amber-50 text-amber-700 border-amber-200'
-                          }`}
-                        >
-                          <option value="active">Active</option>
-                          <option value="inactive">Inactive</option>
-                        </select>
+                          label="Listing visible to buyers"
+                          onLabel="Active"
+                          offLabel="Inactive"
+                          size="sm"
+                        />
                       ) : (
                         <span className={`inline-flex px-2 py-0.5 rounded text-[10px] font-medium border ${getStatusColor(property.status)}`}>
                           {property.status === 'under_review' ? 'Under Review' : property.status === 'rejected' ? 'Update Required' : (property.status || 'draft')?.charAt(0).toUpperCase() + (property.status || '').slice(1) || 'Draft'}

@@ -4,6 +4,28 @@ A running log of every UX/UI change made to the seller portal as part of the ent
 
 ---
 
+## 2026-05-25 — Listing status: <select> → real toggle switch
+
+**Files:** `components/properties/ToggleSwitch.js` (new), `app/properties/page.js`
+
+**Summary**
+Replaced the "fake dropdown" on the properties table status column with a real toggle switch. The control looked like a multi-option dropdown but actually had only two options (Active / Inactive), which violated the "look like what you do" rule and made sellers hesitate. Now it looks and behaves like the binary toggle it actually is.
+
+**Changes**
+- New primitive `components/properties/ToggleSwitch.js`. Standard iOS-style switch with two sizes (`md` default, `sm` for tight rows). Animates a knob across a colored track; `bg-[#0F6E56]` when on, `bg-[#D4D4CF]` when off. Has accessible `role="switch"` + `aria-checked` + `aria-label`.
+- Properties table view (`app/properties/page.js` ~833): replaced the chevron-styled `<select value=active|inactive>` with `<ToggleSwitch>`.
+- Properties card view (same file ~985): replaced the smaller pill-styled `<select>` with `<ToggleSwitch size="sm">`.
+- Both use the same `handleToggleActive` callback so backend behaviour is unchanged. The subscription gate (no activation without an active plan) still kicks in — it's just routed through a clearer control now.
+
+**Why**
+This is the same family of bug as "Send for Review": the visual was lying about what the control does. A `<select>` says "many choices"; a binary action should say "two states". Roland flagged this in the audit ("looks like a dropdown, acts like a toggle"). Toggle switches are the universal pattern for binary state.
+
+**Verified end-to-end (2026-05-25):** Loaded /properties as Yousaf, saw three real toggle switches in the status column (one active green, two inactive gray) plus a read-only "Draft" badge on the draft row. Clicked the active switch → row updated to inactive in UI and in DB (`status: inactive, property_status: unavailable`). Clicking an inactive switch correctly attempts activation and would be blocked by the subscription gate if the seller has no paid plan (existing safety check, preserved).
+
+**Status:** Done. Three primitives now in `components/properties/`: `<SaveStatus>`, `<StickyActionBar>`, `<ToggleSwitch>`. Time to start planning the migration to a dedicated `components/ui/` directory.
+
+---
+
 ## 2026-05-25 — Shared `<StickyActionBar>` primitive
 
 **Files:** `components/properties/StickyActionBar.js` (new), `app/properties/edit/[id]/page.js`
