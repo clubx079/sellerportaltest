@@ -1,0 +1,72 @@
+'use client';
+import { useState, useEffect } from 'react';
+import { AlertCircle, Check } from 'lucide-react';
+
+/**
+ * SaveStatus — small indicator chip showing draft / unsaved / saving / saved / error states.
+ * Designed for forms that use auto-save. Same primitive used in both edit and new-listing pages.
+ *
+ * Props:
+ *   autoSaving  boolean   — true while a silent save is in flight
+ *   lastSavedAt Date|null — timestamp of last successful save
+ *   dirty       boolean   — there are unsaved changes
+ *   error       string|null — text of last auto-save error
+ *   status      string    — current listing status; 'draft' enables auto-save, others show the "review on publish" hint
+ */
+export default function SaveStatus({ autoSaving, lastSavedAt, dirty, error, status }) {
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    if (!lastSavedAt) return;
+    const i = setInterval(() => setTick(t => t + 1), 15_000);
+    return () => clearInterval(i);
+  }, [lastSavedAt]);
+
+  if (status && status !== 'draft') {
+    return (
+      <span className="inline-flex items-center gap-1.5 text-[12px] text-[#737370]">
+        <span className="w-1.5 h-1.5 rounded-full bg-[#737370]" />
+        Changes will be reviewed when you publish
+      </span>
+    );
+  }
+  if (error) {
+    return (
+      <span className="inline-flex items-center gap-1.5 text-[12px] text-[#D03839]">
+        <AlertCircle className="w-3.5 h-3.5" />
+        Couldn&apos;t save — we&apos;ll retry
+      </span>
+    );
+  }
+  if (autoSaving) {
+    return (
+      <span className="inline-flex items-center gap-1.5 text-[12px] text-[#737370]">
+        <span className="w-3 h-3 border-2 border-[#A8A8A4] border-t-transparent rounded-full animate-spin" />
+        Saving…
+      </span>
+    );
+  }
+  if (dirty) {
+    return (
+      <span className="inline-flex items-center gap-1.5 text-[12px] text-[#A8A8A4]">
+        <span className="w-1.5 h-1.5 rounded-full bg-[#D97706]" />
+        Unsaved changes
+      </span>
+    );
+  }
+  if (lastSavedAt) {
+    const sec = Math.floor((Date.now() - lastSavedAt.getTime()) / 1000);
+    const label = sec < 5 ? 'Saved just now' : sec < 60 ? `Saved ${sec}s ago` : `Saved ${Math.floor(sec / 60)}m ago`;
+    return (
+      <span className="inline-flex items-center gap-1.5 text-[12px] text-[#0F6E56]">
+        <Check className="w-3.5 h-3.5" />
+        {label}
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-1.5 text-[12px] text-[#A8A8A4]">
+      <span className="w-1.5 h-1.5 rounded-full bg-[#A8A8A4]" />
+      Draft
+    </span>
+  );
+}

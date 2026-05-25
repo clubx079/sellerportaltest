@@ -7,6 +7,7 @@ import { Save, Eye, ArrowLeft, Upload, X, AlertCircle, Home, FileText, Zap, Star
 import ImageGalleryManager from '@/components/properties/ImageGalleryManager';
 import TextEditor from '@/components/forms/TextEditor';
 import GooglePlacesAutocomplete from '@/components/forms/GooglePlacesAutocomplete';
+import SaveStatus from '@/components/properties/SaveStatus';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
 
@@ -93,6 +94,13 @@ export default function NewPropertyPage() {
   const [addOnLoading, setAddOnLoading] = useState(false);
   const [addOnError, setAddOnError] = useState(null);
   const [pendingPublishData, setPendingPublishData] = useState(null);
+  // ── Auto-save state ───────────────────────────────────────────
+  const [currentDraftId, setCurrentDraftId] = useState(draftId);
+  const [lastSavedAt, setLastSavedAt] = useState(null);
+  const [autoSaving, setAutoSaving] = useState(false);
+  const [dirty, setDirty] = useState(false);
+  const [autoSaveError, setAutoSaveError] = useState(null);
+  const [readyForAutoSave, setReadyForAutoSave] = useState(false);
 
   const descRef = useRef(null);
   const repairsRef = useRef(null);
@@ -244,6 +252,7 @@ export default function NewPropertyPage() {
       ...prev,
       [field]: value
     }));
+    setDirty(true);
   };
 
   const handleAddressSelect = (addressData) => {
@@ -257,7 +266,45 @@ export default function NewPropertyPage() {
       zipcode: addressData.zipcode,
       state: addressData.stateShort
     }));
+    setDirty(true);
   };
+
+  // ── Auto-save ─────────────────────────────────────────────────
+  // Enable auto-save once the seller is identified (so we have a seller_id to write with).
+  useEffect(() => {
+    if (userId) setReadyForAutoSave(true);
+  }, [userId]);
+
+  // Debounced auto-save: 2s after the last change, save the draft silently.
+  // - Skipped on the Add-Ons tab (that's the explicit publish step).
+  // - Requires at least a location field so we have something to write.
+  // - Never publishes — handleSave's silent branch forces publishStatus='draft'.
+  useEffect(() => {
+    if (!readyForAutoSave || !dirty) return;
+    if (saving || autoSaving) return;
+    if (imageUploadStatus.isUploading) return;
+    if (activeTab === 'addons') return;
+    if (!formData.location) return;
+
+    const timer = setTimeout(async () => {
+      setAutoSaving(true);
+      setAutoSaveError(null);
+      try {
+        const ok = await handleSave('draft', { silent: true, skipNavigation: true });
+        if (ok) {
+          setLastSavedAt(new Date());
+          setDirty(false);
+        }
+      } catch (e) {
+        setAutoSaveError(e?.message || 'Couldn\'t save');
+      } finally {
+        setAutoSaving(false);
+      }
+    }, 2000);
+
+    return () => clearTimeout(timer);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formData, dirty, readyForAutoSave, saving, autoSaving, imageUploadStatus.isUploading, activeTab]);
 
   const buildSeoDefaults = (data) => {
     const addr = data.location || '';
@@ -351,7 +398,9 @@ export default function NewPropertyPage() {
   };
 
   const handleSave = async (publishStatus = 'draft', options = {}) => {
-    const { skipFeaturedPrompt = false, forceAutoSelectFeatured = false, addOnFlags = null, bypassLimit = false, addonPaymentIntentId = null } = options;
+    const { skipFeaturedPrompt = false, forceAutoSelectFeatured = false, addOnFlags = null, bypassLimit = false, addonPaymentIntentId = null, silent = false, skipNavigation = false } = options;
+    // Auto-save (silent) always behaves like a draft save with relaxed validation.
+    if (silent) publishStatus = 'draft';
 
     if (!bypassLimit) {
       // Block publishing if subscription has ended
@@ -383,9 +432,11 @@ export default function NewPropertyPage() {
     }
 
     if (!formData.location) {
-      setError('Please fill in the property address.');
-      setActiveTab('basic');
-      return;
+      if (!silent) {
+        setError('Please fill in the property address.');
+        setActiveTab('basic');
+      }
+      return false;
     }
 
     if (publishStatus === 'active' && !formData.price) {
@@ -440,8 +491,8 @@ export default function NewPropertyPage() {
     }
 
     if (imageUploadStatus.isUploading) {
-      setError(`Please wait for ${imageUploadStatus.uploadingCount} image${imageUploadStatus.uploadingCount > 1 ? 's' : ''} to finish uploading.`);
-      return;
+      if (!silent) setError(`Please wait for ${imageUploadStatus.uploadingCount} image${imageUploadStatus.uploadingCount > 1 ? 's' : ''} to finish uploading.`);
+      return false;
     }
 
     const completedImages = imageUploadStatus.images.filter(
@@ -502,9 +553,11 @@ export default function NewPropertyPage() {
       formData.repairs = cleanRepairs;
     }
 
-    setSaving(true);
-    setError(null);
-    setSuccess(null);
+    if (!silent) {
+      setSaving(true);
+      setError(null);
+      setSuccess(null);
+    }
 
     // Short unique slug — reuse existing slug for drafts, generate new for fresh properties
     let shortSlug;
@@ -563,18 +616,19 @@ export default function NewPropertyPage() {
     try {
       // Update existing draft or create new property
       let data;
-      if (draftId) {
+      const updateTargetId = currentDraftId;
+      if (updateTargetId) {
         const { data: updated, error: updateErr } = await supabase
           .from('properties')
           .update({ ...saveData, updated_at: new Date().toISOString() })
-          .eq('id', draftId)
+          .eq('id', updateTargetId)
           .eq('seller_id', sellerId)
           .select()
           .single();
         if (updateErr) throw updateErr;
         data = updated;
         // Remove old images so we can replace with current set
-        await supabase.from('property_images').delete().eq('property_id', draftId);
+        await supabase.from('property_images').delete().eq('property_id', updateTargetId);
       } else {
         const { data: inserted, error: saveErr } = await supabase
           .from('properties')
@@ -583,6 +637,8 @@ export default function NewPropertyPage() {
           .single();
         if (saveErr) throw saveErr;
         data = inserted;
+        // Track the new id so further auto-saves update this row instead of inserting another
+        setCurrentDraftId(inserted.id);
       }
 
       // Save images to database
@@ -657,16 +713,22 @@ export default function NewPropertyPage() {
         }).catch(() => {});
       }
 
+      if (silent || skipNavigation) {
+        if (!silent) setSaving(false);
+        return true;
+      }
       const successMsg = publishStatus === 'active'
-        ? 'Property submitted for review! You\'ll be notified when it\'s approved.'
+        ? 'Listing published — it\'ll be live shortly.'
         : 'Property saved as draft!';
       sessionStorage.setItem('listingSuccess', successMsg);
       router.push('/properties');
 
     } catch (err) {
       console.error('Save failed:', err);
+      if (silent) throw err;
       setError(err?.message || 'Failed to save property. Please try again.');
       setSaving(false);
+      return false;
     }
   };
 
@@ -923,20 +985,13 @@ export default function NewPropertyPage() {
             </p>
           </div>
         </div>
-        <button
-          type="button"
-          onClick={() => handleSave('draft')}
-          disabled={saving || imageUploadStatus.isUploading}
-          className="flex items-center justify-center gap-2 bg-[#FAFAF8] hover:bg-[#E8E8E4] text-[#1A1816] px-3 py-2 rounded text-[13px] font-medium border border-[#E8E8E4] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          <Save size={16} />
-          <span>
-            {imageUploadStatus.isUploading
-              ? `Uploading ${imageUploadStatus.uploadingCount}...`
-              : saving ? 'Saving…' : 'Save Draft'
-            }
-          </span>
-        </button>
+        <SaveStatus
+          autoSaving={autoSaving}
+          lastSavedAt={lastSavedAt}
+          dirty={dirty}
+          error={autoSaveError}
+          status="draft"
+        />
       </div>
 
       {/* Notifications */}
@@ -1552,18 +1607,14 @@ export default function NewPropertyPage() {
               >
                 <ArrowLeft className="w-4 h-4" /> Back
               </button>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => handleSave('draft')}
-                  disabled={saving || imageUploadStatus.isUploading}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded border border-[#E8E8E4] text-[13px] font-medium text-[#737370] hover:border-[#1A1816] hover:text-[#1A1816] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <Save className="w-4 h-4" />
-                  {imageUploadStatus.isUploading
-                    ? `Uploading ${imageUploadStatus.uploadingCount}...`
-                    : saving ? 'Saving…' : 'Save Draft'}
-                </button>
+              <div className="flex items-center gap-3">
+                <SaveStatus
+                  autoSaving={autoSaving}
+                  lastSavedAt={lastSavedAt}
+                  dirty={dirty}
+                  error={autoSaveError}
+                  status="draft"
+                />
                 <button
                   type="button"
                   onClick={handleContinue}

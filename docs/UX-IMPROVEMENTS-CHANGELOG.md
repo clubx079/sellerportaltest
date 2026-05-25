@@ -35,23 +35,34 @@ Replaced the dual top + bottom save/publish buttons on the listing edit page wit
 - Two redundant buttons (top + bottom) create cognitive double-take ("which one is the real one?").
 - Long forms with manual save are a data-loss risk; auto-save eliminates it.
 
+**Verified end-to-end (2026-05-25):** Initial load shows `Draft` cleanly (no false unsaved state). User edits a price field → indicator goes `Unsaved changes` (amber) → `Saving…` → `Saved just now` (green ✓) within ~3 seconds. DB confirms `price` updated and `status` stayed `draft` — auto-save never silently publishes.
+
+**Commit:** `ceb79c7` on `feature/inline-contracts`.
+
 ---
 
-## 2026-05-25 — Save Draft added to new-listing step footer (Add Property wizard)
+## 2026-05-25 — Auto-save + canonical action pattern (New Listing wizard)
 
-**Files:** `app/properties/new/page.js`
+**Files:** `app/properties/new/page.js`, `components/properties/SaveStatus.js` (new shared component)
 
 **Summary**
-Added a "Save Draft" button to the step footer at the bottom of each tab in the new-listing wizard. The wizard's "Save Draft" was previously only at the top, requiring sellers to scroll back up.
+Brought the new-listing wizard up to the same enterprise-grade pattern as the edit page. Manual Save Draft buttons are gone; auto-save handles drafts; SaveStatus indicator shows progress in the header and step footer. The Add-Ons / Publish step is unchanged — that's where the explicit publish + payment happens.
 
 **Changes**
-- Added Save Draft button next to Continue → in the bottom step footer of every tab except Add-Ons (which already has its own publish action).
-- Reuses the existing `handleSave('draft')` handler so behavior is identical to the top button.
+1. **Auto-save for drafts.** Every edit is debounced 2s and silently saved. After the first auto-save creates a new property row, the new id is captured in `currentDraftId` so subsequent saves UPDATE the same row instead of inserting more. Skipped on the Add-Ons tab (publish step) and requires at least a location.
+2. **`SaveStatus` indicator** in the header (orientation) and the step footer (action context). Same five states as the edit page.
+3. **Removed the top Save Draft button.** The header now shows just back arrow + "Post a Deal" title + status indicator.
+4. **Removed the duplicate Save Draft button** I'd added to the step footer earlier in this session. The step footer is now just Back ↔ SaveStatus + Continue → — clean.
+5. **Extracted `SaveStatus` into a shared component** at `components/properties/SaveStatus.js`. The edit page now imports the same component instead of defining its own inline copy. First step toward the shared primitives library.
+6. **Refactored `handleSave`** to accept `{ silent, skipNavigation }` options. Silent mode forces `publishStatus='draft'`, relaxes validation, skips the success toast and the navigation to `/properties`. Same safety guarantees as the edit page (never silently publishes, never navigates).
+7. **Renamed publish success message:** "Property submitted for review!..." → *"Listing published — it'll be live shortly."* for consistency with the edit page.
 
 **Why**
-Same reasoning as the edit-page footer fix — bottom is where users look for next-action after editing.
+Same logic as the edit page: long forms with manual save are a data-loss risk; auto-save eliminates it. Two redundant save buttons (top + bottom) create cognitive double-take. The wizard needs the same pattern so sellers don't have to learn two different conventions across edit and new flows.
 
-**Status:** Will be superseded by the full auto-save pattern in the next pass.
+**Verified end-to-end (2026-05-25):** Loaded `/properties/new?draft_id=<id>`. Initial: `Draft`. Edit price 95000 → 142000. Status transitions `Unsaved changes` → `Saving…` → `Saved just now` within ~3s. DB confirms `price=142000, status=draft`. Both indicators (header + step footer) stay in sync.
+
+**Status:** Done.
 
 ---
 
@@ -59,8 +70,8 @@ Same reasoning as the edit-page footer fix — bottom is where users look for ne
 
 The following improvements are planned next, derived from the meeting feedback (2026-05-22) and the UX audit (2026-05-25):
 
-- **Apply auto-save + sticky footer pattern to `/properties/new`** (the new-listing wizard). Currently still uses the manual Save Draft at top + Continue navigation pattern.
-- **Extract shared component primitives** so the SaveStatus and StickyActionBar are reusable across the rest of the portal.
+- ~~**Apply auto-save + sticky footer pattern to `/properties/new`**~~ Done 2026-05-25.
+- **Extract shared component primitives** so the SaveStatus and StickyActionBar are reusable across the rest of the portal. SaveStatus done 2026-05-25 (`components/properties/SaveStatus.js`); StickyActionBar pending.
 - **Scope under-review trigger.** Currently any edit sends the entire listing back through moderation. Should only trigger for fields where bad content could appear (photos, description, free-text). Numeric/structured fields should save immediately without re-review.
 - **Dispo rep dropdown** on the listing contact picker. Preload sellers' saved reps from their profile; user picks one and the phone auto-fills.
 - **Rename contract templates** to plain user-friendly labels (e.g. "Assignment of Sale Contract", "Purchase Contract"); reorder so Purchase Contract appears first.
