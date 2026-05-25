@@ -933,7 +933,7 @@ export default function EditPropertyPage() {
           </button>
           <div className="min-w-0">
             <h1 className="text-lg md:text-xl font-semibold tracking-tight text-[#1A1816] truncate">
-              {formData.title || 'Edit Property'}
+              {formData.location || formData.title || 'Edit Property'}
             </h1>
             <div className="mt-0.5">
               <SaveStatus
