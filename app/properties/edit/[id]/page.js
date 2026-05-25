@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import { Save, ArrowLeft, Upload, X, AlertCircle, AlertTriangle, Home, FileText, ChevronDown } from 'lucide-react';
+import { Save, ArrowLeft, Upload, X, AlertCircle, AlertTriangle, Home, FileText, ChevronDown, Check } from 'lucide-react';
 import ImageGalleryManager from '@/components/properties/ImageGalleryManager';
 import TextEditor from '@/components/forms/TextEditor';
 import GooglePlacesAutocomplete from '@/components/forms/GooglePlacesAutocomplete';
@@ -84,6 +84,64 @@ function PropertySelect({ value, onChange, options }) {
   )
 }
 
+function SaveStatus({ autoSaving, lastSavedAt, dirty, error, status }) {
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    if (!lastSavedAt) return;
+    const i = setInterval(() => setTick(t => t + 1), 15_000);
+    return () => clearInterval(i);
+  }, [lastSavedAt]);
+
+  if (status && status !== 'draft') {
+    return (
+      <span className="inline-flex items-center gap-1.5 text-[12px] text-[#737370]">
+        <span className="w-1.5 h-1.5 rounded-full bg-[#737370]" />
+        Changes will be reviewed when you publish
+      </span>
+    );
+  }
+  if (error) {
+    return (
+      <span className="inline-flex items-center gap-1.5 text-[12px] text-[#D03839]">
+        <AlertCircle className="w-3.5 h-3.5" />
+        Couldn&apos;t save — we&apos;ll retry
+      </span>
+    );
+  }
+  if (autoSaving) {
+    return (
+      <span className="inline-flex items-center gap-1.5 text-[12px] text-[#737370]">
+        <span className="w-3 h-3 border-2 border-[#A8A8A4] border-t-transparent rounded-full animate-spin" />
+        Saving…
+      </span>
+    );
+  }
+  if (dirty) {
+    return (
+      <span className="inline-flex items-center gap-1.5 text-[12px] text-[#A8A8A4]">
+        <span className="w-1.5 h-1.5 rounded-full bg-[#D97706]" />
+        Unsaved changes
+      </span>
+    );
+  }
+  if (lastSavedAt) {
+    const sec = Math.floor((Date.now() - lastSavedAt.getTime()) / 1000);
+    const label = sec < 5 ? 'Saved just now' : sec < 60 ? `Saved ${sec}s ago` : `Saved ${Math.floor(sec / 60)}m ago`;
+    return (
+      <span className="inline-flex items-center gap-1.5 text-[12px] text-[#0F6E56]">
+        <Check className="w-3.5 h-3.5" />
+        {label}
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-1.5 text-[12px] text-[#A8A8A4]">
+      <span className="w-1.5 h-1.5 rounded-full bg-[#A8A8A4]" />
+      Draft
+    </span>
+  );
+}
+
 export default function EditPropertyPage() {
   const router = useRouter();
   const { id } = useParams();
@@ -97,6 +155,12 @@ export default function EditPropertyPage() {
   const [userId, setUserId] = useState(null);
   const [sourceType, setSourceType] = useState(null); // 'manual' | 'scraped'
   const [tempSellerId, setTempSellerId] = useState(null); // for scraped fetch/save
+  // ── Auto-save state ────────────────────────────────────────────
+  const [lastSavedAt, setLastSavedAt] = useState(null);
+  const [autoSaving, setAutoSaving] = useState(false);
+  const [dirty, setDirty] = useState(false);
+  const [autoSaveError, setAutoSaveError] = useState(null);
+  const [readyForAutoSave, setReadyForAutoSave] = useState(false);
 
   const descRef = useRef(null);
   const repairsRef = useRef(null);
@@ -373,6 +437,7 @@ export default function EditPropertyPage() {
       ...prev,
       [field]: value
     }));
+    setDirty(true);
   };
 
   const handleAddressSelect = (addressData) => {
@@ -386,6 +451,7 @@ export default function EditPropertyPage() {
       zipcode: addressData.zipcode,
       state: addressData.stateShort
     }));
+    setDirty(true);
   };
 
   const handleTabChange = (tabId) => {
@@ -401,15 +467,17 @@ export default function EditPropertyPage() {
     setActiveTab(tabId);
   };
 
-  const handleSave = async (publishStatus = 'draft') => {
+  const handleSave = async (publishStatus = 'draft', options = {}) => {
+    const { silent = false, skipNavigation = false } = options;
+
     if (!formData.title || !formData.location) {
-      setError('Please fill in Title and Address before saving.');
-      return;
+      if (!silent) setError('Please fill in Title and Address before saving.');
+      return false;
     }
 
     if (imageUploadStatus.isUploading) {
-      setError(`Please wait for ${imageUploadStatus.uploadingCount} image${imageUploadStatus.uploadingCount > 1 ? 's' : ''} to finish uploading.`);
-      return;
+      if (!silent) setError(`Please wait for ${imageUploadStatus.uploadingCount} image${imageUploadStatus.uploadingCount > 1 ? 's' : ''} to finish uploading.`);
+      return false;
     }
 
     // Save editor content before submitting
@@ -422,9 +490,11 @@ export default function EditPropertyPage() {
       formData.repairs = cleanRepairs;
     }
 
-    setSaving(true);
-    setError(null);
-    setSuccess(null);
+    if (!silent) {
+      setSaving(true);
+      setError(null);
+      setSuccess(null);
+    }
 
     // Short unique slug when address changes: 7 alphabets + 2 numerics (e.g. kxmnpqr29)
     const locationForSlug = (formData.location || '').trim();
@@ -440,7 +510,10 @@ export default function EditPropertyPage() {
     const slugToSave = shouldUpdateSlug ? newShortSlug() : existingSlugRef.current;
 
     // If listing is active/rejected, send back to under_review for re-moderation
-    const effectiveStatus = publishStatus === 'active' ? 'under_review' : publishStatus;
+    // For silent (auto-save) mode, preserve the current status — never silently change publication state.
+    const effectiveStatus = silent
+      ? (formData.status || 'draft')
+      : (publishStatus === 'active' ? 'under_review' : publishStatus);
 
     // Create save data object matching the actual database schema
     const saveData = {
@@ -553,21 +626,25 @@ export default function EditPropertyPage() {
           }
         }
 
-        if (publishStatus === 'active') {
+        if (publishStatus === 'active' && !silent) {
           fetch('/api/seller/moderate', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ property_id: id }),
           }).catch(() => {});
         }
-        setSuccess(
-          publishStatus === 'active'
-            ? 'Property updated and sent for review!'
-            : 'Property updated successfully!'
-        );
-        setTimeout(() => router.push(fromDraft ? `/properties/enhance?id=${id}` : '/properties'), 1500);
-        setSaving(false);
-        return;
+        if (!silent) {
+          setSuccess(
+            publishStatus === 'active'
+              ? 'Listing published — it\'ll be live shortly.'
+              : 'Property updated successfully!'
+          );
+        }
+        if (!skipNavigation) {
+          setTimeout(() => router.push(fromDraft ? `/properties/enhance?id=${id}` : '/properties'), 1500);
+        }
+        if (!silent) setSaving(false);
+        return true;
       }
 
       const { data, error: updateError } = await supabase
@@ -612,37 +689,90 @@ export default function EditPropertyPage() {
         }
       }
 
-      if (publishStatus === 'active') {
+      if (publishStatus === 'active' && !silent) {
         fetch('/api/seller/moderate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ property_id: data.id }),
         }).catch(() => {});
       }
-      setSuccess(
-        publishStatus === 'active'
-          ? 'Property updated and sent for review!'
-          : 'Property updated successfully!'
-      );
+      if (!silent) {
+        setSuccess(
+          publishStatus === 'active'
+            ? 'Listing published — it\'ll be live shortly.'
+            : 'Property updated successfully!'
+        );
+      }
 
-      setTimeout(() => {
-        router.push(fromDraft ? `/properties/enhance?id=${data.id}` : '/properties');
-      }, 1500);
+      if (!skipNavigation) {
+        setTimeout(() => {
+          router.push(fromDraft ? `/properties/enhance?id=${data.id}` : '/properties');
+        }, 1500);
+      }
+      return true;
     } catch (err) {
       console.error('Update failed:', err);
+      if (silent) throw err; // bubble up so auto-save effect can record the error
       setError(err?.message || 'Failed to update property. Please try again.');
+      return false;
     } finally {
-      setSaving(false);
+      if (!silent) setSaving(false);
     }
   };
 
   const handleImagesChange = (data) => {
-    setImageUploadStatus({
-      images: data.images,
-      isUploading: data.isUploading,
-      uploadingCount: data.uploadingCount
+    setImageUploadStatus(prev => {
+      // Mark dirty only when this is a real change after initial load,
+      // not when ImageGalleryManager re-fires onChange with the same data on mount.
+      const prevIds = prev.images.map(i => i.id || i.imageUrl).join('|');
+      const newIds  = (data.images || []).map(i => i.id || i.imageUrl).join('|');
+      if (readyForAutoSave && !data.isUploading && prevIds !== newIds) {
+        setDirty(true);
+      }
+      return {
+        images: data.images,
+        isUploading: data.isUploading,
+        uploadingCount: data.uploadingCount,
+      };
     });
   };
+
+  // ── Auto-save ─────────────────────────────────────────────────
+  // Enable auto-save once the initial property has loaded.
+  useEffect(() => {
+    if (!loadingProperty && formData.title && formData.location) {
+      setReadyForAutoSave(true);
+    }
+  }, [loadingProperty, formData.title, formData.location]);
+
+  // Debounced auto-save: 2s after the last change, save the draft silently.
+  // Only for draft listings — live/under_review/rejected listings require an
+  // explicit Publish click so changes go through re-review on the seller's terms.
+  useEffect(() => {
+    if (!readyForAutoSave || !dirty) return;
+    if (saving || autoSaving) return;
+    if (imageUploadStatus.isUploading) return;
+    if (formData.status !== 'draft') return;
+
+    const timer = setTimeout(async () => {
+      setAutoSaving(true);
+      setAutoSaveError(null);
+      try {
+        const ok = await handleSave('draft', { silent: true, skipNavigation: true });
+        if (ok) {
+          setLastSavedAt(new Date());
+          setDirty(false);
+        }
+      } catch (e) {
+        setAutoSaveError(e?.message || 'Couldn\'t save');
+      } finally {
+        setAutoSaving(false);
+      }
+    }, 2000);
+
+    return () => clearTimeout(timer);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formData, dirty, readyForAutoSave, saving, autoSaving, imageUploadStatus.isUploading]);
 
   const handleInspectionUpload = async (event) => {
     const file = event.target.files[0];
@@ -746,48 +876,30 @@ export default function EditPropertyPage() {
 
   return (
     <div className="space-y-3 md:space-y-4">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
+      {/* Header — orientation only. Actions live in the sticky footer. */}
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3 min-w-0">
           <button
             onClick={() => router.back()}
-            className="p-2 rounded hover:bg-neutral-100 transition-colors"
+            className="p-2 rounded hover:bg-neutral-100 transition-colors shrink-0"
+            aria-label="Go back"
           >
             <ArrowLeft size={20} className="text-neutral-600" />
           </button>
-          <div>
-            <h1 className="text-lg md:text-xl font-semibold tracking-tight text-[#1A1816]">Edit Property</h1>
+          <div className="min-w-0">
+            <h1 className="text-lg md:text-xl font-semibold tracking-tight text-[#1A1816] truncate">
+              {formData.title || 'Edit Property'}
+            </h1>
+            <div className="mt-0.5">
+              <SaveStatus
+                autoSaving={autoSaving}
+                lastSavedAt={lastSavedAt}
+                dirty={dirty}
+                error={autoSaveError}
+                status={formData.status}
+              />
+            </div>
           </div>
-        </div>
-        <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={() => handleSave('draft')}
-            disabled={saving || imageUploadStatus.isUploading}
-            className="flex items-center justify-center gap-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 px-3 py-2 rounded text-sm font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <Save size={16} />
-            <span>
-              {imageUploadStatus.isUploading
-                ? `Uploading ${imageUploadStatus.uploadingCount}...`
-                : saving ? 'Saving…' : 'Save Draft'
-              }
-            </span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => handleSave('active')}
-            disabled={saving || imageUploadStatus.isUploading}
-            className="flex items-center justify-center gap-2 bg-[#D03839] hover:bg-[#B82F30] text-white px-3 py-2 rounded text-sm font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <span>
-              {imageUploadStatus.isUploading
-                ? 'Please wait...'
-                : saving ? 'Sending…' : 'Send for Review'
-              }
-            </span>
-          </button>
         </div>
       </div>
 
@@ -1359,6 +1471,30 @@ export default function EditPropertyPage() {
       </div>
         )
       })()}
+
+      {/* Sticky action footer — single source of truth for actions.
+          Drafts auto-save; this button publishes (which queues moderation review). */}
+      <div className="sticky bottom-0 -mb-4 md:-mb-6 -mx-4 md:-mx-6 px-4 md:px-6 py-3 bg-white/95 backdrop-blur border-t border-[#E8E8E4] shadow-[0_-2px_8px_rgba(0,0,0,0.04)] flex items-center justify-between gap-3 z-10">
+        <div className="min-w-0">
+          <SaveStatus
+            autoSaving={autoSaving}
+            lastSavedAt={lastSavedAt}
+            dirty={dirty}
+            error={autoSaveError}
+            status={formData.status}
+          />
+        </div>
+        <button
+          type="button"
+          onClick={() => handleSave('active')}
+          disabled={saving || autoSaving || imageUploadStatus.isUploading}
+          className="flex items-center justify-center gap-2 bg-[#D03839] hover:bg-[#B82F30] text-white px-6 py-2.5 rounded text-sm font-semibold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+        >
+          {imageUploadStatus.isUploading
+            ? 'Please wait…'
+            : saving ? 'Publishing…' : 'Publish'}
+        </button>
+      </div>
     </div>
   );
 }

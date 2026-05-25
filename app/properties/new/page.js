@@ -1552,13 +1552,26 @@ export default function NewPropertyPage() {
               >
                 <ArrowLeft className="w-4 h-4" /> Back
               </button>
-              <button
-                type="button"
-                onClick={handleContinue}
-                className="flex items-center gap-1.5 px-5 py-2 bg-[#D03839] hover:bg-[#E0493B] text-white text-[13px] font-semibold rounded transition-colors"
-              >
-                Continue <ChevronRight className="w-4 h-4" />
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleSave('draft')}
+                  disabled={saving || imageUploadStatus.isUploading}
+                  className="flex items-center gap-1.5 px-4 py-2 rounded border border-[#E8E8E4] text-[13px] font-medium text-[#737370] hover:border-[#1A1816] hover:text-[#1A1816] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Save className="w-4 h-4" />
+                  {imageUploadStatus.isUploading
+                    ? `Uploading ${imageUploadStatus.uploadingCount}...`
+                    : saving ? 'Saving…' : 'Save Draft'}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleContinue}
+                  className="flex items-center gap-1.5 px-5 py-2 bg-[#D03839] hover:bg-[#E0493B] text-white text-[13px] font-semibold rounded transition-colors"
+                >
+                  Continue <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
             </div>
           )}
 
