@@ -70,13 +70,53 @@ export default function NewContractWizardPage() {
   const [propertyId, setPropertyId] = useState('') // '' | 'manual' | <uuid>
   const [buyerName, setBuyerName] = useState('')
   const [buyerEmail, setBuyerEmail] = useState('')
+  // Smart defaults for date-aware fields. Computed once on mount.
+  const todayISO = new Date().toISOString().slice(0, 10)
+  const acceptanceDefaultISO = (() => {
+    const d = new Date()
+    d.setDate(d.getDate() + 3)
+    return d.toISOString().slice(0, 10)
+  })()
+
+  // Profile defaults — saved in localStorage when the seller ticks "Save as default".
+  // These pre-fill on every new contract; the seller can still edit per-contract.
+  const SAVED_DEFAULTS_KEY = 'seller_contract_defaults'
+  const loadSavedDefaults = () => {
+    try {
+      const raw = typeof window !== 'undefined' ? localStorage.getItem(SAVED_DEFAULTS_KEY) : null
+      return raw ? JSON.parse(raw) : {}
+    } catch { return {} }
+  }
+  const persistDefault = (key, value) => {
+    try {
+      const cur = loadSavedDefaults()
+      if (value && String(value).trim()) cur[key] = value
+      else delete cur[key]
+      localStorage.setItem(SAVED_DEFAULTS_KEY, JSON.stringify(cur))
+    } catch {}
+  }
+  const savedDefaults = loadSavedDefaults()
+
   const [fieldValues, setFieldValues] = useState({
-    property_address: '',
-    purchase_price: '',
-    emd: '',
-    closing_date: '',
-    financing_type: '',
-    special_terms: '',
+    // Universal
+    property_address:    '',
+    purchase_price:      '',
+    emd:                 '',
+    closing_date:        '',
+    special_terms:       '',
+    // Purchase-only
+    financing_type:      '',
+    buyer_address:       savedDefaults.buyer_address || '',
+    seller_address:      '',
+    property_tax_id:     '',
+    other_description:   '',
+    emd_escrow:          savedDefaults.emd_escrow || '',
+    due_diligence_days:  '14',
+    acceptance_deadline: acceptanceDefaultISO,
+    closing_location:    savedDefaults.closing_location || '',
+    // Assignment-only
+    original_seller_name: '',
+    original_psa_date:    '',
   })
 
   // ── Auto-save state (mirrors edit-page pattern) ─────────────────
@@ -471,6 +511,9 @@ export default function NewContractWizardPage() {
           <Step4Terms
             values={fieldValues}
             onChange={setField}
+            template={templates.find(t => String(t.id) === String(templateId))}
+            onPersistDefault={persistDefault}
+            savedDefaults={savedDefaults}
           />
         )}
         {step === 5 && (
@@ -710,81 +753,296 @@ function Step3Buyer({ buyerName, buyerEmail, onBuyerNameChange, onBuyerEmailChan
   )
 }
 
-function Step4Terms({ values, onChange }) {
+// ── Reusable input building blocks ─────────────────────────────────────
+const INPUT_CLS = 'w-full h-10 px-3 border border-[#E8E8E4] rounded text-[13px] text-[#1A1816] placeholder:text-[#A8A8A4] focus:outline-none focus:border-[#1A1816]'
+const LABEL_CLS = 'block text-[12px] font-semibold text-[#444441] mb-1.5'
+
+function FieldRow({ label, hint, children, span }) {
+  return (
+    <div className={span === 'full' ? 'md:col-span-2' : ''}>
+      <label className={LABEL_CLS}>{label}{hint && <span className="text-[#A8A8A4] font-normal ml-1">{hint}</span>}</label>
+      {children}
+    </div>
+  )
+}
+
+function Step4Terms({ values, onChange, template, onPersistDefault, savedDefaults }) {
+  const slug = template?.slug
+  const isAssignment = slug === 'assignment'
+
+  // "Save as default" toggle below selected fields — updates localStorage on toggle.
+  const SavedAsDefault = ({ fieldKey }) => {
+    const current = values[fieldKey] || ''
+    const saved = savedDefaults?.[fieldKey] || ''
+    const isSaved = !!saved && saved === current
+    if (!current.trim()) return null
+    return (
+      <button
+        type="button"
+        onClick={() => {
+          if (isSaved) { onPersistDefault?.(fieldKey, ''); }
+          else { onPersistDefault?.(fieldKey, current); }
+          // Force re-render via a tiny formData touch
+          onChange(fieldKey, current)
+        }}
+        className={`mt-1 inline-flex items-center gap-1 text-[11px] font-medium ${isSaved ? 'text-[#0F6E56]' : 'text-[#737370] hover:text-[#1A1816]'}`}
+        title={isSaved ? 'This is saved as your default for future contracts. Click to unset.' : 'Save this value as the default for future contracts.'}
+      >
+        <span className={`w-3 h-3 rounded border ${isSaved ? 'bg-[#0F6E56] border-[#0F6E56]' : 'border-[#A8A8A4]'} inline-flex items-center justify-center`}>
+          {isSaved && <Check className="w-2.5 h-2.5 text-white" strokeWidth={3} />}
+        </span>
+        {isSaved ? 'Saved as default' : 'Save as default'}
+      </button>
+    )
+  }
+
   return (
     <div>
       <div className="mb-5">
         <h2 className="text-[16px] font-bold text-[#1A1816] mb-1">Deal terms</h2>
-        <p className="text-[13px] text-[#737370]">Fill in the financial details. All fields optional — they'll pre-fill on the contract.</p>
+        <p className="text-[13px] text-[#737370]">
+          {isAssignment
+            ? 'Numbers and dates that pre-fill on the assignment contract. Required fields are marked.'
+            : 'Numbers, dates, and parties that pre-fill on the purchase contract. Required fields are marked.'}
+        </p>
       </div>
+
+      {/* ── Universal: price + EMD + closing date + (financing if purchase) ── */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <label className="block text-[12px] font-semibold text-[#444441] mb-1.5">Purchase Price ($)</label>
+        <FieldRow label={isAssignment ? 'Assignment Fee ($)' : 'Sale Price ($)'} hint="*">
           <input
             type="number"
             value={values.purchase_price || ''}
             onChange={e => onChange('purchase_price', e.target.value)}
-            placeholder="250000"
-            className="w-full h-10 px-3 border border-[#E8E8E4] rounded text-[13px] text-[#1A1816] placeholder:text-[#A8A8A4] focus:outline-none focus:border-[#1A1816]"
+            placeholder={isAssignment ? '15000' : '250000'}
+            className={INPUT_CLS}
           />
-        </div>
-        <div>
-          <label className="block text-[12px] font-semibold text-[#444441] mb-1.5">Earnest Money Deposit ($)</label>
+        </FieldRow>
+
+        <FieldRow label={isAssignment ? 'Nonrefundable Deposit ($)' : 'Earnest Money Deposit ($)'} hint="*">
           <input
             type="number"
             value={values.emd || ''}
             onChange={e => onChange('emd', e.target.value)}
-            placeholder="5000"
-            className="w-full h-10 px-3 border border-[#E8E8E4] rounded text-[13px] text-[#1A1816] placeholder:text-[#A8A8A4] focus:outline-none focus:border-[#1A1816]"
+            placeholder={isAssignment ? '1000' : '5000'}
+            className={INPUT_CLS}
           />
-        </div>
-        <div>
-          <label className="block text-[12px] font-semibold text-[#444441] mb-1.5">Closing Date</label>
+        </FieldRow>
+
+        <FieldRow label="Closing Date" hint="*">
           <input
             type="date"
             value={values.closing_date || ''}
             onChange={e => onChange('closing_date', e.target.value)}
-            className="w-full h-10 px-3 border border-[#E8E8E4] rounded text-[13px] text-[#1A1816] focus:outline-none focus:border-[#1A1816]"
+            className={INPUT_CLS}
           />
-        </div>
-        <div>
-          <label className="block text-[12px] font-semibold text-[#444441] mb-1.5">Financing Type</label>
-          <div className="flex items-center gap-2">
-            {FINANCING_OPTIONS.map(opt => {
-              const selected = values.financing_type === opt.value
-              return (
-                <button
-                  key={opt.value}
-                  type="button"
-                  onClick={() => onChange('financing_type', selected ? '' : opt.value)}
-                  className={`flex-1 h-10 px-3 rounded border-2 text-[13px] font-semibold transition-colors ${
-                    selected
-                      ? 'border-[#D03839] bg-[#FEF0EF] text-[#D03839]'
-                      : 'border-[#E8E8E4] bg-white text-[#444441] hover:border-[#1A1816]'
-                  }`}
-                >
-                  {opt.label}
-                </button>
-              )
-            })}
-          </div>
-        </div>
+        </FieldRow>
+
+        {!isAssignment && (
+          <FieldRow label="Source of Funds">
+            <div className="flex items-center gap-2">
+              {FINANCING_OPTIONS.map(opt => {
+                const selected = values.financing_type === opt.value
+                return (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => onChange('financing_type', selected ? '' : opt.value)}
+                    className={`flex-1 h-10 px-3 rounded border-2 text-[13px] font-semibold transition-colors ${
+                      selected ? 'border-[#D03839] bg-[#FEF0EF] text-[#D03839]' : 'border-[#E8E8E4] bg-white text-[#444441] hover:border-[#1A1816]'
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                )
+              })}
+            </div>
+          </FieldRow>
+        )}
       </div>
-      <div className="mt-4">
-        <label className="block text-[12px] font-semibold text-[#444441] mb-1.5">Special Terms</label>
-        <textarea
-          value={values.special_terms || ''}
-          onChange={e => onChange('special_terms', e.target.value)}
-          rows={4}
-          placeholder="Anything extra: contingencies, repairs, included items, …"
-          className="w-full px-3 py-2 border border-[#E8E8E4] rounded text-[13px] text-[#1A1816] placeholder:text-[#A8A8A4] focus:outline-none focus:border-[#1A1816] resize-y"
-        />
+
+      {/* ── Purchase Contract specific ─────────────────────────── */}
+      {!isAssignment && (
+        <>
+          <div className="mt-6 mb-3">
+            <p className="text-[11px] font-bold text-[#A8A8A4] uppercase tracking-wide">Property Details</p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FieldRow label="Property Tax ID(s)">
+              <input
+                type="text"
+                value={values.property_tax_id || ''}
+                onChange={e => onChange('property_tax_id', e.target.value)}
+                placeholder="Parcel / APN"
+                className={INPUT_CLS}
+              />
+            </FieldRow>
+            <FieldRow label="Other Description" hint="optional">
+              <input
+                type="text"
+                value={values.other_description || ''}
+                onChange={e => onChange('other_description', e.target.value)}
+                placeholder="e.g. includes adjacent lot 4B"
+                className={INPUT_CLS}
+              />
+            </FieldRow>
+          </div>
+
+          <div className="mt-6 mb-3">
+            <p className="text-[11px] font-bold text-[#A8A8A4] uppercase tracking-wide">Parties' Addresses</p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FieldRow label="Your Address (Buyer)">
+              <input
+                type="text"
+                value={values.buyer_address || ''}
+                onChange={e => onChange('buyer_address', e.target.value)}
+                placeholder="123 Your St, City, ST 00000"
+                className={INPUT_CLS}
+              />
+              <SavedAsDefault fieldKey="buyer_address" />
+            </FieldRow>
+            <FieldRow label="Seller's Address" hint="property owner">
+              <input
+                type="text"
+                value={values.seller_address || ''}
+                onChange={e => onChange('seller_address', e.target.value)}
+                placeholder="Where to send paperwork"
+                className={INPUT_CLS}
+              />
+            </FieldRow>
+          </div>
+
+          <div className="mt-6 mb-3">
+            <p className="text-[11px] font-bold text-[#A8A8A4] uppercase tracking-wide">Escrow &amp; Closing</p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FieldRow label="EMD Escrow Holder" hint="title company / closing attorney">
+              <input
+                type="text"
+                value={values.emd_escrow || ''}
+                onChange={e => onChange('emd_escrow', e.target.value)}
+                placeholder="e.g. Stewart Title of Texas"
+                className={INPUT_CLS}
+              />
+              <SavedAsDefault fieldKey="emd_escrow" />
+            </FieldRow>
+            <FieldRow label="Closing Location" hint="usually title company address">
+              <input
+                type="text"
+                value={values.closing_location || ''}
+                onChange={e => onChange('closing_location', e.target.value)}
+                placeholder="Same as escrow holder if not sure"
+                className={INPUT_CLS}
+              />
+              <SavedAsDefault fieldKey="closing_location" />
+            </FieldRow>
+          </div>
+
+          <div className="mt-6 mb-3">
+            <p className="text-[11px] font-bold text-[#A8A8A4] uppercase tracking-wide">Inspection &amp; Acceptance</p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FieldRow label="Due Diligence Period (days)" hint="default 14">
+              <input
+                type="number"
+                value={values.due_diligence_days || ''}
+                onChange={e => onChange('due_diligence_days', e.target.value)}
+                placeholder="14"
+                className={INPUT_CLS}
+              />
+            </FieldRow>
+            <FieldRow label="Seller's Acceptance Deadline" hint="default 3 days from today">
+              <input
+                type="date"
+                value={values.acceptance_deadline || ''}
+                onChange={e => onChange('acceptance_deadline', e.target.value)}
+                className={INPUT_CLS}
+              />
+            </FieldRow>
+          </div>
+        </>
+      )}
+
+      {/* ── Assignment Contract specific ──────────────────────── */}
+      {isAssignment && (
+        <>
+          <div className="mt-6 mb-3">
+            <p className="text-[11px] font-bold text-[#A8A8A4] uppercase tracking-wide">Underlying Purchase Contract</p>
+            <p className="text-[12px] text-[#737370] mt-1">
+              Reference the original Purchase &amp; Sale Contract you're assigning. Who the seller is and when you signed it both appear in the Whereas clause.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FieldRow label="Original Seller Name" hint="* property owner from the PSA">
+              <input
+                type="text"
+                value={values.original_seller_name || ''}
+                onChange={e => onChange('original_seller_name', e.target.value)}
+                placeholder="Jane Doe"
+                className={INPUT_CLS}
+              />
+            </FieldRow>
+            <FieldRow label="Original PSA Signed Date" hint="*">
+              <input
+                type="date"
+                value={values.original_psa_date || ''}
+                onChange={e => onChange('original_psa_date', e.target.value)}
+                className={INPUT_CLS}
+              />
+            </FieldRow>
+          </div>
+        </>
+      )}
+
+      {/* ── Special Terms (universal, last) ──────────────────── */}
+      <div className="mt-6">
+        <FieldRow label={isAssignment ? 'Additional Terms' : 'Special Terms'} hint={isAssignment ? 'one per line (up to 6 lines)' : 'optional'}>
+          <textarea
+            value={values.special_terms || ''}
+            onChange={e => onChange('special_terms', e.target.value)}
+            rows={isAssignment ? 6 : 4}
+            placeholder={isAssignment
+              ? 'Each line becomes one of the 6 numbered lines on the contract.'
+              : 'Contingencies, repairs, included items, anything extra…'}
+            className="w-full px-3 py-2 border border-[#E8E8E4] rounded text-[13px] text-[#1A1816] placeholder:text-[#A8A8A4] focus:outline-none focus:border-[#1A1816] resize-y"
+          />
+        </FieldRow>
       </div>
     </div>
   )
 }
 
 function Step5Review({ template, propertyId, property, buyerName, buyerEmail, fieldValues, sellerName, sellerEmail, onJump }) {
+  const isAssignment = template?.slug === 'assignment'
+  const counterpartyLabel = isAssignment ? 'Assignee (end buyer)' : 'Seller (property owner)'
+  const userRoleLabel     = isAssignment ? 'Assignor (you)'       : 'Buyer (you)'
+
+  const termsItems = isAssignment
+    ? [
+        { label: 'Assignment Fee',      value: fmtPrice(fieldValues.purchase_price) },
+        { label: 'Nonrefundable Deposit', value: fmtPrice(fieldValues.emd) },
+        { label: 'Closing Date',        value: fmtDate(fieldValues.closing_date) },
+        { label: 'Original Seller',     value: fieldValues.original_seller_name || '—' },
+        { label: 'Original PSA Date',   value: fmtDate(fieldValues.original_psa_date) },
+        { label: 'Additional Terms',    value: fieldValues.special_terms || '—' },
+      ]
+    : [
+        { label: 'Sale Price',          value: fmtPrice(fieldValues.purchase_price) },
+        { label: 'Earnest Money',       value: fmtPrice(fieldValues.emd) },
+        { label: 'EMD Escrow',          value: fieldValues.emd_escrow || '—' },
+        { label: 'Source of Funds',     value: fieldValues.financing_type ? (fieldValues.financing_type === 'cash' ? 'Cash' : 'Loan') : '—' },
+        { label: 'Due Diligence',       value: fieldValues.due_diligence_days ? `${fieldValues.due_diligence_days} days` : '—' },
+        { label: 'Acceptance Deadline', value: fmtDate(fieldValues.acceptance_deadline) },
+        { label: 'Closing Date',        value: fmtDate(fieldValues.closing_date) },
+        { label: 'Closing Location',    value: fieldValues.closing_location || '—' },
+        { label: 'Property Tax ID',     value: fieldValues.property_tax_id || '—' },
+        { label: 'Other Description',   value: fieldValues.other_description || '—' },
+        { label: 'Your Address',        value: fieldValues.buyer_address || '—' },
+        { label: 'Seller Address',      value: fieldValues.seller_address || '—' },
+        { label: 'Special Terms',       value: fieldValues.special_terms || '—' },
+      ]
+
   const rows = [
     {
       section: 'Contract Type',
@@ -797,7 +1055,7 @@ function Step5Review({ template, propertyId, property, buyerName, buyerEmail, fi
       section: 'Property',
       step: 2,
       items: [
-        { label: 'Source', value: propertyId === 'manual' ? 'Manual entry' : (property ? 'From your listings' : '—') },
+        { label: 'Source',  value: propertyId === 'manual' ? 'Manual entry' : (property ? 'From your listings' : '—') },
         { label: 'Address', value: fieldValues.property_address || '—' },
       ],
     },
@@ -805,20 +1063,14 @@ function Step5Review({ template, propertyId, property, buyerName, buyerEmail, fi
       section: 'Parties',
       step: 3,
       items: [
-        { label: 'Seller', value: `${sellerName || '—'} (${sellerEmail || '—'})` },
-        { label: 'Buyer', value: `${buyerName || '—'} (${buyerEmail || '—'})` },
+        { label: userRoleLabel,     value: `${sellerName || '—'} (${sellerEmail || '—'})` },
+        { label: counterpartyLabel, value: `${buyerName || '—'} (${buyerEmail || '—'})` },
       ],
     },
     {
       section: 'Terms',
       step: 4,
-      items: [
-        { label: 'Purchase Price', value: fmtPrice(fieldValues.purchase_price) },
-        { label: 'Earnest Money', value: fmtPrice(fieldValues.emd) },
-        { label: 'Closing Date', value: fmtDate(fieldValues.closing_date) },
-        { label: 'Financing', value: fieldValues.financing_type ? (fieldValues.financing_type === 'cash' ? 'Cash' : 'Loan') : '—' },
-        { label: 'Special Terms', value: fieldValues.special_terms || '—' },
-      ],
+      items: termsItems,
     },
   ]
 
