@@ -106,8 +106,8 @@ export default function NewContractWizardPage() {
     special_terms:       '',
     // Purchase-only
     financing_type:      '',
-    buyer_address:       savedDefaults.buyer_address || '',
-    seller_address:      '',
+    seller_address:      savedDefaults.seller_address || savedDefaults.buyer_address || '',
+    buyer_address:       '',
     property_tax_id:     '',
     other_description:   '',
     emd_escrow:          savedDefaults.emd_escrow || '',
@@ -141,7 +141,7 @@ export default function NewContractWizardPage() {
     const u = JSON.parse(raw)
     setUserId(u.id)
     setSellerEmail(u.email)
-    const myName = u.name || u.full_name || u.first_name || ''
+    const myName = u.contactPersonName || u.businessName || u.name || u.full_name || u.first_name || ''
     setSellerName(myName)
     setEffectiveEmail(u.email)
     setEffectiveName(myName)
@@ -892,21 +892,21 @@ function Step4Terms({ values, onChange, template, onPersistDefault, savedDefault
             <p className="text-[11px] font-bold text-[#A8A8A4] uppercase tracking-wide">Parties' Addresses</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FieldRow label="Your Address (Buyer)">
-              <input
-                type="text"
-                value={values.buyer_address || ''}
-                onChange={e => onChange('buyer_address', e.target.value)}
-                placeholder="123 Your St, City, ST 00000"
-                className={INPUT_CLS}
-              />
-              <SavedAsDefault fieldKey="buyer_address" />
-            </FieldRow>
-            <FieldRow label="Seller's Address" hint="property owner">
+            <FieldRow label="Your Address (Seller)">
               <input
                 type="text"
                 value={values.seller_address || ''}
                 onChange={e => onChange('seller_address', e.target.value)}
+                placeholder="123 Your St, City, ST 00000"
+                className={INPUT_CLS}
+              />
+              <SavedAsDefault fieldKey="seller_address" />
+            </FieldRow>
+            <FieldRow label="Buyer's Address" hint="counterparty">
+              <input
+                type="text"
+                value={values.buyer_address || ''}
+                onChange={e => onChange('buyer_address', e.target.value)}
                 placeholder="Where to send paperwork"
                 className={INPUT_CLS}
               />
@@ -1015,8 +1015,8 @@ function Step4Terms({ values, onChange, template, onPersistDefault, savedDefault
 
 function Step5Review({ template, propertyId, property, buyerName, buyerEmail, fieldValues, sellerName, sellerEmail, onJump }) {
   const isAssignment = template?.slug === 'assignment'
-  const counterpartyLabel = isAssignment ? 'Assignee (end buyer)' : 'Seller (property owner)'
-  const userRoleLabel     = isAssignment ? 'Assignor (you)'       : 'Buyer (you)'
+  const counterpartyLabel = isAssignment ? 'Assignee (end buyer)' : 'Buyer (counterparty)'
+  const userRoleLabel     = isAssignment ? 'Assignor (you)'       : 'Seller (you)'
 
   const termsItems = isAssignment
     ? [
@@ -1038,8 +1038,8 @@ function Step5Review({ template, propertyId, property, buyerName, buyerEmail, fi
         { label: 'Closing Location',    value: fieldValues.closing_location || '—' },
         { label: 'Property Tax ID',     value: fieldValues.property_tax_id || '—' },
         { label: 'Other Description',   value: fieldValues.other_description || '—' },
-        { label: 'Your Address',        value: fieldValues.buyer_address || '—' },
-        { label: 'Seller Address',      value: fieldValues.seller_address || '—' },
+        { label: 'Your Address (Seller)', value: fieldValues.seller_address || '—' },
+        { label: 'Buyer Address',         value: fieldValues.buyer_address || '—' },
         { label: 'Special Terms',       value: fieldValues.special_terms || '—' },
       ]
 

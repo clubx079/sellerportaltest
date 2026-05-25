@@ -101,10 +101,18 @@ export async function POST(request) {
     const ctx = {
       sellerName: sellerName || sellerEmail,
       sellerEmail,
+      buyerName: buyerName || buyerEmail,
+      buyerEmail,
       today,
       todayISO: today.toISOString().slice(0, 10),
     }
-    const mappedValues = mapFieldValues(templateId, field_values || {}, ctx)
+    // Step 2's "Buyer Full Name" lives at body.buyerName, not inside field_values.
+    // Inject it here so it lands in the contract's buyer_name field (line 1).
+    const enrichedFieldValues = {
+      ...(field_values || {}),
+      buyer_name: (field_values && field_values.buyer_name) || buyerName || '',
+    }
+    const mappedValues = mapFieldValues(templateId, enrichedFieldValues, ctx)
     const hasValues = !!mappedValues && Object.keys(mappedValues).length > 0
 
     const submitters = [
