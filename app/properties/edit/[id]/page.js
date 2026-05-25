@@ -111,6 +111,11 @@ export default function EditPropertyPage() {
   const initialTitleRef = useRef('');
   const initialLocationRef = useRef('');
   const existingSlugRef = useRef('');
+  // Snapshot of fields that DO require re-review when changed.
+  // Editing other fields (price, beds, baths, sqft, etc.) on a live listing
+  // saves immediately as 'active' without re-triggering moderation.
+  const initialModeratableRef = useRef({ description: '', repairs: '', inspectionUrl: null, contractUrl: null, imageUrls: '' });
+  const imagesChangedRef = useRef(false);
 
   const [formData, setFormData] = useState({
     status: 'draft',
@@ -193,6 +198,15 @@ export default function EditPropertyPage() {
         initialTitleRef.current = derivedTitle;
         initialLocationRef.current = data.address || '';
         existingSlugRef.current = data.slug || '';
+        // Snapshot moderatable fields so we can detect real-content changes later
+        initialModeratableRef.current = {
+          description: data.description || '',
+          repairs: data.repairs || '',
+          inspectionUrl: data.inspection_report_url || null,
+          contractUrl: data.contract_url || null,
+          imageUrls: (data.property_images || []).map(i => i.image_url).filter(Boolean).sort().join('|'),
+        };
+        imagesChangedRef.current = false;
 
         setFormData({
           title: derivedTitle,
@@ -304,6 +318,14 @@ export default function EditPropertyPage() {
       initialTitleRef.current = derivedTitle;
       initialLocationRef.current = locationLine || '';
       existingSlugRef.current = d.slug || '';
+      initialModeratableRef.current = {
+        description: d.description || '',
+        repairs: Array.isArray(d.features) ? d.features.join('\n') : (d.repairs || ''),
+        inspectionUrl: d.inspection_report_url || null,
+        contractUrl: d.contract_url || null,
+        imageUrls: (d.property_photos || []).map(p => p.photo_url).filter(Boolean).sort().join('|'),
+      };
+      imagesChangedRef.current = false;
 
       setFormData({
         title: derivedTitle,
@@ -453,11 +475,39 @@ export default function EditPropertyPage() {
     };
     const slugToSave = shouldUpdateSlug ? newShortSlug() : existingSlugRef.current;
 
-    // If listing is active/rejected, send back to under_review for re-moderation
-    // For silent (auto-save) mode, preserve the current status — never silently change publication state.
-    const effectiveStatus = silent
-      ? (formData.status || 'draft')
-      : (publishStatus === 'active' ? 'under_review' : publishStatus);
+    // Decide whether this save should trigger re-moderation.
+    // Re-review is required if any "moderatable" field has changed since load:
+    //   photos, description, repairs, inspection report, contract upload.
+    // Other edits (price, beds, baths, sqft, contact info, SEO, etc.) on an
+    // already-live listing save immediately as 'active' without triggering review.
+    const currentStatus = (formData.status || 'draft').toLowerCase();
+    const currentImageUrls = imageUploadStatus.images
+      .filter(i => i.status === 'completed' && i.imageUrl)
+      .map(i => i.imageUrl)
+      .sort()
+      .join('|');
+    const photosChanged       = imagesChangedRef.current && currentImageUrls !== initialModeratableRef.current.imageUrls;
+    const descriptionChanged  = (formData.description || '') !== (initialModeratableRef.current.description || '');
+    const repairsChanged      = (formData.repairs || '')     !== (initialModeratableRef.current.repairs || '');
+    const inspectionChanged   = (inspectionReport.url || null) !== (initialModeratableRef.current.inspectionUrl || null);
+    const contractChanged     = (contractUpload.url || null)   !== (initialModeratableRef.current.contractUrl || null);
+    const moderatableChanged  = photosChanged || descriptionChanged || repairsChanged || inspectionChanged || contractChanged;
+
+    let effectiveStatus;
+    if (silent) {
+      effectiveStatus = currentStatus; // auto-save never changes status
+    } else if (publishStatus === 'active') {
+      // First-time publish (was draft) → always review.
+      // Rejected listings being resubmitted → always review.
+      // Already-live listings → review only if a moderatable field changed.
+      if (currentStatus === 'active' && !moderatableChanged) {
+        effectiveStatus = 'active';
+      } else {
+        effectiveStatus = 'under_review';
+      }
+    } else {
+      effectiveStatus = publishStatus;
+    }
 
     // Create save data object matching the actual database schema
     const saveData = {
@@ -570,7 +620,7 @@ export default function EditPropertyPage() {
           }
         }
 
-        if (publishStatus === 'active' && !silent) {
+        if (effectiveStatus === 'under_review' && !silent) {
           fetch('/api/seller/moderate', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -578,12 +628,21 @@ export default function EditPropertyPage() {
           }).catch(() => {});
         }
         if (!silent) {
-          setSuccess(
-            publishStatus === 'active'
-              ? 'Listing submitted — typically live within ~10 minutes once our review completes. We\'ll email you if anything needs attention.'
-              : 'Property updated successfully!'
-          );
+          const msg = effectiveStatus === 'under_review'
+            ? 'Listing submitted — typically live within ~10 minutes once our review completes. We\'ll email you if anything needs attention.'
+            : effectiveStatus === 'active'
+              ? 'Listing updated — changes are live now.'
+              : 'Property updated successfully!';
+          setSuccess(msg);
         }
+        initialModeratableRef.current = {
+          description: formData.description || '',
+          repairs:     formData.repairs || '',
+          inspectionUrl: inspectionReport.url || null,
+          contractUrl:   contractUpload.url || null,
+          imageUrls:   currentImageUrls,
+        };
+        imagesChangedRef.current = false;
         if (!skipNavigation) {
           setTimeout(() => router.push(fromDraft ? `/properties/enhance?id=${id}` : '/properties'), 1500);
         }
@@ -633,7 +692,7 @@ export default function EditPropertyPage() {
         }
       }
 
-      if (publishStatus === 'active' && !silent) {
+      if (effectiveStatus === 'under_review' && !silent) {
         fetch('/api/seller/moderate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -641,13 +700,24 @@ export default function EditPropertyPage() {
         }).catch(() => {});
       }
       if (!silent) {
-        setSuccess(
-          publishStatus === 'active'
-            ? 'Listing submitted — typically live within ~10 minutes once our review completes. We\'ll email you if anything needs attention.'
-            : 'Property updated successfully!'
-        );
+        const msg = effectiveStatus === 'under_review'
+          ? 'Listing submitted — typically live within ~10 minutes once our review completes. We\'ll email you if anything needs attention.'
+          : effectiveStatus === 'active'
+            ? 'Listing updated — changes are live now.'
+            : 'Property updated successfully!';
+        setSuccess(msg);
       }
 
+      // After a successful save, refresh the moderatable snapshot so subsequent
+      // edits compare against the new baseline (not the original load).
+      initialModeratableRef.current = {
+        description: formData.description || '',
+        repairs:     formData.repairs || '',
+        inspectionUrl: inspectionReport.url || null,
+        contractUrl:   contractUpload.url || null,
+        imageUrls:   currentImageUrls,
+      };
+      imagesChangedRef.current = false;
       if (!skipNavigation) {
         setTimeout(() => {
           router.push(fromDraft ? `/properties/enhance?id=${data.id}` : '/properties');
@@ -666,12 +736,13 @@ export default function EditPropertyPage() {
 
   const handleImagesChange = (data) => {
     setImageUploadStatus(prev => {
-      // Mark dirty only when this is a real change after initial load,
-      // not when ImageGalleryManager re-fires onChange with the same data on mount.
+      // Mark dirty + moderatable-changed only when this is a real change after
+      // initial load — not when ImageGalleryManager re-fires onChange on mount.
       const prevIds = prev.images.map(i => i.id || i.imageUrl).join('|');
       const newIds  = (data.images || []).map(i => i.id || i.imageUrl).join('|');
       if (readyForAutoSave && !data.isUploading && prevIds !== newIds) {
         setDirty(true);
+        imagesChangedRef.current = true;
       }
       return {
         images: data.images,
