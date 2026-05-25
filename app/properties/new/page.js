@@ -1191,32 +1191,12 @@ export default function NewPropertyPage() {
                 </select>
               </div>
 
-              {/* Contact Info */}
+              {/* Contact Info — always editable; pre-filled from the seller's profile.
+                  Sellers can keep the defaults or override them per-listing. */}
               <div>
-                <div className="flex items-center justify-between mb-3">
-                  <div>
-                    <h3 className="text-[15px] font-semibold text-[#1A1816]">Contact Info</h3>
-                    <p className="text-[13px] text-[#737370] mt-0.5">How buyers can reach you about this listing.</p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const next = !useCustomContact;
-                      setUseCustomContact(next);
-                      if (!next) {
-                        setFormData(prev => ({ ...prev, contact_name: sellerProfileContact.name, contact_phone: sellerProfileContact.phone }));
-                      } else {
-                        setFormData(prev => ({ ...prev, contact_name: '', contact_phone: '' }));
-                      }
-                    }}
-                    className={`text-[13px] font-semibold px-4 py-2 rounded border transition-all duration-200 active:scale-[0.98] ${
-                      useCustomContact
-                        ? 'bg-[#D03839] border-[#D03839] text-white hover:bg-[#E0493B] hover:border-[#E0493B]'
-                        : 'bg-white border-[#D03839] text-[#D03839] hover:bg-[#FEF0EF]'
-                    }`}
-                  >
-                    {useCustomContact ? 'Use profile contact' : 'Edit contact info'}
-                  </button>
+                <div className="mb-3">
+                  <h3 className="text-[15px] font-semibold text-[#1A1816]">Contact Info</h3>
+                  <p className="text-[13px] text-[#737370] mt-0.5">How buyers can reach you about this listing. Pre-filled from your profile — edit if you want different contact info on this listing.</p>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
@@ -1225,13 +1205,8 @@ export default function NewPropertyPage() {
                       type="text"
                       value={formData.contact_name || ''}
                       onChange={(e) => handleInputChange('contact_name', e.target.value)}
-                      readOnly={!useCustomContact}
                       placeholder="Your name or company"
-                      className={`w-full px-4 py-3 border rounded text-[13px] text-[#1A1816] transition-colors ${
-                        useCustomContact
-                          ? 'border-[#E8E8E4] focus:border-[#D03839] focus:outline-none'
-                          : 'border-[#E8E8E4] bg-[#FAFAF8] text-[#737370] cursor-default outline-none'
-                      }`}
+                      className="w-full px-4 py-3 border border-[#E8E8E4] rounded text-[13px] text-[#1A1816] focus:border-[#D03839] focus:outline-none transition-colors"
                     />
                   </div>
                   <div>
@@ -1240,13 +1215,8 @@ export default function NewPropertyPage() {
                       type="tel"
                       value={formData.contact_phone || ''}
                       onChange={(e) => handleInputChange('contact_phone', e.target.value)}
-                      readOnly={!useCustomContact}
                       placeholder="+1 (555) 000-0000"
-                      className={`w-full px-4 py-3 border rounded text-[13px] text-[#1A1816] transition-colors ${
-                        useCustomContact
-                          ? 'border-[#E8E8E4] focus:border-[#D03839] focus:outline-none'
-                          : 'border-[#E8E8E4] bg-[#FAFAF8] text-[#737370] cursor-default outline-none'
-                      }`}
+                      className="w-full px-4 py-3 border border-[#E8E8E4] rounded text-[13px] text-[#1A1816] focus:border-[#D03839] focus:outline-none transition-colors"
                     />
                   </div>
                 </div>

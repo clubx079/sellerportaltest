@@ -21,14 +21,11 @@ export default function SaveStatus({ autoSaving, lastSavedAt, dirty, error, stat
     return () => clearInterval(i);
   }, [lastSavedAt]);
 
-  if (status && status !== 'draft') {
-    return (
-      <span className="inline-flex items-center gap-1.5 text-[12px] text-[#737370]">
-        <span className="w-1.5 h-1.5 rounded-full bg-[#737370]" />
-        Changes will be reviewed when you publish
-      </span>
-    );
-  }
+  // For non-draft listings, the SaveStatus chip is suppressed.
+  // The orientation info (status badge) is shown elsewhere in the UI
+  // (listings table, rejection banner on the edit page). The Publish
+  // button itself communicates the explicit action.
+  if (status && status !== 'draft') return null;
   if (error) {
     return (
       <span className="inline-flex items-center gap-1.5 text-[12px] text-[#D03839]">
