@@ -176,6 +176,20 @@ export default function NewContractWizardPage() {
       .finally(() => setTemplatesLoading(false))
   }, [])
 
+  // Drafts can outlive a template if we archive one in DocuSeal. If the resumed
+  // templateId isn't in the live list, drop it and send the user back to step 1
+  // so we don't pass `template={undefined}` into the Step 4 / Step 5 components.
+  useEffect(() => {
+    if (templatesLoading) return
+    if (!templateId) return
+    if (templates.length === 0) return
+    const stillExists = templates.some(t => String(t.id) === String(templateId))
+    if (!stillExists) {
+      setTemplateId('')
+      setStep(1)
+    }
+  }, [templates, templatesLoading, templateId])
+
   // ── Load seller's properties for the dropdown ───────────────────
   useEffect(() => {
     if (!effectiveSellerId) return
