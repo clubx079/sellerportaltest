@@ -199,7 +199,7 @@ export default function NewContractWizardPage() {
       .from('properties')
       .select('id, address, price, bedrooms, bathrooms, floor_area, slug, status')
       .eq('seller_id', effectiveSellerId)
-      .in('status', ['active', 'draft', 'under_review'])
+      .eq('status', 'active')
       .order('updated_at', { ascending: false })
       .then(({ data, error }) => {
         if (!error && data) setProperties(data)
