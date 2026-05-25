@@ -110,6 +110,7 @@ export default function NewContractWizardPage() {
     buyer_address:       '',
     property_tax_id:     '',
     other_description:   '',
+    co_seller_name:      '',
     emd_escrow:          savedDefaults.emd_escrow || '',
     due_diligence_days:  '14',
     acceptance_deadline: acceptanceDefaultISO,
@@ -519,6 +520,9 @@ export default function NewContractWizardPage() {
             buyerEmail={buyerEmail}
             onBuyerNameChange={(v) => { setBuyerName(v); setDirty(true) }}
             onBuyerEmailChange={(v) => { setBuyerEmail(v); setDirty(true) }}
+            template={templates.find(t => String(t.id) === String(templateId))}
+            coSellerName={fieldValues.co_seller_name}
+            onCoSellerNameChange={v => { setFieldValues(prev => ({ ...prev, co_seller_name: v })); setDirty(true) }}
           />
         )}
         {step === 4 && (
@@ -728,7 +732,7 @@ function Step2Property({ properties, propertiesLoading, propertyId, onChange, ma
   )
 }
 
-function Step3Buyer({ buyerName, buyerEmail, onBuyerNameChange, onBuyerEmailChange }) {
+function Step3Buyer({ buyerName, buyerEmail, onBuyerNameChange, onBuyerEmailChange, template, coSellerName, onCoSellerNameChange }) {
   return (
     <div>
       <div className="mb-5">
@@ -763,6 +767,53 @@ function Step3Buyer({ buyerName, buyerEmail, onBuyerNameChange, onBuyerEmailChan
           </p>
         </div>
       </div>
+
+      {template?.slug === 'purchase' && (
+        <CoSellerField name={coSellerName} onChange={onCoSellerNameChange} />
+      )}
+    </div>
+  )
+}
+
+// Optional co-seller for jointly-owned properties (e.g. spouses).
+// Pre-fills the contract's seller2_print_name slot only — the co-seller signs
+// by hand on the printed copy.
+function CoSellerField({ name, onChange }) {
+  const [open, setOpen] = useState(!!name)
+  if (!open) {
+    return (
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="mt-5 inline-flex items-center gap-1 text-[12px] font-semibold text-[#D03839] hover:text-[#B82F30]"
+      >
+        + Add co-seller (optional)
+      </button>
+    )
+  }
+  return (
+    <div className="mt-5 pt-5 border-t border-[#E8E8E4]">
+      <div className="flex items-center justify-between mb-3">
+        <div>
+          <p className="text-[13px] font-semibold text-[#1A1816]">Co-seller</p>
+          <p className="text-[12px] text-[#737370]">For jointly-owned properties (e.g. spouses). Their name will print on the contract; they'll sign by hand on the printed copy.</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => { onChange(''); setOpen(false); }}
+          className="text-[12px] text-[#737370] hover:text-[#1A1816]"
+        >
+          Remove
+        </button>
+      </div>
+      <label className="block text-[12px] font-semibold text-[#444441] mb-1.5">Co-seller Full Name</label>
+      <input
+        type="text"
+        value={name}
+        onChange={e => onChange(e.target.value)}
+        placeholder="Jane Smith"
+        className="w-full h-10 px-3 border border-[#E8E8E4] rounded text-[13px] text-[#1A1816] placeholder:text-[#A8A8A4] focus:outline-none focus:border-[#1A1816]"
+      />
     </div>
   )
 }
@@ -1078,6 +1129,7 @@ function Step5Review({ template, propertyId, property, buyerName, buyerEmail, fi
       step: 3,
       items: [
         { label: userRoleLabel,     value: `${sellerName || '—'} (${sellerEmail || '—'})` },
+        ...(fieldValues.co_seller_name ? [{ label: 'Co-seller', value: fieldValues.co_seller_name }] : []),
         { label: counterpartyLabel, value: `${buyerName || '—'} (${buyerEmail || '—'})` },
       ],
     },
