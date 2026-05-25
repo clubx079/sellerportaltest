@@ -1,198 +1,209 @@
-# Seller Portal — UX Improvements Changelog
+# Seller Portal — Improvements Log
 
-A running log of every UX/UI change made to the seller portal as part of the enterprise-grade rework. Each entry lists what changed, why, and the files touched.
-
----
-
-## 2026-05-25 — Team-member contact picker for enterprise listings (`553ab36`)
-
-**Files:** `database/add_phone_to_team_members.sql` (new), `app/api/team/[id]/route.js`, `app/team/page.js`, `app/properties/edit/[id]/page.js`, `app/properties/new/page.js`
-
-**Summary**
-Enterprise sellers can now pick a team member from a dropdown in a listing's Contact Info section and have both Contact Name + Contact Phone auto-filled, instead of re-typing them on every new listing.
-
-**Changes**
-- **New `phone` column on `org_members`.** Migration file lives at `database/add_phone_to_team_members.sql` (`ALTER TABLE org_members ADD COLUMN IF NOT EXISTS phone TEXT;`). Must be run manually in the Supabase SQL Editor before this code deploys — PostgREST doesn't support DDL, and there's no `exec_sql` RPC on this project. The code is defensive: `GET /api/team` uses `select('*')` so a missing column is invisible; `PATCH /api/team/[id]` catches the column-missing error and reports `phoneSkipped: true` so the UI surfaces "Migration pending" instead of silently failing.
-- **`/team` page — phone field per member.** Owners see a phone input below each member's email row. Saves on blur (or Enter), matches the existing form-input styling (`h-7 px-2 border-[#E8E8E4] rounded`). Inline `MemberPhoneField` component handles the optimistic save + error state. Hidden for non-owners.
-- **`PATCH /api/team/[id]` extended.** Now accepts `permissions` and/or `phone` in the body. Permission update path unchanged. Phone update only changes the phone column; owner-only authorization is identical.
-- **`/properties/new` and `/properties/edit/[id]` — "Pick a team member" dropdown.** Appears above Contact Name + Phone, **only** when the seller's `seller_plans.plan_type === 'enterprise'` AND they have at least one team member. Default option is `Custom (fill in below)`. Selecting a member fills `formData.contact_name` (name or email fallback) and `formData.contact_phone` (member's phone, blank if not set). Free-typing into the inputs afterwards is preserved — we never override what the seller typed. Non-enterprise sellers see no change (existing always-editable Contact Name + Phone behavior preserved).
-
-**Why**
-Enterprise sellers asked for this — when their team handles inbound calls on listings, the person on the listing should be the one taking the call, not the account owner. The old "always your profile name + phone" flow forced them to type the right person's info on every new listing. This makes the right thing a one-click choice while keeping a full custom-typed escape hatch.
-
-**Pattern note**
-Followed the same defensive-column pattern already in `app/api/team/workspaces/route.js` (try, catch the schema error, fall back). Confirmed locally that `select('*')` against `org_members` without the phone column returns the existing columns and no error, so the team page and dropdown both work pre-migration — they just won't show a phone value.
-
-**Verified end-to-end (2026-05-25):** `/team` returns 200, `/properties/new` returns 200, no errors in `/tmp/seller_dev.log`. Migration SQL written and committed; user must execute it in the Supabase SQL Editor before the dropdown will populate real phone numbers.
-
-**Status:** Code shipped. Migration awaiting manual SQL run.
+A plain-English log of every change we shipped to the seller portal during the enterprise-grade rework. Each entry is written for anyone — not just developers — to understand what was different before, what we changed, and what the seller now sees.
 
 ---
 
-## 2026-05-25 — Audit sweep: sticky-flush fix, contact UX, click-to-scroll, auto-featured, counter-offer preview, concrete timelines
+## 2026-05-25 — Contracts: full wizard with every field collected
 
-**Files:** `components/properties/SaveStatus.js`, `components/properties/StickyActionBar.js`, `app/properties/edit/[id]/page.js`, `app/properties/new/page.js`, `app/messages/page.js`
+**What we updated:** the entire contracts feature.
 
-**Summary**
-Batched six audit findings into focused commits. All commit SHAs listed at the end.
+**What changed:** before, the only way to send a contract was to fill in 4 fields on a tiny popup (buyer name, buyer email, free-text property address, template) and then jump to DocuSeal to actually fill in the contract — purchase price, EMD, closing date, addresses, due diligence period, etc. — manually. We replaced that with a real 5-step wizard.
 
-**Changes**
+**What it looks like now:**
+- Step 1: pick which contract you want — Purchase Contract or Assignment of Contract (with friendly cards, not raw filenames).
+- Step 2: pick a property from a dropdown of your own listings (auto-fills the address), or enter one manually.
+- Step 3: enter the other party's name + email.
+- Step 4: fill in the deal terms. **Every field that exists on the contract is now collected here** — sale price, earnest money, escrow holder, closing date, closing location, due diligence period, acceptance deadline, both addresses, tax ID, financing type. For Assignment, also: the original seller's name and the date you signed the original purchase contract.
+- Step 5: review everything in one summary, hit Send.
+- The contract opens in DocuSeal **already filled in** with everything from the wizard. The seller just signs and sends. The buyer gets an email with a link to sign on our website.
 
-- **StickyActionBar flush with viewport (`f2abdc3`).** Switched from negative `mb-*` (which can't override sticky positioning's scrollport anchor) to negative `bottom-*`. Verified: gap below the footer is now 0px on the edit page.
+**Bonus: profile defaults.** Three fields you reuse every time — your address, your default title company, your default closing location — have a "Save as default" toggle. Click it once and they auto-fill on every future contract.
 
-- **SaveStatus hides on non-draft listings (`f2abdc3`).** Dropped the "Changes will be reviewed when you publish" chip. Same anti-pattern as "Send for Review" — exposed internal moderation. Status info for live listings is already visible in the listings table badge and the rejection banner.
-
-- **Contact info: always editable (`f2abdc3`).** Removed the "Edit contact info" / "Use profile contact" toggle on both `/properties/edit/[id]` and `/properties/new`. Fields are pre-filled from the seller's profile and always editable. Eliminates the destructive-toggle (toggling cleared user input) and matches every other field on the form.
-
-- **Rejection click-to-scroll (`49cdb2a`).** Each issue in the rejection banner is now a button. Click it → switches to the relevant tab, scrolls the offending field into view, briefly highlights it with a red ring. Added `id="rejection-target-*"` anchors on the image gallery, description, repairs, inspection, and contract sections.
-
-- **Auto-select featured image on publish (`49cdb2a`).** Removed the "Pick a featured image" modal that interrupted the publish flow. If no image is marked featured, the first uploaded one is auto-selected. Sellers can still re-pick from the gallery later.
-
-- **Concrete timelines instead of "shortly" (`49cdb2a`).** Replaced `Listing published — it'll be live shortly` with `Listing submitted — typically live within ~10 minutes once our review completes. We'll email you if anything needs attention.` Sellers now know what to expect.
-
-- **Counter-offer review-and-send modal (`38bda8d`).** Inserted a confirmation step between filling the counter-offer form and sending it. Modal shows price prominently + timeline + financing + notes + buyer-notification reminder; two buttons (Edit / Send counter offer). Stops accidental sends on a legally-meaningful number.
-
-**Why**
-These are all the same family of UX rules: surface decisions before they commit, hide internal mechanics, and don't make users hunt for things. Roland's audit pointed at most of them; the remaining ones came from the broader sweep.
-
-**Verified end-to-end (2026-05-25):** All pages still compile and render 200 OK. Edit-page sticky footer measures `gap: 0` from viewport bottom. Pushed to `feature/inline-contracts` as commits `f2abdc3`, `49cdb2a`, `38bda8d`.
-
-**Status:** Done. Remaining audit items: `/contracts` auto-save pattern (in progress).
+**Bonus: drafts.** If you bail halfway, your progress auto-saves every 2 seconds. Come back later, click "Resume" from the contracts list, pick up where you left off.
 
 ---
 
-## 2026-05-25 — Listing status: <select> → real toggle switch
+## 2026-05-25 — Listing edit page: auto-save instead of "Save Draft"
 
-**Files:** `components/properties/ToggleSwitch.js` (new), `app/properties/page.js`
+**What we updated:** the listing edit page (`/properties/edit/...`).
 
-**Summary**
-Replaced the "fake dropdown" on the properties table status column with a real toggle switch. The control looked like a multi-option dropdown but actually had only two options (Active / Inactive), which violated the "look like what you do" rule and made sellers hesitate. Now it looks and behaves like the binary toggle it actually is.
+**What changed:** before, the page had two buttons at the top — Save Draft and Send for Review. Sellers had to scroll back up to save, and "Send for Review" exposed our internal moderation process. We replaced that with auto-save and a single Publish button at the bottom.
 
-**Changes**
-- New primitive `components/properties/ToggleSwitch.js`. Standard iOS-style switch with two sizes (`md` default, `sm` for tight rows). Animates a knob across a colored track; `bg-[#0F6E56]` when on, `bg-[#D4D4CF]` when off. Has accessible `role="switch"` + `aria-checked` + `aria-label`.
-- Properties table view (`app/properties/page.js` ~833): replaced the chevron-styled `<select value=active|inactive>` with `<ToggleSwitch>`.
-- Properties card view (same file ~985): replaced the smaller pill-styled `<select>` with `<ToggleSwitch size="sm">`.
-- Both use the same `handleToggleActive` callback so backend behaviour is unchanged. The subscription gate (no activation without an active plan) still kicks in — it's just routed through a clearer control now.
-
-**Why**
-This is the same family of bug as "Send for Review": the visual was lying about what the control does. A `<select>` says "many choices"; a binary action should say "two states". Roland flagged this in the audit ("looks like a dropdown, acts like a toggle"). Toggle switches are the universal pattern for binary state.
-
-**Verified end-to-end (2026-05-25):** Loaded /properties as Yousaf, saw three real toggle switches in the status column (one active green, two inactive gray) plus a read-only "Draft" badge on the draft row. Clicked the active switch → row updated to inactive in UI and in DB (`status: inactive, property_status: unavailable`). Clicking an inactive switch correctly attempts activation and would be blocked by the subscription gate if the seller has no paid plan (existing safety check, preserved).
-
-**Status:** Done. Three primitives now in `components/properties/`: `<SaveStatus>`, `<StickyActionBar>`, `<ToggleSwitch>`. Time to start planning the migration to a dedicated `components/ui/` directory.
+**What it looks like now:**
+- The page auto-saves drafts every 2 seconds while you edit. You never lose work.
+- A small status chip in the header and at the bottom shows you exactly what's happening: "Draft" / "Unsaved changes" / "Saving…" / "Saved just now" / "Couldn't save — we'll retry".
+- One red **Publish** button at the bottom, edge-to-edge with the viewport.
+- Renamed "Send for Review" → "Publish". The success message now says "Listing submitted — typically live within ~10 minutes once our review completes" instead of vague "shortly".
 
 ---
 
-## 2026-05-25 — Shared `<StickyActionBar>` primitive
+## 2026-05-25 — New listing wizard: same auto-save pattern
 
-**Files:** `components/properties/StickyActionBar.js` (new), `app/properties/edit/[id]/page.js`
+**What we updated:** the new-listing wizard (`/properties/new`).
 
-**Summary**
-Extracted the sticky bottom action footer from the edit page into a reusable component. Any future long form in the seller portal can drop in a `<StickyActionBar>` and slot in a status indicator + action buttons without copy-pasting the positioning gymnastics.
+**What changed:** before, the wizard had Save Draft at the top and a separate Continue button at the bottom — same scroll-up problem. Now it auto-saves like the edit page, so the seller can focus on filling out the form without thinking about it.
 
-**Changes**
-- New component: `components/properties/StickyActionBar.js`. Bakes in:
-  - `sticky bottom-0` for in-scroll-container stickiness
-  - `-mx-4 md:-mx-6` and `-mb-4 md:-mb-6` to cancel DashboardLayout `<main>`'s padding (edge-to-edge, no bottom gap)
-  - White bg with subtle backdrop-blur + 1px top border + faint shadow above
-  - `flex items-center justify-between gap-3` — first child anchors left, last child anchors right
-- Edit page now uses `<StickyActionBar>` instead of an inline `<div>`. Same visual result, less repetition.
-- API is intentionally minimal — `children` slotted via flexbox. For multiple actions, wrap them in a `<div className="flex gap-2">`. A `className` prop is exposed for the rare case where the standard padding cancellation doesn't apply (e.g. outside DashboardLayout).
-
-**Why**
-This pattern (sticky footer with status on the left + primary action on the right) will be used on many more pages — contracts editor, messages composer, settings forms, etc. Extracting now means every page picks up future improvements (e.g. mobile behavior, keyboard shortcuts) for free.
-
-**Verified end-to-end (2026-05-25):** Reloaded the edit page, made a price edit (142000 → 99000), auto-save fired and indicator went to `Saved just now`. Publish button still present and disabled while auto-saving. Visually identical to the pre-refactor sticky footer.
-
-**Status:** Done. Two primitives now in the library: `<SaveStatus>` and `<StickyActionBar>`. When we reach 3+, we should migrate them to a dedicated `components/ui/` directory.
+**What it looks like now:**
+- Auto-save kicks in after the seller enters at least an address. From that point every change is saved to a draft within 2 seconds.
+- The header shows the same status chip as the edit page.
+- The step footer at the bottom now shows the status + Continue button (no more redundant Save Draft).
 
 ---
 
-## 2026-05-25 — Auto-save + canonical action footer (Edit Listing page)
+## 2026-05-25 — Listings table: real toggle, not a fake dropdown
 
-**Files:** `app/properties/edit/[id]/page.js`
+**What we updated:** the status column on the listings table (`/properties`).
 
-**Summary**
-Replaced the dual top + bottom save/publish buttons on the listing edit page with an auto-save + single sticky "Publish" pattern. Sellers no longer hunt for a save button or fear losing work.
+**What changed:** before, the "Active / Inactive" control on each listing row was styled like a dropdown with a chevron arrow — but it only had two options, so it was really a toggle pretending to be a dropdown. Sellers would hesitate, expecting more choices.
 
-**Changes**
-1. **Auto-save for drafts.** Edits to any field are debounced and silently saved after 2 seconds. Only runs while `status === 'draft'`. Never changes publication state, never navigates away.
-2. **`SaveStatus` indicator.** A small status chip with five states, rendered in both the header (orientation) and the sticky footer (action context):
-   - `Saved just now` / `Saved Xs ago` / `Saved Xm ago` (green, with checkmark)
-   - `Saving…` (gray, with spinner)
-   - `Unsaved changes` (amber dot)
-   - `Couldn't save — we'll retry` (red, with alert icon)
-   - `Changes will be reviewed when you publish` (for non-draft listings)
-3. **Top header simplified.** Removed the two top buttons (Save Draft + Send for Review). Header is now just back arrow + listing title + status indicator. No competing CTAs.
-4. **Single sticky footer.** One red **Publish** button on the right; the SaveStatus indicator on the left. Edge-to-edge with the viewport via `-mx-4 md:-mx-6` (cancels parent main's horizontal padding) and `-mb-4 md:-mb-6` (closes the bottom gap from parent main's bottom padding).
-5. **Renamed "Send for Review" → "Publish".** Hides internal moderation mechanics from sellers; success toast updated to *"Listing published — it'll be live shortly."*
-6. **Safety guarantees:**
-   - Auto-save never publishes (always preserves current `status` field)
-   - Auto-save never navigates away
-   - Live / under-review / rejected listings don't auto-save (explicit Publish required so changes go through re-review on the seller's terms)
-   - Publish button is disabled while auto-save is in flight (no race)
-   - Auto-save errors show in the indicator, don't dump a scary toast on the page
-
-**Why**
-- Roland's explicit feedback: save button at the top forces a scroll-back; users naturally look at the bottom of a form for next-action.
-- "Send for Review" exposed internal moderation mechanics. Sellers should think about publishing, not about being reviewed.
-- Two redundant buttons (top + bottom) create cognitive double-take ("which one is the real one?").
-- Long forms with manual save are a data-loss risk; auto-save eliminates it.
-
-**Verified end-to-end (2026-05-25):** Initial load shows `Draft` cleanly (no false unsaved state). User edits a price field → indicator goes `Unsaved changes` (amber) → `Saving…` → `Saved just now` (green ✓) within ~3 seconds. DB confirms `price` updated and `status` stayed `draft` — auto-save never silently publishes.
-
-**Commit:** `ceb79c7` on `feature/inline-contracts`.
+**What it looks like now:**
+- A proper iOS-style toggle switch: green when active, gray when inactive, with a small label next to it.
+- Click flips the state immediately. The subscription gate (can't activate without a paid plan) still applies — it just routes through a clearer control.
 
 ---
 
-## 2026-05-25 — Auto-save + canonical action pattern (New Listing wizard)
+## 2026-05-25 — Contact Info: no more "Edit contact info" button
 
-**Files:** `app/properties/new/page.js`, `components/properties/SaveStatus.js` (new shared component)
+**What we updated:** the Contact Info section on both the edit and new-listing pages.
 
-**Summary**
-Brought the new-listing wizard up to the same enterprise-grade pattern as the edit page. Manual Save Draft buttons are gone; auto-save handles drafts; SaveStatus indicator shows progress in the header and step footer. The Add-Ons / Publish step is unchanged — that's where the explicit publish + payment happens.
+**What changed:** before, there was an "Edit contact info" button that toggled the fields between read-only (showing your profile defaults) and editable. Clicking the toggle erased anything you'd typed. We removed the toggle entirely.
 
-**Changes**
-1. **Auto-save for drafts.** Every edit is debounced 2s and silently saved. After the first auto-save creates a new property row, the new id is captured in `currentDraftId` so subsequent saves UPDATE the same row instead of inserting more. Skipped on the Add-Ons tab (publish step) and requires at least a location.
-2. **`SaveStatus` indicator** in the header (orientation) and the step footer (action context). Same five states as the edit page.
-3. **Removed the top Save Draft button.** The header now shows just back arrow + "Post a Deal" title + status indicator.
-4. **Removed the duplicate Save Draft button** I'd added to the step footer earlier in this session. The step footer is now just Back ↔ SaveStatus + Continue → — clean.
-5. **Extracted `SaveStatus` into a shared component** at `components/properties/SaveStatus.js`. The edit page now imports the same component instead of defining its own inline copy. First step toward the shared primitives library.
-6. **Refactored `handleSave`** to accept `{ silent, skipNavigation }` options. Silent mode forces `publishStatus='draft'`, relaxes validation, skips the success toast and the navigation to `/properties`. Same safety guarantees as the edit page (never silently publishes, never navigates).
-7. **Renamed publish success message:** "Property submitted for review!..." → *"Listing published — it'll be live shortly."* for consistency with the edit page.
-
-**Why**
-Same logic as the edit page: long forms with manual save are a data-loss risk; auto-save eliminates it. Two redundant save buttons (top + bottom) create cognitive double-take. The wizard needs the same pattern so sellers don't have to learn two different conventions across edit and new flows.
-
-**Verified end-to-end (2026-05-25):** Loaded `/properties/new?draft_id=<id>`. Initial: `Draft`. Edit price 95000 → 142000. Status transitions `Unsaved changes` → `Saving…` → `Saved just now` within ~3s. DB confirms `price=142000, status=draft`. Both indicators (header + step footer) stay in sync.
-
-**Status:** Done.
+**What it looks like now:**
+- The Contact Name and Contact Phone fields are always editable.
+- They're pre-filled with your saved profile contact, but you can change them per listing if you want.
+- Helper text under the heading explains this so the seller knows what to expect.
 
 ---
 
-## Pending / planned
+## 2026-05-25 — Sticky save bar sits flush at the bottom
 
-The following improvements are planned next, derived from the meeting feedback (2026-05-22) and the UX audit (2026-05-25):
+**What we updated:** the bottom action bar on the edit page.
 
-- ~~**Apply auto-save + sticky footer pattern to `/properties/new`**~~ Done 2026-05-25.
-- ~~**Extract shared component primitives**~~ Done 2026-05-25: `<SaveStatus>` and `<StickyActionBar>` both live at `components/properties/`. Migrate to `components/ui/` when we have 3+ primitives.
-- **Scope under-review trigger.** Currently any edit sends the entire listing back through moderation. Should only trigger for fields where bad content could appear (photos, description, free-text). Numeric/structured fields should save immediately without re-review.
-- **Dispo rep dropdown** on the listing contact picker. Preload sellers' saved reps from their profile; user picks one and the phone auto-fills.
-- **Rename contract templates** to plain user-friendly labels (e.g. "Assignment of Sale Contract", "Purchase Contract"); reorder so Purchase Contract appears first.
-- **Multi-step contract creation flow** with inline preview before send. Replace the current manual multi-page entry with stepped prompts.
-- **Preload property address dropdown** when creating a contract — auto-fill from the seller's listed properties.
-- **Make rejection issues clickable** to scroll directly to the offending field in the edit form.
-- **Auto-select featured image** on first publish to eliminate the extra modal step.
-- **Warn before clearing custom contact info** when toggling to profile contact.
-- **Clarify listing status selector vs activation toggle** on the properties table.
-- **Counter-offer preview before send** in the messages page.
-- **Replace generic "you'll be notified" success messages** with concrete timelines ("approval typically takes ~24 hours").
+**What changed:** the bar had a small gray gap between it and the bottom of the visible screen. We fixed the positioning so it sits exactly at the bottom edge.
+
+**What it looks like now:** no gap. The action bar is glued to the bottom of the viewport while you scroll, no awkward strip of background showing below it.
 
 ---
 
-## Conventions used across this changelog
+## 2026-05-25 — Rejection messages are clickable
 
-- Every entry has: date, files touched, summary, list of changes, why, and (optionally) status.
-- Group multiple related edits under one entry rather than splitting per-file.
-- When a pattern is established (e.g. SaveStatus indicator), reference it by name in subsequent entries instead of re-explaining.
-- Keep entries human-readable — anyone joining the project should be able to read this top-to-bottom and understand the design direction.
+**What we updated:** the rejection banner on the edit page.
+
+**What changed:** before, when a listing was rejected, the banner listed the issues as text. Sellers had to read each issue, find the matching tab and field on their own, then scroll to it. Now each issue is a clickable shortcut.
+
+**What it looks like now:**
+- Each rejection issue is a button. Click it → the page switches to the right tab and scrolls the offending field into view.
+- The offending field briefly pulses with a red ring so the seller can see exactly which one was flagged.
+- The banner copy now says "Click an issue to jump to it. Fix it and click Publish to send back for review."
+
+---
+
+## 2026-05-25 — Featured image picks itself automatically
+
+**What we updated:** the publish flow when you have images but none marked as featured.
+
+**What changed:** before, hitting Publish opened a modal asking the seller to pick which image to feature. Extra click, extra friction. Now it just uses the first uploaded image automatically.
+
+**What it looks like now:**
+- Click Publish, no modal interruption.
+- The first uploaded image becomes the featured one.
+- Seller can still re-pick from the gallery if they want a different one.
+
+---
+
+## 2026-05-25 — Concrete timelines instead of "soon"
+
+**What we updated:** success messages across the listing flow.
+
+**What changed:** before, when a listing was submitted, the message was "Listing published — it'll be live shortly." Vague. Sellers don't know what "shortly" means. We replaced it with a concrete timeline.
+
+**What it looks like now:** "Listing submitted — typically live within ~10 minutes once our review completes. We'll email you if anything needs attention."
+
+---
+
+## 2026-05-25 — Counter-offers: review before send
+
+**What we updated:** the counter-offer flow on the messages page.
+
+**What changed:** before, the seller filled in a counter-offer (price, closing timeline, financing, notes) and hit Send — fired immediately to the buyer, no chance to double-check. Counter-offers are legally meaningful numbers, so we added a confirmation step.
+
+**What it looks like now:**
+- The "Send counter" button is now "Review & Send".
+- Clicking it opens a clean preview modal showing the full counter-offer: price prominent, closing timeline, financing, notes, plus a reminder that the buyer gets notified immediately.
+- Two buttons: Edit (goes back to the form) and Send counter offer (actually fires it).
+
+---
+
+## 2026-05-25 — Editing a live listing doesn't always trigger re-review
+
+**What we updated:** what counts as "needs another moderation check".
+
+**What changed:** before, any edit on a live listing — even a $5 price tweak — sent the whole listing back to under_review. The listing temporarily disappeared from buyer search while moderation re-ran. We narrowed the trigger to changes that actually affect what buyers see.
+
+**What it looks like now:**
+- If the seller only changes price, beds, baths, sqft, contact info, SEO fields, etc. — the listing stays live. Saving works immediately. Toast says "Listing updated — changes are live now."
+- If the seller changes photos, description, repairs, inspection report, or contract upload — the listing goes back to re-review (those are the fields where bad content could appear).
+- For listings still in draft or rejected, the first Publish always goes through review.
+
+---
+
+## 2026-05-25 — Team-member contact dropdown (enterprise sellers)
+
+**What we updated:** the Contact Info section on listings, for enterprise sellers with team members.
+
+**What changed:** before, enterprise sellers had to manually type a team member's name and phone every time they posted a listing. Now they pick from a dropdown.
+
+**What it looks like now:**
+- On the `/team` page, the owner can set a phone number for each team member (next to their email).
+- On the listing edit and new pages, enterprise sellers see a "Pick a team member" dropdown above Contact Name + Phone.
+- Picking a team member auto-fills both fields. Picking "Custom" lets them type manually.
+- Non-enterprise sellers don't see the dropdown — they get the same always-editable inputs as before.
+
+**Note:** the migration to add the phone column to the team_members table needs to be run in Supabase before this fully works. Until then, the dropdown shows but team members appear as "(no phone)".
+
+---
+
+## 2026-05-25 — Auction.com scraper: 0-30 day window (DeelScout)
+
+**What we updated:** the auction.com scraper that powers the deals shown in the marketplace.
+
+**What changed:** the scraper was filtering for auctions 7-30 days away. Any auction happening in the next 6 days was excluded. Roland called this out — buyers want to see imminent auctions too. Fixed to 0-30 days.
+
+**What it looks like now:**
+- The scraper now captures auctions happening today through 30 days out.
+- Items with no auction date are excluded (they fail the basic "must have a date" rule).
+- Auctions older than today are excluded.
+- Verified end-to-end: a real run returned 1,296 properties with 102 in the previously-excluded 0-6 day window (1 "Auction Today", 17 "Auction Tomorrow", 84 in 1-6 days).
+
+---
+
+## Reusable building blocks added
+
+While doing the above work we also extracted three small reusable components so the same patterns can be applied elsewhere in the portal without duplicating code:
+
+- **SaveStatus** — the little status chip that shows Saved / Saving / Unsaved / Error.
+- **StickyActionBar** — the bottom action footer that stays glued to the bottom of the screen.
+- **ToggleSwitch** — the on/off switch used for the listing status.
+
+These live in `components/properties/` and can be dropped into any future page that needs the same kind of UX. Once we have a fourth primitive they should move to a dedicated `components/ui/` folder.
+
+---
+
+## Things still planned / not done
+
+- **Custom contract templates.** Sellers can't yet upload their own contract PDFs and label fields — they're limited to the two we set up (Purchase + Assignment). DocuSeal supports it; we deferred to V2.
+- **More auction-window flexibility.** Right now we hard-code 0-30 days. If you ever want 0-60 or "today only", we'd add a filter control.
+- **Multi-line additional terms on Assignment.** The Assignment template has six numbered "additional terms" slots. We split the wizard's textarea by newline and fill up to 6 lines. Long blocks get truncated — sellers should be aware.
+- **Conventions update.** When we hit three reusable components (already there), we agreed to migrate them to `components/ui/`. Not yet done.
+
+---
+
+## What you (the team) need to do for everything to work end-to-end
+
+Two one-time database migrations need to be run manually in Supabase (DDL can't be applied automatically via the API):
+
+1. **`database/add_phone_to_team_members.sql`** — adds the phone column for team members. ✅ Already run.
+2. **`database/contract_drafts.sql`** — creates the table that stores in-progress contract wizard drafts. ✅ Already run.
+
+Both are pasted-into-SQL-editor-and-Run jobs.
