@@ -4,6 +4,38 @@ A running log of every UX/UI change made to the seller portal as part of the ent
 
 ---
 
+## 2026-05-25 — Audit sweep: sticky-flush fix, contact UX, click-to-scroll, auto-featured, counter-offer preview, concrete timelines
+
+**Files:** `components/properties/SaveStatus.js`, `components/properties/StickyActionBar.js`, `app/properties/edit/[id]/page.js`, `app/properties/new/page.js`, `app/messages/page.js`
+
+**Summary**
+Batched six audit findings into focused commits. All commit SHAs listed at the end.
+
+**Changes**
+
+- **StickyActionBar flush with viewport (`f2abdc3`).** Switched from negative `mb-*` (which can't override sticky positioning's scrollport anchor) to negative `bottom-*`. Verified: gap below the footer is now 0px on the edit page.
+
+- **SaveStatus hides on non-draft listings (`f2abdc3`).** Dropped the "Changes will be reviewed when you publish" chip. Same anti-pattern as "Send for Review" — exposed internal moderation. Status info for live listings is already visible in the listings table badge and the rejection banner.
+
+- **Contact info: always editable (`f2abdc3`).** Removed the "Edit contact info" / "Use profile contact" toggle on both `/properties/edit/[id]` and `/properties/new`. Fields are pre-filled from the seller's profile and always editable. Eliminates the destructive-toggle (toggling cleared user input) and matches every other field on the form.
+
+- **Rejection click-to-scroll (`49cdb2a`).** Each issue in the rejection banner is now a button. Click it → switches to the relevant tab, scrolls the offending field into view, briefly highlights it with a red ring. Added `id="rejection-target-*"` anchors on the image gallery, description, repairs, inspection, and contract sections.
+
+- **Auto-select featured image on publish (`49cdb2a`).** Removed the "Pick a featured image" modal that interrupted the publish flow. If no image is marked featured, the first uploaded one is auto-selected. Sellers can still re-pick from the gallery later.
+
+- **Concrete timelines instead of "shortly" (`49cdb2a`).** Replaced `Listing published — it'll be live shortly` with `Listing submitted — typically live within ~10 minutes once our review completes. We'll email you if anything needs attention.` Sellers now know what to expect.
+
+- **Counter-offer review-and-send modal (`38bda8d`).** Inserted a confirmation step between filling the counter-offer form and sending it. Modal shows price prominently + timeline + financing + notes + buyer-notification reminder; two buttons (Edit / Send counter offer). Stops accidental sends on a legally-meaningful number.
+
+**Why**
+These are all the same family of UX rules: surface decisions before they commit, hide internal mechanics, and don't make users hunt for things. Roland's audit pointed at most of them; the remaining ones came from the broader sweep.
+
+**Verified end-to-end (2026-05-25):** All pages still compile and render 200 OK. Edit-page sticky footer measures `gap: 0` from viewport bottom. Pushed to `feature/inline-contracts` as commits `f2abdc3`, `49cdb2a`, `38bda8d`.
+
+**Status:** Done. Remaining audit items: `/contracts` auto-save pattern (in progress).
+
+---
+
 ## 2026-05-25 — Listing status: <select> → real toggle switch
 
 **Files:** `components/properties/ToggleSwitch.js` (new), `app/properties/page.js`
