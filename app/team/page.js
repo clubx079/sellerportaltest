@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
-import { Users, Plus, Trash2, X, Mail, Crown, Clock, CheckCircle, Check, Zap, AlertTriangle, Shield, Settings2 } from 'lucide-react'
+import { Users, Plus, Trash2, X, Mail, Crown, Clock, CheckCircle, Check, Zap, AlertTriangle, Shield, Settings2, Phone } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
 function fmtDate(d) {
@@ -336,6 +336,65 @@ function InviteModal({ onClose, onInvited, hasOrg, defaultOrgName }) {
   )
 }
 
+function MemberPhoneField({ memberId, initialPhone, onChanged }) {
+  const [value, setValue] = useState(initialPhone || '')
+  const [savedValue, setSavedValue] = useState(initialPhone || '')
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    setValue(initialPhone || '')
+    setSavedValue(initialPhone || '')
+  }, [initialPhone])
+
+  async function save() {
+    const next = value.trim()
+    if (next === savedValue.trim()) return
+    setSaving(true)
+    setError('')
+    try {
+      const sellerId = JSON.parse(localStorage.getItem('seller_user') || '{}')?.id
+      const res = await fetch(`/api/team/${memberId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${sellerId}` },
+        body: JSON.stringify({ phone: next }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setError(data.error || 'Failed to save')
+        setSaving(false)
+        return
+      }
+      if (data.phoneSkipped) {
+        setError('Migration pending')
+      } else {
+        setSavedValue(next)
+        if (onChanged) onChanged()
+      }
+    } catch {
+      setError('Failed to save')
+    }
+    setSaving(false)
+  }
+
+  return (
+    <div className="flex items-center gap-1.5 mt-1">
+      <Phone className="w-3 h-3 text-[#A8A8A4] shrink-0" />
+      <input
+        type="tel"
+        value={value}
+        onChange={e => setValue(e.target.value)}
+        onBlur={save}
+        onKeyDown={e => { if (e.key === 'Enter') { e.currentTarget.blur() } }}
+        placeholder="Add phone number"
+        className="flex-1 max-w-[200px] h-7 px-2 border border-[#E8E8E4] rounded text-[12px] text-[#1A1816] placeholder:text-[#A8A8A4] focus:outline-none focus:border-[#1A1816] transition-colors"
+      />
+      {saving && <span className="text-[11px] text-[#737370]">Saving…</span>}
+      {error && <span className="text-[11px] text-[#D03839]">{error}</span>}
+    </div>
+  )
+}
+
 export default function TeamPage() {
   const router = useRouter()
   const [data, setData] = useState(null)
@@ -499,6 +558,13 @@ export default function TeamPage() {
                   <span className="truncate">{m.email}</span>
                   <span className="shrink-0">Invited {fmtDate(m.invited_at)}</span>
                 </div>
+                {isOwner && (
+                  <MemberPhoneField
+                    memberId={m.id}
+                    initialPhone={m.phone || ''}
+                    onChanged={fetchTeam}
+                  />
+                )}
               </div>
               {isOwner && (
                 <div className="flex items-center gap-2 shrink-0">

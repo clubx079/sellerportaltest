@@ -127,6 +127,8 @@ export default function NewPropertyPage() {
   const [ownershipConfirmed, setOwnershipConfirmed] = useState(false);
   const [sellerProfileContact, setSellerProfileContact] = useState({ name: '', phone: '' });
   const [useCustomContact, setUseCustomContact] = useState(false);
+  const [teamMembers, setTeamMembers] = useState([]);
+  const [selectedTeamMemberId, setSelectedTeamMemberId] = useState('');
   const [contractUpload, setContractUpload] = useState({
     url: null,
     key: null,
@@ -186,6 +188,22 @@ export default function NewPropertyPage() {
           .then(({ data }) => { if (data?.admin_notes === 'LIFETIME_FREE') setIsLifetimeFree(true) });
       });
   }, []);
+
+  // Fetch team members for enterprise sellers (for the contact-picker dropdown)
+  useEffect(() => {
+    if (trialPlan?.plan_type !== 'enterprise') return;
+    const userStr = typeof window !== 'undefined' ? localStorage.getItem('seller_user') : null;
+    if (!userStr) return;
+    const user = JSON.parse(userStr);
+    if (!user?.id) return;
+    fetch('/api/team', { headers: { Authorization: `Bearer ${user.id}` } })
+      .then(r => r.json())
+      .then(json => {
+        const members = (json?.members || []).filter(m => m.name || m.email);
+        setTeamMembers(members);
+      })
+      .catch(() => {});
+  }, [trialPlan?.plan_type]);
 
   // Pre-fill form from draft when draft_id is present
   useEffect(() => {
@@ -1158,6 +1176,33 @@ export default function NewPropertyPage() {
                   <h3 className="text-[15px] font-semibold text-[#1A1816]">Contact Info</h3>
                   <p className="text-[13px] text-[#737370] mt-0.5">How buyers can reach you about this listing. Pre-filled from your profile — edit if you want different contact info on this listing.</p>
                 </div>
+                {trialPlan?.plan_type === 'enterprise' && teamMembers.length > 0 && (
+                  <div className="mb-4">
+                    <label className="block text-[13px] font-semibold text-[#1A1816] mb-2">Pick a team member</label>
+                    <select
+                      value={selectedTeamMemberId}
+                      onChange={(e) => {
+                        const memberId = e.target.value;
+                        setSelectedTeamMemberId(memberId);
+                        if (!memberId) return;
+                        const m = teamMembers.find(tm => String(tm.id) === String(memberId));
+                        if (!m) return;
+                        const memberName = m.name || m.email || '';
+                        const memberPhone = m.phone || '';
+                        setFormData(prev => ({ ...prev, contact_name: memberName, contact_phone: memberPhone }));
+                        setDirty(true);
+                      }}
+                      className="w-full px-4 py-3 border border-[#E8E8E4] rounded text-[13px] text-[#1A1816] focus:border-[#D03839] focus:outline-none transition-colors bg-white"
+                    >
+                      <option value="">Custom (fill in below)</option>
+                      {teamMembers.map(m => (
+                        <option key={m.id} value={m.id}>
+                          {(m.name || m.email)}{m.phone ? ` — ${m.phone}` : ' (no phone)'}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-[13px] font-semibold text-[#1A1816] mb-2">Contact Name</label>

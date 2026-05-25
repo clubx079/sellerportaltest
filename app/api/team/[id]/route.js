@@ -12,16 +12,24 @@ function getSellerId(request) {
   return null
 }
 
-// PATCH /api/team/[id] — update a member's permissions
+// PATCH /api/team/[id] — update a member's permissions and/or phone
 export async function PATCH(request, { params }) {
   const sellerId = getSellerId(request)
   if (!sellerId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   try {
     const { id: memberId } = await params
-    const { permissions } = await request.json()
+    const body = await request.json()
+    const { permissions, phone } = body
 
-    if (!permissions || typeof permissions !== 'object' || Array.isArray(permissions)) {
+    const hasPermissions = permissions !== undefined
+    const hasPhone = phone !== undefined
+
+    if (!hasPermissions && !hasPhone) {
+      return NextResponse.json({ error: 'Nothing to update' }, { status: 400 })
+    }
+
+    if (hasPermissions && (typeof permissions !== 'object' || Array.isArray(permissions) || permissions === null)) {
       return NextResponse.json({ error: 'Invalid permissions' }, { status: 400 })
     }
 
@@ -43,7 +51,28 @@ export async function PATCH(request, { params }) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    await supabase.from('org_members').update({ permissions, role: 'member' }).eq('id', memberId)
+    const update = {}
+    if (hasPermissions) {
+      update.permissions = permissions
+      update.role = 'member'
+    }
+    if (hasPhone) {
+      const trimmed = typeof phone === 'string' ? phone.trim() : ''
+      update.phone = trimmed || null
+    }
+
+    const { error: updateErr } = await supabase.from('org_members').update(update).eq('id', memberId)
+
+    // Fallback if phone column doesn't exist yet (migration not run)
+    if (updateErr && hasPhone && /phone/i.test(updateErr.message || '')) {
+      const { phone: _, ...rest } = update
+      if (Object.keys(rest).length > 0) {
+        await supabase.from('org_members').update(rest).eq('id', memberId)
+      }
+      return NextResponse.json({ success: true, phoneSkipped: true, message: 'Phone column not available — run database/add_phone_to_team_members.sql' })
+    }
+
+    if (updateErr) return NextResponse.json({ error: 'Failed to update member' }, { status: 500 })
     return NextResponse.json({ success: true })
   } catch (err) {
     console.error('[team PATCH id]', err)
