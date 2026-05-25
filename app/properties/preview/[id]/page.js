@@ -327,7 +327,7 @@ export default function PropertyPreviewPage() {
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 px-4">
           <div className="bg-white rounded w-full max-w-sm p-6 text-center shadow-xl">
             <h3 className="text-[16px] font-bold text-[#1A1816] mb-2">You&apos;re in Preview Mode</h3>
-            <p className="text-[13px] text-[#737370] mb-5">This is how buyers see your listing. When a buyer clicks this button, they&apos;ll be prompted to log in before taking any action.</p>
+            <p className="text-[13px] text-[#737370] mb-5">This is how buyers see your listing.</p>
             <button onClick={() => setShowPreviewModal(false)} className="w-full h-[40px] bg-[#1A1816] hover:bg-[#2A2825] text-white text-[13px] font-semibold rounded transition-colors">
               Got it
             </button>
