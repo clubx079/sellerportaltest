@@ -729,7 +729,7 @@ export default function NewPropertyPage() {
         return true;
       }
       const successMsg = publishStatus === 'active'
-        ? 'Listing submitted — typically live within ~10 minutes once our review completes. We\'ll email you if anything needs attention.'
+        ? 'Listing submitted for review — usually goes live within seconds. We\'ll email you if anything needs attention.'
         : 'Property saved as draft!';
       sessionStorage.setItem('listingSuccess', successMsg);
       router.push('/properties');

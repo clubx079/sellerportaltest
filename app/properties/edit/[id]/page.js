@@ -1078,7 +1078,7 @@ export default function EditPropertyPage() {
                 {idx + 1}
               </span>
               <span className="hidden sm:inline">{tab.label}</span>
-              {tabHasIssue[tab.id] && <span className="w-1.5 h-1.5 rounded-full bg-[#B42318] flex-shrink-0" />}
+              {tabHasIssue[tab.id] && <span title="This tab has issues to fix" className="w-2 h-2 rounded-full bg-[#B42318] ring-2 ring-[#FEE4E2] flex-shrink-0 animate-pulse" />}
             </button>
           ))}
         </div>

@@ -362,8 +362,8 @@ function UpgradeContent() {
                   <p className="text-[12px] font-semibold text-[#0F6E56]">{appliedPromo.name || promoCode.toUpperCase()} applied</p>
                   <p className="text-[11px] text-[#0F6E56]">
                     {appliedPromo.discount.type === 'percent'
-                      ? `${appliedPromo.discount.value}% off — applied at renewal`
-                      : `$${appliedPromo.discount.value.toFixed(2)} off — applied at renewal`}
+                      ? `${appliedPromo.discount.value}% off your next charge`
+                      : `$${appliedPromo.discount.value.toFixed(2)} off your next charge`}
                   </p>
                 </div>
                 <button
@@ -395,6 +395,31 @@ function UpgradeContent() {
                 {promoError && <p className="text-[12px] text-[#D03839] mt-1.5">{promoError}</p>}
               </div>
             )}
+
+            {/* Recalculated total when a promo is applied */}
+            {appliedPromo && (() => {
+              const base = isAnnual ? annualTotal : price
+              const disc = appliedPromo.discount.type === 'percent'
+                ? base * (appliedPromo.discount.value / 100)
+                : Math.min(appliedPromo.discount.value, base)
+              const total = Math.max(0, base - disc)
+              return (
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between text-[12px] text-[#737370]">
+                    <span>Subtotal</span>
+                    <span>${base.toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-[12px] text-[#0F6E56]">
+                    <span>Promo discount</span>
+                    <span>−${disc.toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
+                  </div>
+                  <div className="flex items-center justify-between pt-1.5 border-t border-[#F3F3F0]">
+                    <span className="text-[13px] font-semibold text-[#1A1816]">Total {isAnnual ? '/ year' : '/ month'}</span>
+                    <span className="text-[15px] font-bold text-[#1A1816]">${total.toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
+                  </div>
+                </div>
+              )
+            })()}
 
             <div className="border-t border-[#F3F3F0]" />
 

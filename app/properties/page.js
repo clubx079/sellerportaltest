@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { Plus, Edit2, Trash2, Search, X, Building2, ChevronLeft, ChevronRight, ChevronDown, MapPin, DollarSign, RotateCcw, BarChart2, Link2, Home, FileEdit, Eye, Zap } from 'lucide-react';
+import { Plus, Edit2, Trash2, Search, X, Building2, ChevronLeft, ChevronRight, ChevronDown, MapPin, DollarSign, RotateCcw, BarChart2, Link2, Home, FileEdit, Eye, Zap, CheckCircle } from 'lucide-react';
 import ToggleSwitch from '@/components/properties/ToggleSwitch';
 import { useRouter, useSearchParams } from 'next/navigation';
 import DeleteConfirmModal from '@/components/properties/DeleteConfirmModal';
@@ -19,6 +19,9 @@ const PropertiesManagement = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showArchiveModal, setShowArchiveModal] = useState(false);
+  const [showMarkSoldModal, setShowMarkSoldModal] = useState(false);
+  const [propertyToMarkSold, setPropertyToMarkSold] = useState(null);
+  const [markingSold, setMarkingSold] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
   const [showAnalyticsSidebar, setShowAnalyticsSidebar] = useState(false);
   const [propertyForAnalytics, setPropertyForAnalytics] = useState(null);
@@ -254,6 +257,40 @@ const PropertiesManagement = () => {
   const handleArchiveClick = (property) => {
     setSelectedProperty(property);
     setShowArchiveModal(true);
+  };
+
+  // Mark Listing as Sold — quick row-level action.
+  // Only manual listings (not DeelScout-sourced) support this. Sets
+  // property_status='sold' but keeps the listing visible in the seller's table
+  // (it just gets a Sold badge). Doesn't archive or delete.
+  const handleMarkSoldClick = (property) => {
+    setPropertyToMarkSold(property);
+    setShowMarkSoldModal(true);
+  };
+
+  const handleMarkSoldConfirm = async () => {
+    if (!propertyToMarkSold || markingSold) return;
+    setMarkingSold(true);
+    try {
+      const { error } = await supabase
+        .from('properties')
+        .update({ property_status: 'sold' })
+        .eq('id', propertyToMarkSold.id)
+        .eq('seller_id', effectiveUserId);
+      if (error) throw error;
+      setProperties(prev => prev.map(p =>
+        p.id === propertyToMarkSold.id && p._source === 'manual'
+          ? { ...p, property_status: 'sold' }
+          : p
+      ));
+      setShowMarkSoldModal(false);
+      setPropertyToMarkSold(null);
+    } catch (e) {
+      console.error('Error marking as sold:', e);
+      alert('Failed to mark as sold: ' + (e?.message || 'Unknown error'));
+    } finally {
+      setMarkingSold(false);
+    }
   };
 
   const handleArchiveConfirm = async () => {
@@ -582,6 +619,41 @@ const PropertiesManagement = () => {
   const draftProperties = properties.filter(p => (p.status || '') === 'draft').length;
   const availableProperties = properties.filter(p => (p.property_status || 'available').toLowerCase() === 'available').length;
 
+  // Listings being moderated (under_review) usually flip to 'active' within a few
+  // seconds via lib/moderateSellerProperty. Poll every 5s for up to 2 minutes
+  // so the badge updates without the seller having to refresh the page.
+  useEffect(() => {
+    const pending = properties.filter(p => p._source === 'manual' && (p.status || '').toLowerCase() === 'under_review')
+    if (pending.length === 0) return
+    let cancelled = false
+    let attempts = 0
+    const MAX = 24 // 2 minutes at 5s
+    const tick = async () => {
+      attempts++
+      if (cancelled || attempts > MAX) return
+      const ids = pending.map(p => p.id)
+      const { data, error } = await supabase
+        .from('properties')
+        .select('id, status, property_status, rejection_reason')
+        .in('id', ids)
+      if (!cancelled && !error && Array.isArray(data)) {
+        const byId = new Map(data.map(r => [r.id, r]))
+        setProperties(prev => prev.map(p => {
+          const fresh = p._source === 'manual' ? byId.get(p.id) : null
+          if (!fresh) return p
+          return { ...p, status: fresh.status, property_status: fresh.property_status || p.property_status, rejection_reason: fresh.rejection_reason }
+        }))
+        // If all pending have transitioned (status !== under_review), we can stop.
+        const stillPending = data.some(r => (r.status || '').toLowerCase() === 'under_review')
+        if (!stillPending) return
+      }
+      setTimeout(tick, 5000)
+    }
+    const handle = setTimeout(tick, 5000)
+    return () => { cancelled = true; clearTimeout(handle) }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [properties.filter(p => p._source === 'manual' && (p.status||'').toLowerCase() === 'under_review').length])
+
   const setViewModeAndUrl = (mode) => {
     setViewMode(mode);
     if (mode === 'trash') {
@@ -909,6 +981,11 @@ const PropertiesManagement = () => {
                                 <Edit2 className="w-4 h-4" strokeWidth={2} />
                               </button>
                             )}
+                            {(workspaceRole === 'admin' || workspacePerms?.listings_update) && property._source === 'manual' && ['active','published'].includes((property.status||'').toLowerCase()) && (property.property_status||'').toLowerCase() !== 'sold' && (
+                              <button onClick={() => handleMarkSoldClick(property)} className="flex items-center justify-center w-8 h-8 rounded text-[#A8A8A4] hover:text-[#0F6E56] hover:bg-[#E4F5EC] transition-colors" title="Mark as Sold">
+                                <CheckCircle className="w-4 h-4" strokeWidth={2} />
+                              </button>
+                            )}
                             <button onClick={() => { setPropertyForAnalytics(property); setShowAnalyticsSidebar(true); }} className="flex items-center justify-center w-8 h-8 rounded text-[#A8A8A4] hover:text-primary hover:bg-[#E8E8E4] transition-colors" title="Analytics">
                               <BarChart2 className="w-4 h-4" strokeWidth={2} />
                             </button>
@@ -1156,6 +1233,44 @@ const PropertiesManagement = () => {
         itemName={selectedProperty?.full_address || selectedProperty?.address || selectedProperty?.slug || 'this property'}
         isPermanent={false}
       />
+
+      {showMarkSoldModal && propertyToMarkSold && (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="flex min-h-screen items-center justify-center p-4">
+            <div className="fixed inset-0 bg-[#1A1816]/40 transition-opacity" onClick={() => { if (!markingSold) { setShowMarkSoldModal(false); setPropertyToMarkSold(null) } }} aria-hidden="true" />
+            <div className="relative bg-white rounded shadow-lg border border-[#E8E8E4] max-w-md w-full p-6 z-10">
+              <div className="flex items-start gap-3 mb-4">
+                <div className="w-10 h-10 rounded bg-[#E4F5EC] flex items-center justify-center flex-shrink-0">
+                  <CheckCircle className="w-5 h-5 text-[#0F6E56]" strokeWidth={2} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-[16px] font-semibold text-[#1A1816] mb-1">Mark as sold?</h3>
+                  <p className="text-[13px] text-[#737370]">This listing will display a Sold badge. You can change it back from the edit page anytime.</p>
+                </div>
+              </div>
+              <div className="py-2.5 px-3 mb-5 bg-[#FAFAF8] border border-[#E8E8E4] rounded">
+                <p className="text-[13px] text-[#1A1816] font-medium break-words">
+                  {propertyToMarkSold.full_address || propertyToMarkSold.address || propertyToMarkSold.slug || 'this property'}
+                </p>
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => { setShowMarkSoldModal(false); setPropertyToMarkSold(null) }}
+                  disabled={markingSold}
+                  className="flex-1 h-10 px-4 text-[13px] font-semibold text-[#1A1816] bg-white border border-[#E8E8E4] rounded hover:bg-[#FAFAF8] transition-colors disabled:opacity-50"
+                >Cancel</button>
+                <button
+                  type="button"
+                  onClick={handleMarkSoldConfirm}
+                  disabled={markingSold}
+                  className="flex-1 h-10 px-4 text-[13px] font-semibold text-white bg-[#0F6E56] hover:bg-[#0C5A47] rounded transition-colors disabled:opacity-50"
+                >{markingSold ? 'Marking…' : 'Mark as Sold'}</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showViewModal && selectedProperty && (
         <PropertyViewModal
