@@ -892,7 +892,7 @@ function Step4Terms({ values, onChange, template, onPersistDefault, savedDefault
         </p>
       </div>
 
-      {/* ── Universal: price + EMD + closing date + (financing if purchase) ── */}
+      {/* ── Universal: price + earnest money + closing date + (financing if purchase) ── */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <FieldRow label={isAssignment ? 'Agreed Purchase Price ($)' : 'Sale Price ($)'} hint="*">
           <input
@@ -924,7 +924,7 @@ function Step4Terms({ values, onChange, template, onPersistDefault, savedDefault
         </FieldRow>
 
         {!isAssignment && (
-          <FieldRow label="Source of Funds">
+          <FieldRow label="Buyer's Source of Funds" hint="cash or financing">
             <div className="flex items-center gap-2">
               {FINANCING_OPTIONS.map(opt => {
                 const selected = values.financing_type === opt.value
@@ -1002,7 +1002,7 @@ function Step4Terms({ values, onChange, template, onPersistDefault, savedDefault
             <p className="text-[11px] font-bold text-[#A8A8A4] uppercase tracking-wide">Escrow &amp; Closing</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FieldRow label="EMD Escrow Holder" hint="title company / closing attorney">
+            <FieldRow label="Title Company / Escrow Agent" hint="who holds the earnest money">
               <input
                 type="text"
                 value={values.emd_escrow || ''}
@@ -1059,7 +1059,7 @@ function Step4Terms({ values, onChange, template, onPersistDefault, savedDefault
             </p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FieldRow label="Original Seller Name" hint="* property owner from the PSA">
+            <FieldRow label="Original Seller Name" hint="* property owner from the original Purchase Contract">
               <input
                 type="text"
                 value={values.original_seller_name || ''}
@@ -1068,7 +1068,7 @@ function Step4Terms({ values, onChange, template, onPersistDefault, savedDefault
                 className={INPUT_CLS}
               />
             </FieldRow>
-            <FieldRow label="Original PSA Signed Date" hint="*">
+            <FieldRow label="Original Purchase Contract Signed Date" hint="*">
               <input
                 type="date"
                 value={values.original_psa_date || ''}
@@ -1109,14 +1109,14 @@ function Step5Review({ template, propertyId, property, buyerName, buyerEmail, fi
         { label: 'Nonrefundable Deposit', value: fmtPrice(fieldValues.emd) },
         { label: 'Closing Date',        value: fmtDate(fieldValues.closing_date) },
         { label: 'Original Seller',     value: fieldValues.original_seller_name || '—' },
-        { label: 'Original PSA Date',   value: fmtDate(fieldValues.original_psa_date) },
+        { label: 'Original Purchase Contract Date', value: fmtDate(fieldValues.original_psa_date) },
         { label: 'Additional Terms',    value: fieldValues.special_terms || '—' },
       ]
     : [
         { label: 'Sale Price',          value: fmtPrice(fieldValues.purchase_price) },
         { label: 'Earnest Money',       value: fmtPrice(fieldValues.emd) },
-        { label: 'EMD Escrow',          value: fieldValues.emd_escrow || '—' },
-        { label: 'Source of Funds',     value: fieldValues.financing_type ? (fieldValues.financing_type === 'cash' ? 'Cash' : 'Loan') : '—' },
+        { label: 'Title Company / Escrow Agent', value: fieldValues.emd_escrow || '—' },
+        { label: "Buyer's Source of Funds", value: fieldValues.financing_type ? (fieldValues.financing_type === 'cash' ? 'Cash' : 'Loan') : '—' },
         { label: 'Due Diligence',       value: fieldValues.due_diligence_days ? `${fieldValues.due_diligence_days} days` : '—' },
         { label: 'Acceptance Deadline', value: fmtDate(fieldValues.acceptance_deadline) },
         { label: 'Closing Date',        value: fmtDate(fieldValues.closing_date) },
