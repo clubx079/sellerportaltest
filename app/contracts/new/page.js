@@ -745,15 +745,23 @@ function Step2Property({ properties, propertiesLoading, propertyId, onChange, ma
 }
 
 function Step3Buyer({ buyerName, buyerEmail, onBuyerNameChange, onBuyerEmailChange, template, coSellerName, onCoSellerNameChange }) {
+  const isAssignment = template?.slug === 'assignment'
+  // Per the contract PDF: the Assignment template uses "Assignee" terminology;
+  // the Purchase template uses "Buyer". Match the form labels to the exact verbiage
+  // the seller will see in the rendered contract so there's no mental translation.
+  const partyLabel  = isAssignment ? 'Assignee' : 'Buyer'
+  const partyDescription = isAssignment
+    ? "The party you're assigning the contract to. They'll receive a copy to sign once you finish."
+    : "Who's signing on the buyer side?"
   return (
     <div>
       <div className="mb-5">
-        <h2 className="text-[16px] font-bold text-[#1A1816] mb-1">Buyer info</h2>
-        <p className="text-[13px] text-[#737370]">Who's signing on the buyer side?</p>
+        <h2 className="text-[16px] font-bold text-[#1A1816] mb-1">{partyLabel} info</h2>
+        <p className="text-[13px] text-[#737370]">{partyDescription}</p>
       </div>
       <div className="space-y-4">
         <div>
-          <label className="block text-[12px] font-semibold text-[#444441] mb-1.5">Buyer Full Name</label>
+          <label className="block text-[12px] font-semibold text-[#444441] mb-1.5">{partyLabel} Full Name</label>
           <input
             type="text"
             value={buyerName}
@@ -764,7 +772,7 @@ function Step3Buyer({ buyerName, buyerEmail, onBuyerNameChange, onBuyerEmailChan
         </div>
         <div>
           <label className="block text-[12px] font-semibold text-[#444441] mb-1.5">
-            Buyer Email <span className="text-[#D03839]">*</span>
+            {partyLabel} Email <span className="text-[#D03839]">*</span>
           </label>
           <input
             type="email"
@@ -775,7 +783,7 @@ function Step3Buyer({ buyerName, buyerEmail, onBuyerNameChange, onBuyerEmailChan
             required
           />
           <p className="text-[12px] text-[#A8A8A4] mt-1.5">
-            The buyer will only get a signing link after you sign first.
+            The {partyLabel.toLowerCase()} will only get a signing link after you sign first.
           </p>
         </div>
       </div>
@@ -1074,7 +1082,7 @@ function Step4Terms({ values, onChange, template, onPersistDefault, savedDefault
 
       {/* ── Special Terms (universal, last) ──────────────────── */}
       <div className="mt-6">
-        <FieldRow label={isAssignment ? 'Additional Terms' : 'Special Terms'} hint={isAssignment ? 'one per line (up to 6 lines)' : 'optional'}>
+        <FieldRow label={'Additional Terms'} hint={isAssignment ? 'one per line (up to 6 lines)' : 'optional'}>
           <textarea
             value={values.special_terms || ''}
             onChange={e => onChange('special_terms', e.target.value)}
@@ -1092,8 +1100,8 @@ function Step4Terms({ values, onChange, template, onPersistDefault, savedDefault
 
 function Step5Review({ template, propertyId, property, buyerName, buyerEmail, fieldValues, sellerName, sellerEmail, onJump }) {
   const isAssignment = template?.slug === 'assignment'
-  const counterpartyLabel = isAssignment ? 'Assignee (end buyer)' : 'Buyer (counterparty)'
-  const userRoleLabel     = isAssignment ? 'Assignor (you)'       : 'Seller (you)'
+  const counterpartyLabel = isAssignment ? 'Assignee' : 'Buyer'
+  const userRoleLabel     = isAssignment ? 'Assignor (you)' : 'Seller (you)'
 
   const termsItems = isAssignment
     ? [
