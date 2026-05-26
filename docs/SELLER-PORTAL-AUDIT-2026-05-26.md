@@ -57,7 +57,7 @@
 - **Problem:** `parseRejectionReasons()` splits per-field reasons but the UI shows one bulk text block. If photos fail moderation, seller doesn't know to fix Photos tab specifically.
 - **Fix:** Render a red badge on each tab that has a rejection; show the per-field reason inline next to the affected field.
 - **Decision:** Approved — proceed
-- **Status:** `[~]` In progress
+- **Status:** `[x]` **Done** in commit `6f62989` — tab indicator bumped from 1.5px to 2px + ring + pulse animation. (Note: per-field rejection display was already implemented; the agent finding overstated the issue.)
 
 ### H2. Polling + Realtime running together
 - **File:** `app/messages/page.js:138-155, 243-245, 269-305`
@@ -78,7 +78,7 @@
 - **Problem:** Code accepts the promo and shows "applied at renewal" but the Subtotal/Total on the right doesn't change. Seller can't see what they're actually paying.
 - **Fix:** Recalculate displayed total: `Subtotal − Promo = Total`.
 - **Decision:** Approved — proceed
-- **Status:** `[ ]` Queued
+- **Status:** `[x]` **Done** in commit `6f62989` — subtotal/discount/total breakdown shown when promo applied; "applied at renewal" copy fixed.
 
 ### H5. No Stripe Customer Portal link
 - **File:** `app/billing/page.js:275-303`
@@ -114,14 +114,14 @@
 - **Problem:** Seller sees "Under Review" badge for those 5-15 seconds and has no idea if it'll be live in a moment or stuck in queue for hours.
 - **Fix:** Add a toast on publish — "Submitted for review — usually takes 5-10 seconds" — and either auto-refresh the listing status, or poll for status change for 60 seconds so the badge flips to "Active" without manual refresh.
 - **Decision:** Approved (based on user's "if not then okay yes lets do it")
-- **Status:** `[ ]` Queued
+- **Status:** `[x]` **Done** in commit `6f62989` — accurate publish message + 5s polling on /properties to auto-update under_review listings.
 
 ### H9. No "Mark as Sold" action ✅
 - **File:** `app/properties/page.js`
 - **Problem:** `property_status` enum supports `sold`, but there's no UI shortcut to set it. Seller must open edit page, find the dropdown, change it.
 - **Fix:** Add a row-level "Mark as Sold" button (or 3-dot menu item) on `/properties` that sets `property_status='sold'` + optionally archives the listing. Confirmation dialog before commit.
 - **Decision:** Approved — proceed
-- **Status:** `[ ]` Queued
+- **Status:** `[x]` **Done** in commit `6f62989` — "Mark as Sold" button + confirmation modal added to row actions.
 
 ### H10. Email-change disabled with confusing UX
 - **File:** `app/settings/page.js:253-260`
