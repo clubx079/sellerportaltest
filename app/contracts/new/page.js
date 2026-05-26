@@ -894,7 +894,7 @@ function Step4Terms({ values, onChange, template, onPersistDefault, savedDefault
 
       {/* ── Universal: price + earnest money + closing date + (financing if purchase) ── */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <FieldRow label={isAssignment ? 'Agreed Purchase Price ($)' : 'Sale Price ($)'} hint="*">
+        <FieldRow label={isAssignment ? 'Agreed Purchase Price ($)' : 'Agreed Sale Price ($)'} hint="*">
           <input
             type="number"
             value={values.purchase_price || ''}
@@ -1113,7 +1113,7 @@ function Step5Review({ template, propertyId, property, buyerName, buyerEmail, fi
         { label: 'Additional Terms',    value: fieldValues.special_terms || '—' },
       ]
     : [
-        { label: 'Sale Price',          value: fmtPrice(fieldValues.purchase_price) },
+        { label: 'Agreed Sale Price',   value: fmtPrice(fieldValues.purchase_price) },
         { label: 'Earnest Money',       value: fmtPrice(fieldValues.emd) },
         { label: 'Title Company / Escrow Agent', value: fieldValues.emd_escrow || '—' },
         { label: "Buyer's Source of Funds", value: fieldValues.financing_type ? (fieldValues.financing_type === 'cash' ? 'Cash' : 'Loan') : '—' },
