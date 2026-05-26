@@ -894,7 +894,7 @@ function Step4Terms({ values, onChange, template, onPersistDefault, savedDefault
 
       {/* ── Universal: price + EMD + closing date + (financing if purchase) ── */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <FieldRow label={isAssignment ? 'Assignment Fee ($)' : 'Sale Price ($)'} hint="*">
+        <FieldRow label={isAssignment ? 'Agreed Purchase Price ($)' : 'Sale Price ($)'} hint="*">
           <input
             type="number"
             value={values.purchase_price || ''}
@@ -1105,7 +1105,7 @@ function Step5Review({ template, propertyId, property, buyerName, buyerEmail, fi
 
   const termsItems = isAssignment
     ? [
-        { label: 'Assignment Fee',      value: fmtPrice(fieldValues.purchase_price) },
+        { label: 'Agreed Purchase Price', value: fmtPrice(fieldValues.purchase_price) },
         { label: 'Nonrefundable Deposit', value: fmtPrice(fieldValues.emd) },
         { label: 'Closing Date',        value: fmtDate(fieldValues.closing_date) },
         { label: 'Original Seller',     value: fieldValues.original_seller_name || '—' },
