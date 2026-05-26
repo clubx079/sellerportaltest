@@ -29,7 +29,7 @@ const STEPS = [
 
 const FINANCING_OPTIONS = [
   { value: 'cash', label: 'Cash' },
-  { value: 'loan', label: 'Loan' },
+  { value: 'financing', label: 'Financing' },
 ]
 
 function fmtPrice(v) {
@@ -1116,7 +1116,7 @@ function Step5Review({ template, propertyId, property, buyerName, buyerEmail, fi
         { label: 'Agreed Sale Price',   value: fmtPrice(fieldValues.purchase_price) },
         { label: 'Earnest Money',       value: fmtPrice(fieldValues.emd) },
         { label: 'Title Company / Escrow Agent', value: fieldValues.emd_escrow || '—' },
-        { label: "Buyer's Source of Funds", value: fieldValues.financing_type ? (fieldValues.financing_type === 'cash' ? 'Cash' : 'Loan') : '—' },
+        { label: "Buyer's Source of Funds", value: fieldValues.financing_type ? (fieldValues.financing_type === 'cash' ? 'Cash' : 'Financing') : '—' },
         { label: 'Due Diligence',       value: fieldValues.due_diligence_days ? `${fieldValues.due_diligence_days} days` : '—' },
         { label: 'Acceptance Deadline', value: fmtDate(fieldValues.acceptance_deadline) },
         { label: 'Closing Date',        value: fmtDate(fieldValues.closing_date) },
