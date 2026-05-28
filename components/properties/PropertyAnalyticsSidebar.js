@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
-import { Users, Eye, Clock, Image as ImageIcon, Smartphone, Monitor, Tablet, X, ChevronDown, BarChart2, Heart, FileText, MessageSquare, Flame, RefreshCw } from 'lucide-react';
+import { Users, Eye, Clock, Image as ImageIcon, Smartphone, Monitor, Tablet, X, ChevronDown, ChevronRight, BarChart2, Heart, FileText, MessageSquare, Flame, RefreshCw } from 'lucide-react';
 
 function formatDuration(seconds) {
   if (seconds == null || seconds === 0) return '—';
@@ -257,29 +257,50 @@ export default function PropertyAnalyticsSidebar({ propertyId, propertyName, onC
           {!loading && !error && data && (
             <div className="p-5 space-y-5">
 
-              {/* ── Deal funnel: Views → Saves → Offers ── */}
-              <div className="grid grid-cols-3 gap-3">
-                <div className="bg-white border border-[#E8E8E4] rounded p-4">
-                  <div className="flex items-center gap-1.5 mb-2">
-                    <Eye className="w-3.5 h-3.5 text-[#737370]" />
-                    <p className="text-[11px] font-semibold text-[#A8A8A4] uppercase tracking-[0.6px]">Views</p>
+              {/* ── Deal funnel: Views → Saves → Offers (reads as a pipeline) ── */}
+              <div>
+                <p className="text-[11px] font-semibold text-[#A8A8A4] uppercase tracking-[0.8px] mb-2">Deal Funnel</p>
+                <div className="flex items-stretch">
+                  {/* Views */}
+                  <div className="flex-1 bg-white border border-[#E8E8E4] rounded p-3.5 text-center">
+                    <div className="flex items-center justify-center gap-1.5 mb-1.5">
+                      <Eye className="w-3.5 h-3.5 text-[#737370]" />
+                      <p className="text-[10px] font-semibold text-[#A8A8A4] uppercase tracking-[0.5px]">Views</p>
+                    </div>
+                    <p className="text-[24px] font-bold text-[#1A1816] leading-none">{totalViews}</p>
                   </div>
-                  <p className="text-[26px] font-bold text-[#1A1816] leading-none">{totalViews}</p>
-                </div>
-                <div className="bg-white border border-[#E8E8E4] rounded p-4">
-                  <div className="flex items-center gap-1.5 mb-2">
-                    <Heart className="w-3.5 h-3.5 text-[#D03839]" />
-                    <p className="text-[11px] font-semibold text-[#A8A8A4] uppercase tracking-[0.6px]">Saves</p>
+                  {/* → */}
+                  <div className="flex items-center justify-center px-1 shrink-0">
+                    <ChevronRight className="w-4 h-4 text-[#C9C9C4]" />
                   </div>
-                  <p className="text-[26px] font-bold text-[#1A1816] leading-none">{savesCount}</p>
-                </div>
-                <div className="bg-white border border-[#E8E8E4] rounded p-4">
-                  <div className="flex items-center gap-1.5 mb-2">
-                    <FileText className="w-3.5 h-3.5 text-[#0F6E56]" />
-                    <p className="text-[11px] font-semibold text-[#A8A8A4] uppercase tracking-[0.6px]">Offers</p>
+                  {/* Saves */}
+                  <div className="flex-1 bg-white border border-[#E8E8E4] rounded p-3.5 text-center">
+                    <div className="flex items-center justify-center gap-1.5 mb-1.5">
+                      <Heart className="w-3.5 h-3.5 text-[#D03839]" />
+                      <p className="text-[10px] font-semibold text-[#A8A8A4] uppercase tracking-[0.5px]">Saves</p>
+                    </div>
+                    <p className="text-[24px] font-bold text-[#1A1816] leading-none">{savesCount}</p>
                   </div>
-                  <p className="text-[26px] font-bold text-[#1A1816] leading-none">{offersCount}</p>
+                  {/* → */}
+                  <div className="flex items-center justify-center px-1 shrink-0">
+                    <ChevronRight className="w-4 h-4 text-[#C9C9C4]" />
+                  </div>
+                  {/* Offers */}
+                  <div className="flex-1 bg-white border border-[#E8E8E4] rounded p-3.5 text-center">
+                    <div className="flex items-center justify-center gap-1.5 mb-1.5">
+                      <FileText className="w-3.5 h-3.5 text-[#0F6E56]" />
+                      <p className="text-[10px] font-semibold text-[#A8A8A4] uppercase tracking-[0.5px]">Offers</p>
+                    </div>
+                    <p className="text-[24px] font-bold text-[#1A1816] leading-none">{offersCount}</p>
+                  </div>
                 </div>
+                {/* Conversion micro-line */}
+                {totalViews > 0 && (
+                  <p className="text-[11px] text-[#A8A8A4] mt-2">
+                    {savesCount > 0 ? `${Math.round((savesCount / totalViews) * 100)}% of viewers saved this deal` : 'No saves yet from these views'}
+                    {offersCount > 0 ? ` · ${offersCount} offer${offersCount !== 1 ? 's' : ''} received` : ''}
+                  </p>
+                )}
               </div>
 
               {/* ── Viewer Activity ── */}
@@ -375,17 +396,17 @@ export default function PropertyAnalyticsSidebar({ propertyId, propertyName, onC
                                 <p className="text-[13px] font-bold text-[#1A1816] leading-none capitalize">
                                   {name}
                                 </p>
-                                {(() => {
-                                  const t = TEMP_STYLE[row._eng?.temp || 'cold'];
+                                {(row._eng?.temp === 'hot' || row._eng?.temp === 'warm') && (() => {
+                                  const t = TEMP_STYLE[row._eng.temp];
                                   return (
                                     <span className={`inline-flex items-center gap-1 h-5 px-2 rounded-full text-[10px] font-semibold border ${t.cls}`}>
-                                      {row._eng?.temp === 'hot' && <Flame className="w-2.5 h-2.5" />}
+                                      {row._eng.temp === 'hot' && <Flame className="w-2.5 h-2.5" />}
                                       {t.label}
                                     </span>
                                   );
                                 })()}
                                 {(row.visit_count || 1) > 1 && (
-                                  <span className="inline-flex items-center gap-1 h-5 px-2 rounded-full bg-[#EBF3FC] text-[#0369A1] text-[10px] font-semibold border border-[#BFDBF7]">
+                                  <span className="inline-flex items-center gap-1 h-5 px-2 rounded-full bg-[#F0F0EC] text-[#444441] text-[10px] font-semibold border border-[#E8E8E4]">
                                     <RefreshCw className="w-2.5 h-2.5" />
                                     {row.visit_count}× visits
                                   </span>
