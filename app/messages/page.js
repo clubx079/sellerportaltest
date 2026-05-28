@@ -129,6 +129,8 @@ export default function MessagesPage() {
   const [counterFinancing, setCounterFinancing] = useState('Cash');
   const [counterNotes, setCounterNotes] = useState('');
   const [showCounterPreview, setShowCounterPreview] = useState(false);
+  const [toast, setToast] = useState(null);
+  const [showContactInfo, setShowContactInfo] = useState(false);
   const [offerActionLoading, setOfferActionLoading] = useState(false);
   const [showMobilePropPanel, setShowMobilePropPanel] = useState(false);
 
@@ -525,11 +527,21 @@ export default function MessagesPage() {
             <div className="px-5 py-4 border-b border-[#E8E8E4] flex items-center justify-between">
               <div>
                 <h3 className="text-[16px] font-bold text-[#1A1816]">Review counter offer</h3>
-                <p className="text-[12px] text-[#737370] mt-0.5">Confirm the terms before sending.</p>
+                <p className="text-[12px] text-[#737370] mt-0.5">This is what {buyerDisplayName} will receive by email.</p>
               </div>
               <button onClick={() => setShowCounterPreview(false)} className="p-1 rounded hover:bg-[#FAFAF8] -mr-1" aria-label="Close">
                 <X className="w-4 h-4 text-[#737370]" />
               </button>
+            </div>
+            {/* Email-style preview frame so the seller sees the buyer's actual view */}
+            <div className="mx-5 mt-4 rounded border border-[#E8E8E4] overflow-hidden">
+              <div className="bg-[#D03839] px-4 py-2.5">
+                <span className="text-white text-[14px] font-bold tracking-tight">DeelMap</span>
+              </div>
+              <div className="px-4 py-3 bg-white">
+                <p className="text-[13px] font-semibold text-[#1A1816]">You\u2019ve received a counter offer</p>
+                <p className="text-[12px] text-[#737370] mt-0.5">{selectedPropertyAddress || 'Your offer'} \u2014 the seller has responded with new terms.</p>
+              </div>
             </div>
             <div className="px-5 py-4 space-y-3">
               <div className="flex items-baseline justify-between">
@@ -570,6 +582,8 @@ export default function MessagesPage() {
                     counter_data: { amount: Number(counterAmount), closing_timeline: counterTimeline, financing_type: counterFinancing, notes: counterNotes }
                   });
                   setShowCounterPreview(false);
+                  setToast(`Counter offer sent to ${buyerDisplayName}. They'll receive an email.`);
+                  setTimeout(() => setToast(null), 3500);
                 }}
                 disabled={offerActionLoading}
                 className="h-9 px-5 bg-[#D03839] hover:bg-[#E0493B] text-white text-[13px] font-semibold rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -678,7 +692,7 @@ export default function MessagesPage() {
                   </button>
                   <div className="flex-1 min-w-0">
                     <h2 className="text-[16px] font-bold text-[#1A1816]">{buyerDisplayName}</h2>
-                    <p className="text-[13px] text-[#737370]">Interested Buyer</p>
+                    <p className="text-[13px] text-[#737370] truncate">{selectedPropertyAddress || 'Interested Buyer'}</p>
                   </div>
                   {selectedPropertyAddress && (
                     <button
@@ -918,17 +932,28 @@ export default function MessagesPage() {
                       </div>
                     </div>
                   </div>
-                  {selectedConversation.buyer_email && (
-                    <div className="flex items-center gap-2 text-[13px] text-[#444441] mb-1.5">
-                      <Mail className="w-4 h-4 text-[#737370]" />
-                      <span className="truncate">{selectedConversation.buyer_email}</span>
-                    </div>
-                  )}
-                  {selectedConversation.buyer_phone && (
-                    <div className="flex items-center gap-2 text-[13px] text-[#444441]">
-                      <Phone className="w-4 h-4 text-[#737370]" />
-                      <span>{selectedConversation.buyer_phone}</span>
-                    </div>
+                  {(selectedConversation.buyer_email || selectedConversation.buyer_phone) && (
+                    showContactInfo ? (
+                      <>
+                        {selectedConversation.buyer_email && (
+                          <div className="flex items-center gap-2 text-[13px] text-[#444441] mb-1.5">
+                            <Mail className="w-4 h-4 text-[#737370]" />
+                            <span className="truncate">{selectedConversation.buyer_email}</span>
+                          </div>
+                        )}
+                        {selectedConversation.buyer_phone && (
+                          <div className="flex items-center gap-2 text-[13px] text-[#444441]">
+                            <Phone className="w-4 h-4 text-[#737370]" />
+                            <span>{selectedConversation.buyer_phone}</span>
+                          </div>
+                        )}
+                        <button onClick={() => setShowContactInfo(false)} className="text-[11px] text-[#737370] hover:text-[#1A1816] mt-1.5">Hide contact info</button>
+                      </>
+                    ) : (
+                      <button onClick={() => setShowContactInfo(true)} className="flex items-center gap-1.5 text-[12px] font-semibold text-[#D03839] hover:text-[#B82F30]">
+                        <Mail className="w-3.5 h-3.5" /> Show contact info
+                      </button>
+                    )
                   )}
                 </div>
 
@@ -1191,6 +1216,13 @@ export default function MessagesPage() {
           <button className="w-full text-left text-[13px] px-3 py-2 rounded text-[#D03839] hover:bg-[#FEF0EF] transition-colors duration-200" onClick={() => { setBlockConfirm(contextMenu.conv); setContextMenu(null); }}>
             Block user
           </button>
+        </div>
+      )}
+
+      {toast && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] bg-[#1A1816] text-white text-[13px] font-medium px-4 py-3 rounded shadow-lg flex items-center gap-2 max-w-[90vw]">
+          <span className="w-1.5 h-1.5 rounded-full bg-[#0F6E56] flex-shrink-0" />
+          {toast}
         </div>
       )}
 
