@@ -325,6 +325,11 @@ export default function BillingPage() {
               )}
             </div>
 
+            {!isLifetimeFree && !teamWorkspace && plan.plan_type !== 'standard' && ['active','trialing','canceling'].includes(plan.status) && (
+              <a href="/settings" className="inline-flex items-center gap-1 mt-3 text-[12px] font-semibold text-[#737370] hover:text-[#D03839] transition-colors">
+                Manage or cancel subscription →
+              </a>
+            )}
           </div>
         ) : teamWorkspace ? (
           <div className="flex items-start gap-3 p-4 bg-[#F3F3F0] rounded border border-[#E8E8E4]">
@@ -472,7 +477,19 @@ export default function BillingPage() {
               </button>
             </div>
             <p className="text-[13px] text-[#737370] mb-4">Enter your new card details below. It becomes the default for future charges.</p>
-            <Elements stripe={stripePromise} options={{ clientSecret: cardClientSecret }}>
+            <Elements stripe={stripePromise} options={{
+              clientSecret: cardClientSecret,
+              appearance: {
+                variables: {
+                  borderRadius: '4px',
+                  colorPrimary: '#D03839',
+                  colorText: '#1A1816',
+                  colorDanger: '#D03839',
+                  fontFamily: 'DM Sans, -apple-system, sans-serif',
+                  fontSizeBase: '14px',
+                },
+              },
+            }}>
               <CardUpdateForm
                 customerId={plan?.stripe_customer_id}
                 onSaved={handleCardSaved}
