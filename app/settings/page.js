@@ -53,6 +53,7 @@ export default function SettingsPage() {
   const [showPasswords, setShowPasswords] = useState({ current: false, new: false, confirm: false });
   // Email change flow: step 'idle' | 'form' (enter new email + password) | 'otp' (enter code)
   const [emailChange, setEmailChange] = useState({ step: 'idle', newEmail: '', password: '', otp: '', error: '', loading: false });
+  const [phoneChange, setPhoneChange] = useState({ step: 'idle', newPhone: '', password: '', otp: '', error: '', loading: false });
 
   // Subscription management (cancel flow)
   const [planInfo, setPlanInfo] = useState(null);
@@ -195,15 +196,49 @@ export default function SettingsPage() {
     }
   }
 
+  // ── Phone change (U16) ──────────────────────────────────────────
+  async function requestPhoneChange() {
+    if (!user?.id) return;
+    setPhoneChange(s => ({ ...s, loading: true, error: '' }));
+    try {
+      const res = await fetch('/api/seller/change-phone', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sellerId: user.id, currentPassword: phoneChange.password, newPhone: phoneChange.newPhone }),
+      });
+      const json = await res.json();
+      if (!res.ok || json.error) { setPhoneChange(s => ({ ...s, loading: false, error: json.error || 'Failed' })); return; }
+      setPhoneChange(s => ({ ...s, step: 'otp', loading: false, error: '' }));
+    } catch { setPhoneChange(s => ({ ...s, loading: false, error: 'Something went wrong' })); }
+  }
+
+  async function verifyPhoneChange() {
+    if (!user?.id) return;
+    setPhoneChange(s => ({ ...s, loading: true, error: '' }));
+    try {
+      const res = await fetch('/api/seller/change-phone/verify', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sellerId: user.id, otp: phoneChange.otp }),
+      });
+      const json = await res.json();
+      if (!res.ok || json.error) { setPhoneChange(s => ({ ...s, loading: false, error: json.error || 'Failed' })); return; }
+      const updated = { ...user, phone: json.newPhone };
+      setUser(updated);
+      setProfileForm(f => ({ ...f, phone: json.newPhone }));
+      try { localStorage.setItem('seller_user', JSON.stringify(updated)); } catch {}
+      setPhoneChange({ step: 'idle', newPhone: '', password: '', otp: '', error: '', loading: false });
+      setMessage({ type: 'success', text: 'Phone updated successfully.' });
+    } catch { setPhoneChange(s => ({ ...s, loading: false, error: 'Something went wrong' })); }
+  }
+
   const fetchActivities = async () => {
     if (!user?.id) return;
     try {
       setActivitiesLoading(true);
       const { data: sellerData } = await supabase.from('seller_applications').select('temp_seller_id').eq('id', user.id).maybeSingle();
       const tempSellerId = sellerData?.temp_seller_id ?? null;
-      const { data: manualList = [] } = await supabase.from('properties').select('id, address, slug, price, status, created_at').eq('seller_id', user.id).order('created_at', { ascending: false });
+      const { data: manualList = [] } = await supabase.from('properties').select('id, address, slug, price, status, created_at').eq('seller_id', user.id).order('created_at', { ascending: false }).limit(50);
       let scrapedList = [];
-      if (tempSellerId) { const { data: wl, error } = await supabase.from('wholesale_deals').select('id, full_address, address, slug, price, status, created_at').eq('temp_seller_id', tempSellerId).order('created_at', { ascending: false }); if (!error && wl) scrapedList = wl; }
+      if (tempSellerId) { const { data: wl, error } = await supabase.from('wholesale_deals').select('id, full_address, address, slug, price, status, created_at').eq('temp_seller_id', tempSellerId).order('created_at', { ascending: false }).limit(50); if (!error && wl) scrapedList = wl; }
       const normalizeStatus = p => { const s = (p.status || '').toLowerCase(); if (s === 'archived') return 'archived'; if (s === 'published' || s === 'active') return 'active'; return 'draft'; };
       const combined = [...(manualList || []).map(p => ({ ...p, _source: 'manual', _normalizedStatus: normalizeStatus(p) })), ...scrapedList.map(p => ({ ...p, _source: 'scraped', _normalizedStatus: normalizeStatus(p) }))].sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
       const list = combined.map(property => {
@@ -304,8 +339,14 @@ export default function SettingsPage() {
                 </div>
                 <div>
                   <label className="block text-[12px] font-medium text-[#444441] mb-1.5">Phone Number</label>
-                  <input type="tel" readOnly value={profileForm.phone} className="w-full px-4 py-2.5 border border-[#E8E8E4] rounded bg-[#FAFAF8] text-[14px] text-[#737370]" />
-                  <p className="text-[11px] text-[#A8A8A4] mt-1">Phone cannot be changed</p>
+                  <div className="flex items-center gap-2">
+                    <input type="tel" readOnly value={profileForm.phone} className="flex-1 px-4 py-2.5 border border-[#E8E8E4] rounded bg-[#FAFAF8] text-[14px] text-[#737370]" />
+                    <button type="button" onClick={() => setPhoneChange({ step: 'form', newPhone: '', password: '', otp: '', error: '', loading: false })}
+                      className="px-4 py-2.5 text-[13px] font-semibold text-[#D03839] border border-[#E8E8E4] rounded hover:bg-[#FAFAF8] transition-colors whitespace-nowrap">
+                      Change
+                    </button>
+                  </div>
+                  <p className="text-[11px] text-[#A8A8A4] mt-1">We'll text a code to your new number to verify it.</p>
                 </div>
               </div>
             </div>
@@ -661,6 +702,58 @@ export default function SettingsPage() {
                   <button type="button" onClick={verifyEmailChange} disabled={emailChange.loading || emailChange.otp.length !== 6}
                     className="flex-1 h-10 px-4 text-[13px] font-semibold text-white bg-[#D03839] hover:bg-[#E0493B] rounded transition-colors disabled:opacity-50">
                     {emailChange.loading ? 'Verifying…' : 'Confirm email'}</button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {phoneChange.step !== 'idle' && (
+        <div className="fixed inset-0 z-[95] flex items-center justify-center p-4">
+          <div className="fixed inset-0 bg-[#1A1816]/40" onClick={() => phoneChange.loading ? null : setPhoneChange({ step: 'idle', newPhone: '', password: '', otp: '', error: '', loading: false })} aria-hidden="true" />
+          <div className="relative bg-white rounded shadow-lg border border-[#E8E8E4] max-w-md w-full p-6 z-10">
+            {phoneChange.step === 'form' ? (
+              <>
+                <h3 className="text-[16px] font-semibold text-[#1A1816] mb-1">Change phone number</h3>
+                <p className="text-[13px] text-[#737370] mb-4">Enter your new number and current password. We'll text a verification code to the new number.</p>
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-[12px] font-medium text-[#444441] mb-1.5">New phone number</label>
+                    <input type="tel" value={phoneChange.newPhone} onChange={e => setPhoneChange(s => ({ ...s, newPhone: e.target.value, error: '' }))}
+                      placeholder="(555) 123-4567"
+                      className="w-full px-4 py-2.5 border border-[#E8E8E4] rounded text-[14px] text-[#1A1816] focus:outline-none focus:border-[#D03839]" />
+                  </div>
+                  <div>
+                    <label className="block text-[12px] font-medium text-[#444441] mb-1.5">Current password</label>
+                    <input type="password" value={phoneChange.password} onChange={e => setPhoneChange(s => ({ ...s, password: e.target.value, error: '' }))}
+                      placeholder="••••••••"
+                      className="w-full px-4 py-2.5 border border-[#E8E8E4] rounded text-[14px] text-[#1A1816] focus:outline-none focus:border-[#D03839]" />
+                  </div>
+                </div>
+                {phoneChange.error && <p className="text-[12px] text-[#D03839] mt-2">{phoneChange.error}</p>}
+                <div className="flex items-center gap-3 mt-5">
+                  <button type="button" onClick={() => setPhoneChange({ step: 'idle', newPhone: '', password: '', otp: '', error: '', loading: false })}
+                    className="flex-1 h-10 px-4 text-[13px] font-semibold text-[#1A1816] bg-white border border-[#E8E8E4] rounded hover:bg-[#FAFAF8] transition-colors">Cancel</button>
+                  <button type="button" onClick={requestPhoneChange} disabled={phoneChange.loading || !phoneChange.newPhone || !phoneChange.password}
+                    className="flex-1 h-10 px-4 text-[13px] font-semibold text-white bg-[#D03839] hover:bg-[#E0493B] rounded transition-colors disabled:opacity-50">
+                    {phoneChange.loading ? 'Sending…' : 'Send code'}</button>
+                </div>
+              </>
+            ) : (
+              <>
+                <h3 className="text-[16px] font-semibold text-[#1A1816] mb-1">Enter verification code</h3>
+                <p className="text-[13px] text-[#737370] mb-4">We texted a 6-digit code to <strong className="text-[#1A1816]">{phoneChange.newPhone}</strong>. Enter it below to confirm.</p>
+                <input type="text" inputMode="numeric" maxLength={6} value={phoneChange.otp} onChange={e => setPhoneChange(s => ({ ...s, otp: e.target.value.replace(/\D/g, ''), error: '' }))}
+                  placeholder="000000"
+                  className="w-full px-4 py-2.5 border border-[#E8E8E4] rounded text-[18px] tracking-[8px] text-center text-[#1A1816] focus:outline-none focus:border-[#D03839]" />
+                {phoneChange.error && <p className="text-[12px] text-[#D03839] mt-2">{phoneChange.error}</p>}
+                <div className="flex items-center gap-3 mt-5">
+                  <button type="button" onClick={() => setPhoneChange(s => ({ ...s, step: 'form', otp: '', error: '' }))}
+                    className="flex-1 h-10 px-4 text-[13px] font-semibold text-[#1A1816] bg-white border border-[#E8E8E4] rounded hover:bg-[#FAFAF8] transition-colors">Back</button>
+                  <button type="button" onClick={verifyPhoneChange} disabled={phoneChange.loading || phoneChange.otp.length !== 6}
+                    className="flex-1 h-10 px-4 text-[13px] font-semibold text-white bg-[#D03839] hover:bg-[#E0493B] rounded transition-colors disabled:opacity-50">
+                    {phoneChange.loading ? 'Verifying…' : 'Confirm phone'}</button>
                 </div>
               </>
             )}

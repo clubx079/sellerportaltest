@@ -551,7 +551,7 @@ export default function TeamPage() {
                   <span className="text-[14px] font-semibold text-[#1A1816] truncate">{m.name || m.email}</span>
                   <StatusBadge status={m.status} />
                   <span className="inline-flex items-center gap-1 px-2 h-5 rounded text-[11px] font-semibold bg-[#F3F3F0] text-[#737370] border border-[#E8E8E4]">
-                    {count}/{TOTAL_PERMISSIONS} access
+                    {count >= TOTAL_PERMISSIONS ? 'Full Access' : `${count}/${TOTAL_PERMISSIONS} access`}
                   </span>
                 </div>
                 <div className="flex items-center gap-3 text-[12px] text-[#737370]">
