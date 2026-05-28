@@ -414,7 +414,7 @@ export default function PlansPage() {
                       )}
                       {isPro && !isCurrent && !isPendingThis && (
                         <span className="inline-block text-[11px] font-semibold bg-[#F3F3F0] text-[#737370] px-2.5 py-0.5 rounded">
-                          Your plan · {isAnnual ? 'annual' : 'monthly'}
+                          Your plan · billed {isAnnual ? 'annually' : 'monthly'}
                         </span>
                       )}
                       {isPendingThis && (
@@ -493,7 +493,7 @@ export default function PlansPage() {
                     <div className="min-h-[22px] mb-3">
                       {isEnterprise && !isCurrent && !isPendingThis && (
                         <span className="inline-block text-[11px] font-semibold bg-[#F3F3F0] text-[#737370] px-2.5 py-0.5 rounded">
-                          Your plan · {isAnnual ? 'annual' : 'monthly'}
+                          Your plan · billed {isAnnual ? 'annually' : 'monthly'}
                         </span>
                       )}
                       {isCurrent && (

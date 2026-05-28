@@ -504,7 +504,10 @@ export default function SellerAnalyticsPage() {
           <div className="py-16 text-center">
             <Eye className="w-8 h-8 text-[#D4D4CF] mx-auto mb-2" />
             <p className="text-[13px] font-semibold text-[#444441]">No activity yet</p>
-            <p className="text-[12px] text-[#737370] mt-1">When buyers view your listings they'll appear here</p>
+            <p className="text-[12px] text-[#737370] mt-1 mb-4">Share your listings to start getting buyer views.</p>
+            <a href="/properties" className="inline-flex items-center gap-1.5 h-9 px-4 bg-[#D03839] hover:bg-[#E0493B] text-white text-[13px] font-semibold rounded transition-colors">
+              Go to My Listings
+            </a>
           </div>
         ) : (
           <div className="overflow-x-auto">
