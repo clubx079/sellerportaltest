@@ -65,13 +65,15 @@
 - **Fix:** Remove the `setInterval` poll; keep realtime + a 60s heartbeat as fallback.
 - **Decision:** `[?]` **Needs discussion** before implementing
 - **Discussion notes:** User wants to evaluate first.
-- **Status:** `[?]` Awaiting decision
+- **Decision:** Approved — remove poll, keep realtime + 60s fallback.
+- **Status:** `[x]` **Done** in commit `04c5096` — poll 10s→60s + stopped clobbering active search filter.
 
 ### H3. Analytics permission check runs after API call
 - **File:** `app/analytics/page.js:145-165`
 - **Problem (clarified):** This is the `/analytics` page in the seller portal (the one with views/saves/offers charts). When a TEAM MEMBER (not the workspace owner) opens it, the component fetches analytics data first, then checks if they're allowed to see it. Result: brief "Access Denied" flash even when permission is granted, plus unnecessary API hit.
 - **Fix:** Move the `/api/team/workspaces` permission fetch to the initial `useEffect`; gate the analytics API call on `analytics_view=true`.
-- **Decision:** `[?]` **Awaiting answer** — does user now understand and approve?
+- **Decision:** Approved.
+- **Status:** `[x]` **Verified already-correct** (commit `04c5096` note) — fetch is gated on userId which is only set after the permission check passes. No premature fetch / Access-Denied flash. Agent finding was inaccurate, like H1.
 
 ### H4. Promo code applied but order summary doesn't recalc ✅
 - **File:** `app/plans/upgrade/[planType]/page.js:358-397`
@@ -85,18 +87,22 @@
 - **Problem:** Users can view invoices but can't update their card, change billing address, or cancel their subscription without contacting support.
 - **Recommendation:** **YES, this IS the enterprise-product standard.** Notion, Linear, Vercel, GitHub, Slack — every modern SaaS uses Stripe's Customer Portal. It's a one-API-call setup; Stripe hosts the UI for card updates, invoice history, cancellation, and billing address. Eliminates 80% of billing support tickets. Without it, every "I need a new card on file" email lands in our inbox.
 - **Fix:** Add `app/api/billing/portal/route.js` that calls `stripe.billingPortal.sessions.create({ customer, return_url })` and a button "Manage payment in Stripe →" that redirects.
-- **Decision:** `[?]` **Awaiting answer** — proceed now that justification is clear?
+- **Decision:** Approved BUT user wants it built NATIVELY (no redirect to Stripe hosted portal) — embedded Stripe Elements card form + our own cancel/invoice/address UI, backend does the Stripe work.
+- **Status:** `[ ]` Pending — largest remaining build.
 
-### H6. Paperclip button does nothing
+### H6. Paperclip button does nothing ✅
 - **File:** `app/messages/page.js:740-742`
-- **Problem (clarified):** Inside the **chat message input** on the `/messages` page, there's a paperclip 📎 icon next to where you type a reply. It's wired to a `<button>` with no `onClick` handler — clicking does nothing, silently.
+- **Decision:** Build attachments now.
+- **Status:** `[x]` **Done** in commit `6d51f1a` — seller side: upload to Supabase storage + send + render (image preview / file card). Buyer side (`ChatWindow.js`) already had full attachment support, so the feature is complete end-to-end.
+- **Original problem:** the paperclip button had no onClick handler.
 - **Fix options:**
   - Option A: Implement file attachments — upload to Supabase storage, insert attachment URL into `messages` table, render as image preview / file card in chat.
   - Option B: Delete the button until attachments are built.
 - **Recommendation:** Option B (delete) for now — proper attachments are a 2-day feature (storage, security scanning, preview UI), not worth blocking on. Add it back when we have time.
 - **Decision:** `[?]` **Awaiting answer**
 
-### H7. Block buyer = one-click, no confirmation, no email
+### H7. Block buyer = one-click, no confirmation, no email ✅
+- **Status:** `[x]` **Done** in commit `04c5096` — confirmation modal added before block; no buyer email (per decision).
 - **File:** `app/messages/page.js:1130`
 - **Problem (clarified):** When viewing a conversation with a buyer in `/messages`, there's a "Block user" option (in a 3-dot menu or right-click). Clicking it instantly + permanently blocks that buyer from messaging — no confirmation dialog ("are you sure?"), and the buyer is never told they were blocked (they just see their messages stop being read).
 - **Why it matters:**
@@ -132,7 +138,8 @@
   3. Both must be confirmed within 24h to complete the change
   4. Old address gets a "wasn't you? Revert" link valid for 7 days
 - **Alternative:** Lock it to support contact only — simpler, but creates a support ticket every time. Most companies have moved away from this.
-- **Decision:** `[?]` **Awaiting decision**
+- **Decision:** Approved — allow with verification.
+- **Status:** `[x]` **Done** in commit `20c9cdf` — new email + password → OTP to new email → update + heads-up to old email.
 
 ---
 
