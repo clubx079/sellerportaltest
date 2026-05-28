@@ -189,6 +189,15 @@ export default function OffersReceivedPage() {
                         <MessageCircle className="w-3.5 h-3.5" />
                         Respond
                       </Link>
+                      {offer.status === 'accepted' && (
+                        <Link
+                          href={`/contracts/new?from_offer=${offer.id}`}
+                          className="flex items-center gap-1.5 px-3 py-2 bg-[#0F6E56] hover:bg-[#0C5A47] text-white text-[12px] font-semibold rounded transition-colors whitespace-nowrap"
+                        >
+                          <FileText className="w-3.5 h-3.5" />
+                          Create Contract
+                        </Link>
+                      )}
                     </div>
                   </div>
                 </div>

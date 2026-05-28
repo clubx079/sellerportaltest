@@ -173,6 +173,8 @@ export default function PropertyPreviewPage() {
   const [photos, setPhotos] = useState([])
   const [loading, setLoading] = useState(true)
   const [showPreviewModal, setShowPreviewModal] = useState(false)
+  const [showPhone, setShowPhone] = useState(false)
+  const [sellerPhone, setSellerPhone] = useState('')
   const [showImageModal, setShowImageModal] = useState(false)
   const [imageModalIndex, setImageModalIndex] = useState(0)
   const [showFullDescription, setShowFullDescription] = useState(false)
@@ -185,6 +187,13 @@ export default function PropertyPreviewPage() {
   const mapInitRef = useRef(false)
 
   const intercept = (e) => { e.preventDefault(); e.stopPropagation(); setShowPreviewModal(true) }
+
+  useEffect(() => {
+    try {
+      const u = JSON.parse(localStorage.getItem('seller_user') || '{}')
+      if (u?.phone) setSellerPhone(u.phone)
+    } catch {}
+  }, [])
 
   useEffect(() => {
     if (!id) return
@@ -327,16 +336,13 @@ export default function PropertyPreviewPage() {
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 px-4">
           <div className="bg-white rounded w-full max-w-sm p-6 text-center shadow-xl">
             <h3 className="text-[16px] font-bold text-[#1A1816] mb-2">You&apos;re in Preview Mode</h3>
-            <p className="text-[13px] text-[#737370] mb-5">This is how buyers see your listing.</p>
+            <p className="text-[13px] text-[#737370] mb-5">This is how buyers see your listing. Actions buyers use — messaging, offers, and saving — are turned off here.</p>
             <button onClick={() => setShowPreviewModal(false)} className="w-full h-[40px] bg-[#1A1816] hover:bg-[#2A2825] text-white text-[13px] font-semibold rounded transition-colors">
               Got it
             </button>
           </div>
         </div>
       )}
-
-      {/* Preview overlay — intercepts all clicks below the nav */}
-      <div className="fixed inset-0 z-[45] cursor-default" onClick={() => setShowPreviewModal(true)} />
 
       {/* Image modal */}
       <ImageModal
@@ -379,7 +385,8 @@ export default function PropertyPreviewPage() {
             </button>
             <button
               onClick={intercept}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded border border-[#E8E8E4] bg-white text-[#444441] hover:bg-[#FAFAF8] transition-colors text-sm font-medium"
+              title="Disabled in preview"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded border border-[#E8E8E4] bg-[#F3F3F1] text-[#A8A8A4] cursor-not-allowed transition-colors text-sm font-medium"
             >
               <Heart className="h-4 w-4" />
               <span className="hidden sm:inline">Save</span>
@@ -631,32 +638,52 @@ export default function PropertyPreviewPage() {
                   </div>
                 )}
 
-                {/* Call Seller */}
+                {/* Call Seller — phone is safe to reveal in preview */}
                 <div className="mb-3">
-                  <button
-                    onClick={intercept}
-                    className="flex items-center justify-center gap-2 w-full font-semibold py-2.5 px-4 rounded text-sm bg-[#1A1816] hover:bg-[#2C2A28] text-white transition-colors"
-                  >
-                    <Phone className="w-4 h-4" />
-                    Call Seller
-                  </button>
+                  {showPhone ? (
+                    sellerPhone ? (
+                      <a
+                        href={`tel:${sellerPhone}`}
+                        className="flex items-center justify-center gap-2 w-full font-semibold py-2.5 px-4 rounded text-sm bg-[#1A1816] hover:bg-[#2C2A28] text-white transition-colors"
+                      >
+                        <Phone className="w-4 h-4" />
+                        {sellerPhone}
+                      </a>
+                    ) : (
+                      <div className="flex items-center justify-center gap-2 w-full py-2.5 px-4 rounded text-sm bg-[#FAFAF8] border border-[#E8E8E4] text-[#737370]">
+                        <Phone className="w-4 h-4" />
+                        No phone number on file
+                      </div>
+                    )
+                  ) : (
+                    <button
+                      onClick={() => setShowPhone(true)}
+                      className="flex items-center justify-center gap-2 w-full font-semibold py-2.5 px-4 rounded text-sm bg-[#1A1816] hover:bg-[#2C2A28] text-white transition-colors"
+                    >
+                      <Phone className="w-4 h-4" />
+                      Call Seller
+                    </button>
+                  )}
                 </div>
 
-                {/* Message Seller */}
+                {/* Message Seller — disabled in preview (would start a real chat) */}
                 <button
                   onClick={intercept}
-                  className="block w-full bg-[#D03839] hover:bg-[#E0493B] text-white font-semibold py-2.5 px-4 rounded text-center text-sm transition-colors mb-3"
+                  title="Disabled in preview"
+                  className="block w-full bg-[#F3F3F1] text-[#A8A8A4] border border-[#E8E8E4] font-semibold py-2.5 px-4 rounded text-center text-sm cursor-not-allowed mb-3"
                 >
                   Message Seller
                 </button>
 
-                {/* Make Offer */}
+                {/* Make Offer — disabled in preview */}
                 <button
                   onClick={intercept}
-                  className="block w-full border border-[#1A1816] text-[#1A1816] font-semibold py-2.5 px-4 rounded text-center text-sm hover:bg-[#FAFAF8] transition-colors"
+                  title="Disabled in preview"
+                  className="block w-full bg-[#F3F3F1] text-[#A8A8A4] border border-[#E8E8E4] font-semibold py-2.5 px-4 rounded text-center text-sm cursor-not-allowed"
                 >
                   Make Offer
                 </button>
+                <p className="text-[12px] text-[#A8A8A4] text-center mt-2">Buyer actions are disabled in preview.</p>
               </div>
 
               {/* Map */}

@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import {
   MessageCircle, Send, Search, ArrowLeft, Loader2, Check, CheckCheck,
-  Pin, Paperclip, Smile, MapPin, Mail, Phone, Shield, AlertCircle, X, MoreVertical, Ban } from 'lucide-react';
+  Pin, Paperclip, Smile, MapPin, Mail, Phone, Shield, AlertCircle, X, MoreVertical, Ban, FileText } from 'lucide-react';
 import { createClient } from '@supabase/supabase-js';
 
 const API = '/api/seller/chat';
@@ -1050,10 +1050,17 @@ export default function MessagesPage() {
                 {/* Post-action states */}
                 {offer && offer.status === 'accepted' && (
                   <div className="px-5 py-4">
-                    <div className="bg-[#E4F5EC] border border-[#A8DFBA] rounded px-4 py-3">
-                      <p className="text-[13px] font-semibold text-[#0F6E56] mb-1">Next Steps</p>
-                      <p className="text-[12px] text-[#0F6E56]">Coordinate with the buyer to proceed to contract signing.</p>
+                    <div className="bg-[#E4F5EC] border border-[#A8DFBA] rounded px-4 py-3 mb-3">
+                      <p className="text-[13px] font-semibold text-[#0F6E56] mb-1">Offer accepted</p>
+                      <p className="text-[12px] text-[#0F6E56]">Send the contract to lock in the deal — we'll pre-fill it from this offer.</p>
                     </div>
+                    <a
+                      href={`/contracts/new?from_offer=${offer.id}`}
+                      className="flex items-center justify-center gap-1.5 w-full py-3 bg-[#0F6E56] hover:bg-[#0C5A47] text-white text-[14px] font-semibold rounded transition-colors"
+                    >
+                      <FileText className="w-4 h-4" />
+                      Create Contract
+                    </a>
                   </div>
                 )}
                 {offer && offer.status === 'rejected' && (
