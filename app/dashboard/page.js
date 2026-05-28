@@ -370,6 +370,38 @@ export default function DashboardPage() {
       </div>
 
       <div className="px-2 lg:px-4 py-5">
+        {/* U4: Getting Started checklist for brand-new sellers (0 active listings) */}
+        {stats.activeProperties === 0 && (
+          <div className="bg-white border border-[#E8E8E4] rounded p-5 mb-6">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="w-1 h-4 rounded-full bg-[#D03839]" />
+              <h2 className="text-[15px] font-bold text-[#1A1816]">Get started on DeelMap</h2>
+            </div>
+            <p className="text-[13px] text-[#737370] mb-4">A couple of quick steps to start getting buyers on your deals.</p>
+            <div className="space-y-2">
+              {[
+                { done: false, title: 'Post your first listing', desc: 'Add a deal so buyers can find it.', href: '/properties/new', cta: 'Post a deal' },
+                { done: false, title: 'Complete your profile', desc: 'Add your business info so buyers trust your listings.', href: '/settings', cta: 'Edit profile' },
+                { done: false, title: 'Review your plan', desc: 'Pick the plan that fits how many deals you run.', href: '/plans', cta: 'View plans' },
+              ].map((s, i) => (
+                <div key={i} className="flex items-center gap-3 p-3 rounded border border-[#F0F0EC] bg-[#FAFAF8]">
+                  <div className="w-6 h-6 rounded-full border-2 border-[#E8E8E4] flex items-center justify-center flex-shrink-0">
+                    <span className="text-[11px] font-bold text-[#A8A8A4]">{i + 1}</span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[13px] font-semibold text-[#1A1816]">{s.title}</p>
+                    <p className="text-[12px] text-[#737370]">{s.desc}</p>
+                  </div>
+                  <Link href={s.href}
+                    className={`h-8 px-3 inline-flex items-center text-[12px] font-semibold rounded transition-colors flex-shrink-0 ${i === 0 ? 'bg-[#D03839] hover:bg-[#E0493B] text-white' : 'border border-[#E8E8E4] text-[#1A1816] hover:bg-white'}`}>
+                    {s.cta}
+                  </Link>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* KPI Cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
           {kpiCards.map(card => (

@@ -618,13 +618,23 @@ const PropertiesManagement = () => {
       tags.push({ label: days != null ? `Featured · ${days}d` : 'Featured', cls: 'bg-[#E4F5EC] text-[#0F6E56] border-[#B6E4CE]' })
     }
     if (!tags.length) return <span className="text-[10px] text-[#A8A8A4]">—</span>
+    // Surface a Renew link when any active add-on expires within 7 days.
+    const soonDays = [property.highlight_ends_at, property.boost_ends_at, property.homepage_feature_ends_at]
+      .map(d => daysLeft(d)).filter(d => d != null);
+    const expiringSoon = soonDays.length > 0 && Math.min(...soonDays) <= 7;
     return (
-      <div className="flex flex-wrap gap-1">
+      <div className="flex flex-wrap items-center gap-1">
         {tags.map(t => (
           <span key={t.label} className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium border ${t.cls}`}>
             {t.label}
           </span>
         ))}
+        {expiringSoon && (
+          <button onClick={() => router.push(`/properties/enhance?id=${property.id}`)}
+            className="text-[10px] font-semibold text-[#D03839] hover:underline">
+            Renew
+          </button>
+        )}
       </div>
     )
   }
