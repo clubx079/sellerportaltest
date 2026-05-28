@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
-import { Users, Eye, Clock, Image as ImageIcon, Smartphone, Monitor, Tablet, X, ChevronDown, ChevronRight, BarChart2, Heart, FileText, MessageSquare, Flame, RefreshCw } from 'lucide-react';
+import { Users, Eye, Clock, Image as ImageIcon, Smartphone, Monitor, Tablet, X, ChevronDown, ChevronRight, BarChart2, Heart, FileText, MessageSquare, Flame, RefreshCw, Lightbulb } from 'lucide-react';
 
 function formatDuration(seconds) {
   if (seconds == null || seconds === 0) return '—';
@@ -83,8 +83,19 @@ function scoreBuyer(b) {
   if (b.viewed_repairs) score += 2;                    // read the repairs = serious
   if (b.scrolled_to_bottom) score += 1;
   if (b.viewed_description) score += 1;
+  if (b.offered) score += 6;                           // made an offer = hottest lead
+  else if (b.saved) score += 3;                        // saved the deal = strong intent
   const temp = score >= 8 ? 'hot' : score >= 4 ? 'warm' : 'cold';
   return { score, temp };
+}
+
+// One actionable, plain-English read on the funnel — what a wholesaler should DO next.
+function buildInsight(viewers, saves, offers) {
+  if (offers > 0) return { cls: 'bg-[#E4F5EC] border-[#A8DFBA] text-[#0F6E56]', text: `You've received ${offers} offer${offers !== 1 ? 's' : ''} — follow up with your hot buyers below to push this to contract.` };
+  if (saves > 0) return { cls: 'bg-[#FEF3E2] border-[#F5D9A0] text-[#B5620A]', text: `${saves} buyer${saves !== 1 ? 's' : ''} saved this but no offers yet — reach out to the hot buyers below before they cool off.` };
+  if (viewers >= 10) return { cls: 'bg-[#FEF3E2] border-[#F5D9A0] text-[#B5620A]', text: `${viewers} buyers viewed but none saved or offered — your price may be too high, or the photos/description need strengthening.` };
+  if (viewers > 0) return { cls: 'bg-[#F0F0EC] border-[#E8E8E4] text-[#737370]', text: 'Getting some early views — keep sharing the listing to build momentum.' };
+  return { cls: 'bg-[#F0F0EC] border-[#E8E8E4] text-[#737370]', text: 'No views yet — share this listing to get it in front of buyers.' };
 }
 
 const TEMP_STYLE = {
@@ -147,10 +158,12 @@ export default function PropertyAnalyticsSidebar({ propertyId, propertyName, onC
   // Wholesalers only follow up with identified buyers — drop guests entirely.
   const sessions = rawSessions.filter(isRealBuyer);
 
-  // Funnel numbers
+  // Funnel numbers — people-based so the conversion actually means something.
   const totalViews = agg.totalPageViews ?? agg.totalSessionViews ?? 0;
+  const uniqueViewers = agg.uniqueViewerCount ?? totalViews;
   const savesCount = agg.savesCount ?? 0;
   const offersCount = agg.offersCount ?? 0;
+  const insight = buildInsight(uniqueViewers, savesCount, offersCount);
 
   // Score + sort buyers hottest-first (unless the user picked an explicit sort)
   const scoredBuyers = sessions
@@ -261,13 +274,13 @@ export default function PropertyAnalyticsSidebar({ propertyId, propertyName, onC
               <div>
                 <p className="text-[11px] font-semibold text-[#A8A8A4] uppercase tracking-[0.8px] mb-2">Deal Funnel</p>
                 <div className="flex items-stretch">
-                  {/* Views */}
+                  {/* Viewers (unique people) */}
                   <div className="flex-1 bg-white border border-[#E8E8E4] rounded p-3.5 text-center">
                     <div className="flex items-center justify-center gap-1.5 mb-1.5">
                       <Eye className="w-3.5 h-3.5 text-[#737370]" />
-                      <p className="text-[10px] font-semibold text-[#A8A8A4] uppercase tracking-[0.5px]">Views</p>
+                      <p className="text-[10px] font-semibold text-[#A8A8A4] uppercase tracking-[0.5px]">Viewers</p>
                     </div>
-                    <p className="text-[24px] font-bold text-[#1A1816] leading-none">{totalViews}</p>
+                    <p className="text-[24px] font-bold text-[#1A1816] leading-none">{uniqueViewers}</p>
                   </div>
                   {/* → */}
                   <div className="flex items-center justify-center px-1 shrink-0">
@@ -295,12 +308,18 @@ export default function PropertyAnalyticsSidebar({ propertyId, propertyName, onC
                   </div>
                 </div>
                 {/* Conversion micro-line */}
-                {totalViews > 0 && (
+                {uniqueViewers > 0 && (
                   <p className="text-[11px] text-[#A8A8A4] mt-2">
-                    {savesCount > 0 ? `${Math.round((savesCount / totalViews) * 100)}% of viewers saved this deal` : 'No saves yet from these views'}
-                    {offersCount > 0 ? ` · ${offersCount} offer${offersCount !== 1 ? 's' : ''} received` : ''}
+                    {savesCount > 0 ? `${Math.min(100, Math.round((savesCount / uniqueViewers) * 100))}% of viewers saved this deal` : 'No saves yet from these viewers'}
+                    {totalViews > uniqueViewers ? ` · ${totalViews} total views` : ''}
                   </p>
                 )}
+
+                {/* Action insight — the "so what / do this next" line */}
+                <div className={`mt-3 flex items-start gap-2 rounded border px-3 py-2.5 ${insight.cls}`}>
+                  <Lightbulb className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                  <p className="text-[12px] font-medium leading-snug">{insight.text}</p>
+                </div>
               </div>
 
               {/* ── Viewer Activity ── */}
@@ -396,6 +415,16 @@ export default function PropertyAnalyticsSidebar({ propertyId, propertyName, onC
                                 <p className="text-[13px] font-bold text-[#1A1816] leading-none capitalize">
                                   {name}
                                 </p>
+                                {row.offered && (
+                                  <span className="inline-flex items-center gap-1 h-5 px-2 rounded-full bg-[#E4F5EC] text-[#0F6E56] text-[10px] font-semibold border border-[#A8DFBA]">
+                                    <FileText className="w-2.5 h-2.5" /> Offered
+                                  </span>
+                                )}
+                                {row.saved && !row.offered && (
+                                  <span className="inline-flex items-center gap-1 h-5 px-2 rounded-full bg-[#FEF0EF] text-[#D03839] text-[10px] font-semibold border border-[#F5C4C0]">
+                                    <Heart className="w-2.5 h-2.5" /> Saved
+                                  </span>
+                                )}
                                 {(row._eng?.temp === 'hot' || row._eng?.temp === 'warm') && (() => {
                                   const t = TEMP_STYLE[row._eng.temp];
                                   return (

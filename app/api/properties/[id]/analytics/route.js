@@ -299,23 +299,69 @@ export async function GET(request, { params }) {
       return tB - tA;
     });
 
-    // Funnel counts for wholesalers: Saves + Offers on this property
+    // ── Funnel + per-buyer intent: Saves & Offers on this property ──────────
+    // Counts respect the selected period (so the funnel is consistent with the
+    // Viewers number); the id sets are all-time so we can still flag a buyer who
+    // ever saved/offered, regardless of the period filter.
     let savesCount = 0;
     let offersCount = 0;
+    const saverIds = new Set();
+    const offererIds = new Set();
     try {
-      const { count: sc } = await supabase
+      const { data: favRows } = await supabase
         .from('user_favorites')
-        .select('id', { count: 'exact', head: true })
+        .select('user_id, created_at')
         .eq('property_id', propertyId);
-      savesCount = sc || 0;
+      (favRows || []).forEach((r) => {
+        if (r.user_id) saverIds.add(String(r.user_id));
+        if (!periodStart || (r.created_at && r.created_at >= periodStart)) savesCount += 1;
+      });
     } catch {}
     try {
-      const { count: oc } = await supabase
+      const { data: offerRows } = await supabase
         .from('offers')
-        .select('id', { count: 'exact', head: true })
+        .select('buyer_id, created_at')
         .eq('property_id', propertyId);
-      offersCount = oc || 0;
+      (offerRows || []).forEach((r) => {
+        if (r.buyer_id) offererIds.add(String(r.buyer_id));
+        if (!periodStart || (r.created_at && r.created_at >= periodStart)) offersCount += 1;
+      });
     } catch {}
+
+    // Resolve saver/offerer ids -> emails so a viewer can be matched by id OR email.
+    const idsToResolve = [...new Set([...saverIds, ...offererIds])];
+    const idToEmail = new Map();
+    if (idsToResolve.length) {
+      try {
+        const { data: urows } = await supabase
+          .from('users')
+          .select('id, email')
+          .in('id', idsToResolve);
+        (urows || []).forEach((u) => { if (u.email) idToEmail.set(String(u.id), String(u.email).trim().toLowerCase()); });
+      } catch {}
+    }
+    const saverEmails = new Set([...saverIds].map((id) => idToEmail.get(String(id))).filter(Boolean));
+    const offererEmails = new Set([...offererIds].map((id) => idToEmail.get(String(id))).filter(Boolean));
+
+    // Flag each buyer who saved and/or made an offer on this property.
+    viewerSessions.forEach((v) => {
+      const vid = v.user_id ? String(v.user_id) : null;
+      const vemail = (v.user_email || '').trim().toLowerCase();
+      v.saved = !!((vid && saverIds.has(vid)) || (vemail && saverEmails.has(vemail)));
+      v.offered = !!((vid && offererIds.has(vid)) || (vemail && offererEmails.has(vemail)));
+    });
+
+    // Unique viewers (people, period-consistent): identified buyers deduped by
+    // id/email, anonymous visitors deduped by session — not inflated by reloads.
+    const viewerKeySet = new Set();
+    for (const row of allSessionRows) {
+      const email = (row.user_email || '').trim().toLowerCase();
+      const key = row.user_id
+        ? `u:${row.user_id}`
+        : (email && email !== 'guest' ? `e:${email}` : (row.session_id ? `s:${row.session_id}` : null));
+      if (key) viewerKeySet.add(key);
+    }
+    const uniqueViewerCount = viewerKeySet.size;
 
     return NextResponse.json({
       propertyId,
@@ -328,6 +374,7 @@ export async function GET(request, { params }) {
         totalImagesViewed,
         deviceBreakdown,
         activeNow,
+        uniqueViewerCount,
         savesCount,
         offersCount
       },
