@@ -4,8 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import {
   MessageCircle, Send, Search, ArrowLeft, Loader2, Check, CheckCheck,
-  Pin, Paperclip, Smile, MapPin, Mail, Phone, Shield, AlertCircle, X, MoreVertical
-} from 'lucide-react';
+  Pin, Paperclip, Smile, MapPin, Mail, Phone, Shield, AlertCircle, X, MoreVertical, Ban } from 'lucide-react';
 import { createClient } from '@supabase/supabase-js';
 
 const API = '/api/seller/chat';
@@ -108,6 +107,7 @@ export default function MessagesPage() {
   const [contextAddress, setContextAddress] = useState('');
   const [contextConversationId, setContextConversationId] = useState(null);
   const [contextMenu, setContextMenu] = useState(null);
+  const [blockConfirm, setBlockConfirm] = useState(null);
   const messagesEndRef = useRef(null);
   const messageInputRef = useRef(null);
 
@@ -232,7 +232,9 @@ export default function MessagesPage() {
       : `${API}?action=get_conversations`;
     fetch(url, { headers: h }).then(r => r.json()).then(data => {
       const list = data.conversations || [];
-      setConversations(list); setFilteredConversations(list);
+      setConversations(list);
+      // Don't set filteredConversations here — the searchQuery effect derives it
+      // from `conversations`, so it stays correct without clobbering an active search.
       if (openConversationId != null && !list.some(c => c.id === openConversationId)) setOpenConversationId(null);
     }).catch(() => {});
   }
@@ -240,7 +242,10 @@ export default function MessagesPage() {
   useEffect(() => {
     const headers = getAuthHeaders();
     if (!headers.Authorization) return;
-    const interval = setInterval(() => fetchConversations(headers), 10000);
+    // 60s fallback poll to catch NEW conversations from buyers not currently open.
+    // The currently-open conversation updates instantly via the Supabase realtime
+    // subscription below, so this only needs to be a slow safety net.
+    const interval = setInterval(() => fetchConversations(headers), 60000);
     return () => clearInterval(interval);
   }, [buyerIdFromUrl, propertyIdFromUrl]);
 
@@ -1127,9 +1132,40 @@ export default function MessagesPage() {
           <button className="w-full text-left text-[13px] px-3 py-2 rounded text-[#D03839] hover:bg-[#FEF0EF] transition-colors duration-200" onClick={() => { deleteConversation(contextMenu.conv.id); setContextMenu(null); }}>
             Delete chat
           </button>
-          <button className="w-full text-left text-[13px] px-3 py-2 rounded text-[#D03839] hover:bg-[#FEF0EF] transition-colors duration-200" onClick={() => { updateConversationPref(contextMenu.conv.id, { is_blocked: true }); setContextMenu(null); }}>
+          <button className="w-full text-left text-[13px] px-3 py-2 rounded text-[#D03839] hover:bg-[#FEF0EF] transition-colors duration-200" onClick={() => { setBlockConfirm(contextMenu.conv); setContextMenu(null); }}>
             Block user
           </button>
+        </div>
+      )}
+
+      {blockConfirm && (
+        <div className="fixed inset-0 z-[95] flex items-center justify-center p-4" >
+          <div className="fixed inset-0 bg-[#1A1816]/40" onClick={() => setBlockConfirm(null)} aria-hidden="true" />
+          <div className="relative bg-white rounded shadow-lg border border-[#E8E8E4] max-w-md w-full p-6 z-10">
+            <div className="flex items-start gap-3 mb-4">
+              <div className="w-10 h-10 rounded bg-[#FEF0EF] flex items-center justify-center flex-shrink-0">
+                <Ban className="w-5 h-5 text-[#D03839]" strokeWidth={2} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="text-[16px] font-semibold text-[#1A1816] mb-1">Block this buyer?</h3>
+                <p className="text-[13px] text-[#737370]">
+                  {blockConfirm.buyer_name || 'This buyer'} won't be able to message you anymore, and this conversation will be hidden. You can unblock them later from this conversation's menu.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setBlockConfirm(null)}
+                className="flex-1 h-10 px-4 text-[13px] font-semibold text-[#1A1816] bg-white border border-[#E8E8E4] rounded hover:bg-[#FAFAF8] transition-colors"
+              >Cancel</button>
+              <button
+                type="button"
+                onClick={() => { updateConversationPref(blockConfirm.id, { is_blocked: true }); setBlockConfirm(null); }}
+                className="flex-1 h-10 px-4 text-[13px] font-semibold text-white bg-[#D03839] hover:bg-[#E0493B] rounded transition-colors"
+              >Block buyer</button>
+            </div>
+          </div>
         </div>
       )}
     </div>
