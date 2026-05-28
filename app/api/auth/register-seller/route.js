@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { hashPassword } from '@/lib/password'
 import { createClient } from '@supabase/supabase-js'
 
 const getSupabase = () =>
@@ -38,7 +39,7 @@ export async function POST(request) {
       .insert({
         contact_person_name,
         email: email.trim().toLowerCase(),
-        password,
+        password: await hashPassword(password),
         phone: '',
         business_name: contact_person_name,
         business_type: 'individual',

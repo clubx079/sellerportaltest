@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { hashPassword } from '@/lib/password';
 import { createClient } from '@supabase/supabase-js';
 import { clearResetOtp, getResetOtp } from '@/lib/password-reset-store';
 
@@ -52,7 +53,7 @@ export async function POST(request) {
     const { error: updateError } = await supabase
       .from('seller_applications')
       .update({
-        password: String(newPassword),
+        password: await hashPassword(newPassword),
         updated_at: new Date().toISOString()
       })
       .eq('id', seller.id);

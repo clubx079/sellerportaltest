@@ -142,12 +142,14 @@ export default function SettingsPage() {
   const handlePasswordSubmit = async (e) => {
     e.preventDefault(); setSaving(true); setMessage({ type: '', text: '' });
     if (passwordForm.new_password !== passwordForm.confirm_password) { setMessage({ type: 'error', text: 'New passwords do not match' }); setSaving(false); return; }
-    if (passwordForm.new_password.length < 6) { setMessage({ type: 'error', text: 'Password must be at least 6 characters' }); setSaving(false); return; }
+    if (passwordForm.new_password.length < 8) { setMessage({ type: 'error', text: 'Password must be at least 8 characters' }); setSaving(false); return; }
     try {
-      const { data: appData, error: verifyError } = await supabase.from('seller_applications').select('id').eq('id', user.id).eq('password', passwordForm.current_password).maybeSingle();
-      if (verifyError || !appData) { setMessage({ type: 'error', text: 'Current password is incorrect' }); setSaving(false); return; }
-      const { error } = await supabase.from('seller_applications').update({ password: passwordForm.new_password, updated_at: new Date().toISOString() }).eq('id', user.id);
-      if (error) throw error;
+      const res = await fetch('/api/seller/change-password', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sellerId: user.id, currentPassword: passwordForm.current_password, newPassword: passwordForm.new_password }),
+      });
+      const json = await res.json();
+      if (!res.ok || json.error) { setMessage({ type: 'error', text: json.error || 'Failed to update password' }); setSaving(false); return; }
       setMessage({ type: 'success', text: 'Password updated successfully!' });
       setPasswordForm({ current_password: '', new_password: '', confirm_password: '' });
       setTimeout(() => setMessage({ type: '', text: '' }), 3000);

@@ -7,7 +7,7 @@ import Image from "next/image";
 import { getCurrentCurrencySymbol } from "@/lib/currency";
 import {
   Building2, PlusCircle, ChevronRight, ChevronLeft, MessageCircle,
-  Eye, Home, CircleDollarSign, FileText, BarChart3, Megaphone,
+  Eye, Home, CircleDollarSign, FileText, BarChart3, Megaphone, ScrollText,
   Edit3, Bed, Bath, Square, Bell, TrendingUp, TrendingDown, CheckCircle2,
   MapPin, Heart
 } from "lucide-react";
@@ -276,7 +276,7 @@ export default function DashboardPage() {
     { label: "Post a new deal", desc: "Create a listing", icon: <PlusCircle className="w-5 h-5 text-[#737370]" />, href: "/properties/new" },
     { label: "Edit Listings", desc: "Update your deals", icon: <Edit3 className="w-5 h-5 text-[#D03839]" />, href: "/properties" },
     { label: "View Offers", desc: `${stats.offersReceived} pending offers`, icon: <FileText className="w-5 h-5 text-[#B5620A]" />, href: "/offers" },
-    { label: "Promote Listing", desc: "Boost visibility", icon: <Megaphone className="w-5 h-5 text-[#B5620A]" />, href: "/properties" },
+    { label: "Create Contract", desc: "Send a deal to a buyer", icon: <ScrollText className="w-5 h-5 text-[#0F6E56]" />, href: "/contracts/new" },
   ];
 
   return (

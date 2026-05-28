@@ -42,72 +42,18 @@ function LoginForm() {
     setError('')
 
     try {
-      const { data: application, error: appError } = await supabase
-        .from('seller_applications')
-        .select('*')
-        .eq('email', formData.email)
-        .eq('password', formData.password)
-        .single()
-
-      if (appError || !application) {
-        setError('Invalid email or password')
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: formData.email, password: formData.password }),
+      })
+      const json = await res.json()
+      if (!res.ok || json.error) {
+        setError(json.error || 'Invalid email or password')
         setLoading(false)
         return
       }
-
-      if (application.status === 'pending') {
-        setError('Your application is pending review. Please wait for approval.')
-        setLoading(false)
-        return
-      }
-
-      if (application.status === 'under_review') {
-        setError('Your application is under review. We will notify you once approved.')
-        setLoading(false)
-        return
-      }
-
-      if (application.status === 'on_hold') {
-        setError('Your application is on hold. Please contact support for more information.')
-        setLoading(false)
-        return
-      }
-
-      if (application.status === 'requires_info') {
-        setError('Your application requires additional information. Please check your email.')
-        setLoading(false)
-        return
-      }
-
-      if (application.status === 'rejected') {
-        setError('Your application has been rejected. Please contact support for more information.')
-        setLoading(false)
-        return
-      }
-
-      if (!['approved', 'onboarding'].includes(application.status)) {
-        setError('Your application status does not allow login. Please contact support.')
-        setLoading(false)
-        return
-      }
-
-      const { data: planRow } = await supabase
-        .from('seller_plans')
-        .select('plan_type')
-        .eq('seller_id', application.id)
-        .maybeSingle()
-
-      const userData = {
-        id: application.id,
-        email: application.email,
-        businessName: application.business_name,
-        contactPersonName: application.contact_person_name,
-        phone: application.phone,
-        businessType: application.business_type,
-        plan: planRow?.plan_type || null,
-      }
-
-      localStorage.setItem('seller_user', JSON.stringify(userData))
+      localStorage.setItem('seller_user', JSON.stringify(json.user))
       router.push('/dashboard')
     } catch {
       setError('An error occurred. Please try again.')
