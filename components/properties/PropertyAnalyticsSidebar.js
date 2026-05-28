@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
-import { Users, Eye, Clock, Image as ImageIcon, Smartphone, Monitor, Tablet, X, ChevronDown, BarChart2 } from 'lucide-react';
+import { Users, Eye, Clock, Image as ImageIcon, Smartphone, Monitor, Tablet, X, ChevronDown, BarChart2, Heart, FileText, MessageSquare, Flame, RefreshCw } from 'lucide-react';
 
 function formatDuration(seconds) {
   if (seconds == null || seconds === 0) return '—';
@@ -71,7 +71,35 @@ function getAvatarPair(seed = '') {
   return AVATAR_PAIRS[Math.abs(hash) % AVATAR_PAIRS.length];
 }
 
-export default function PropertyAnalyticsSidebar({ propertyId, propertyName, onClose }) {
+// Engagement score for a buyer — what a wholesaler cares about: did they really
+// look at the deal? Weighted by time, photos viewed, repairs read, scrolling,
+// and repeat visits. Returns { score, temp } where temp is hot|warm|cold.
+function scoreBuyer(b) {
+  const duration = b.duration_seconds ?? b.active_time_seconds ?? 0;
+  let score = 0;
+  score += Math.min(duration / 30, 6);                 // up to 6 for time (>=3min caps)
+  score += Math.min((b.images_viewed || 0) * 0.5, 4);  // up to 4 for photos
+  score += (b.visit_count || 1) >= 2 ? 3 : 0;          // repeat visit = strong intent
+  if (b.viewed_repairs) score += 2;                    // read the repairs = serious
+  if (b.scrolled_to_bottom) score += 1;
+  if (b.viewed_description) score += 1;
+  const temp = score >= 8 ? 'hot' : score >= 4 ? 'warm' : 'cold';
+  return { score, temp };
+}
+
+const TEMP_STYLE = {
+  hot:  { label: 'Hot',  cls: 'bg-[#FEF0EF] text-[#D03839] border-[#F5C4C0]' },
+  warm: { label: 'Warm', cls: 'bg-[#FEF3E2] text-[#B5620A] border-[#F5D9A0]' },
+  cold: { label: 'Cold', cls: 'bg-[#F0F0EC] text-[#737370] border-[#E8E8E4]' },
+};
+
+function isRealBuyer(row) {
+  // Drop guests — wholesalers only care about identified buyers they can follow up with.
+  const email = (row.user_email || '').trim().toLowerCase();
+  return !!row.user_id || (!!email && email !== 'guest');
+}
+
+export default function PropertyAnalyticsSidebar({ propertyId, propertyName, onClose, isEnterprise = false }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [data, setData] = useState(null);
@@ -115,7 +143,32 @@ export default function PropertyAnalyticsSidebar({ propertyId, propertyName, onC
   }, [propertyId, period, sortBy]);
 
   const agg = data?.aggregates || {};
-  const sessions = data?.viewerSessions || [];
+  const rawSessions = data?.viewerSessions || [];
+  // Wholesalers only follow up with identified buyers — drop guests entirely.
+  const sessions = rawSessions.filter(isRealBuyer);
+
+  // Funnel numbers
+  const totalViews = agg.totalPageViews ?? agg.totalSessionViews ?? 0;
+  const savesCount = agg.savesCount ?? 0;
+  const offersCount = agg.offersCount ?? 0;
+
+  // Score + sort buyers hottest-first (unless the user picked an explicit sort)
+  const scoredBuyers = sessions
+    .map((b) => ({ ...b, _eng: scoreBuyer(b) }))
+    .sort((a, b) => {
+      if (sortBy === 'time_spent' || sortBy === 'page_views' || sortBy === 'last_visit') {
+        // respect explicit sort from the API (already sorted), keep order
+        return 0;
+      }
+      return b._eng.score - a._eng.score;
+    });
+
+  function messageBuyer(b) {
+    if (!b.user_id) return;
+    const params = new URLSearchParams({ buyer_id: b.user_id, property_id: String(propertyId) });
+    if (propertyName) params.set('address', propertyName);
+    window.location.href = `/messages?${params.toString()}`;
+  }
 
   // Computed aggregates from sessions
   const totalPhotos = sessions.reduce((sum, s) => sum + (Number(s.images_viewed) || 0), 0);
@@ -204,72 +257,30 @@ export default function PropertyAnalyticsSidebar({ propertyId, propertyName, onC
           {!loading && !error && data && (
             <div className="p-5 space-y-5">
 
-              {/* ── Row 1: 2 stat cards ── */}
-              <div className="grid grid-cols-2 gap-3">
-                {/* Unique Viewers */}
+              {/* ── Deal funnel: Views → Saves → Offers ── */}
+              <div className="grid grid-cols-3 gap-3">
                 <div className="bg-white border border-[#E8E8E4] rounded p-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="w-7 h-7 rounded bg-[#FEF0EF] flex items-center justify-center flex-shrink-0">
-                      <Users className="w-3.5 h-3.5 text-[#D03839]" />
-                    </div>
-                    <p className="text-[11px] font-semibold text-[#A8A8A4] uppercase tracking-[0.8px]">Unique Viewers</p>
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <Eye className="w-3.5 h-3.5 text-[#737370]" />
+                    <p className="text-[11px] font-semibold text-[#A8A8A4] uppercase tracking-[0.6px]">Views</p>
                   </div>
-                  <p className="text-[28px] font-bold text-[#1A1816] leading-none">{agg.uniqueViewers ?? 0}</p>
+                  <p className="text-[26px] font-bold text-[#1A1816] leading-none">{totalViews}</p>
                 </div>
-
-                {/* Avg. Time */}
                 <div className="bg-white border border-[#E8E8E4] rounded p-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="w-7 h-7 rounded bg-[#EFF6FF] flex items-center justify-center flex-shrink-0">
-                      <Clock className="w-3.5 h-3.5 text-[#0369A1]" />
-                    </div>
-                    <p className="text-[11px] font-semibold text-[#A8A8A4] uppercase tracking-[0.8px]">Avg. Time</p>
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <Heart className="w-3.5 h-3.5 text-[#D03839]" />
+                    <p className="text-[11px] font-semibold text-[#A8A8A4] uppercase tracking-[0.6px]">Saves</p>
                   </div>
-                  <p className="text-[28px] font-bold text-[#1A1816] leading-none">{formatDuration(avgDuration)}</p>
+                  <p className="text-[26px] font-bold text-[#1A1816] leading-none">{savesCount}</p>
+                </div>
+                <div className="bg-white border border-[#E8E8E4] rounded p-4">
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <FileText className="w-3.5 h-3.5 text-[#0F6E56]" />
+                    <p className="text-[11px] font-semibold text-[#A8A8A4] uppercase tracking-[0.6px]">Offers</p>
+                  </div>
+                  <p className="text-[26px] font-bold text-[#1A1816] leading-none">{offersCount}</p>
                 </div>
               </div>
-
-              {/* ── Row 2: Device breakdown (full width) ── */}
-              {(() => {
-                const desktop = sessions.filter(s => !s.device_type || s.device_type.toLowerCase() === 'desktop').length;
-                const mobileAll = sessions.filter(s => s.device_type?.toLowerCase() === 'mobile' || s.device_type?.toLowerCase() === 'tablet').length;
-                const total = sessions.length || 1;
-                return (
-                  <div className="bg-white border border-[#E8E8E4] rounded p-4">
-                    <p className="text-[11px] font-semibold text-[#A8A8A4] uppercase tracking-[0.8px] mb-3">Device Breakdown</p>
-                    <div className="flex items-center gap-4">
-                      {/* Desktop */}
-                      <div className="flex items-center gap-2 flex-1">
-                        <div className="w-7 h-7 rounded bg-[#EFF6FF] flex items-center justify-center flex-shrink-0">
-                          <Monitor className="w-3.5 h-3.5 text-[#0369A1]" />
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-[18px] font-bold text-[#1A1816] leading-none">{desktop}</p>
-                          <p className="text-[11px] text-[#737370] mt-0.5">Desktop</p>
-                        </div>
-                      </div>
-                      <div className="w-px h-8 bg-[#E8E8E4]" />
-                      {/* Mobile (phone + tablet) */}
-                      <div className="flex items-center gap-2 flex-1">
-                        <div className="w-7 h-7 rounded bg-[#E4F5EC] flex items-center justify-center flex-shrink-0">
-                          <Smartphone className="w-3.5 h-3.5 text-[#0F6E56]" />
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-[18px] font-bold text-[#1A1816] leading-none">{mobileAll}</p>
-                          <p className="text-[11px] text-[#737370] mt-0.5">Mobile</p>
-                        </div>
-                      </div>
-                    </div>
-                    {/* Progress bar */}
-                    {sessions.length > 0 && (
-                      <div className="mt-3 flex h-1.5 rounded-full overflow-hidden gap-0.5">
-                        {desktop > 0 && <div className="bg-[#0369A1] rounded-full" style={{ width: `${(desktop / total) * 100}%` }} />}
-                        {mobileAll > 0 && <div className="bg-[#0F6E56] rounded-full" style={{ width: `${(mobileAll / total) * 100}%` }} />}
-                      </div>
-                    )}
-                  </div>
-                );
-              })()}
 
               {/* ── Viewer Activity ── */}
               <div>
@@ -277,9 +288,9 @@ export default function PropertyAnalyticsSidebar({ propertyId, propertyName, onC
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
                     <span className="w-1 h-4 rounded-full bg-[#D03839] flex-shrink-0" />
-                    <h3 className="text-[13px] font-bold text-[#1A1816]">Viewer Activity</h3>
+                    <h3 className="text-[13px] font-bold text-[#1A1816]">Interested Buyers</h3>
                     <span className="text-[11px] font-semibold text-[#737370] bg-[#F0F0EC] px-2 py-0.5 rounded-full">
-                      {sessions.length}
+                      {scoredBuyers.length}
                     </span>
                   </div>
                   {/* Sort dropdown */}
@@ -310,19 +321,19 @@ export default function PropertyAnalyticsSidebar({ propertyId, propertyName, onC
                 </div>
 
                 {/* Empty state */}
-                {sessions.length === 0 ? (
+                {scoredBuyers.length === 0 ? (
                   <div className="rounded border border-dashed border-[#E8E8E4] bg-white py-12 text-center">
                     <div className="w-10 h-10 rounded-full bg-[#F0F0EC] flex items-center justify-center mx-auto mb-3">
                       <Eye className="w-5 h-5 text-[#A8A8A4]" />
                     </div>
                     <p className="text-[14px] font-semibold text-[#1A1816] mb-1">No activity yet</p>
                     <p className="text-[12px] text-[#737370] max-w-[200px] mx-auto">
-                      When buyers view this listing, they'll appear here.
+                      When identified buyers view this listing, they'll appear here.
                     </p>
                   </div>
                 ) : (
                   <div className="space-y-2">
-                    {sessions.map((row, idx) => {
+                    {scoredBuyers.map((row, idx) => {
                       const name = displayName(row);
                       const initial = (name && name !== 'Guest' ? name.charAt(0) : (row.user_email || 'G').charAt(0)).toUpperCase();
                       const avatarPair = getAvatarPair(name);
@@ -359,20 +370,29 @@ export default function PropertyAnalyticsSidebar({ propertyId, propertyName, onC
                             </div>
 
                             <div className="min-w-0 flex-1">
-                              {/* Name + source + device row */}
+                              {/* Name + lead temp + repeat + source row */}
                               <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mb-1.5">
                                 <p className="text-[13px] font-bold text-[#1A1816] leading-none capitalize">
                                   {name}
                                 </p>
+                                {(() => {
+                                  const t = TEMP_STYLE[row._eng?.temp || 'cold'];
+                                  return (
+                                    <span className={`inline-flex items-center gap-1 h-5 px-2 rounded-full text-[10px] font-semibold border ${t.cls}`}>
+                                      {row._eng?.temp === 'hot' && <Flame className="w-2.5 h-2.5" />}
+                                      {t.label}
+                                    </span>
+                                  );
+                                })()}
+                                {(row.visit_count || 1) > 1 && (
+                                  <span className="inline-flex items-center gap-1 h-5 px-2 rounded-full bg-[#EBF3FC] text-[#0369A1] text-[10px] font-semibold border border-[#BFDBF7]">
+                                    <RefreshCw className="w-2.5 h-2.5" />
+                                    {row.visit_count}× visits
+                                  </span>
+                                )}
                                 {row.utm_source && (
                                   <span className="inline-flex items-center h-5 px-2 rounded-full bg-[#FEF0EF] text-[#D03839] text-[10px] font-semibold capitalize border border-[#F5C4C0]">
                                     {row.utm_source}
-                                  </span>
-                                )}
-                                {device && (
-                                  <span className="inline-flex items-center gap-1 h-5 px-2 rounded-full bg-[#F0F0EC] text-[#737370] text-[10px] font-semibold">
-                                    {getDeviceIcon(row.device_type)}
-                                    {device}
                                   </span>
                                 )}
                               </div>
@@ -416,6 +436,16 @@ export default function PropertyAnalyticsSidebar({ propertyId, propertyName, onC
                                 <p className="text-[11px] text-[#A8A8A4]">
                                   Last seen: {lastSeen}
                                 </p>
+                              )}
+
+                              {/* Message button — enterprise plan only, needs an identified buyer */}
+                              {isEnterprise && row.user_id && (
+                                <button
+                                  onClick={() => messageBuyer(row)}
+                                  className="mt-2 inline-flex items-center gap-1.5 h-7 px-3 rounded bg-[#1A1816] hover:bg-black text-white text-[11px] font-semibold transition-colors"
+                                >
+                                  <MessageSquare className="w-3 h-3" /> Message buyer
+                                </button>
                               )}
                             </div>
                           </div>

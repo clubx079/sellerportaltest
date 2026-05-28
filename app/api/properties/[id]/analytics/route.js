@@ -240,10 +240,12 @@ export async function GET(request, { params }) {
           viewed_photos: photos,
           viewed_description: desc,
           viewed_repairs: repairs,
+          visit_count: 1,
           _minStart: start,
           _maxEnd: end
         });
       } else {
+        existing.visit_count = (existing.visit_count || 1) + 1;
         existing.page_views += views;
         existing.duration_seconds += duration;
         if (row.active_time_seconds != null) existing.active_time_seconds += Number(row.active_time_seconds);
@@ -297,6 +299,24 @@ export async function GET(request, { params }) {
       return tB - tA;
     });
 
+    // Funnel counts for wholesalers: Saves + Offers on this property
+    let savesCount = 0;
+    let offersCount = 0;
+    try {
+      const { count: sc } = await supabase
+        .from('user_favorites')
+        .select('id', { count: 'exact', head: true })
+        .eq('property_id', propertyId);
+      savesCount = sc || 0;
+    } catch {}
+    try {
+      const { count: oc } = await supabase
+        .from('offers')
+        .select('id', { count: 'exact', head: true })
+        .eq('property_id', propertyId);
+      offersCount = oc || 0;
+    } catch {}
+
     return NextResponse.json({
       propertyId,
       aggregates: {
@@ -307,7 +327,9 @@ export async function GET(request, { params }) {
         totalActiveTimeSeconds,
         totalImagesViewed,
         deviceBreakdown,
-        activeNow
+        activeNow,
+        savesCount,
+        offersCount
       },
       viewerSessions
     });

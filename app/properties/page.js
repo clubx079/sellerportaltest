@@ -35,6 +35,7 @@ const PropertiesManagement = () => {
   const [effectiveUserId, setEffectiveUserId] = useState(null);
   const [workspaceRole, setWorkspaceRole] = useState(null);
   const [workspacePerms, setWorkspacePerms] = useState(null);
+  const [planType, setPlanType] = useState(null);
   const [showUTMModal, setShowUTMModal] = useState(false);
   const [propertyForUTM, setPropertyForUTM] = useState(null);
   const [selectedPropertyRaw, setSelectedPropertyRaw] = useState(null); // raw property for UTM (slug/id)
@@ -79,6 +80,21 @@ const PropertiesManagement = () => {
       fetchProperties();
     }
   }, [effectiveUserId, viewMode]);
+
+  // Plan type drives the enterprise-only Message button in the analytics sidebar.
+  // For team members, effectiveUserId is the workspace owner, so this reflects
+  // the workspace's plan (enterprise team members get the button too).
+  useEffect(() => {
+    if (!effectiveUserId) return;
+    supabase
+      .from('seller_plans')
+      .select('plan_type')
+      .eq('seller_id', effectiveUserId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+      .then(({ data }) => setPlanType(data?.plan_type || null));
+  }, [effectiveUserId]);
 
   const fetchProperties = async () => {
     try {
@@ -1305,6 +1321,7 @@ const PropertiesManagement = () => {
           <PropertyAnalyticsSidebar
             propertyId={propertyForAnalytics.id}
             propertyName={propertyForAnalytics.full_address || propertyForAnalytics.address || propertyForAnalytics.slug}
+            isEnterprise={planType === 'enterprise'}
             onClose={() => {
               setShowAnalyticsSidebar(false);
               setPropertyForAnalytics(null);
