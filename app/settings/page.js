@@ -51,6 +51,8 @@ export default function SettingsPage() {
 
   const [passwordForm, setPasswordForm] = useState({ current_password: '', new_password: '', confirm_password: '' });
   const [showPasswords, setShowPasswords] = useState({ current: false, new: false, confirm: false });
+  // Email change flow: step 'idle' | 'form' (enter new email + password) | 'otp' (enter code)
+  const [emailChange, setEmailChange] = useState({ step: 'idle', newEmail: '', password: '', otp: '', error: '', loading: false });
 
   // Subscription management (cancel flow)
   const [planInfo, setPlanInfo] = useState(null);
@@ -152,6 +154,47 @@ export default function SettingsPage() {
     finally { setSaving(false); }
   };
 
+  // ── Email change (H10) ──────────────────────────────────────────
+  async function requestEmailChange() {
+    if (!user?.id) return;
+    setEmailChange(s => ({ ...s, loading: true, error: '' }));
+    try {
+      const res = await fetch('/api/seller/change-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sellerId: user.id, currentPassword: emailChange.password, newEmail: emailChange.newEmail }),
+      });
+      const json = await res.json();
+      if (!res.ok || json.error) { setEmailChange(s => ({ ...s, loading: false, error: json.error || 'Failed' })); return; }
+      setEmailChange(s => ({ ...s, step: 'otp', loading: false, error: '' }));
+    } catch {
+      setEmailChange(s => ({ ...s, loading: false, error: 'Something went wrong' }));
+    }
+  }
+
+  async function verifyEmailChange() {
+    if (!user?.id) return;
+    setEmailChange(s => ({ ...s, loading: true, error: '' }));
+    try {
+      const res = await fetch('/api/seller/change-email/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sellerId: user.id, otp: emailChange.otp }),
+      });
+      const json = await res.json();
+      if (!res.ok || json.error) { setEmailChange(s => ({ ...s, loading: false, error: json.error || 'Failed' })); return; }
+      // Success — update local state + localStorage
+      const updated = { ...user, email: json.newEmail };
+      setUser(updated);
+      setProfileForm(f => ({ ...f, email: json.newEmail }));
+      try { localStorage.setItem('seller_user', JSON.stringify(updated)); } catch {}
+      setEmailChange({ step: 'idle', newEmail: '', password: '', otp: '', error: '', loading: false });
+      setMessage({ type: 'success', text: 'Email updated successfully.' });
+    } catch {
+      setEmailChange(s => ({ ...s, loading: false, error: 'Something went wrong' }));
+    }
+  }
+
   const fetchActivities = async () => {
     if (!user?.id) return;
     try {
@@ -250,8 +293,14 @@ export default function SettingsPage() {
                 </div>
                 <div>
                   <label className="block text-[12px] font-medium text-[#444441] mb-1.5">Email Address</label>
-                  <input type="email" readOnly value={profileForm.email} className="w-full px-4 py-2.5 border border-[#E8E8E4] rounded bg-[#FAFAF8] text-[14px] text-[#737370]" />
-                  <p className="text-[11px] text-[#A8A8A4] mt-1">Email cannot be changed</p>
+                  <div className="flex items-center gap-2">
+                    <input type="email" readOnly value={profileForm.email} className="flex-1 px-4 py-2.5 border border-[#E8E8E4] rounded bg-[#FAFAF8] text-[14px] text-[#737370]" />
+                    <button type="button" onClick={() => setEmailChange({ step: 'form', newEmail: '', password: '', otp: '', error: '', loading: false })}
+                      className="px-4 py-2.5 text-[13px] font-semibold text-[#D03839] border border-[#E8E8E4] rounded hover:bg-[#FAFAF8] transition-colors whitespace-nowrap">
+                      Change
+                    </button>
+                  </div>
+                  <p className="text-[11px] text-[#A8A8A4] mt-1">We'll verify your new email before changing it.</p>
                 </div>
                 <div>
                   <label className="block text-[12px] font-medium text-[#444441] mb-1.5">Phone Number</label>
@@ -562,6 +611,58 @@ export default function SettingsPage() {
                   </button>
                 </div>
               ))
+            )}
+          </div>
+        </div>
+      )}
+
+      {emailChange.step !== 'idle' && (
+        <div className="fixed inset-0 z-[95] flex items-center justify-center p-4">
+          <div className="fixed inset-0 bg-[#1A1816]/40" onClick={() => emailChange.loading ? null : setEmailChange({ step: 'idle', newEmail: '', password: '', otp: '', error: '', loading: false })} aria-hidden="true" />
+          <div className="relative bg-white rounded shadow-lg border border-[#E8E8E4] max-w-md w-full p-6 z-10">
+            {emailChange.step === 'form' ? (
+              <>
+                <h3 className="text-[16px] font-semibold text-[#1A1816] mb-1">Change email address</h3>
+                <p className="text-[13px] text-[#737370] mb-4">Enter your new email and current password. We'll send a verification code to the new address.</p>
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-[12px] font-medium text-[#444441] mb-1.5">New email address</label>
+                    <input type="email" value={emailChange.newEmail} onChange={e => setEmailChange(s => ({ ...s, newEmail: e.target.value, error: '' }))}
+                      placeholder="you@example.com"
+                      className="w-full px-4 py-2.5 border border-[#E8E8E4] rounded text-[14px] text-[#1A1816] focus:outline-none focus:border-[#D03839]" />
+                  </div>
+                  <div>
+                    <label className="block text-[12px] font-medium text-[#444441] mb-1.5">Current password</label>
+                    <input type="password" value={emailChange.password} onChange={e => setEmailChange(s => ({ ...s, password: e.target.value, error: '' }))}
+                      placeholder="••••••••"
+                      className="w-full px-4 py-2.5 border border-[#E8E8E4] rounded text-[14px] text-[#1A1816] focus:outline-none focus:border-[#D03839]" />
+                  </div>
+                </div>
+                {emailChange.error && <p className="text-[12px] text-[#D03839] mt-2">{emailChange.error}</p>}
+                <div className="flex items-center gap-3 mt-5">
+                  <button type="button" onClick={() => setEmailChange({ step: 'idle', newEmail: '', password: '', otp: '', error: '', loading: false })}
+                    className="flex-1 h-10 px-4 text-[13px] font-semibold text-[#1A1816] bg-white border border-[#E8E8E4] rounded hover:bg-[#FAFAF8] transition-colors">Cancel</button>
+                  <button type="button" onClick={requestEmailChange} disabled={emailChange.loading || !emailChange.newEmail || !emailChange.password}
+                    className="flex-1 h-10 px-4 text-[13px] font-semibold text-white bg-[#D03839] hover:bg-[#E0493B] rounded transition-colors disabled:opacity-50">
+                    {emailChange.loading ? 'Sending…' : 'Send code'}</button>
+                </div>
+              </>
+            ) : (
+              <>
+                <h3 className="text-[16px] font-semibold text-[#1A1816] mb-1">Enter verification code</h3>
+                <p className="text-[13px] text-[#737370] mb-4">We sent a 6-digit code to <strong className="text-[#1A1816]">{emailChange.newEmail}</strong>. Enter it below to confirm.</p>
+                <input type="text" inputMode="numeric" maxLength={6} value={emailChange.otp} onChange={e => setEmailChange(s => ({ ...s, otp: e.target.value.replace(/\D/g, ''), error: '' }))}
+                  placeholder="000000"
+                  className="w-full px-4 py-2.5 border border-[#E8E8E4] rounded text-[18px] tracking-[8px] text-center text-[#1A1816] focus:outline-none focus:border-[#D03839]" />
+                {emailChange.error && <p className="text-[12px] text-[#D03839] mt-2">{emailChange.error}</p>}
+                <div className="flex items-center gap-3 mt-5">
+                  <button type="button" onClick={() => setEmailChange(s => ({ ...s, step: 'form', otp: '', error: '' }))}
+                    className="flex-1 h-10 px-4 text-[13px] font-semibold text-[#1A1816] bg-white border border-[#E8E8E4] rounded hover:bg-[#FAFAF8] transition-colors">Back</button>
+                  <button type="button" onClick={verifyEmailChange} disabled={emailChange.loading || emailChange.otp.length !== 6}
+                    className="flex-1 h-10 px-4 text-[13px] font-semibold text-white bg-[#D03839] hover:bg-[#E0493B] rounded transition-colors disabled:opacity-50">
+                    {emailChange.loading ? 'Verifying…' : 'Confirm email'}</button>
+                </div>
+              </>
             )}
           </div>
         </div>
