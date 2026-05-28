@@ -1090,7 +1090,7 @@ export default function NewPropertyPage() {
           {activeTab === 'basic' && (
             <div className="space-y-6">
               <div>
-                <label className="block text-[13px] font-semibold text-[#1A1816] mb-2">Location *</label>
+                <label className="block text-[13px] font-semibold text-[#1A1816] mb-2">Location <span className="text-[#D03839]">*</span></label>
                 <GooglePlacesAutocomplete
                   onAddressSelect={handleAddressSelect}
                   defaultValue={formData.location || ''}
@@ -1102,7 +1102,7 @@ export default function NewPropertyPage() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-[13px] font-semibold text-[#1A1816] mb-2">Price ($) *</label>
+                  <label className="block text-[13px] font-semibold text-[#1A1816] mb-2">Price ($) <span className="text-[#D03839]">*</span></label>
                   <input
                     type="number"
                     value={formData.price || ''}
@@ -1112,7 +1112,7 @@ export default function NewPropertyPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-[13px] font-semibold text-[#1A1816] mb-2">Property Type *</label>
+                  <label className="block text-[13px] font-semibold text-[#1A1816] mb-2">Property Type <span className="text-[#D03839]">*</span></label>
                   <select
                     value={formData.property_type ?? ''}
                     onChange={(e) => handleInputChange('property_type', e.target.value)}
@@ -1128,7 +1128,7 @@ export default function NewPropertyPage() {
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-[13px] font-semibold text-[#1A1816] mb-2">Beds *</label>
+                  <label className="block text-[13px] font-semibold text-[#1A1816] mb-2">Beds <span className="text-[#D03839]">*</span></label>
                   <PropertySelect
                     value={formData.bedrooms || ''}
                     onChange={(v) => handleInputChange('bedrooms', v)}
@@ -1136,7 +1136,7 @@ export default function NewPropertyPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-[13px] font-semibold text-[#1A1816] mb-2">Baths *</label>
+                  <label className="block text-[13px] font-semibold text-[#1A1816] mb-2">Baths <span className="text-[#D03839]">*</span></label>
                   <PropertySelect
                     value={formData.bathrooms || ''}
                     onChange={(v) => handleInputChange('bathrooms', v)}
@@ -1144,7 +1144,7 @@ export default function NewPropertyPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-[13px] font-semibold text-[#1A1816] mb-2">Floor Area (sqft) *</label>
+                  <label className="block text-[13px] font-semibold text-[#1A1816] mb-2">Floor Area (sqft) <span className="text-[#D03839]">*</span></label>
                   <input
                     type="number"
                     value={formData.floor_area || ''}

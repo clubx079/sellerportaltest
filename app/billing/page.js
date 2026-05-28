@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react'
 import { CreditCard, Check, AlertCircle, Loader2, Receipt, X, Download } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
+import { formatCents } from '@/lib/format'
 import { loadStripe } from '@stripe/stripe-js'
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js'
 
@@ -269,10 +270,10 @@ export default function BillingPage() {
                 {isLifetimeFree ? null : subDetails?.has_discount ? (
                   <div className="flex items-center gap-2 mt-1.5 flex-wrap">
                     <span className="text-[13px] text-[#A8A8A4] line-through">
-                      ${(subDetails.original_amount / 100).toFixed(2)}/{subDetails.interval}
+                      {formatCents(subDetails.original_amount)}/{subDetails.interval}
                     </span>
                     <span className="text-[14px] font-bold text-[#1A1816]">
-                      ${(subDetails.discounted_amount / 100).toFixed(2)}/{subDetails.interval}
+                      {formatCents(subDetails.discounted_amount)}/{subDetails.interval}
                     </span>
                     {subDetails.coupon_name && (
                       <span className="text-[11px] font-semibold bg-[#E4F5EC] text-[#0F6E56] border border-[#B6E4CE] px-2 py-0.5 rounded-full">
@@ -282,7 +283,7 @@ export default function BillingPage() {
                   </div>
                 ) : subDetails?.original_amount ? (
                   <p className="text-[13px] font-semibold text-[#1A1816] mt-1.5">
-                    ${(subDetails.original_amount / 100).toFixed(2)}/{subDetails.interval}
+                    {formatCents(subDetails.original_amount)}/{subDetails.interval}
                   </p>
                 ) : null}
               </div>
@@ -432,11 +433,11 @@ export default function BillingPage() {
                     <div className="flex items-center gap-3 flex-shrink-0 ml-4">
                       <div className="text-right">
                         {inv.discount_amount > 0 && (
-                          <p className="text-[11px] text-[#A8A8A4] line-through">${(inv.subtotal / 100).toFixed(2)}</p>
+                          <p className="text-[11px] text-[#A8A8A4] line-through">{formatCents(inv.subtotal, { cents: 'always' })}</p>
                         )}
-                        <p className="text-[13px] font-bold text-[#1A1816]">${((inv.amount_paid || inv.amount_due) / 100).toFixed(2)}</p>
+                        <p className="text-[13px] font-bold text-[#1A1816]">{formatCents(inv.amount_paid || inv.amount_due, { cents: 'always' })}</p>
                         {inv.discount_amount > 0 && (
-                          <p className="text-[11px] text-[#0F6E56] font-medium">−${(inv.discount_amount / 100).toFixed(2)} discount</p>
+                          <p className="text-[11px] text-[#0F6E56] font-medium">−{formatCents(inv.discount_amount, { cents: 'always' })} discount</p>
                         )}
                       </div>
                       <span className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold border ${

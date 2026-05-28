@@ -241,7 +241,7 @@ function InviteModal({ onClose, onInvited, hasOrg, defaultOrgName }) {
 
   if (isTrialBlock) {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4">
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4">
         <div className="bg-white rounded w-full max-w-[420px] shadow-xl">
           <div className="flex items-center justify-between px-6 py-4 border-b border-[#E8E8E4]">
             <h2 className="text-[16px] font-bold text-[#1A1816]">Trial Active</h2>
@@ -268,7 +268,7 @@ function InviteModal({ onClose, onInvited, hasOrg, defaultOrgName }) {
   const permCount = getPermissionCount(permissions)
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4">
       <div className="bg-white rounded w-full max-w-[480px] shadow-xl max-h-[90vh] flex flex-col">
         <div className="flex items-center justify-between px-6 py-4 border-b border-[#E8E8E4] shrink-0">
           <h2 className="text-[16px] font-bold text-[#1A1816]">Invite Team Member</h2>

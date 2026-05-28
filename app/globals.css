@@ -16,7 +16,7 @@
   }
 
   body {
-    font-family: 'Open Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-family: var(--font-dm-sans), 'Open Sans', sans-serif;
     @apply text-[#1A1816];
     background: #FAFAF8;
   }

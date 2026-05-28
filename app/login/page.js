@@ -194,7 +194,7 @@ function LoginForm() {
                   onChange={handleChange}
                   autoComplete="email"
                   required
-                  className="block w-full min-h-[44px] sm:h-12 px-4 rounded border border-[#D4D4CF] bg-white text-[#1A1816] placeholder:text-[#A8A8A4] text-base focus:outline-none focus:ring-2 focus:ring-[#D03839]/20 focus:border-[#D03839] transition-all duration-200"
+                  className="block w-full min-h-[44px] sm:h-12 px-4 rounded border border-[#E8E8E4] bg-white text-[#1A1816] placeholder:text-[#A8A8A4] text-base focus:outline-none focus:ring-2 focus:ring-[#D03839]/20 focus:border-[#D03839] transition-all duration-200"
                 />
               </div>
 
@@ -213,7 +213,7 @@ function LoginForm() {
                     onChange={handleChange}
                     autoComplete="current-password"
                     required
-                    className="block w-full min-h-[44px] sm:h-12 px-4 pr-12 rounded border border-[#D4D4CF] bg-white text-[#1A1816] placeholder:text-[#A8A8A4] text-base focus:outline-none focus:ring-2 focus:ring-[#D03839]/20 focus:border-[#D03839] transition-colors"
+                    className="block w-full min-h-[44px] sm:h-12 px-4 pr-12 rounded border border-[#E8E8E4] bg-white text-[#1A1816] placeholder:text-[#A8A8A4] text-base focus:outline-none focus:ring-2 focus:ring-[#D03839]/20 focus:border-[#D03839] transition-colors"
                   />
                   <button
                     type="button"
