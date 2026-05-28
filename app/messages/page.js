@@ -110,6 +110,8 @@ export default function MessagesPage() {
   const [blockConfirm, setBlockConfirm] = useState(null);
   const messagesEndRef = useRef(null);
   const messageInputRef = useRef(null);
+  const fileInputRef = useRef(null);
+  const [uploadingAttachment, setUploadingAttachment] = useState(false);
 
   // Offer state
   const [offer, setOffer] = useState(null);
@@ -369,6 +371,46 @@ export default function MessagesPage() {
       })
       .catch(() => {})
       .finally(() => setSending(false));
+  };
+
+  // H6 — upload a file to Supabase storage and send it as an attachment message
+  const sendAttachment = async (file) => {
+    if (!file || !openConversationId || uploadingAttachment) return;
+    const headers = getAuthHeaders();
+    if (!headers.Authorization) return;
+    const MAX = 10 * 1024 * 1024; // 10MB
+    if (file.size > MAX) { alert('File too large (max 10MB).'); return; }
+    setUploadingAttachment(true);
+    try {
+      const supabase = getSupabase();
+      if (!supabase) throw new Error('Storage unavailable');
+      const ext = (file.name.split('.').pop() || 'bin').toLowerCase();
+      const path = `chat/${openConversationId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+      const { error: upErr } = await supabase.storage
+        .from('scraperpropertyphotos')
+        .upload(path, file, { cacheControl: '3600', upsert: false });
+      if (upErr) throw upErr;
+      const { data: pub } = supabase.storage.from('scraperpropertyphotos').getPublicUrl(path);
+      const attachmentUrl = pub?.publicUrl;
+      if (!attachmentUrl) throw new Error('Could not get file URL');
+
+      const res = await fetch(API, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...headers },
+        body: JSON.stringify({ action: 'send_message', conversationId: openConversationId, messageText: messageText.trim() || null, attachmentUrl, attachmentName: file.name }),
+      });
+      const data = await res.json();
+      if (data.message) {
+        const msg = data.message;
+        setMessages(prev => prev.some(m => String(m.id) === String(msg.id)) ? prev : [...prev, msg]);
+        setMessageText('');
+      }
+    } catch (e) {
+      alert('Failed to send attachment: ' + (e?.message || 'unknown error'));
+    } finally {
+      setUploadingAttachment(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
   };
 
   // Fetch offer when conversation changes
@@ -718,6 +760,15 @@ export default function MessagesPage() {
                                   <div className="max-w-[70%]">
                                     <div className={`rounded px-4 py-3 ${isSeller ? 'bg-[#FEF0EF] text-[#1A1816] border border-[#F5C4C0]' : 'bg-[#FAFAF8] text-[#1A1816] border border-[#E8E8E4]'}`}>
                                       {m.message_text && <p className="text-[14px] leading-relaxed whitespace-pre-wrap break-words">{m.message_text}</p>}
+                                      {m.has_attachment && m.attachment_url && (
+                                        /\.(png|jpe?g|gif|webp|heic)$/i.test(m.attachment_name || m.attachment_url)
+                                          ? <a href={m.attachment_url} target="_blank" rel="noopener noreferrer" className={m.message_text ? 'mt-2 block' : 'block'}>
+                                              <img src={m.attachment_url} alt={m.attachment_name || 'attachment'} className="max-w-full rounded border border-[#E8E8E4] max-h-64 object-cover" />
+                                            </a>
+                                          : <a href={m.attachment_url} target="_blank" rel="noopener noreferrer" className={`${m.message_text ? 'mt-2' : ''} flex items-center gap-2 text-[13px] font-medium text-[#D03839] underline`}>
+                                              <Paperclip className="w-3.5 h-3.5" /> {m.attachment_name || 'Download attachment'}
+                                            </a>
+                                      )}
                                     </div>
                                     <div className={`flex items-center gap-1 mt-1 ${isSeller ? 'justify-end' : 'justify-start'}`}>
                                       <span className="text-[11px] text-[#A8A8A4]">{formatTime(m.created_at)}</span>
@@ -742,8 +793,13 @@ export default function MessagesPage() {
               {/* Input */}
               <div className="flex-shrink-0 px-6 py-4 border-t border-[#E8E8E4] bg-white">
                 <form onSubmit={e => { e.preventDefault(); sendMessage(); }} className="flex items-end gap-2">
-                  <button type="button" className="p-2.5 rounded hover:bg-[#FAFAF8] transition-colors duration-200 flex-shrink-0">
-                    <Paperclip className="w-5 h-5 text-[#737370]" />
+                  <input ref={fileInputRef} type="file" className="hidden"
+                    accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt"
+                    onChange={e => { const f = e.target.files?.[0]; if (f) sendAttachment(f); }} />
+                  <button type="button" onClick={() => fileInputRef.current?.click()} disabled={uploadingAttachment || !openConversationId}
+                    title="Attach a file"
+                    className="p-2.5 rounded hover:bg-[#FAFAF8] transition-colors duration-200 flex-shrink-0 disabled:opacity-50">
+                    {uploadingAttachment ? <Loader2 className="w-5 h-5 text-[#737370] animate-spin" /> : <Paperclip className="w-5 h-5 text-[#737370]" />}
                   </button>
                   <button type="button" className="p-2.5 rounded hover:bg-[#FAFAF8] transition-colors duration-200 flex-shrink-0">
                     <Smile className="w-5 h-5 text-[#737370]" />
