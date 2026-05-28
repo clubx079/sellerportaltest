@@ -4,8 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import {
   MessageCircle, Send, Search, ArrowLeft, Loader2, Check, CheckCheck,
-  Pin, Paperclip, Smile, MapPin, Mail, Phone, Shield, AlertCircle, X, MoreVertical
-} from 'lucide-react';
+  Pin, Paperclip, Smile, MapPin, Mail, Phone, Shield, AlertCircle, X, MoreVertical, Ban } from 'lucide-react';
 import { createClient } from '@supabase/supabase-js';
 
 const API = '/api/seller/chat';
@@ -108,8 +107,11 @@ export default function MessagesPage() {
   const [contextAddress, setContextAddress] = useState('');
   const [contextConversationId, setContextConversationId] = useState(null);
   const [contextMenu, setContextMenu] = useState(null);
+  const [blockConfirm, setBlockConfirm] = useState(null);
   const messagesEndRef = useRef(null);
   const messageInputRef = useRef(null);
+  const fileInputRef = useRef(null);
+  const [uploadingAttachment, setUploadingAttachment] = useState(false);
 
   // Offer state
   const [offer, setOffer] = useState(null);
@@ -126,6 +128,9 @@ export default function MessagesPage() {
   const [counterTimeline, setCounterTimeline] = useState('30 days');
   const [counterFinancing, setCounterFinancing] = useState('Cash');
   const [counterNotes, setCounterNotes] = useState('');
+  const [showCounterPreview, setShowCounterPreview] = useState(false);
+  const [toast, setToast] = useState(null);
+  const [showContactInfo, setShowContactInfo] = useState(false);
   const [offerActionLoading, setOfferActionLoading] = useState(false);
   const [showMobilePropPanel, setShowMobilePropPanel] = useState(false);
 
@@ -231,7 +236,9 @@ export default function MessagesPage() {
       : `${API}?action=get_conversations`;
     fetch(url, { headers: h }).then(r => r.json()).then(data => {
       const list = data.conversations || [];
-      setConversations(list); setFilteredConversations(list);
+      setConversations(list);
+      // Don't set filteredConversations here — the searchQuery effect derives it
+      // from `conversations`, so it stays correct without clobbering an active search.
       if (openConversationId != null && !list.some(c => c.id === openConversationId)) setOpenConversationId(null);
     }).catch(() => {});
   }
@@ -239,7 +246,10 @@ export default function MessagesPage() {
   useEffect(() => {
     const headers = getAuthHeaders();
     if (!headers.Authorization) return;
-    const interval = setInterval(() => fetchConversations(headers), 10000);
+    // 60s fallback poll to catch NEW conversations from buyers not currently open.
+    // The currently-open conversation updates instantly via the Supabase realtime
+    // subscription below, so this only needs to be a slow safety net.
+    const interval = setInterval(() => fetchConversations(headers), 60000);
     return () => clearInterval(interval);
   }, [buyerIdFromUrl, propertyIdFromUrl]);
 
@@ -365,6 +375,46 @@ export default function MessagesPage() {
       .finally(() => setSending(false));
   };
 
+  // H6 — upload a file to Supabase storage and send it as an attachment message
+  const sendAttachment = async (file) => {
+    if (!file || !openConversationId || uploadingAttachment) return;
+    const headers = getAuthHeaders();
+    if (!headers.Authorization) return;
+    const MAX = 10 * 1024 * 1024; // 10MB
+    if (file.size > MAX) { alert('File too large (max 10MB).'); return; }
+    setUploadingAttachment(true);
+    try {
+      const supabase = getSupabase();
+      if (!supabase) throw new Error('Storage unavailable');
+      const ext = (file.name.split('.').pop() || 'bin').toLowerCase();
+      const path = `chat/${openConversationId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+      const { error: upErr } = await supabase.storage
+        .from('scraperpropertyphotos')
+        .upload(path, file, { cacheControl: '3600', upsert: false });
+      if (upErr) throw upErr;
+      const { data: pub } = supabase.storage.from('scraperpropertyphotos').getPublicUrl(path);
+      const attachmentUrl = pub?.publicUrl;
+      if (!attachmentUrl) throw new Error('Could not get file URL');
+
+      const res = await fetch(API, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...headers },
+        body: JSON.stringify({ action: 'send_message', conversationId: openConversationId, messageText: messageText.trim() || null, attachmentUrl, attachmentName: file.name }),
+      });
+      const data = await res.json();
+      if (data.message) {
+        const msg = data.message;
+        setMessages(prev => prev.some(m => String(m.id) === String(msg.id)) ? prev : [...prev, msg]);
+        setMessageText('');
+      }
+    } catch (e) {
+      alert('Failed to send attachment: ' + (e?.message || 'unknown error'));
+    } finally {
+      setUploadingAttachment(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
   // Fetch offer when conversation changes
   useEffect(() => {
     if (!openConversationId) { setOffer(null); setAllOffers([]); return; }
@@ -469,6 +519,82 @@ export default function MessagesPage() {
 
   return (
     <div className="flex flex-col h-full min-h-0 flex-1 overflow-hidden -m-4 lg:-m-6" style={{ fontFamily: FONT }}>
+      {/* Counter-offer preview/confirm modal — gate the send so sellers
+          see the full terms before committing. */}
+      {showCounterPreview && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4" onClick={() => setShowCounterPreview(false)}>
+          <div onClick={e => e.stopPropagation()} className="w-full max-w-[460px] bg-white border border-[#E8E8E4] rounded shadow-2xl overflow-hidden">
+            <div className="px-5 py-4 border-b border-[#E8E8E4] flex items-center justify-between">
+              <div>
+                <h3 className="text-[16px] font-bold text-[#1A1816]">Review counter offer</h3>
+                <p className="text-[12px] text-[#737370] mt-0.5">This is what {buyerDisplayName} will receive by email.</p>
+              </div>
+              <button onClick={() => setShowCounterPreview(false)} className="p-1 rounded hover:bg-[#FAFAF8] -mr-1" aria-label="Close">
+                <X className="w-4 h-4 text-[#737370]" />
+              </button>
+            </div>
+            {/* Email-style preview frame so the seller sees the buyer's actual view */}
+            <div className="mx-5 mt-4 rounded border border-[#E8E8E4] overflow-hidden">
+              <div className="bg-[#D03839] px-4 py-2.5">
+                <span className="text-white text-[14px] font-bold tracking-tight">DeelMap</span>
+              </div>
+              <div className="px-4 py-3 bg-white">
+                <p className="text-[13px] font-semibold text-[#1A1816]">You\u2019ve received a counter offer</p>
+                <p className="text-[12px] text-[#737370] mt-0.5">{selectedPropertyAddress || 'Your offer'} \u2014 the seller has responded with new terms.</p>
+              </div>
+            </div>
+            <div className="px-5 py-4 space-y-3">
+              <div className="flex items-baseline justify-between">
+                <span className="text-[12px] font-semibold text-[#A8A8A4] uppercase tracking-wide">Counter price</span>
+                <span className="text-[22px] font-bold text-[#1A1816]">${counterAmount ? Number(counterAmount).toLocaleString() : '0'}</span>
+              </div>
+              <div className="flex items-center justify-between py-2 border-t border-[#F0F0EE]">
+                <span className="text-[12px] text-[#737370]">Closing timeline</span>
+                <span className="text-[13px] font-medium text-[#1A1816]">{counterTimeline}</span>
+              </div>
+              <div className="flex items-center justify-between py-2 border-t border-[#F0F0EE]">
+                <span className="text-[12px] text-[#737370]">Financing</span>
+                <span className="text-[13px] font-medium text-[#1A1816]">{counterFinancing}</span>
+              </div>
+              {counterNotes && (
+                <div className="py-2 border-t border-[#F0F0EE]">
+                  <span className="block text-[12px] text-[#737370] mb-1">Notes to buyer</span>
+                  <p className="text-[13px] text-[#1A1816] whitespace-pre-wrap leading-relaxed">{counterNotes}</p>
+                </div>
+              )}
+              <div className="flex items-start gap-2 bg-[#FEF9EC] border border-[#F5D78E] rounded px-3 py-2.5 mt-2">
+                <AlertCircle className="w-3.5 h-3.5 text-[#B5620A] flex-shrink-0 mt-0.5" />
+                <p className="text-[12px] text-[#B5620A]">The buyer will be notified immediately and can accept, counter, or decline.</p>
+              </div>
+            </div>
+            <div className="px-5 py-3 border-t border-[#E8E8E4] bg-[#FAFAF8] flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setShowCounterPreview(false)}
+                className="h-9 px-3 border border-[#E8E8E4] text-[#444441] hover:border-[#1A1816] hover:text-[#1A1816] text-[13px] font-semibold rounded transition-colors"
+              >
+                Edit
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  await handleOfferAction('counter', {
+                    counter_data: { amount: Number(counterAmount), closing_timeline: counterTimeline, financing_type: counterFinancing, notes: counterNotes }
+                  });
+                  setShowCounterPreview(false);
+                  setToast(`Counter offer sent to ${buyerDisplayName}. They'll receive an email.`);
+                  setTimeout(() => setToast(null), 3500);
+                }}
+                disabled={offerActionLoading}
+                className="h-9 px-5 bg-[#D03839] hover:bg-[#E0493B] text-white text-[13px] font-semibold rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {offerActionLoading ? 'Sending…' : 'Send counter offer'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {error && (
         <div className="rounded bg-[#FEF0EF] border border-[#F5C4C0] p-3 mb-3 shrink-0">
           <p className="text-[13px] text-[#D03839]">{error}</p>
@@ -566,7 +692,7 @@ export default function MessagesPage() {
                   </button>
                   <div className="flex-1 min-w-0">
                     <h2 className="text-[16px] font-bold text-[#1A1816]">{buyerDisplayName}</h2>
-                    <p className="text-[13px] text-[#737370]">Interested Buyer</p>
+                    <p className="text-[13px] text-[#737370] truncate">{selectedPropertyAddress || 'Interested Buyer'}</p>
                   </div>
                   {selectedPropertyAddress && (
                     <button
@@ -648,6 +774,15 @@ export default function MessagesPage() {
                                   <div className="max-w-[70%]">
                                     <div className={`rounded px-4 py-3 ${isSeller ? 'bg-[#FEF0EF] text-[#1A1816] border border-[#F5C4C0]' : 'bg-[#FAFAF8] text-[#1A1816] border border-[#E8E8E4]'}`}>
                                       {m.message_text && <p className="text-[14px] leading-relaxed whitespace-pre-wrap break-words">{m.message_text}</p>}
+                                      {m.has_attachment && m.attachment_url && (
+                                        /\.(png|jpe?g|gif|webp|heic)$/i.test(m.attachment_name || m.attachment_url)
+                                          ? <a href={m.attachment_url} target="_blank" rel="noopener noreferrer" className={m.message_text ? 'mt-2 block' : 'block'}>
+                                              <img src={m.attachment_url} alt={m.attachment_name || 'attachment'} className="max-w-full rounded border border-[#E8E8E4] max-h-64 object-cover" />
+                                            </a>
+                                          : <a href={m.attachment_url} target="_blank" rel="noopener noreferrer" className={`${m.message_text ? 'mt-2' : ''} flex items-center gap-2 text-[13px] font-medium text-[#D03839] underline`}>
+                                              <Paperclip className="w-3.5 h-3.5" /> {m.attachment_name || 'Download attachment'}
+                                            </a>
+                                      )}
                                     </div>
                                     <div className={`flex items-center gap-1 mt-1 ${isSeller ? 'justify-end' : 'justify-start'}`}>
                                       <span className="text-[11px] text-[#A8A8A4]">{formatTime(m.created_at)}</span>
@@ -672,8 +807,13 @@ export default function MessagesPage() {
               {/* Input */}
               <div className="flex-shrink-0 px-6 py-4 border-t border-[#E8E8E4] bg-white">
                 <form onSubmit={e => { e.preventDefault(); sendMessage(); }} className="flex items-end gap-2">
-                  <button type="button" className="p-2.5 rounded hover:bg-[#FAFAF8] transition-colors duration-200 flex-shrink-0">
-                    <Paperclip className="w-5 h-5 text-[#737370]" />
+                  <input ref={fileInputRef} type="file" className="hidden"
+                    accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt"
+                    onChange={e => { const f = e.target.files?.[0]; if (f) sendAttachment(f); }} />
+                  <button type="button" onClick={() => fileInputRef.current?.click()} disabled={uploadingAttachment || !openConversationId}
+                    title="Attach a file"
+                    className="p-2.5 rounded hover:bg-[#FAFAF8] transition-colors duration-200 flex-shrink-0 disabled:opacity-50">
+                    {uploadingAttachment ? <Loader2 className="w-5 h-5 text-[#737370] animate-spin" /> : <Paperclip className="w-5 h-5 text-[#737370]" />}
                   </button>
                   <button type="button" className="p-2.5 rounded hover:bg-[#FAFAF8] transition-colors duration-200 flex-shrink-0">
                     <Smile className="w-5 h-5 text-[#737370]" />
@@ -758,13 +898,11 @@ export default function MessagesPage() {
                     <p className="text-[12px] text-[#B5620A]">The buyer will be notified immediately and can accept, counter, or decline your offer</p>
                   </div>
                   <button
-                    onClick={() => handleOfferAction('counter', {
-                      counter_data: { amount: Number(counterAmount), closing_timeline: counterTimeline, financing_type: counterFinancing, notes: counterNotes }
-                    })}
+                    onClick={() => setShowCounterPreview(true)}
                     disabled={offerActionLoading || !counterAmount}
                     className="w-full py-3 bg-[#D03839] text-white text-[14px] font-semibold rounded hover:bg-[#E0493B] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    {offerActionLoading ? 'Sending...' : 'Send counter'}
+                    Review &amp; Send
                   </button>
                 </div>
               </>
@@ -794,17 +932,28 @@ export default function MessagesPage() {
                       </div>
                     </div>
                   </div>
-                  {selectedConversation.buyer_email && (
-                    <div className="flex items-center gap-2 text-[13px] text-[#444441] mb-1.5">
-                      <Mail className="w-4 h-4 text-[#737370]" />
-                      <span className="truncate">{selectedConversation.buyer_email}</span>
-                    </div>
-                  )}
-                  {selectedConversation.buyer_phone && (
-                    <div className="flex items-center gap-2 text-[13px] text-[#444441]">
-                      <Phone className="w-4 h-4 text-[#737370]" />
-                      <span>{selectedConversation.buyer_phone}</span>
-                    </div>
+                  {(selectedConversation.buyer_email || selectedConversation.buyer_phone) && (
+                    showContactInfo ? (
+                      <>
+                        {selectedConversation.buyer_email && (
+                          <div className="flex items-center gap-2 text-[13px] text-[#444441] mb-1.5">
+                            <Mail className="w-4 h-4 text-[#737370]" />
+                            <span className="truncate">{selectedConversation.buyer_email}</span>
+                          </div>
+                        )}
+                        {selectedConversation.buyer_phone && (
+                          <div className="flex items-center gap-2 text-[13px] text-[#444441]">
+                            <Phone className="w-4 h-4 text-[#737370]" />
+                            <span>{selectedConversation.buyer_phone}</span>
+                          </div>
+                        )}
+                        <button onClick={() => setShowContactInfo(false)} className="text-[11px] text-[#737370] hover:text-[#1A1816] mt-1.5">Hide contact info</button>
+                      </>
+                    ) : (
+                      <button onClick={() => setShowContactInfo(true)} className="flex items-center gap-1.5 text-[12px] font-semibold text-[#D03839] hover:text-[#B82F30]">
+                        <Mail className="w-3.5 h-3.5" /> Show contact info
+                      </button>
+                    )
                   )}
                 </div>
 
@@ -1064,9 +1213,47 @@ export default function MessagesPage() {
           <button className="w-full text-left text-[13px] px-3 py-2 rounded text-[#D03839] hover:bg-[#FEF0EF] transition-colors duration-200" onClick={() => { deleteConversation(contextMenu.conv.id); setContextMenu(null); }}>
             Delete chat
           </button>
-          <button className="w-full text-left text-[13px] px-3 py-2 rounded text-[#D03839] hover:bg-[#FEF0EF] transition-colors duration-200" onClick={() => { updateConversationPref(contextMenu.conv.id, { is_blocked: true }); setContextMenu(null); }}>
+          <button className="w-full text-left text-[13px] px-3 py-2 rounded text-[#D03839] hover:bg-[#FEF0EF] transition-colors duration-200" onClick={() => { setBlockConfirm(contextMenu.conv); setContextMenu(null); }}>
             Block user
           </button>
+        </div>
+      )}
+
+      {toast && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] bg-[#1A1816] text-white text-[13px] font-medium px-4 py-3 rounded shadow-lg flex items-center gap-2 max-w-[90vw]">
+          <span className="w-1.5 h-1.5 rounded-full bg-[#0F6E56] flex-shrink-0" />
+          {toast}
+        </div>
+      )}
+
+      {blockConfirm && (
+        <div className="fixed inset-0 z-[95] flex items-center justify-center p-4" >
+          <div className="fixed inset-0 bg-[#1A1816]/40" onClick={() => setBlockConfirm(null)} aria-hidden="true" />
+          <div className="relative bg-white rounded shadow-lg border border-[#E8E8E4] max-w-md w-full p-6 z-10">
+            <div className="flex items-start gap-3 mb-4">
+              <div className="w-10 h-10 rounded bg-[#FEF0EF] flex items-center justify-center flex-shrink-0">
+                <Ban className="w-5 h-5 text-[#D03839]" strokeWidth={2} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="text-[16px] font-semibold text-[#1A1816] mb-1">Block this buyer?</h3>
+                <p className="text-[13px] text-[#737370]">
+                  {blockConfirm.buyer_name || 'This buyer'} won't be able to message you anymore, and this conversation will be hidden. You can unblock them later from this conversation's menu.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setBlockConfirm(null)}
+                className="flex-1 h-10 px-4 text-[13px] font-semibold text-[#1A1816] bg-white border border-[#E8E8E4] rounded hover:bg-[#FAFAF8] transition-colors"
+              >Cancel</button>
+              <button
+                type="button"
+                onClick={() => { updateConversationPref(blockConfirm.id, { is_blocked: true }); setBlockConfirm(null); }}
+                className="flex-1 h-10 px-4 text-[13px] font-semibold text-white bg-[#D03839] hover:bg-[#E0493B] rounded transition-colors"
+              >Block buyer</button>
+            </div>
+          </div>
         </div>
       )}
     </div>

@@ -441,7 +441,7 @@ export async function POST(request) {
     const { effectiveId: sellerId } = await getWorkspaceSellerId(rawSellerId);
 
     const body = await request.json().catch(() => ({}));
-    const { action, conversationId, messageText, buyerId, propertyId, propertyAddress } = body;
+    const { action, conversationId, messageText, buyerId, propertyId, propertyAddress, attachmentUrl, attachmentName } = body;
 
     // Heartbeat: mark seller as active on messages tab
     if (action === 'heartbeat') {
@@ -497,7 +497,7 @@ export async function POST(request) {
       return NextResponse.json({ success: true });
     }
 
-    if (action === 'send_message' && conversationId && messageText != null) {
+    if (action === 'send_message' && conversationId && (messageText != null || attachmentUrl)) {
       const pref = await getSellerConversationPref(conversationId, sellerId);
       if (pref?.is_blocked) {
         return NextResponse.json({ success: false, error: 'This conversation is blocked. Unblock user first.' }, { status: 403 });
@@ -520,11 +520,13 @@ export async function POST(request) {
           conversation_id: conversationId,
           sender_type: 'seller',
           sender_id: sellerId,
-          message_text: String(messageText).trim(),
-          has_attachment: false,
+          message_text: messageText != null ? String(messageText).trim() : '',
+          has_attachment: !!attachmentUrl,
+          attachment_url: attachmentUrl || null,
+          attachment_name: attachmentName || null,
           is_read: false
         })
-        .select('id, conversation_id, sender_type, message_text, created_at')
+        .select('id, conversation_id, sender_type, message_text, has_attachment, attachment_url, attachment_name, created_at')
         .single();
 
       if (error) {
@@ -536,7 +538,7 @@ export async function POST(request) {
         .from('conversations')
         .update({
           last_message_at: new Date().toISOString(),
-          last_message_preview: String(messageText).trim().slice(0, 200),
+          last_message_preview: (messageText != null && String(messageText).trim()) ? String(messageText).trim().slice(0, 200) : '\uD83D\uDCCE Attachment',
           updated_at: new Date().toISOString()
         })
         .eq('id', conversationId);

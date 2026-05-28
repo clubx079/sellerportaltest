@@ -3,10 +3,12 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import { Save, ArrowLeft, Upload, X, AlertCircle, AlertTriangle, Home, FileText, ChevronDown } from 'lucide-react';
+import { Save, ArrowLeft, Upload, X, AlertCircle, AlertTriangle, Home, FileText, ChevronDown, ChevronRight, Check } from 'lucide-react';
 import ImageGalleryManager from '@/components/properties/ImageGalleryManager';
 import TextEditor from '@/components/forms/TextEditor';
 import GooglePlacesAutocomplete from '@/components/forms/GooglePlacesAutocomplete';
+import SaveStatus from '@/components/properties/SaveStatus';
+import StickyActionBar from '@/components/properties/StickyActionBar';
 
 const PROPERTY_STATUSES = [
   { value: 'available', label: 'Available - Ready for sale' },
@@ -54,6 +56,36 @@ function parseRejectionReasons(raw) {
   return map
 }
 
+function PropertySelect({ value, onChange, options }) {
+  const [open, setOpen] = React.useState(false)
+  const ref = React.useRef(null)
+  React.useEffect(() => {
+    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+  const label = options.find(o => String(o.value) === String(value))?.label || 'Select'
+  return (
+    <div className="relative" ref={ref}>
+      <button type="button" onClick={() => setOpen(o => !o)}
+        className="w-full px-3 py-2.5 pr-8 border border-[#E8E8E4] rounded bg-white text-[13px] text-left text-[#1A1816] cursor-pointer hover:border-[#1A1816] transition-colors flex items-center justify-between">
+        <span className={value === '' ? 'text-[#A8A8A4]' : ''}>{label}</span>
+        <ChevronDown className={`absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none text-[#737370] transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+      {open && (
+        <div className="absolute z-30 top-full left-0 mt-1 w-full bg-white border border-[#E8E8E4] rounded shadow-lg overflow-hidden">
+          {options.map(opt => (
+            <div key={opt.value} onClick={() => { onChange(String(opt.value)); setOpen(false) }}
+              className={`px-3 py-2 text-[13px] cursor-pointer transition-colors ${String(value) === String(opt.value) ? 'bg-[#1A1816] text-white' : 'text-[#1A1816] hover:bg-[#FAFAF8]'}`}>
+              {opt.label}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function EditPropertyPage() {
   const router = useRouter();
   const { id } = useParams();
@@ -63,16 +95,29 @@ export default function EditPropertyPage() {
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
   const [activeTab, setActiveTab] = useState('basic');
+  // Same tab order as the tab strip below; used by the Previous/Continue buttons in the sticky footer.
+  const TAB_ORDER = ['basic', 'images', 'ownership', 'content', 'seo'];
   const [rejectionReason, setRejectionReason] = useState(null);
   const [userId, setUserId] = useState(null);
   const [sourceType, setSourceType] = useState(null); // 'manual' | 'scraped'
   const [tempSellerId, setTempSellerId] = useState(null); // for scraped fetch/save
+  // ── Auto-save state ────────────────────────────────────────────
+  const [lastSavedAt, setLastSavedAt] = useState(null);
+  const [autoSaving, setAutoSaving] = useState(false);
+  const [dirty, setDirty] = useState(false);
+  const [autoSaveError, setAutoSaveError] = useState(null);
+  const [readyForAutoSave, setReadyForAutoSave] = useState(false);
 
   const descRef = useRef(null);
   const repairsRef = useRef(null);
   const initialTitleRef = useRef('');
   const initialLocationRef = useRef('');
   const existingSlugRef = useRef('');
+  // Snapshot of fields that DO require re-review when changed.
+  // Editing other fields (price, beds, baths, sqft, etc.) on a live listing
+  // saves immediately as 'active' without re-triggering moderation.
+  const initialModeratableRef = useRef({ description: '', repairs: '', inspectionUrl: null, contractUrl: null, imageUrls: '' });
+  const imagesChangedRef = useRef(false);
 
   const [formData, setFormData] = useState({
     status: 'draft',
@@ -95,6 +140,10 @@ export default function EditPropertyPage() {
   const [sellerType, setSellerType] = useState('owner');
   const [sellerProfileContact, setSellerProfileContact] = useState({ name: '', phone: '' });
   const [useCustomContact, setUseCustomContact] = useState(false);
+  const [sellerPlanType, setSellerPlanType] = useState(null);
+  const [teamMembers, setTeamMembers] = useState([]);
+  const [teamLoaded, setTeamLoaded] = useState(false);
+  const [selectedTeamMemberId, setSelectedTeamMemberId] = useState('');
   const [contractUpload, setContractUpload] = useState({
     url: null,
     key: null,
@@ -123,6 +172,34 @@ export default function EditPropertyPage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId, id]);
+
+  // Load seller plan + team members for the enterprise contact-picker.
+  // One round-trip via /api/team (it already returns isEnterprise + members),
+  // and we seed sellerPlanType from a localStorage cache so the picker slot is
+  // reserved on first paint for repeat enterprise visitors.
+  useEffect(() => {
+    const userStr = typeof window !== 'undefined' ? localStorage.getItem('seller_user') : null;
+    if (!userStr) return;
+    const user = JSON.parse(userStr);
+    if (!user?.id) return;
+
+    try {
+      const cached = localStorage.getItem('seller_plan_type');
+      if (cached) setSellerPlanType(cached);
+    } catch {}
+
+    fetch('/api/team', { headers: { Authorization: `Bearer ${user.id}` } })
+      .then(r => r.json())
+      .then(json => {
+        const planType = json?.isEnterprise ? 'enterprise' : null;
+        setSellerPlanType(planType);
+        try { localStorage.setItem('seller_plan_type', planType || ''); } catch {}
+        const members = (json?.members || []).filter(m => m.name || m.email);
+        setTeamMembers(members);
+        setTeamLoaded(true);
+      })
+      .catch(() => setTeamLoaded(true));
+  }, []);
 
   const fetchProperty = async () => {
     try {
@@ -155,6 +232,15 @@ export default function EditPropertyPage() {
         initialTitleRef.current = derivedTitle;
         initialLocationRef.current = data.address || '';
         existingSlugRef.current = data.slug || '';
+        // Snapshot moderatable fields so we can detect real-content changes later
+        initialModeratableRef.current = {
+          description: data.description || '',
+          repairs: data.repairs || '',
+          inspectionUrl: data.inspection_report_url || null,
+          contractUrl: data.contract_url || null,
+          imageUrls: (data.property_images || []).map(i => i.image_url).filter(Boolean).sort().join('|'),
+        };
+        imagesChangedRef.current = false;
 
         setFormData({
           title: derivedTitle,
@@ -266,6 +352,14 @@ export default function EditPropertyPage() {
       initialTitleRef.current = derivedTitle;
       initialLocationRef.current = locationLine || '';
       existingSlugRef.current = d.slug || '';
+      initialModeratableRef.current = {
+        description: d.description || '',
+        repairs: Array.isArray(d.features) ? d.features.join('\n') : (d.repairs || ''),
+        inspectionUrl: d.inspection_report_url || null,
+        contractUrl: d.contract_url || null,
+        imageUrls: (d.property_photos || []).map(p => p.photo_url).filter(Boolean).sort().join('|'),
+      };
+      imagesChangedRef.current = false;
 
       setFormData({
         title: derivedTitle,
@@ -343,6 +437,7 @@ export default function EditPropertyPage() {
       ...prev,
       [field]: value
     }));
+    setDirty(true);
   };
 
   const handleAddressSelect = (addressData) => {
@@ -356,6 +451,7 @@ export default function EditPropertyPage() {
       zipcode: addressData.zipcode,
       state: addressData.stateShort
     }));
+    setDirty(true);
   };
 
   const handleTabChange = (tabId) => {
@@ -371,15 +467,17 @@ export default function EditPropertyPage() {
     setActiveTab(tabId);
   };
 
-  const handleSave = async (publishStatus = 'draft') => {
+  const handleSave = async (publishStatus = 'draft', options = {}) => {
+    const { silent = false, skipNavigation = false } = options;
+
     if (!formData.title || !formData.location) {
-      setError('Please fill in Title and Address before saving.');
-      return;
+      if (!silent) setError('Please fill in Title and Address before saving.');
+      return false;
     }
 
     if (imageUploadStatus.isUploading) {
-      setError(`Please wait for ${imageUploadStatus.uploadingCount} image${imageUploadStatus.uploadingCount > 1 ? 's' : ''} to finish uploading.`);
-      return;
+      if (!silent) setError(`Please wait for ${imageUploadStatus.uploadingCount} image${imageUploadStatus.uploadingCount > 1 ? 's' : ''} to finish uploading.`);
+      return false;
     }
 
     // Save editor content before submitting
@@ -392,9 +490,11 @@ export default function EditPropertyPage() {
       formData.repairs = cleanRepairs;
     }
 
-    setSaving(true);
-    setError(null);
-    setSuccess(null);
+    if (!silent) {
+      setSaving(true);
+      setError(null);
+      setSuccess(null);
+    }
 
     // Short unique slug when address changes: 7 alphabets + 2 numerics (e.g. kxmnpqr29)
     const locationForSlug = (formData.location || '').trim();
@@ -409,8 +509,39 @@ export default function EditPropertyPage() {
     };
     const slugToSave = shouldUpdateSlug ? newShortSlug() : existingSlugRef.current;
 
-    // If listing is active/rejected, send back to under_review for re-moderation
-    const effectiveStatus = publishStatus === 'active' ? 'under_review' : publishStatus;
+    // Decide whether this save should trigger re-moderation.
+    // Re-review is required if any "moderatable" field has changed since load:
+    //   photos, description, repairs, inspection report, contract upload.
+    // Other edits (price, beds, baths, sqft, contact info, SEO, etc.) on an
+    // already-live listing save immediately as 'active' without triggering review.
+    const currentStatus = (formData.status || 'draft').toLowerCase();
+    const currentImageUrls = imageUploadStatus.images
+      .filter(i => i.status === 'completed' && i.imageUrl)
+      .map(i => i.imageUrl)
+      .sort()
+      .join('|');
+    const photosChanged       = imagesChangedRef.current && currentImageUrls !== initialModeratableRef.current.imageUrls;
+    const descriptionChanged  = (formData.description || '') !== (initialModeratableRef.current.description || '');
+    const repairsChanged      = (formData.repairs || '')     !== (initialModeratableRef.current.repairs || '');
+    const inspectionChanged   = (inspectionReport.url || null) !== (initialModeratableRef.current.inspectionUrl || null);
+    const contractChanged     = (contractUpload.url || null)   !== (initialModeratableRef.current.contractUrl || null);
+    const moderatableChanged  = photosChanged || descriptionChanged || repairsChanged || inspectionChanged || contractChanged;
+
+    let effectiveStatus;
+    if (silent) {
+      effectiveStatus = currentStatus; // auto-save never changes status
+    } else if (publishStatus === 'active') {
+      // First-time publish (was draft) → always review.
+      // Rejected listings being resubmitted → always review.
+      // Already-live listings → review only if a moderatable field changed.
+      if (currentStatus === 'active' && !moderatableChanged) {
+        effectiveStatus = 'active';
+      } else {
+        effectiveStatus = 'under_review';
+      }
+    } else {
+      effectiveStatus = publishStatus;
+    }
 
     // Create save data object matching the actual database schema
     const saveData = {
@@ -523,21 +654,34 @@ export default function EditPropertyPage() {
           }
         }
 
-        if (publishStatus === 'active') {
+        if (effectiveStatus === 'under_review' && !silent) {
           fetch('/api/seller/moderate', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ property_id: id }),
           }).catch(() => {});
         }
-        setSuccess(
-          publishStatus === 'active'
-            ? 'Property updated and sent for review!'
-            : 'Property updated successfully!'
-        );
-        setTimeout(() => router.push(fromDraft ? `/properties/enhance?id=${id}` : '/properties'), 1500);
-        setSaving(false);
-        return;
+        if (!silent) {
+          const msg = effectiveStatus === 'under_review'
+            ? 'Listing submitted — typically live within ~10 minutes once our review completes. We\'ll email you if anything needs attention.'
+            : effectiveStatus === 'active'
+              ? 'Listing updated — changes are live now.'
+              : 'Property updated successfully!';
+          setSuccess(msg);
+        }
+        initialModeratableRef.current = {
+          description: formData.description || '',
+          repairs:     formData.repairs || '',
+          inspectionUrl: inspectionReport.url || null,
+          contractUrl:   contractUpload.url || null,
+          imageUrls:   currentImageUrls,
+        };
+        imagesChangedRef.current = false;
+        if (!skipNavigation) {
+          setTimeout(() => router.push(fromDraft ? `/properties/enhance?id=${id}` : '/properties'), 1500);
+        }
+        if (!silent) setSaving(false);
+        return true;
       }
 
       const { data, error: updateError } = await supabase
@@ -582,37 +726,102 @@ export default function EditPropertyPage() {
         }
       }
 
-      if (publishStatus === 'active') {
+      if (effectiveStatus === 'under_review' && !silent) {
         fetch('/api/seller/moderate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ property_id: data.id }),
         }).catch(() => {});
       }
-      setSuccess(
-        publishStatus === 'active'
-          ? 'Property updated and sent for review!'
-          : 'Property updated successfully!'
-      );
+      if (!silent) {
+        const msg = effectiveStatus === 'under_review'
+          ? 'Listing submitted — typically live within ~10 minutes once our review completes. We\'ll email you if anything needs attention.'
+          : effectiveStatus === 'active'
+            ? 'Listing updated — changes are live now.'
+            : 'Property updated successfully!';
+        setSuccess(msg);
+      }
 
-      setTimeout(() => {
-        router.push(fromDraft ? `/properties/enhance?id=${data.id}` : '/properties');
-      }, 1500);
+      // After a successful save, refresh the moderatable snapshot so subsequent
+      // edits compare against the new baseline (not the original load).
+      initialModeratableRef.current = {
+        description: formData.description || '',
+        repairs:     formData.repairs || '',
+        inspectionUrl: inspectionReport.url || null,
+        contractUrl:   contractUpload.url || null,
+        imageUrls:   currentImageUrls,
+      };
+      imagesChangedRef.current = false;
+      if (!skipNavigation) {
+        setTimeout(() => {
+          router.push(fromDraft ? `/properties/enhance?id=${data.id}` : '/properties');
+        }, 1500);
+      }
+      return true;
     } catch (err) {
       console.error('Update failed:', err);
+      if (silent) throw err; // bubble up so auto-save effect can record the error
       setError(err?.message || 'Failed to update property. Please try again.');
+      return false;
     } finally {
-      setSaving(false);
+      if (!silent) setSaving(false);
     }
   };
 
   const handleImagesChange = (data) => {
-    setImageUploadStatus({
-      images: data.images,
-      isUploading: data.isUploading,
-      uploadingCount: data.uploadingCount
+    setImageUploadStatus(prev => {
+      // Mark dirty + moderatable-changed only when this is a real change after
+      // initial load — not when ImageGalleryManager re-fires onChange on mount.
+      const prevIds = prev.images.map(i => i.id || i.imageUrl).join('|');
+      const newIds  = (data.images || []).map(i => i.id || i.imageUrl).join('|');
+      if (readyForAutoSave && !data.isUploading && prevIds !== newIds) {
+        setDirty(true);
+        imagesChangedRef.current = true;
+      }
+      return {
+        images: data.images,
+        isUploading: data.isUploading,
+        uploadingCount: data.uploadingCount,
+      };
     });
   };
+
+  // ── Auto-save ─────────────────────────────────────────────────
+  // Enable auto-save once the initial property has loaded.
+  useEffect(() => {
+    if (!loadingProperty && formData.title && formData.location) {
+      setReadyForAutoSave(true);
+    }
+  }, [loadingProperty, formData.title, formData.location]);
+
+  // Debounced auto-save: 2s after the last change, save the draft silently.
+  // Only for draft listings — live/under_review/rejected listings require an
+  // explicit Publish click so changes go through re-review on the seller's terms.
+  useEffect(() => {
+    if (!readyForAutoSave || !dirty) return;
+    if (saving || autoSaving) return;
+    if (imageUploadStatus.isUploading) return;
+    if (formData.status !== 'draft') return;
+
+    const timer = setTimeout(async () => {
+      setAutoSaving(true);
+      setAutoSaveError(null);
+      try {
+        const ok = await handleSave('draft', { silent: true, skipNavigation: true });
+        if (ok) {
+          setLastSavedAt(new Date());
+          setDirty(false);
+        }
+      } catch (e) {
+        setAutoSaveError(e?.message || 'Couldn\'t save');
+      } finally {
+        setAutoSaving(false);
+      }
+    }, 2000);
+
+    return () => clearTimeout(timer);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formData, dirty, readyForAutoSave, saving, autoSaving, imageUploadStatus.isUploading]);
 
   const handleInspectionUpload = async (event) => {
     const file = event.target.files[0];
@@ -716,48 +925,30 @@ export default function EditPropertyPage() {
 
   return (
     <div className="space-y-3 md:space-y-4">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
+      {/* Header — orientation only. Actions live in the sticky footer. */}
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3 min-w-0">
           <button
             onClick={() => router.back()}
-            className="p-2 rounded hover:bg-neutral-100 transition-colors"
+            className="p-2 rounded hover:bg-neutral-100 transition-colors shrink-0"
+            aria-label="Go back"
           >
             <ArrowLeft size={20} className="text-neutral-600" />
           </button>
-          <div>
-            <h1 className="text-lg md:text-xl font-semibold tracking-tight text-[#1A1816]">Edit Property</h1>
+          <div className="min-w-0">
+            <h1 className="text-lg md:text-xl font-semibold tracking-tight text-[#1A1816] truncate">
+              {formData.location || formData.title || 'Edit Property'}
+            </h1>
+            <div className="mt-0.5">
+              <SaveStatus
+                autoSaving={autoSaving}
+                lastSavedAt={lastSavedAt}
+                dirty={dirty}
+                error={autoSaveError}
+                status={formData.status}
+              />
+            </div>
           </div>
-        </div>
-        <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={() => handleSave('draft')}
-            disabled={saving || imageUploadStatus.isUploading}
-            className="flex items-center justify-center gap-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 px-3 py-2 rounded text-sm font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <Save size={16} />
-            <span>
-              {imageUploadStatus.isUploading
-                ? `Uploading ${imageUploadStatus.uploadingCount}...`
-                : saving ? 'Saving…' : 'Save Draft'
-              }
-            </span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => handleSave('active')}
-            disabled={saving || imageUploadStatus.isUploading}
-            className="flex items-center justify-center gap-2 bg-[#D03839] hover:bg-[#B82F30] text-white px-3 py-2 rounded text-sm font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <span>
-              {imageUploadStatus.isUploading
-                ? 'Please wait...'
-                : saving ? 'Sending…' : 'Send for Review'
-              }
-            </span>
-          </button>
         </div>
       </div>
 
@@ -799,9 +990,31 @@ export default function EditPropertyPage() {
         </div>
       )}
 
-      {/* Rejection Banner */}
+      {/* Rejection Banner — each issue is a clickable shortcut to the offending field */}
       {rejectionReason && (() => {
         const rMap = parseRejectionReasons(rejectionReason)
+        const REJECTION_TARGETS = {
+          photo:       { tab: 'images',    elId: 'rejection-target-photo' },
+          description: { tab: 'content',   elId: 'rejection-target-description' },
+          repairs:     { tab: 'content',   elId: 'rejection-target-repairs' },
+          inspection:  { tab: 'content',   elId: 'rejection-target-inspection' },
+          contract:    { tab: 'ownership', elId: 'rejection-target-contract' },
+        }
+        const goToIssue = (key) => {
+          const target = REJECTION_TARGETS[key]
+          if (!target) return
+          setActiveTab(target.tab)
+          // wait for the tab content to render, then scroll
+          setTimeout(() => {
+            const el = document.getElementById(target.elId)
+            if (el) {
+              el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+              // brief highlight pulse so the user sees what they jumped to
+              el.classList.add('ring-2', 'ring-[#B42318]', 'ring-offset-2', 'rounded')
+              setTimeout(() => el.classList.remove('ring-2', 'ring-[#B42318]', 'ring-offset-2', 'rounded'), 1500)
+            }
+          }, 60)
+        }
         return (
           <div className="bg-[#FEF3F2] border border-[#FECDCA] rounded p-4">
             <div className="flex items-start gap-3">
@@ -810,15 +1023,21 @@ export default function EditPropertyPage() {
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-[14px] font-semibold text-[#B42318] mb-1">Your listing wasn&apos;t approved</p>
-                <p className="text-[13px] text-[#B42318]/80 mb-3">Fix the issues below and click &quot;Send for Review&quot; — your listing will go back under review automatically.</p>
-                <div className="space-y-1.5">
+                <p className="text-[13px] text-[#B42318]/80 mb-3">Click an issue to jump to it. Fix it and click <span className="font-semibold">Publish</span> to send back for review.</p>
+                <div className="space-y-1">
                   {Object.entries(rMap).map(([key, reason]) => (
-                    <div key={key} className="flex items-start gap-2">
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => goToIssue(key)}
+                      className="flex items-start gap-2 text-left w-full px-2 py-1.5 -mx-2 rounded hover:bg-[#FEE4E2] transition-colors group"
+                    >
                       <span className="w-1.5 h-1.5 rounded-full bg-[#B42318] flex-shrink-0 mt-1.5" />
-                      <p className="text-[12px] text-[#B42318]">
+                      <p className="text-[12px] text-[#B42318] flex-1">
                         <span className="font-semibold capitalize">{key === 'inspection' ? 'Inspection Report' : key}:</span> {reason}
                       </p>
-                    </div>
+                      <span className="text-[11px] text-[#B42318]/60 font-medium opacity-0 group-hover:opacity-100 transition-opacity shrink-0 mt-0.5">Jump to field →</span>
+                    </button>
                   ))}
                 </div>
               </div>
@@ -859,7 +1078,7 @@ export default function EditPropertyPage() {
                 {idx + 1}
               </span>
               <span className="hidden sm:inline">{tab.label}</span>
-              {tabHasIssue[tab.id] && <span className="w-1.5 h-1.5 rounded-full bg-[#B42318] flex-shrink-0" />}
+              {tabHasIssue[tab.id] && <span title="This tab has issues to fix" className="w-2 h-2 rounded-full bg-[#B42318] ring-2 ring-[#FEE4E2] flex-shrink-0 animate-pulse" />}
             </button>
           ))}
         </div>
@@ -909,33 +1128,19 @@ export default function EditPropertyPage() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-[13px] font-semibold text-[#1A1816] mb-2">Rooms/Units</label>
-                  <div className="relative">
-                    <select
-                      value={formData.bedrooms || ''}
-                      onChange={(e) => handleInputChange('bedrooms', e.target.value)}
-                      className="w-full px-3 py-2.5 pr-8 border border-[#E8E8E4] rounded bg-white focus:border-[#1A1816] focus:outline-none transition-colors text-[13px] text-[#1A1816] appearance-none"
-                    >
-                      <option value="">Select</option>
-                      {[1,2,3,4].map(n => <option key={n} value={n}>{n}</option>)}
-                      <option value="5">5+</option>
-                    </select>
-                    <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none text-[#737370]" />
-                  </div>
+                  <PropertySelect
+                    value={formData.bedrooms || ''}
+                    onChange={(v) => handleInputChange('bedrooms', v)}
+                    options={[{ value: '', label: 'Select' }, ...[1,2,3,4].map(n => ({ value: n, label: String(n) })), { value: '5', label: '5+' }]}
+                  />
                 </div>
                 <div>
                   <label className="block text-[13px] font-semibold text-[#1A1816] mb-2">Bathrooms</label>
-                  <div className="relative">
-                    <select
-                      value={formData.bathrooms || ''}
-                      onChange={(e) => handleInputChange('bathrooms', e.target.value)}
-                      className="w-full px-3 py-2.5 pr-8 border border-[#E8E8E4] rounded bg-white focus:border-[#1A1816] focus:outline-none transition-colors text-[13px] text-[#1A1816] appearance-none"
-                    >
-                      <option value="">Select</option>
-                      {[1,1.5,2,2.5,3,3.5,4,4.5].map(n => <option key={n} value={n}>{n}</option>)}
-                      <option value="5">5+</option>
-                    </select>
-                    <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none text-[#737370]" />
-                  </div>
+                  <PropertySelect
+                    value={formData.bathrooms || ''}
+                    onChange={(v) => handleInputChange('bathrooms', v)}
+                    options={[{ value: '', label: 'Select' }, ...[1,1.5,2,2.5,3,3.5,4,4.5].map(n => ({ value: n, label: String(n) })), { value: '5', label: '5+' }]}
+                  />
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-neutral-700 mb-2">Floor Area (sqft)</label>
@@ -965,33 +1170,44 @@ export default function EditPropertyPage() {
                 </div>
               )}
 
-              {/* Contact Info */}
+              {/* Contact Info — always editable; pre-filled from the seller's profile.
+                  Sellers can keep the defaults or override them per-listing. */}
               <div>
-                <div className="flex items-center justify-between mb-3">
-                  <div>
-                    <h3 className="text-[15px] font-semibold text-[#1A1816]">Contact Info</h3>
-                    <p className="text-[13px] text-[#737370] mt-0.5">How buyers can reach you about this listing.</p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const next = !useCustomContact;
-                      setUseCustomContact(next);
-                      if (!next) {
-                        setFormData(prev => ({ ...prev, contact_name: sellerProfileContact.name, contact_phone: sellerProfileContact.phone }));
-                      } else {
-                        setFormData(prev => ({ ...prev, contact_name: '', contact_phone: '' }));
-                      }
-                    }}
-                    className={`text-[13px] font-semibold px-4 py-2 rounded border transition-all duration-200 active:scale-[0.98] ${
-                      useCustomContact
-                        ? 'bg-[#D03839] border-[#D03839] text-white hover:bg-[#E0493B] hover:border-[#E0493B]'
-                        : 'bg-white border-[#D03839] text-[#D03839] hover:bg-[#FEF0EF]'
-                    }`}
-                  >
-                    {useCustomContact ? 'Use profile contact' : 'Edit contact info'}
-                  </button>
+                <div className="mb-3">
+                  <h3 className="text-[15px] font-semibold text-[#1A1816]">Contact Info</h3>
+                  <p className="text-[13px] text-[#737370] mt-0.5">How buyers can reach you about this listing. Pre-filled from your profile — edit if you want different contact info on this listing.</p>
                 </div>
+                {sellerPlanType === 'enterprise' && (teamMembers.length > 0 || !teamLoaded) && (
+                  <div className="mb-4">
+                    <label className="block text-[13px] font-semibold text-[#1A1816] mb-2">Pick a team member</label>
+                    {teamLoaded ? (
+                      <select
+                        value={selectedTeamMemberId}
+                        onChange={(e) => {
+                          const memberId = e.target.value;
+                          setSelectedTeamMemberId(memberId);
+                          if (!memberId) return;
+                          const m = teamMembers.find(tm => String(tm.id) === String(memberId));
+                          if (!m) return;
+                          const memberName = m.name || m.email || '';
+                          const memberPhone = m.phone || '';
+                          setFormData(prev => ({ ...prev, contact_name: memberName, contact_phone: memberPhone }));
+                          setDirty(true);
+                        }}
+                        className="w-full px-4 py-3 border border-[#E8E8E4] rounded text-[13px] text-[#1A1816] focus:border-[#D03839] focus:outline-none transition-colors bg-white"
+                      >
+                        <option value="">Custom (fill in below)</option>
+                        {teamMembers.map(m => (
+                          <option key={m.id} value={m.id}>
+                            {(m.name || m.email)}{m.phone ? ` — ${m.phone}` : ' (no phone)'}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <div className="w-full h-[46px] rounded bg-[#F4F4F0] animate-pulse" aria-hidden="true" />
+                    )}
+                  </div>
+                )}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-[13px] font-semibold text-[#1A1816] mb-2">Contact Name</label>
@@ -999,13 +1215,8 @@ export default function EditPropertyPage() {
                       type="text"
                       value={formData.contact_name || ''}
                       onChange={(e) => handleInputChange('contact_name', e.target.value)}
-                      readOnly={!useCustomContact}
                       placeholder="Your name or company"
-                      className={`w-full px-4 py-3 border rounded text-[13px] text-[#1A1816] transition-colors ${
-                        useCustomContact
-                          ? 'border-[#E8E8E4] focus:border-[#D03839] focus:outline-none'
-                          : 'border-[#E8E8E4] bg-[#FAFAF8] text-[#737370] cursor-default outline-none'
-                      }`}
+                      className="w-full px-4 py-3 border border-[#E8E8E4] rounded text-[13px] text-[#1A1816] focus:border-[#D03839] focus:outline-none transition-colors"
                     />
                   </div>
                   <div>
@@ -1014,13 +1225,8 @@ export default function EditPropertyPage() {
                       type="tel"
                       value={formData.contact_phone || ''}
                       onChange={(e) => handleInputChange('contact_phone', e.target.value)}
-                      readOnly={!useCustomContact}
                       placeholder="+1 (555) 000-0000"
-                      className={`w-full px-4 py-3 border rounded text-[13px] text-[#1A1816] transition-colors ${
-                        useCustomContact
-                          ? 'border-[#E8E8E4] focus:border-[#D03839] focus:outline-none'
-                          : 'border-[#E8E8E4] bg-[#FAFAF8] text-[#737370] cursor-default outline-none'
-                      }`}
+                      className="w-full px-4 py-3 border border-[#E8E8E4] rounded text-[13px] text-[#1A1816] focus:border-[#D03839] focus:outline-none transition-colors"
                     />
                   </div>
                 </div>
@@ -1055,7 +1261,7 @@ export default function EditPropertyPage() {
           )}
 
           {/* Images Tab */}
-          <div className={activeTab === 'images' ? '' : 'hidden'}>
+          <div id="rejection-target-photo" className={activeTab === 'images' ? '' : 'hidden'}>
             <h3 className="text-lg font-semibold text-neutral-900 mb-2">Property Images</h3>
             <p className="text-sm text-neutral-600 mb-4">
               Upload property images. They will be automatically compressed and uploaded immediately. The first image will be set as the featured image.
@@ -1116,7 +1322,7 @@ export default function EditPropertyPage() {
               </div>
 
               {sellerType === 'wholesaler' && (
-                <div>
+                <div id="rejection-target-contract">
                   <h3 className="text-[15px] font-semibold text-[#1A1816] mb-1">Assignment Contract</h3>
                   <p className="text-[13px] text-[#737370] mb-3">Upload your signed assignment contract. (PDF or DOC)</p>
                   {rejectionReason && parseRejectionReasons(rejectionReason).contract && (
@@ -1172,7 +1378,7 @@ export default function EditPropertyPage() {
           {/* Content Tab */}
           {activeTab === 'content' && (
             <div className="space-y-6">
-              <div>
+              <div id="rejection-target-description">
                 <label className="block text-sm font-semibold text-neutral-700 mb-2">Property Description</label>
                 {rejectionReason && parseRejectionReasons(rejectionReason).description && (
                   <div className="flex items-start gap-2.5 bg-[#FEF3F2] border border-[#FECDCA] rounded px-3 py-2.5 mb-2">
@@ -1188,7 +1394,7 @@ export default function EditPropertyPage() {
                 />
               </div>
 
-              <div>
+              <div id="rejection-target-repairs">
                 <label className="block text-sm font-semibold text-neutral-700 mb-2">Repairs & Renovation</label>
                 {rejectionReason && parseRejectionReasons(rejectionReason).repairs && (
                   <div className="flex items-start gap-2.5 bg-[#FEF3F2] border border-[#FECDCA] rounded px-3 py-2.5 mb-2">
@@ -1204,7 +1410,7 @@ export default function EditPropertyPage() {
                 />
               </div>
 
-              <div>
+              <div id="rejection-target-inspection">
                 <label className="block text-[13px] font-semibold text-[#1A1816] mb-1">Inspection Report <span className="text-[#A8A8A4] font-normal">(optional)</span></label>
                 {rejectionReason && parseRejectionReasons(rejectionReason).inspection && (
                   <div className="flex items-start gap-2.5 bg-[#FEF3F2] border border-[#FECDCA] rounded px-3 py-2.5 mb-2">
@@ -1343,6 +1549,57 @@ export default function EditPropertyPage() {
       </div>
         )
       })()}
+
+      {/* Sticky action footer — Previous / Continue navigate between tabs,
+          Publish commits the listing (drafts auto-save in the background). */}
+      <StickyActionBar>
+        <div className="min-w-0">
+          <SaveStatus
+            autoSaving={autoSaving}
+            lastSavedAt={lastSavedAt}
+            dirty={dirty}
+            error={autoSaveError}
+            status={formData.status}
+          />
+        </div>
+        {(() => {
+          const currentIdx = TAB_ORDER.indexOf(activeTab);
+          const hasPrev = currentIdx > 0;
+          const hasNext = currentIdx >= 0 && currentIdx < TAB_ORDER.length - 1;
+          const goPrev = () => { if (hasPrev) handleTabChange(TAB_ORDER[currentIdx - 1]); };
+          const goNext = () => { if (hasNext) handleTabChange(TAB_ORDER[currentIdx + 1]); };
+          return (
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={goPrev}
+                disabled={!hasPrev}
+                className="inline-flex items-center gap-1.5 px-3 py-2 rounded border border-[#E8E8E4] text-[13px] font-medium text-[#444441] hover:border-[#1A1816] hover:text-[#1A1816] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <ArrowLeft className="w-4 h-4" /> Previous
+              </button>
+              <button
+                type="button"
+                onClick={goNext}
+                disabled={!hasNext}
+                className="inline-flex items-center gap-1.5 px-3 py-2 rounded border border-[#E8E8E4] text-[13px] font-medium text-[#444441] hover:border-[#1A1816] hover:text-[#1A1816] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                Continue <ChevronRight className="w-4 h-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSave('active')}
+                disabled={saving || autoSaving || imageUploadStatus.isUploading}
+                className="inline-flex items-center justify-center gap-2 bg-[#D03839] hover:bg-[#B82F30] text-white px-5 py-2 rounded text-[13px] font-semibold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+              >
+                {imageUploadStatus.isUploading
+                  ? 'Please wait…'
+                  : saving ? 'Publishing…' : 'Publish'}
+              </button>
+            </div>
+          );
+        })()}
+      </StickyActionBar>
     </div>
   );
 }

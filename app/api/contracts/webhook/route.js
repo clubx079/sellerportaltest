@@ -39,7 +39,7 @@ export async function POST(request) {
 
     const assignorName = data.name || data.email || 'The Assignor'
     const property = data.submission.name || ''
-    const signingUrl = `https://docuseal.com/s/${assigneeSubmitter.slug}`
+    const signingUrl = `https://deelmap.com/sign/${assigneeSubmitter.slug}`
 
     await resend.emails.send({
       from: FROM,

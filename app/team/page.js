@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
-import { Users, Plus, Trash2, X, Mail, Crown, Clock, CheckCircle, Check, Zap, AlertTriangle, Shield, Settings2 } from 'lucide-react'
+import { Users, Plus, Trash2, X, Mail, Crown, Clock, CheckCircle, Check, Zap, AlertTriangle, Shield, Settings2, Phone } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
 function fmtDate(d) {
@@ -241,7 +241,7 @@ function InviteModal({ onClose, onInvited, hasOrg, defaultOrgName }) {
 
   if (isTrialBlock) {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4">
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4">
         <div className="bg-white rounded w-full max-w-[420px] shadow-xl">
           <div className="flex items-center justify-between px-6 py-4 border-b border-[#E8E8E4]">
             <h2 className="text-[16px] font-bold text-[#1A1816]">Trial Active</h2>
@@ -268,7 +268,7 @@ function InviteModal({ onClose, onInvited, hasOrg, defaultOrgName }) {
   const permCount = getPermissionCount(permissions)
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4">
       <div className="bg-white rounded w-full max-w-[480px] shadow-xl max-h-[90vh] flex flex-col">
         <div className="flex items-center justify-between px-6 py-4 border-b border-[#E8E8E4] shrink-0">
           <h2 className="text-[16px] font-bold text-[#1A1816]">Invite Team Member</h2>
@@ -332,6 +332,65 @@ function InviteModal({ onClose, onInvited, hasOrg, defaultOrgName }) {
           </div>
         </form>
       </div>
+    </div>
+  )
+}
+
+function MemberPhoneField({ memberId, initialPhone, onChanged }) {
+  const [value, setValue] = useState(initialPhone || '')
+  const [savedValue, setSavedValue] = useState(initialPhone || '')
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    setValue(initialPhone || '')
+    setSavedValue(initialPhone || '')
+  }, [initialPhone])
+
+  async function save() {
+    const next = value.trim()
+    if (next === savedValue.trim()) return
+    setSaving(true)
+    setError('')
+    try {
+      const sellerId = JSON.parse(localStorage.getItem('seller_user') || '{}')?.id
+      const res = await fetch(`/api/team/${memberId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${sellerId}` },
+        body: JSON.stringify({ phone: next }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setError(data.error || 'Failed to save')
+        setSaving(false)
+        return
+      }
+      if (data.phoneSkipped) {
+        setError('Migration pending')
+      } else {
+        setSavedValue(next)
+        if (onChanged) onChanged()
+      }
+    } catch {
+      setError('Failed to save')
+    }
+    setSaving(false)
+  }
+
+  return (
+    <div className="flex items-center gap-1.5 mt-1">
+      <Phone className="w-3 h-3 text-[#A8A8A4] shrink-0" />
+      <input
+        type="tel"
+        value={value}
+        onChange={e => setValue(e.target.value)}
+        onBlur={save}
+        onKeyDown={e => { if (e.key === 'Enter') { e.currentTarget.blur() } }}
+        placeholder="Add phone number"
+        className="flex-1 max-w-[200px] h-7 px-2 border border-[#E8E8E4] rounded text-[12px] text-[#1A1816] placeholder:text-[#A8A8A4] focus:outline-none focus:border-[#1A1816] transition-colors"
+      />
+      {saving && <span className="text-[11px] text-[#737370]">Saving…</span>}
+      {error && <span className="text-[11px] text-[#D03839]">{error}</span>}
     </div>
   )
 }
@@ -492,13 +551,20 @@ export default function TeamPage() {
                   <span className="text-[14px] font-semibold text-[#1A1816] truncate">{m.name || m.email}</span>
                   <StatusBadge status={m.status} />
                   <span className="inline-flex items-center gap-1 px-2 h-5 rounded text-[11px] font-semibold bg-[#F3F3F0] text-[#737370] border border-[#E8E8E4]">
-                    {count}/{TOTAL_PERMISSIONS} access
+                    {count >= TOTAL_PERMISSIONS ? 'Full Access' : `${count}/${TOTAL_PERMISSIONS} access`}
                   </span>
                 </div>
                 <div className="flex items-center gap-3 text-[12px] text-[#737370]">
                   <span className="truncate">{m.email}</span>
                   <span className="shrink-0">Invited {fmtDate(m.invited_at)}</span>
                 </div>
+                {isOwner && (
+                  <MemberPhoneField
+                    memberId={m.id}
+                    initialPhone={m.phone || ''}
+                    onChanged={fetchTeam}
+                  />
+                )}
               </div>
               {isOwner && (
                 <div className="flex items-center gap-2 shrink-0">

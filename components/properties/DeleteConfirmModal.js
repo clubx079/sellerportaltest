@@ -13,33 +13,33 @@ export default function DeleteConfirmModal({ isOpen, onClose, onConfirm, itemNam
     <div className="fixed inset-0 z-50 overflow-y-auto">
       <div className="flex min-h-screen items-center justify-center p-4">
         <div
-          className="fixed inset-0 bg-gray-900/40 transition-opacity"
+          className="fixed inset-0 bg-[#1A1816]/40 transition-opacity"
           onClick={onClose}
           aria-hidden="true"
         />
 
-        <div className="relative bg-white rounded shadow-lg border border-gray-200 max-w-md w-full p-6 z-10">
-          <h3 className="text-base font-semibold text-gray-900 tracking-tight mb-4">
+        <div className="relative bg-white rounded shadow-lg border border-[#E8E8E4] max-w-md w-full p-6 z-10">
+          <h3 className="text-base font-semibold text-[#1A1816] tracking-tight mb-4">
             {title}
           </h3>
 
-          <p className="text-sm text-gray-700 mb-3">
+          <p className="text-sm text-[#444441] mb-3">
             {question}
           </p>
 
-          <div className="py-2.5 px-3 mb-4 bg-gray-50 border border-gray-100 rounded">
-            <p className="text-sm text-gray-800 font-medium break-words" title={itemName}>
+          <div className="py-2.5 px-3 mb-4 bg-[#FAFAF8] border border-[#F0F0EC] rounded">
+            <p className="text-sm text-[#1A1816] font-medium break-words" title={itemName}>
               {itemName}
             </p>
           </div>
 
-          <p className="text-sm text-gray-500 mb-6">
+          <p className="text-sm text-[#737370] mb-6">
             {supportingText}
           </p>
 
           {isPermanent && (
-            <div className="p-3 bg-gray-50 border border-gray-200 rounded mb-6">
-              <p className="text-xs text-gray-600 leading-relaxed">
+            <div className="p-3 bg-[#FAFAF8] border border-[#E8E8E4] rounded mb-6">
+              <p className="text-xs text-[#737370] leading-relaxed">
                 The property and all associated images will be permanently removed.
               </p>
             </div>
@@ -49,14 +49,14 @@ export default function DeleteConfirmModal({ isOpen, onClose, onConfirm, itemNam
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded transition-colors"
+              className="flex-1 px-4 py-2.5 text-sm font-medium text-[#444441] bg-[#FAFAF8] hover:bg-[#F0F0EC] border border-[#E8E8E4] rounded transition-colors"
             >
               Cancel
             </button>
             <button
               type="button"
               onClick={onConfirm}
-              className="flex-1 px-4 py-2.5 text-sm font-medium text-white bg-primary hover:bg-primary-600 rounded transition-colors"
+              className="flex-1 px-4 py-2.5 text-sm font-medium text-white bg-[#D03839] hover:bg-[#E0493B] rounded transition-colors"
             >
               {isPermanent ? 'Delete' : 'Move to trash'}
             </button>

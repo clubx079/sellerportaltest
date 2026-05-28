@@ -55,7 +55,17 @@ export default function ReferralPage() {
       const [referralData, payoutsData, connectData] = await Promise.all([
         referralRes.json(), payoutsRes.json(), connectRes.json(),
       ])
-      setReferral(referralData.referral || null)
+      // U15: auto-generate the referral code on first load so the seller never
+      // has to click "Get my code" — they see their shareable code immediately.
+      let ref = referralData.referral || null
+      if (!ref) {
+        try {
+          const genRes = await fetch('/api/referral', { method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' } })
+          const genData = await genRes.json()
+          if (genRes.ok && genData.referral) ref = genData.referral
+        } catch {}
+      }
+      setReferral(ref)
       setPayouts(payoutsData.payouts || [])
       setConnected(connectData.connected || false)
     } catch {

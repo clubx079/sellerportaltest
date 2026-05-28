@@ -18,8 +18,8 @@ const AVATAR_PAIRS = [
   { bg: '#FEF0EF', text: '#D03839' },  // primary-surface / primary
   { bg: '#E4F5EC', text: '#0F6E56' },  // success-surface / success
   { bg: '#FEF3E2', text: '#B5620A' },  // warning-surface / warning
-  { bg: '#EBF3FC', text: '#4A90E2' },  // blue light / blue
-  { bg: '#F3EEFF', text: '#7C3AED' },  // purple light / purple
+  { bg: '#F0F0EC', text: '#444441' },  // neutral surface / body
+  { bg: '#FAFAF8', text: '#1A1816' },  // light surface / primary text
 ];
 function getAvatarPair(seed = '') {
   const str = String(seed || 'u');
@@ -257,7 +257,7 @@ export default function DashboardPage() {
     {
       label: "Total views", value: stats.totalViews.toLocaleString(),
       sub: stats.viewsThisWeek > 0 ? `+${stats.viewsThisWeek} this week` : null, subUp: true,
-      icon: <Eye className="w-4 h-4 text-[#4A90E2]" />, iconBg: "#EBF3FC"
+      icon: <Eye className="w-4 h-4 text-[#B5620A]" />, iconBg: "#FEF3E2"
     },
     {
       label: "Offers received", value: stats.offersReceived,
@@ -274,9 +274,9 @@ export default function DashboardPage() {
 
   const manageItems = [
     { label: "Post a new deal", desc: "Create a listing", icon: <PlusCircle className="w-5 h-5 text-[#737370]" />, href: "/properties/new" },
-    { label: "Edit Listings", desc: "Update your deals", icon: <Edit3 className="w-5 h-5 text-[#4A90E2]" />, href: "/properties" },
+    { label: "Edit Listings", desc: "Update your deals", icon: <Edit3 className="w-5 h-5 text-[#D03839]" />, href: "/properties" },
     { label: "View Offers", desc: `${stats.offersReceived} pending offers`, icon: <FileText className="w-5 h-5 text-[#B5620A]" />, href: "/offers" },
-    { label: "Promote Listing", desc: "Boost visibility", icon: <Megaphone className="w-5 h-5 text-[#7C3AED]" />, href: "/properties" },
+    { label: "Promote Listing", desc: "Boost visibility", icon: <Megaphone className="w-5 h-5 text-[#B5620A]" />, href: "/properties" },
   ];
 
   return (
@@ -285,7 +285,7 @@ export default function DashboardPage() {
       <div className="px-2 lg:px-4 pt-5 pb-4">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-[24px] font-normal text-[#1A1816] tracking-[-0.56px]">Welcome Back, {firstName}</h1>
+            <h1 className="text-[24px] font-bold text-[#1A1816] tracking-[-0.56px]">Welcome Back, {firstName}</h1>
             <p className="text-[14px] text-[#737370] mt-0.5">{getCurrentDate()}</p>
           </div>
           <div className="flex items-center gap-3">
@@ -435,7 +435,7 @@ export default function DashboardPage() {
                   const statusStyle = ps === 'active'
                     ? 'bg-[#E4F5EC] text-[#0F6E56]'
                     : ps === 'sold'
-                    ? 'bg-[#EBF3FC] text-[#4A90E2]'
+                    ? 'bg-[#FEF0EF] text-[#D03839]'
                     : 'bg-[#F3F3F0] text-[#737370]';
 
                   return (
@@ -472,7 +472,7 @@ export default function DashboardPage() {
                           <Link href={`/properties/edit/${property.id}`} className="flex-1 py-2.5 text-center border border-[#1A1816] text-[#1A1816] text-[13px] font-semibold rounded hover:bg-[#FAFAF8] transition-colors duration-200">
                             Edit
                           </Link>
-                          <Link href={`/properties/edit/${property.id}`} className="flex-1 py-2.5 text-center bg-[#FEF0EF] text-[#D03839] text-[13px] font-semibold rounded border border-[#D03839] hover:bg-[#fde4e3] transition-colors duration-200">
+                          <Link href={`/properties/preview/${property.id}`} className="flex-1 py-2.5 text-center bg-[#FEF0EF] text-[#D03839] text-[13px] font-semibold rounded border border-[#D03839] hover:bg-[#fde4e3] transition-colors duration-200">
                             View Deal
                           </Link>
                         </div>

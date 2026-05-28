@@ -7,6 +7,7 @@ import { Save, Eye, ArrowLeft, Upload, X, AlertCircle, Home, FileText, Zap, Star
 import ImageGalleryManager from '@/components/properties/ImageGalleryManager';
 import TextEditor from '@/components/forms/TextEditor';
 import GooglePlacesAutocomplete from '@/components/forms/GooglePlacesAutocomplete';
+import SaveStatus from '@/components/properties/SaveStatus';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
 
@@ -40,6 +41,36 @@ const PROPERTY_TYPES = [
   'Other'
 ];
 
+function PropertySelect({ value, onChange, options }) {
+  const [open, setOpen] = React.useState(false)
+  const ref = React.useRef(null)
+  React.useEffect(() => {
+    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+  const label = options.find(o => String(o.value) === String(value))?.label || 'Select'
+  return (
+    <div className="relative" ref={ref}>
+      <button type="button" onClick={() => setOpen(o => !o)}
+        className="w-full px-3 py-2.5 pr-8 border border-[#E8E8E4] rounded bg-white text-[13px] text-left text-[#1A1816] cursor-pointer hover:border-[#1A1816] transition-colors flex items-center justify-between">
+        <span className={value === '' ? 'text-[#A8A8A4]' : ''}>{label}</span>
+        <ChevronDown className={`absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none text-[#737370] transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+      {open && (
+        <div className="absolute z-30 top-full left-0 mt-1 w-full bg-white border border-[#E8E8E4] rounded shadow-lg overflow-hidden">
+          {options.map(opt => (
+            <div key={opt.value} onClick={() => { onChange(String(opt.value)); setOpen(false) }}
+              className={`px-3 py-2 text-[13px] cursor-pointer transition-colors ${String(value) === String(opt.value) ? 'bg-[#1A1816] text-white' : 'text-[#1A1816] hover:bg-[#FAFAF8]'}`}>
+              {opt.label}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function NewPropertyPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -63,6 +94,13 @@ export default function NewPropertyPage() {
   const [addOnLoading, setAddOnLoading] = useState(false);
   const [addOnError, setAddOnError] = useState(null);
   const [pendingPublishData, setPendingPublishData] = useState(null);
+  // ── Auto-save state ───────────────────────────────────────────
+  const [currentDraftId, setCurrentDraftId] = useState(draftId);
+  const [lastSavedAt, setLastSavedAt] = useState(null);
+  const [autoSaving, setAutoSaving] = useState(false);
+  const [dirty, setDirty] = useState(false);
+  const [autoSaveError, setAutoSaveError] = useState(null);
+  const [readyForAutoSave, setReadyForAutoSave] = useState(false);
 
   const descRef = useRef(null);
   const repairsRef = useRef(null);
@@ -89,6 +127,8 @@ export default function NewPropertyPage() {
   const [ownershipConfirmed, setOwnershipConfirmed] = useState(false);
   const [sellerProfileContact, setSellerProfileContact] = useState({ name: '', phone: '' });
   const [useCustomContact, setUseCustomContact] = useState(false);
+  const [teamMembers, setTeamMembers] = useState([]);
+  const [selectedTeamMemberId, setSelectedTeamMemberId] = useState('');
   const [contractUpload, setContractUpload] = useState({
     url: null,
     key: null,
@@ -148,6 +188,22 @@ export default function NewPropertyPage() {
           .then(({ data }) => { if (data?.admin_notes === 'LIFETIME_FREE') setIsLifetimeFree(true) });
       });
   }, []);
+
+  // Fetch team members for enterprise sellers (for the contact-picker dropdown)
+  useEffect(() => {
+    if (trialPlan?.plan_type !== 'enterprise') return;
+    const userStr = typeof window !== 'undefined' ? localStorage.getItem('seller_user') : null;
+    if (!userStr) return;
+    const user = JSON.parse(userStr);
+    if (!user?.id) return;
+    fetch('/api/team', { headers: { Authorization: `Bearer ${user.id}` } })
+      .then(r => r.json())
+      .then(json => {
+        const members = (json?.members || []).filter(m => m.name || m.email);
+        setTeamMembers(members);
+      })
+      .catch(() => {});
+  }, [trialPlan?.plan_type]);
 
   // Pre-fill form from draft when draft_id is present
   useEffect(() => {
@@ -214,6 +270,7 @@ export default function NewPropertyPage() {
       ...prev,
       [field]: value
     }));
+    setDirty(true);
   };
 
   const handleAddressSelect = (addressData) => {
@@ -227,7 +284,45 @@ export default function NewPropertyPage() {
       zipcode: addressData.zipcode,
       state: addressData.stateShort
     }));
+    setDirty(true);
   };
+
+  // ── Auto-save ─────────────────────────────────────────────────
+  // Enable auto-save once the seller is identified (so we have a seller_id to write with).
+  useEffect(() => {
+    if (userId) setReadyForAutoSave(true);
+  }, [userId]);
+
+  // Debounced auto-save: 2s after the last change, save the draft silently.
+  // - Skipped on the Add-Ons tab (that's the explicit publish step).
+  // - Requires at least a location field so we have something to write.
+  // - Never publishes — handleSave's silent branch forces publishStatus='draft'.
+  useEffect(() => {
+    if (!readyForAutoSave || !dirty) return;
+    if (saving || autoSaving) return;
+    if (imageUploadStatus.isUploading) return;
+    if (activeTab === 'addons') return;
+    if (!formData.location) return;
+
+    const timer = setTimeout(async () => {
+      setAutoSaving(true);
+      setAutoSaveError(null);
+      try {
+        const ok = await handleSave('draft', { silent: true, skipNavigation: true });
+        if (ok) {
+          setLastSavedAt(new Date());
+          setDirty(false);
+        }
+      } catch (e) {
+        setAutoSaveError(e?.message || 'Couldn\'t save');
+      } finally {
+        setAutoSaving(false);
+      }
+    }, 2000);
+
+    return () => clearTimeout(timer);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formData, dirty, readyForAutoSave, saving, autoSaving, imageUploadStatus.isUploading, activeTab]);
 
   const buildSeoDefaults = (data) => {
     const addr = data.location || '';
@@ -321,7 +416,9 @@ export default function NewPropertyPage() {
   };
 
   const handleSave = async (publishStatus = 'draft', options = {}) => {
-    const { skipFeaturedPrompt = false, forceAutoSelectFeatured = false, addOnFlags = null, bypassLimit = false, addonPaymentIntentId = null } = options;
+    const { skipFeaturedPrompt = false, forceAutoSelectFeatured = false, addOnFlags = null, bypassLimit = false, addonPaymentIntentId = null, silent = false, skipNavigation = false } = options;
+    // Auto-save (silent) always behaves like a draft save with relaxed validation.
+    if (silent) publishStatus = 'draft';
 
     if (!bypassLimit) {
       // Block publishing if subscription has ended
@@ -353,9 +450,11 @@ export default function NewPropertyPage() {
     }
 
     if (!formData.location) {
-      setError('Please fill in the property address.');
-      setActiveTab('basic');
-      return;
+      if (!silent) {
+        setError('Please fill in the property address.');
+        setActiveTab('basic');
+      }
+      return false;
     }
 
     if (publishStatus === 'active' && !formData.price) {
@@ -410,8 +509,8 @@ export default function NewPropertyPage() {
     }
 
     if (imageUploadStatus.isUploading) {
-      setError(`Please wait for ${imageUploadStatus.uploadingCount} image${imageUploadStatus.uploadingCount > 1 ? 's' : ''} to finish uploading.`);
-      return;
+      if (!silent) setError(`Please wait for ${imageUploadStatus.uploadingCount} image${imageUploadStatus.uploadingCount > 1 ? 's' : ''} to finish uploading.`);
+      return false;
     }
 
     const completedImages = imageUploadStatus.images.filter(
@@ -420,16 +519,9 @@ export default function NewPropertyPage() {
     let completedImagesForSave = completedImages;
     const hasFeaturedImage = completedImages.some((img) => !!img.isFeatured);
 
-    if (completedImages.length > 0 && !hasFeaturedImage && !skipFeaturedPrompt) {
-      setFeaturedImageModal({
-        open: true,
-        publishStatus,
-        imageCount: completedImages.length
-      });
-      return;
-    }
-
-    if (completedImages.length > 0 && !hasFeaturedImage && forceAutoSelectFeatured) {
+    // Auto-select the first image as featured if none picked. The seller can
+    // still re-pick from the gallery; no modal interruption.
+    if (completedImages.length > 0 && !hasFeaturedImage) {
       const firstCompletedId = completedImages[0].id;
       completedImagesForSave = completedImages.map((img, index) => ({
         ...img,
@@ -472,9 +564,11 @@ export default function NewPropertyPage() {
       formData.repairs = cleanRepairs;
     }
 
-    setSaving(true);
-    setError(null);
-    setSuccess(null);
+    if (!silent) {
+      setSaving(true);
+      setError(null);
+      setSuccess(null);
+    }
 
     // Short unique slug — reuse existing slug for drafts, generate new for fresh properties
     let shortSlug;
@@ -533,18 +627,19 @@ export default function NewPropertyPage() {
     try {
       // Update existing draft or create new property
       let data;
-      if (draftId) {
+      const updateTargetId = currentDraftId;
+      if (updateTargetId) {
         const { data: updated, error: updateErr } = await supabase
           .from('properties')
           .update({ ...saveData, updated_at: new Date().toISOString() })
-          .eq('id', draftId)
+          .eq('id', updateTargetId)
           .eq('seller_id', sellerId)
           .select()
           .single();
         if (updateErr) throw updateErr;
         data = updated;
         // Remove old images so we can replace with current set
-        await supabase.from('property_images').delete().eq('property_id', draftId);
+        await supabase.from('property_images').delete().eq('property_id', updateTargetId);
       } else {
         const { data: inserted, error: saveErr } = await supabase
           .from('properties')
@@ -553,6 +648,8 @@ export default function NewPropertyPage() {
           .single();
         if (saveErr) throw saveErr;
         data = inserted;
+        // Track the new id so further auto-saves update this row instead of inserting another
+        setCurrentDraftId(inserted.id);
       }
 
       // Save images to database
@@ -627,16 +724,22 @@ export default function NewPropertyPage() {
         }).catch(() => {});
       }
 
+      if (silent || skipNavigation) {
+        if (!silent) setSaving(false);
+        return true;
+      }
       const successMsg = publishStatus === 'active'
-        ? 'Property submitted for review! You\'ll be notified when it\'s approved.'
+        ? 'Listing submitted for review — usually goes live within seconds. We\'ll email you if anything needs attention.'
         : 'Property saved as draft!';
       sessionStorage.setItem('listingSuccess', successMsg);
       router.push('/properties');
 
     } catch (err) {
       console.error('Save failed:', err);
+      if (silent) throw err;
       setError(err?.message || 'Failed to save property. Please try again.');
       setSaving(false);
+      return false;
     }
   };
 
@@ -893,20 +996,13 @@ export default function NewPropertyPage() {
             </p>
           </div>
         </div>
-        <button
-          type="button"
-          onClick={() => handleSave('draft')}
-          disabled={saving || imageUploadStatus.isUploading}
-          className="flex items-center justify-center gap-2 bg-[#FAFAF8] hover:bg-[#E8E8E4] text-[#1A1816] px-3 py-2 rounded text-[13px] font-medium border border-[#E8E8E4] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          <Save size={16} />
-          <span>
-            {imageUploadStatus.isUploading
-              ? `Uploading ${imageUploadStatus.uploadingCount}...`
-              : saving ? 'Saving…' : 'Save Draft'
-            }
-          </span>
-        </button>
+        <SaveStatus
+          autoSaving={autoSaving}
+          lastSavedAt={lastSavedAt}
+          dirty={dirty}
+          error={autoSaveError}
+          status="draft"
+        />
       </div>
 
       {/* Notifications */}
@@ -934,39 +1030,6 @@ export default function NewPropertyPage() {
         </div>
       )}
 
-      {featuredImageModal.open && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-[1px] flex items-center justify-center p-4">
-          <div className="w-full max-w-md bg-white border border-[#E8E8E4] rounded shadow-2xl overflow-hidden">
-            <div className="px-5 py-4 border-b border-[#E8E8E4] bg-[#FAFAF8]">
-              <h3 className="text-[15px] font-semibold text-[#1A1816]">Select featured image</h3>
-              <p className="text-[12px] text-[#737370] mt-1">
-                Your listing has {featuredImageModal.imageCount} uploaded image{featuredImageModal.imageCount > 1 ? 's' : ''} but no featured one selected.
-              </p>
-            </div>
-            <div className="px-5 py-4">
-              <p className="text-[13px] text-[#1A1816] leading-6">
-                Featured image is used as the main thumbnail on listings. You can choose one manually, or continue and automatically use the first uploaded image.
-              </p>
-            </div>
-            <div className="px-5 py-4 border-t border-[#E8E8E4] bg-white flex items-center justify-end gap-2">
-              <button
-                type="button"
-                onClick={handleFeaturedModalSelectManually}
-                className="px-3.5 py-2 text-[13px] font-medium rounded border border-[#E8E8E4] text-[#1A1816] hover:bg-[#FAFAF8] transition-colors"
-              >
-                Select manually
-              </button>
-              <button
-                type="button"
-                onClick={handleFeaturedModalAutoSelect}
-                className="px-3.5 py-2 text-[13px] font-medium rounded bg-[#D03839] text-white hover:bg-[#E0493B] transition-colors"
-              >
-                Use first image
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Upload Warning */}
       {imageUploadStatus.isUploading && (
@@ -1027,7 +1090,7 @@ export default function NewPropertyPage() {
           {activeTab === 'basic' && (
             <div className="space-y-6">
               <div>
-                <label className="block text-[13px] font-semibold text-[#1A1816] mb-2">Location *</label>
+                <label className="block text-[13px] font-semibold text-[#1A1816] mb-2">Location <span className="text-[#D03839]">*</span></label>
                 <GooglePlacesAutocomplete
                   onAddressSelect={handleAddressSelect}
                   defaultValue={formData.location || ''}
@@ -1039,7 +1102,7 @@ export default function NewPropertyPage() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-[13px] font-semibold text-[#1A1816] mb-2">Price ($) *</label>
+                  <label className="block text-[13px] font-semibold text-[#1A1816] mb-2">Price ($) <span className="text-[#D03839]">*</span></label>
                   <input
                     type="number"
                     value={formData.price || ''}
@@ -1049,7 +1112,7 @@ export default function NewPropertyPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-[13px] font-semibold text-[#1A1816] mb-2">Property Type *</label>
+                  <label className="block text-[13px] font-semibold text-[#1A1816] mb-2">Property Type <span className="text-[#D03839]">*</span></label>
                   <select
                     value={formData.property_type ?? ''}
                     onChange={(e) => handleInputChange('property_type', e.target.value)}
@@ -1065,37 +1128,23 @@ export default function NewPropertyPage() {
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-[13px] font-semibold text-[#1A1816] mb-2">Beds *</label>
-                  <div className="relative">
-                    <select
-                      value={formData.bedrooms || ''}
-                      onChange={(e) => handleInputChange('bedrooms', e.target.value)}
-                      className="w-full px-3 py-2.5 pr-8 border border-[#E8E8E4] rounded bg-white focus:border-[#1A1816] focus:outline-none transition-colors text-[13px] text-[#1A1816] appearance-none"
-                    >
-                      <option value="">Select</option>
-                      {[1,2,3,4].map(n => <option key={n} value={n}>{n}</option>)}
-                      <option value="5">5+</option>
-                    </select>
-                    <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none text-[#737370]" />
-                  </div>
+                  <label className="block text-[13px] font-semibold text-[#1A1816] mb-2">Beds <span className="text-[#D03839]">*</span></label>
+                  <PropertySelect
+                    value={formData.bedrooms || ''}
+                    onChange={(v) => handleInputChange('bedrooms', v)}
+                    options={[{ value: '', label: 'Select' }, ...[1,2,3,4].map(n => ({ value: n, label: String(n) })), { value: '5', label: '5+' }]}
+                  />
                 </div>
                 <div>
-                  <label className="block text-[13px] font-semibold text-[#1A1816] mb-2">Baths *</label>
-                  <div className="relative">
-                    <select
-                      value={formData.bathrooms || ''}
-                      onChange={(e) => handleInputChange('bathrooms', e.target.value)}
-                      className="w-full px-3 py-2.5 pr-8 border border-[#E8E8E4] rounded bg-white focus:border-[#1A1816] focus:outline-none transition-colors text-[13px] text-[#1A1816] appearance-none"
-                    >
-                      <option value="">Select</option>
-                      {[1,1.5,2,2.5,3,3.5,4,4.5].map(n => <option key={n} value={n}>{n}</option>)}
-                      <option value="5">5+</option>
-                    </select>
-                    <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none text-[#737370]" />
-                  </div>
+                  <label className="block text-[13px] font-semibold text-[#1A1816] mb-2">Baths <span className="text-[#D03839]">*</span></label>
+                  <PropertySelect
+                    value={formData.bathrooms || ''}
+                    onChange={(v) => handleInputChange('bathrooms', v)}
+                    options={[{ value: '', label: 'Select' }, ...[1,1.5,2,2.5,3,3.5,4,4.5].map(n => ({ value: n, label: String(n) })), { value: '5', label: '5+' }]}
+                  />
                 </div>
                 <div>
-                  <label className="block text-[13px] font-semibold text-[#1A1816] mb-2">Floor Area (sqft) *</label>
+                  <label className="block text-[13px] font-semibold text-[#1A1816] mb-2">Floor Area (sqft) <span className="text-[#D03839]">*</span></label>
                   <input
                     type="number"
                     value={formData.floor_area || ''}
@@ -1120,33 +1169,40 @@ export default function NewPropertyPage() {
                 </select>
               </div>
 
-              {/* Contact Info */}
+              {/* Contact Info — always editable; pre-filled from the seller's profile.
+                  Sellers can keep the defaults or override them per-listing. */}
               <div>
-                <div className="flex items-center justify-between mb-3">
-                  <div>
-                    <h3 className="text-[15px] font-semibold text-[#1A1816]">Contact Info</h3>
-                    <p className="text-[13px] text-[#737370] mt-0.5">How buyers can reach you about this listing.</p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const next = !useCustomContact;
-                      setUseCustomContact(next);
-                      if (!next) {
-                        setFormData(prev => ({ ...prev, contact_name: sellerProfileContact.name, contact_phone: sellerProfileContact.phone }));
-                      } else {
-                        setFormData(prev => ({ ...prev, contact_name: '', contact_phone: '' }));
-                      }
-                    }}
-                    className={`text-[13px] font-semibold px-4 py-2 rounded border transition-all duration-200 active:scale-[0.98] ${
-                      useCustomContact
-                        ? 'bg-[#D03839] border-[#D03839] text-white hover:bg-[#E0493B] hover:border-[#E0493B]'
-                        : 'bg-white border-[#D03839] text-[#D03839] hover:bg-[#FEF0EF]'
-                    }`}
-                  >
-                    {useCustomContact ? 'Use profile contact' : 'Edit contact info'}
-                  </button>
+                <div className="mb-3">
+                  <h3 className="text-[15px] font-semibold text-[#1A1816]">Contact Info</h3>
+                  <p className="text-[13px] text-[#737370] mt-0.5">How buyers can reach you about this listing. Pre-filled from your profile — edit if you want different contact info on this listing.</p>
                 </div>
+                {trialPlan?.plan_type === 'enterprise' && teamMembers.length > 0 && (
+                  <div className="mb-4">
+                    <label className="block text-[13px] font-semibold text-[#1A1816] mb-2">Pick a team member</label>
+                    <select
+                      value={selectedTeamMemberId}
+                      onChange={(e) => {
+                        const memberId = e.target.value;
+                        setSelectedTeamMemberId(memberId);
+                        if (!memberId) return;
+                        const m = teamMembers.find(tm => String(tm.id) === String(memberId));
+                        if (!m) return;
+                        const memberName = m.name || m.email || '';
+                        const memberPhone = m.phone || '';
+                        setFormData(prev => ({ ...prev, contact_name: memberName, contact_phone: memberPhone }));
+                        setDirty(true);
+                      }}
+                      className="w-full px-4 py-3 border border-[#E8E8E4] rounded text-[13px] text-[#1A1816] focus:border-[#D03839] focus:outline-none transition-colors bg-white"
+                    >
+                      <option value="">Custom (fill in below)</option>
+                      {teamMembers.map(m => (
+                        <option key={m.id} value={m.id}>
+                          {(m.name || m.email)}{m.phone ? ` — ${m.phone}` : ' (no phone)'}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-[13px] font-semibold text-[#1A1816] mb-2">Contact Name</label>
@@ -1154,13 +1210,8 @@ export default function NewPropertyPage() {
                       type="text"
                       value={formData.contact_name || ''}
                       onChange={(e) => handleInputChange('contact_name', e.target.value)}
-                      readOnly={!useCustomContact}
                       placeholder="Your name or company"
-                      className={`w-full px-4 py-3 border rounded text-[13px] text-[#1A1816] transition-colors ${
-                        useCustomContact
-                          ? 'border-[#E8E8E4] focus:border-[#D03839] focus:outline-none'
-                          : 'border-[#E8E8E4] bg-[#FAFAF8] text-[#737370] cursor-default outline-none'
-                      }`}
+                      className="w-full px-4 py-3 border border-[#E8E8E4] rounded text-[13px] text-[#1A1816] focus:border-[#D03839] focus:outline-none transition-colors"
                     />
                   </div>
                   <div>
@@ -1169,13 +1220,8 @@ export default function NewPropertyPage() {
                       type="tel"
                       value={formData.contact_phone || ''}
                       onChange={(e) => handleInputChange('contact_phone', e.target.value)}
-                      readOnly={!useCustomContact}
                       placeholder="+1 (555) 000-0000"
-                      className={`w-full px-4 py-3 border rounded text-[13px] text-[#1A1816] transition-colors ${
-                        useCustomContact
-                          ? 'border-[#E8E8E4] focus:border-[#D03839] focus:outline-none'
-                          : 'border-[#E8E8E4] bg-[#FAFAF8] text-[#737370] cursor-default outline-none'
-                      }`}
+                      className="w-full px-4 py-3 border border-[#E8E8E4] rounded text-[13px] text-[#1A1816] focus:border-[#D03839] focus:outline-none transition-colors"
                     />
                   </div>
                 </div>
@@ -1536,13 +1582,22 @@ export default function NewPropertyPage() {
               >
                 <ArrowLeft className="w-4 h-4" /> Back
               </button>
-              <button
-                type="button"
-                onClick={handleContinue}
-                className="flex items-center gap-1.5 px-5 py-2 bg-[#D03839] hover:bg-[#E0493B] text-white text-[13px] font-semibold rounded transition-colors"
-              >
-                Continue <ChevronRight className="w-4 h-4" />
-              </button>
+              <div className="flex items-center gap-3">
+                <SaveStatus
+                  autoSaving={autoSaving}
+                  lastSavedAt={lastSavedAt}
+                  dirty={dirty}
+                  error={autoSaveError}
+                  status="draft"
+                />
+                <button
+                  type="button"
+                  onClick={handleContinue}
+                  className="flex items-center gap-1.5 px-5 py-2 bg-[#D03839] hover:bg-[#E0493B] text-white text-[13px] font-semibold rounded transition-colors"
+                >
+                  Continue <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
             </div>
           )}
 
