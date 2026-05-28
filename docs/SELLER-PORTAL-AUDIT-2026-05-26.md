@@ -237,6 +237,33 @@
 
 ---
 
+## U Section — Status (2026-05-28)
+
+All resolved:
+- U1 ✅ counter-offer preview framed as the buyer's email view (`ae258fa`)
+- U2 ✅ success toast after counter sent (`ae258fa`)
+- U3 ✅ buyer email/phone gated behind "Show contact info" toggle (`ae258fa`)
+- U4 ✅ new-seller "Get started" checklist on dashboard when 0 listings (`605479a`)
+- U5 ✅ already implemented — Messages nav badge sums unread (verified)
+- U6 ✅ chat header shows property address (`ae258fa`)
+- U7 ✅ empty-analytics state has "Go to My Listings" CTA (`e2c8634`)
+- U8 ✅ add-on countdown already existed; added Renew link when expiring ≤7d (`605479a`)
+- U9 ✅ "Your plan" badge reworded for off-cycle clarity (`e2c8634`)
+- U10 ✅ already-fine — trial copy already clear (verified)
+- U11 ✅ already-satisfied — OTP email/phone verification exists (per user; verified)
+- U12 ✅ non-issue — no false 2FA promise in Settings (verified); 2FA build deferred
+- U13 ⏭️ SKIPPED — account deletion declined by user; data-export deferred
+- U14 ⏸️ DEFERRED — notification preferences (not built this pass)
+- U15 ✅ referral code auto-generates on first load (`e2c8634`)
+- U16 ✅ phone editable with SMS-OTP verification (`072df21`)
+- U17 ✅ activity timeline capped at 50 most-recent (`072df21`)
+- U18 ✅ team member "Full Access" badge consistent with owner (`072df21`)
+
+Note: U14 (notification prefs) is the one remaining UX build — deferred,
+not done. Everything else in U is shipped or verified.
+
+---
+
 ## 🟡 Polish (design-system + minor)
 
 ### P1. Non-design-system blue (`#4A90E2`) + purple (`#7C3AED`) on dashboard
