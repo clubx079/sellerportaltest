@@ -311,6 +311,26 @@
 
 ---
 
+## P Section — Status (2026-05-28)
+
+All resolved (commit `d1794a1` unless noted):
+- P1 ✅ blue/purple → palette (dashboard)
+- P2 ⏭️ SKIPPED — whole app uses 40px inputs; 56px would make properties/new the only inconsistent page
+- P3 ✅ shared lib/format.js currency util; whole-dollar prices drop .00, invoices keep cents
+- P4 ✅ red required asterisks (properties/new)
+- P5 ✅ DeleteConfirmModal gray → brand tokens
+- P6 ✅ login border #D4D4CF → #E8E8E4
+- P7 ✅ global font → DM Sans
+- P8 ✅ Sold badge → palette red
+- P9 ✅ avatar palette → neutral palette pairs
+- P10 ✅ RESOLVED as-is — structural 4px is in place for cards/inputs/buttons; pill badges + circular avatars are intentional per the design system's radius/pill token. No change (decision: chasing badge-radius uniformity is low ROI and would square avatars).
+- P11 ✅ Welcome heading → bold
+- P12 ✅ already fixed during contracts work (verified)
+- P13 ✅ already correct — completed wizard tabs render a Check icon (verified)
+- P14 ✅ team modal backdrop-blur removed
+
+---
+
 ## Sprint Plan (rough)
 
 ### Sprint 1 — Current focus (this week)
