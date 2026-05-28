@@ -1,7 +1,64 @@
 'use client'
 import { useState, useEffect } from 'react'
-import { CreditCard, Check, AlertCircle, Loader2, Receipt } from 'lucide-react'
+import { CreditCard, Check, AlertCircle, Loader2, Receipt, X, Download } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
+import { loadStripe } from '@stripe/stripe-js'
+import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js'
+
+const stripePromise = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
+  ? loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY)
+  : null
+
+// Native card-update form — collects a card via Stripe Elements and saves it
+// as the customer's default. No redirect to Stripe's hosted portal.
+function CardUpdateForm({ customerId, onSaved, onCancel }) {
+  const stripe = useStripe()
+  const elements = useElements()
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState(null)
+
+  const handleSave = async (e) => {
+    e.preventDefault()
+    if (!stripe || !elements) return
+    setSaving(true); setError(null)
+    const { error: submitErr } = await elements.submit()
+    if (submitErr) { setError(submitErr.message); setSaving(false); return }
+    const result = await stripe.confirmSetup({ elements, redirect: 'if_required' })
+    if (result.error) { setError(result.error.message); setSaving(false); return }
+    const intent = result.setupIntent
+    const pmId = typeof intent?.payment_method === 'string' ? intent.payment_method : intent?.payment_method?.id
+    if (!pmId) { setError('Could not read the new card. Please try again.'); setSaving(false); return }
+    try {
+      const res = await fetch('/api/billing/set-default-payment-method', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ customer_id: customerId, payment_method_id: pmId }),
+      })
+      const json = await res.json()
+      if (!res.ok || json.error) throw new Error(json.error || 'Failed to save card')
+      onSaved(json.payment_method || null)
+    } catch (e) {
+      setError(e?.message || 'Failed to save card')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <form onSubmit={handleSave} className="space-y-4">
+      <PaymentElement />
+      {error && <div className="p-3 bg-[#FEF0EF] border border-[#F5C4C0] rounded text-[13px] text-[#D03839]">{error}</div>}
+      <div className="flex items-center gap-3">
+        <button type="button" onClick={onCancel} disabled={saving}
+          className="flex-1 h-10 text-[13px] font-semibold text-[#1A1816] bg-white border border-[#E8E8E4] rounded hover:bg-[#FAFAF8] transition-colors disabled:opacity-50">Cancel</button>
+        <button type="submit" disabled={saving || !stripe}
+          className="flex-1 h-10 text-[13px] font-semibold text-white bg-[#D03839] hover:bg-[#E0493B] rounded transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5">
+          {saving ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving…</> : 'Save card'}
+        </button>
+      </div>
+    </form>
+  )
+}
 
 const labelCls = 'block text-[12px] font-semibold text-[#737370] uppercase tracking-[0.08em] mb-1'
 const valueCls = 'text-[14px] font-semibold text-[#1A1816]'
@@ -43,6 +100,36 @@ export default function BillingPage() {
   const [pmLoading, setPmLoading] = useState(false)
   const [error, setError] = useState(null)
   const [teamWorkspace, setTeamWorkspace] = useState(null)
+  const [showCardModal, setShowCardModal] = useState(false)
+  const [cardClientSecret, setCardClientSecret] = useState(null)
+  const [cardModalLoading, setCardModalLoading] = useState(false)
+
+  // Open the native card-update modal: create a SetupIntent, then mount Elements.
+  async function openCardModal() {
+    if (!plan?.stripe_customer_id) return
+    setCardModalLoading(true)
+    try {
+      const res = await fetch('/api/billing/setup-intent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ customer_id: plan.stripe_customer_id }),
+      })
+      const json = await res.json()
+      if (!res.ok || json.error) throw new Error(json.error || 'Failed to start card update')
+      setCardClientSecret(json.clientSecret)
+      setShowCardModal(true)
+    } catch (e) {
+      setError(e?.message || 'Could not start card update')
+    } finally {
+      setCardModalLoading(false)
+    }
+  }
+
+  function handleCardSaved(newPm) {
+    if (newPm) setPaymentMethod(newPm)
+    setShowCardModal(false)
+    setCardClientSecret(null)
+  }
 
   useEffect(() => {
     const userStr = localStorage.getItem('seller_user')
@@ -293,12 +380,24 @@ export default function BillingPage() {
                     </p>
                   </div>
                 </div>
-                <span className="flex items-center gap-1 text-[11px] font-semibold text-[#0F6E56] bg-[#E4F5EC] px-2 py-0.5 rounded border border-[#9FDBB8]">
-                  <Check className="w-3 h-3" /> Default
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="flex items-center gap-1 text-[11px] font-semibold text-[#0F6E56] bg-[#E4F5EC] px-2 py-0.5 rounded border border-[#9FDBB8]">
+                    <Check className="w-3 h-3" /> Default
+                  </span>
+                  <button onClick={openCardModal} disabled={cardModalLoading}
+                    className="text-[12px] font-semibold text-[#D03839] hover:underline disabled:opacity-50">
+                    {cardModalLoading ? 'Opening…' : 'Update'}
+                  </button>
+                </div>
               </div>
             ) : (
-              <p className="text-[13px] text-[#737370]">No payment method on file.</p>
+              <div className="flex items-center justify-between">
+                <p className="text-[13px] text-[#737370]">No payment method on file.</p>
+                <button onClick={openCardModal} disabled={cardModalLoading}
+                  className="text-[12px] font-semibold text-[#D03839] hover:underline disabled:opacity-50">
+                  {cardModalLoading ? 'Opening…' : 'Add card'}
+                </button>
+              </div>
             )}
           </div>
 
@@ -345,6 +444,13 @@ export default function BillingPage() {
                       }`}>
                         {inv.status === 'paid' ? 'Paid' : inv.status}
                       </span>
+                      {(inv.invoice_pdf || inv.hosted_invoice_url) && (
+                        <a href={inv.invoice_pdf || inv.hosted_invoice_url} target="_blank" rel="noopener noreferrer"
+                          title="Download invoice"
+                          className="w-7 h-7 flex items-center justify-center rounded text-[#A8A8A4] hover:text-[#D03839] hover:bg-[#FAFAF8] transition-colors">
+                          <Download className="w-3.5 h-3.5" />
+                        </a>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -352,6 +458,28 @@ export default function BillingPage() {
             )}
           </div>
         </>
+      )}
+
+      {showCardModal && cardClientSecret && stripePromise && (
+        <div className="fixed inset-0 z-[95] flex items-center justify-center p-4">
+          <div className="fixed inset-0 bg-[#1A1816]/40" onClick={() => { setShowCardModal(false); setCardClientSecret(null); }} aria-hidden="true" />
+          <div className="relative bg-white rounded shadow-lg border border-[#E8E8E4] max-w-md w-full p-6 z-10">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-[16px] font-semibold text-[#1A1816]">Update payment method</h3>
+              <button onClick={() => { setShowCardModal(false); setCardClientSecret(null); }} className="p-1.5 rounded hover:bg-[#FAFAF8] text-[#737370]">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <p className="text-[13px] text-[#737370] mb-4">Enter your new card details below. It becomes the default for future charges.</p>
+            <Elements stripe={stripePromise} options={{ clientSecret: cardClientSecret }}>
+              <CardUpdateForm
+                customerId={plan?.stripe_customer_id}
+                onSaved={handleCardSaved}
+                onCancel={() => { setShowCardModal(false); setCardClientSecret(null); }}
+              />
+            </Elements>
+          </div>
+        </div>
       )}
 
     </div>
