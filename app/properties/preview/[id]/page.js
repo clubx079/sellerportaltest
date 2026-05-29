@@ -7,7 +7,7 @@ import {
   ArrowLeft, Heart, Share2,
   MapPin, Building2, Calendar, Square, Map, Bed, Droplets, Car,
   ChevronLeft, ChevronRight,
-  TrendingUp, Shield, Star, DollarSign, Wrench, Home, Phone, X
+  TrendingUp, Shield, Star, DollarSign, Wrench, Home, Phone, X, Copy, Check
 } from 'lucide-react'
 
 // ─── Footer ──────────────────────────────────────────────────────────────────
@@ -173,8 +173,10 @@ export default function PropertyPreviewPage() {
   const [photos, setPhotos] = useState([])
   const [loading, setLoading] = useState(true)
   const [showPreviewModal, setShowPreviewModal] = useState(false)
-  const [showPhone, setShowPhone] = useState(false)
+  const [showPhonePopup, setShowPhonePopup] = useState(false)
+  const [phoneCopied, setPhoneCopied] = useState(false)
   const [sellerPhone, setSellerPhone] = useState('')
+  const [sellerName, setSellerName] = useState('')
   const [showImageModal, setShowImageModal] = useState(false)
   const [imageModalIndex, setImageModalIndex] = useState(0)
   const [showFullDescription, setShowFullDescription] = useState(false)
@@ -192,6 +194,8 @@ export default function PropertyPreviewPage() {
     try {
       const u = JSON.parse(localStorage.getItem('seller_user') || '{}')
       if (u?.phone) setSellerPhone(u.phone)
+      const name = u?.name || [u?.first_name, u?.last_name].filter(Boolean).join(' ').trim() || ''
+      if (name) setSellerName(name)
     } catch {}
   }, [])
 
@@ -638,31 +642,61 @@ export default function PropertyPreviewPage() {
                   </div>
                 )}
 
-                {/* Call Seller — phone is safe to reveal in preview */}
-                <div className="mb-3">
-                  {showPhone ? (
-                    sellerPhone ? (
-                      <a
-                        href={`tel:${sellerPhone}`}
-                        className="flex items-center justify-center gap-2 w-full font-semibold py-2.5 px-4 rounded text-sm bg-[#1A1816] hover:bg-[#2C2A28] text-white transition-colors"
-                      >
-                        <Phone className="w-4 h-4" />
-                        {sellerPhone}
-                      </a>
-                    ) : (
-                      <div className="flex items-center justify-center gap-2 w-full py-2.5 px-4 rounded text-sm bg-[#FAFAF8] border border-[#E8E8E4] text-[#737370]">
-                        <Phone className="w-4 h-4" />
-                        No phone number on file
+                {/* Call Seller — matches the buyer portal's contact popup */}
+                <div className="relative mb-3">
+                  <button
+                    onClick={() => { if (sellerPhone) setShowPhonePopup(true) }}
+                    disabled={!sellerPhone}
+                    className={`flex items-center justify-center gap-2 w-full font-semibold py-2.5 px-4 rounded text-sm transition-colors ${
+                      sellerPhone
+                        ? 'bg-[#1A1816] hover:bg-[#2C2A28] text-white'
+                        : 'bg-[#E8E8E4] text-[#A8A8A4] cursor-not-allowed'
+                    }`}
+                  >
+                    <Phone className="w-4 h-4" />
+                    Call Seller
+                  </button>
+
+                  {showPhonePopup && sellerPhone && (
+                    <>
+                      <div className="fixed inset-0 z-[9]" onClick={() => setShowPhonePopup(false)} />
+                      <div className="absolute bottom-full left-0 right-0 mb-2 bg-white border border-[#E8E8E4] rounded shadow-lg p-4 z-10">
+                        <div className="flex items-center justify-between mb-2">
+                          <div>
+                            <p className="text-[11px] font-semibold uppercase tracking-wide text-[#737370]">Seller Contact</p>
+                            {sellerName && (
+                              <p className="text-[13px] font-semibold text-[#1A1816] mt-0.5">{sellerName}</p>
+                            )}
+                          </div>
+                          <button onClick={() => setShowPhonePopup(false)} className="p-0.5 text-[#A8A8A4] hover:text-[#1A1816] transition-colors">
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <a
+                            href={`tel:${sellerPhone}`}
+                            className="flex items-center gap-2.5 p-3 bg-[#FAFAF8] border border-[#E8E8E4] rounded hover:border-[#D03839] hover:bg-[#FEF0EF] transition-colors group flex-1"
+                          >
+                            <div className="w-8 h-8 rounded-full bg-[#FEF0EF] flex items-center justify-center shrink-0 group-hover:bg-[#D03839] transition-colors">
+                              <Phone className="w-4 h-4 text-[#D03839] group-hover:text-white transition-colors" />
+                            </div>
+                            <span className="text-[15px] font-semibold text-[#1A1816]">{sellerPhone}</span>
+                          </a>
+                          <button
+                            onClick={() => {
+                              navigator.clipboard.writeText(sellerPhone)
+                              setPhoneCopied(true)
+                              setTimeout(() => setPhoneCopied(false), 2000)
+                            }}
+                            className="p-3 bg-[#FAFAF8] border border-[#E8E8E4] rounded hover:border-[#1A1816] transition-colors shrink-0"
+                            title="Copy number"
+                          >
+                            {phoneCopied ? <Check className="w-4 h-4 text-[#0F6E56]" /> : <Copy className="w-4 h-4 text-[#737370]" />}
+                          </button>
+                        </div>
+                        <p className="text-[11px] text-[#A8A8A4] mt-2 text-center">Tap the number to call</p>
                       </div>
-                    )
-                  ) : (
-                    <button
-                      onClick={() => setShowPhone(true)}
-                      className="flex items-center justify-center gap-2 w-full font-semibold py-2.5 px-4 rounded text-sm bg-[#1A1816] hover:bg-[#2C2A28] text-white transition-colors"
-                    >
-                      <Phone className="w-4 h-4" />
-                      Call Seller
-                    </button>
+                    </>
                   )}
                 </div>
 
