@@ -232,6 +232,81 @@ export default function NewContractWizardPage() {
       .catch(() => {})
   }, [resumeDraftId])
 
+  // ── Prefill from an accepted offer (when ?from_offer=… is present) ──
+  // Lands the seller on Step 5 (Review) with every known value filled in, so
+  // "accept offer → send contract" becomes a confirm-and-sign action. The
+  // normalized field keys are template-agnostic, so the same values map to the
+  // correct labels whether they keep Purchase or switch to Assignment.
+  const fromOfferId = searchParams.get('from_offer')
+  const appliedOfferRef = useRef(false)
+  useEffect(() => {
+    if (!fromOfferId || appliedOfferRef.current) return
+    if (!effectiveSellerId) return
+    if (templatesLoading || templates.length === 0) return
+    if (propertiesLoading) return
+    appliedOfferRef.current = true
+
+    ;(async () => {
+      try {
+        const res = await fetch(`/api/seller/offers?offer_id=${encodeURIComponent(fromOfferId)}`, {
+          headers: { Authorization: `Bearer ${userId}` },
+        })
+        const json = await res.json()
+        const o = json?.offer
+        if (!o) { appliedOfferRef.current = false; return }
+
+        // An accepted offer on a listing is a sale → default to the Purchase Contract.
+        const purchase = templates.find(t => t.slug === 'purchase') || templates[0]
+        if (purchase) setTemplateId(String(purchase.id))
+
+        // Property: use the matching listing if we have it; else manual entry with
+        // the address resolved server-side.
+        const match = properties.find(pp => String(pp.id) === String(o.property_id))
+        if (match) setPropertyId(match.id)
+        else if (o.property_address) setPropertyId('manual')
+
+        if (o.buyer_name && o.buyer_name !== 'Buyer') setBuyerName(o.buyer_name)
+        if (o.buyer_email) setBuyerEmail(o.buyer_email)
+
+        const next = {}
+        if (o.offer_price != null) next.purchase_price = String(Math.round(Number(o.offer_price)))
+        if (o.earnest_money != null && o.earnest_money !== '') next.emd = String(Math.round(Number(o.earnest_money)))
+        if (match) next.property_address = match.address || o.property_address || ''
+        else if (o.property_address) next.property_address = o.property_address
+
+        // Contract only distinguishes cash vs financing; map any non-cash offer to financing.
+        if (o.financing_type) next.financing_type = /cash/i.test(String(o.financing_type)) ? 'cash' : 'financing'
+
+        // Inspection period → due diligence days, only if it parses to a number.
+        const insp = String(o.inspection_period ?? '').match(/\d+/)
+        if (insp) next.due_diligence_days = insp[0]
+
+        // closing_timeline is free text ("30 days", "Flexible"), not a date. If it's
+        // a day count, compute a default closing date the seller can adjust; always
+        // keep the buyer's stated timeline as a note so nothing is silently dropped.
+        const noteLines = []
+        if (o.closing_timeline) {
+          const days = String(o.closing_timeline).match(/\d+/)
+          if (days) {
+            const d = new Date()
+            d.setDate(d.getDate() + parseInt(days[0], 10))
+            next.closing_date = d.toISOString().slice(0, 10)
+          }
+          noteLines.push(`Buyer's requested closing timeline: ${o.closing_timeline}`)
+        }
+        if (o.notes) noteLines.push(String(o.notes))
+        if (noteLines.length) next.special_terms = noteLines.join('\n')
+
+        setFieldValues(prev => ({ ...prev, ...next }))
+        setDirty(true)
+        setStep(5)
+      } catch {
+        appliedOfferRef.current = false
+      }
+    })()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fromOfferId, effectiveSellerId, templatesLoading, templates, propertiesLoading, properties, userId])
+
   // ── Property selection → auto-fill property_address ─────────────
   function handlePropertyChange(value) {
     setPropertyId(value)
@@ -401,6 +476,7 @@ export default function NewContractWizardPage() {
           templateId,
           field_values: fieldValues,
           draft_id: currentDraftId,
+          offer_id: fromOfferId || null,
         }),
       })
       const data = await res.json()

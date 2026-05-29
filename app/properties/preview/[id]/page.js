@@ -7,7 +7,7 @@ import {
   ArrowLeft, Heart, Share2,
   MapPin, Building2, Calendar, Square, Map, Bed, Droplets, Car,
   ChevronLeft, ChevronRight,
-  TrendingUp, Shield, Star, DollarSign, Wrench, Home, Phone, X
+  TrendingUp, Shield, Star, DollarSign, Wrench, Home, Phone, X, Copy, Check
 } from 'lucide-react'
 
 // ─── Footer ──────────────────────────────────────────────────────────────────
@@ -173,6 +173,10 @@ export default function PropertyPreviewPage() {
   const [photos, setPhotos] = useState([])
   const [loading, setLoading] = useState(true)
   const [showPreviewModal, setShowPreviewModal] = useState(false)
+  const [showPhonePopup, setShowPhonePopup] = useState(false)
+  const [phoneCopied, setPhoneCopied] = useState(false)
+  const [sellerPhone, setSellerPhone] = useState('')
+  const [sellerName, setSellerName] = useState('')
   const [showImageModal, setShowImageModal] = useState(false)
   const [imageModalIndex, setImageModalIndex] = useState(0)
   const [showFullDescription, setShowFullDescription] = useState(false)
@@ -185,6 +189,15 @@ export default function PropertyPreviewPage() {
   const mapInitRef = useRef(false)
 
   const intercept = (e) => { e.preventDefault(); e.stopPropagation(); setShowPreviewModal(true) }
+
+  useEffect(() => {
+    try {
+      const u = JSON.parse(localStorage.getItem('seller_user') || '{}')
+      if (u?.phone) setSellerPhone(u.phone)
+      const name = u?.name || [u?.first_name, u?.last_name].filter(Boolean).join(' ').trim() || ''
+      if (name) setSellerName(name)
+    } catch {}
+  }, [])
 
   useEffect(() => {
     if (!id) return
@@ -327,16 +340,13 @@ export default function PropertyPreviewPage() {
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 px-4">
           <div className="bg-white rounded w-full max-w-sm p-6 text-center shadow-xl">
             <h3 className="text-[16px] font-bold text-[#1A1816] mb-2">You&apos;re in Preview Mode</h3>
-            <p className="text-[13px] text-[#737370] mb-5">This is how buyers see your listing.</p>
+            <p className="text-[13px] text-[#737370] mb-5">This is how buyers see your listing. Actions buyers use — messaging, offers, and saving — are turned off here.</p>
             <button onClick={() => setShowPreviewModal(false)} className="w-full h-[40px] bg-[#1A1816] hover:bg-[#2A2825] text-white text-[13px] font-semibold rounded transition-colors">
               Got it
             </button>
           </div>
         </div>
       )}
-
-      {/* Preview overlay — intercepts all clicks below the nav */}
-      <div className="fixed inset-0 z-[45] cursor-default" onClick={() => setShowPreviewModal(true)} />
 
       {/* Image modal */}
       <ImageModal
@@ -379,7 +389,8 @@ export default function PropertyPreviewPage() {
             </button>
             <button
               onClick={intercept}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded border border-[#E8E8E4] bg-white text-[#444441] hover:bg-[#FAFAF8] transition-colors text-sm font-medium"
+              title="Disabled in preview"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded border border-[#E8E8E4] bg-[#F3F3F1] text-[#A8A8A4] cursor-not-allowed transition-colors text-sm font-medium"
             >
               <Heart className="h-4 w-4" />
               <span className="hidden sm:inline">Save</span>
@@ -631,32 +642,82 @@ export default function PropertyPreviewPage() {
                   </div>
                 )}
 
-                {/* Call Seller */}
-                <div className="mb-3">
+                {/* Call Seller — matches the buyer portal's contact popup */}
+                <div className="relative mb-3">
                   <button
-                    onClick={intercept}
-                    className="flex items-center justify-center gap-2 w-full font-semibold py-2.5 px-4 rounded text-sm bg-[#1A1816] hover:bg-[#2C2A28] text-white transition-colors"
+                    onClick={() => { if (sellerPhone) setShowPhonePopup(true) }}
+                    disabled={!sellerPhone}
+                    className={`flex items-center justify-center gap-2 w-full font-semibold py-2.5 px-4 rounded text-sm transition-colors ${
+                      sellerPhone
+                        ? 'bg-[#1A1816] hover:bg-[#2C2A28] text-white'
+                        : 'bg-[#E8E8E4] text-[#A8A8A4] cursor-not-allowed'
+                    }`}
                   >
                     <Phone className="w-4 h-4" />
                     Call Seller
                   </button>
+
+                  {showPhonePopup && sellerPhone && (
+                    <>
+                      <div className="fixed inset-0 z-[9]" onClick={() => setShowPhonePopup(false)} />
+                      <div className="absolute bottom-full left-0 right-0 mb-2 bg-white border border-[#E8E8E4] rounded shadow-lg p-4 z-10">
+                        <div className="flex items-center justify-between mb-2">
+                          <div>
+                            <p className="text-[11px] font-semibold uppercase tracking-wide text-[#737370]">Seller Contact</p>
+                            {sellerName && (
+                              <p className="text-[13px] font-semibold text-[#1A1816] mt-0.5">{sellerName}</p>
+                            )}
+                          </div>
+                          <button onClick={() => setShowPhonePopup(false)} className="p-0.5 text-[#A8A8A4] hover:text-[#1A1816] transition-colors">
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <a
+                            href={`tel:${sellerPhone}`}
+                            className="flex items-center gap-2.5 p-3 bg-[#FAFAF8] border border-[#E8E8E4] rounded hover:border-[#D03839] hover:bg-[#FEF0EF] transition-colors group flex-1"
+                          >
+                            <div className="w-8 h-8 rounded-full bg-[#FEF0EF] flex items-center justify-center shrink-0 group-hover:bg-[#D03839] transition-colors">
+                              <Phone className="w-4 h-4 text-[#D03839] group-hover:text-white transition-colors" />
+                            </div>
+                            <span className="text-[15px] font-semibold text-[#1A1816]">{sellerPhone}</span>
+                          </a>
+                          <button
+                            onClick={() => {
+                              navigator.clipboard.writeText(sellerPhone)
+                              setPhoneCopied(true)
+                              setTimeout(() => setPhoneCopied(false), 2000)
+                            }}
+                            className="p-3 bg-[#FAFAF8] border border-[#E8E8E4] rounded hover:border-[#1A1816] transition-colors shrink-0"
+                            title="Copy number"
+                          >
+                            {phoneCopied ? <Check className="w-4 h-4 text-[#0F6E56]" /> : <Copy className="w-4 h-4 text-[#737370]" />}
+                          </button>
+                        </div>
+                        <p className="text-[11px] text-[#A8A8A4] mt-2 text-center">Tap the number to call</p>
+                      </div>
+                    </>
+                  )}
                 </div>
 
-                {/* Message Seller */}
+                {/* Message Seller — disabled in preview (would start a real chat) */}
                 <button
                   onClick={intercept}
-                  className="block w-full bg-[#D03839] hover:bg-[#E0493B] text-white font-semibold py-2.5 px-4 rounded text-center text-sm transition-colors mb-3"
+                  title="Disabled in preview"
+                  className="block w-full bg-[#F3F3F1] text-[#A8A8A4] border border-[#E8E8E4] font-semibold py-2.5 px-4 rounded text-center text-sm cursor-not-allowed mb-3"
                 >
                   Message Seller
                 </button>
 
-                {/* Make Offer */}
+                {/* Make Offer — disabled in preview */}
                 <button
                   onClick={intercept}
-                  className="block w-full border border-[#1A1816] text-[#1A1816] font-semibold py-2.5 px-4 rounded text-center text-sm hover:bg-[#FAFAF8] transition-colors"
+                  title="Disabled in preview"
+                  className="block w-full bg-[#F3F3F1] text-[#A8A8A4] border border-[#E8E8E4] font-semibold py-2.5 px-4 rounded text-center text-sm cursor-not-allowed"
                 >
                   Make Offer
                 </button>
+                <p className="text-[12px] text-[#A8A8A4] text-center mt-2">Buyer actions are disabled in preview.</p>
               </div>
 
               {/* Map */}

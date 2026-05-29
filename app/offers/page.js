@@ -38,6 +38,8 @@ export default function OffersReceivedPage() {
   const [offers, setOffers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('All');
+  // submission_id -> { status, document_url } for accepted offers that have a contract.
+  const [contractStatuses, setContractStatuses] = useState({});
 
   useEffect(() => {
     const headers = getAuthHeaders();
@@ -48,6 +50,31 @@ export default function OffersReceivedPage() {
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
+
+  // Pull live status for each linked contract so we can show "awaiting buyer"
+  // vs a "View Contract" link to the fully-signed PDF.
+  useEffect(() => {
+    const ids = [...new Set(
+      offers.filter(o => o.status === 'accepted' && o.contract_submission_id)
+            .map(o => o.contract_submission_id)
+    )];
+    if (!ids.length) return;
+    let cancelled = false;
+    Promise.all(ids.map(id =>
+      fetch(`/api/contracts?type=status&id=${encodeURIComponent(id)}`)
+        .then(r => r.json())
+        .then(data => [id, data])
+        .catch(() => [id, null])
+    )).then(entries => {
+      if (cancelled) return;
+      setContractStatuses(prev => {
+        const next = { ...prev };
+        for (const [id, data] of entries) if (data) next[id] = data;
+        return next;
+      });
+    });
+    return () => { cancelled = true; };
+  }, [offers]);
 
   const filtered = filter === 'All'
     ? offers
@@ -189,6 +216,33 @@ export default function OffersReceivedPage() {
                         <MessageCircle className="w-3.5 h-3.5" />
                         Respond
                       </Link>
+                      {offer.status === 'accepted' && (
+                        offer.contract_submission_id ? (
+                          contractStatuses[offer.contract_submission_id]?.status === 'completed' ? (
+                            <a
+                              href={contractStatuses[offer.contract_submission_id].document_url || '/contracts'}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center gap-1.5 px-3 py-2 border border-[#E8E8E4] hover:bg-[#FAFAF8] text-[#1A1816] text-[12px] font-semibold rounded transition-colors whitespace-nowrap"
+                            >
+                              <FileText className="w-3.5 h-3.5" />
+                              View Contract
+                            </a>
+                          ) : (
+                            <span className="flex items-center gap-1.5 px-3 py-2 text-[#B5620A] text-[12px] font-semibold whitespace-nowrap">
+                              Awaiting buyer signature
+                            </span>
+                          )
+                        ) : (
+                          <Link
+                            href={`/contracts/new?from_offer=${offer.id}`}
+                            className="flex items-center gap-1.5 px-3 py-2 bg-[#0F6E56] hover:bg-[#0C5A47] text-white text-[12px] font-semibold rounded transition-colors whitespace-nowrap"
+                          >
+                            <FileText className="w-3.5 h-3.5" />
+                            Create Contract
+                          </Link>
+                        )
+                      )}
                     </div>
                   </div>
                 </div>

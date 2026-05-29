@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { hashPassword, verifyPassword } from '@/lib/password'
 import { createClient } from '@supabase/supabase-js'
 
 const supabase = createClient(
@@ -75,7 +76,7 @@ export async function POST(request) {
     let sellerId
     if (existing) {
       // Verify password matches existing account
-      if (existing.password !== password) {
+      if (!(await verifyPassword(password, existing.password))) {
         return NextResponse.json({ error: 'Incorrect password for your existing account' }, { status: 401 })
       }
       sellerId = existing.id
@@ -94,7 +95,7 @@ export async function POST(request) {
         .insert({
           contact_person_name: displayName,
           email: member.email,
-          password,
+          password: await hashPassword(password),
           phone: '',
           business_name: displayName,
           business_type: 'individual',

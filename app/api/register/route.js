@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { hashPassword } from '@/lib/password'
 import { createClient } from '@supabase/supabase-js'
 
 const supabase = createClient(
@@ -95,7 +96,7 @@ export async function POST(request) {
         contact_person_name,
         email,
         phone,
-        password, // In production, hash this!
+        password: await hashPassword(password),
         business_name: business_name || 'Individual Seller',
         description: description || '',
         business_type: 'individual',

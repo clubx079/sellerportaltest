@@ -21,32 +21,31 @@
 - **Problem:** Reset endpoint writes `password: String(newPassword)` directly to DB. No hashing.
 - **Risk:** Database breach = every user's password compromised + cross-site credential reuse.
 - **Fix:** bcrypt-hash before write; re-hash and compare on login. ~1 hour of work.
-- **Status:** `[!]` Deferred per user — will address later
-- **Decision date:** 2026-05-26
+- **Status:** `[x]` **Done** in commit `f1029b5` — bcrypt via `lib/password.js`; login moved server-side to `/api/auth/login` (lazy re-hash of legacy plaintext); register/reset/change-password/team-accept all hash on write; all existing accounts migrated to `$2b$` hashes.
 
 ### C2. Accepting an offer doesn't create a contract
 - **File:** `app/messages/page.js:965-971`
 - **Problem:** Offer status updates to `accepted` but seller has no clear next step. Right panel just says "Coordinate with the buyer."
 - **Fix:** On accept, INSERT a `contract_drafts` row pre-filled with `buyer_id`, `property_id`, `offer_price`; surface "Create Contract" CTA → `/contracts/new?from_offer=…`
-- **Status:** `[!]` Deferred (Critical section)
+- **Status:** `[x]` **Done** in commit `2db7b6d` — `GET /api/seller/offers?offer_id=` enriches the offer; wizard `?from_offer=` defaults to Purchase, maps offer terms to normalized field keys, lands on Step 5 (Review) for in-app preview/edit before signing; "Create Contract" CTA in the accepted block (messages) + Offers page.
 
 ### C3. Preview overlay blocks all clicks
 - **File:** `app/properties/preview/[id]/page.js:338-339`
 - **Problem:** A `z-[45]` div catches every click and shows a modal — sellers can't actually test the preview.
 - **Fix:** Make banner passive (top strip only). Already partially fixed in commit `2966029` (trimmed copy), but the click-blocking behavior remains.
-- **Status:** `[!]` Deferred (Critical section)
+- **Status:** `[x]` **Done** in commit `2db7b6d` — removed the `z-[45]` overlay (page scrolls, gallery opens); Call Seller reveals phone; Message Seller / Make Offer / Save greyed out with a "disabled in preview" note.
 
 ### C4. Counter-offer form invisible on mobile
 - **File:** `app/messages/page.js:768-832`
 - **Problem:** Right panel is `hidden xl:flex` — tablets/phones cannot counter at all.
 - **Fix:** Convert to bottom-sheet modal triggered by "Counter Offer" button on `<xl` breakpoints.
-- **Status:** `[!]` Deferred (Critical section)
+- **Status:** `[!]` Deferred — user verifying the mobile repro first before we build the bottom-sheet.
 
 ### C5. "Promote Listing" CTA goes to /properties
 - **File:** `app/dashboard/page.js:279`
 - **Problem:** Label promises a feature that doesn't exist; routes to same place as "Edit Listings."
 - **Fix:** Either build a promotion feature page or rename/remove the CTA.
-- **Status:** `[!]` Deferred (Critical section)
+- **Status:** `[x]` **Done** in commit `f1029b5` — replaced with "Create Contract" → `/contracts/new`.
 
 ---
 

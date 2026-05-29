@@ -123,6 +123,45 @@ export async function GET(request) {
 
     const { searchParams } = new URL(request.url);
     const conversationId = searchParams.get('conversation_id');
+    const offerId = searchParams.get('offer_id');
+
+    // ── Single offer — enriched for the "Create Contract from offer" prefill ─
+    if (offerId) {
+      const { data: o, error } = await supabase
+        .from('offers')
+        .select('*')
+        .eq('id', offerId)
+        .eq('seller_id', sellerId)
+        .maybeSingle();
+      if (error || !o) return NextResponse.json({ error: 'Offer not found' }, { status: 404 });
+
+      let buyer_name = 'Buyer', buyer_email = '';
+      if (o.buyer_id) {
+        const { data: u } = await supabase
+          .from('users')
+          .select('first_name, last_name, email')
+          .eq('id', buyerUuidToNumericId(o.buyer_id))
+          .maybeSingle();
+        if (u) {
+          buyer_name = `${u.first_name || ''} ${u.last_name || ''}`.trim() || u.email || 'Buyer';
+          buyer_email = u.email || '';
+        }
+      }
+
+      let property_address = null;
+      if (o.property_id) {
+        const pid = String(o.property_id);
+        const [wdRes, pRes] = await Promise.all([
+          supabase.from('wholesale_deals').select('full_address, display_address, address, city, state').eq('id', pid).maybeSingle(),
+          supabase.from('properties').select('address, city, state').eq('id', pid).maybeSingle(),
+        ]);
+        const wd = wdRes.data, p = pRes.data;
+        if (wd) property_address = (wd.full_address || wd.display_address || '').trim() || [wd.address, wd.city, wd.state].filter(Boolean).join(', ');
+        if (!property_address && p) property_address = [p.address, p.city, p.state].filter(Boolean).join(', ');
+      }
+
+      return NextResponse.json({ offer: { ...o, buyer_name, buyer_email, property_address } });
+    }
 
     // ── All offers for seller ──────────────────────────────────────────────
     if (!conversationId) {

@@ -45,6 +45,20 @@ export async function GET(request) {
       return NextResponse.json({ url })
     }
 
+    // Lightweight status check for a single submission — used by the inbox/offers
+    // to decide whether a contract is still awaiting the buyer or fully signed
+    // (and, when signed, where its PDF lives).
+    if (type === 'status') {
+      const id = searchParams.get('id')
+      if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
+      const res = await fetch(`${DOCUSEAL_BASE}/submissions/${id}`, { headers: dsHeaders(), cache: 'no-store' })
+      const json = await res.json()
+      return NextResponse.json({
+        status: json.status || null,
+        document_url: json.combined_document_url || json.documents?.[0]?.url || null,
+      })
+    }
+
     const effectiveEmail = await resolveEffectiveEmail(request, email)
 
     // Get submission IDs belonging to this seller via application_key
@@ -83,6 +97,9 @@ export async function POST(request) {
       //   to status='sent' + docuseal_submission_id after a successful send.
       field_values,
       draft_id,
+      // When the contract is created from an accepted offer (inbox "Create
+      // Contract"), link the resulting DocuSeal submission back to that offer.
+      offer_id,
     } = await request.json()
 
     if (!buyerEmail || !templateId || !sellerEmail) {
@@ -180,6 +197,24 @@ export async function POST(request) {
       } catch (e) {
         // Non-fatal — the DocuSeal submission already exists.
         console.error('Failed to mark draft as sent:', e?.message)
+      }
+    }
+
+    // Link the submission back to the originating offer so the inbox/offers UI
+    // can show "Contract sent" instead of prompting to create one again.
+    // Non-fatal: contract creation must succeed even if the column/row update fails.
+    if (offer_id) {
+      try {
+        const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY)
+        await supabase
+          .from('offers')
+          .update({
+            contract_submission_id: String(assignorSubmitter.submission_id),
+            contract_created_at: new Date().toISOString(),
+          })
+          .eq('id', offer_id)
+      } catch (e) {
+        console.error('Failed to link contract to offer:', e?.message)
       }
     }
 

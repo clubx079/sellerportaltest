@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { setPhoneChange } from '@/lib/phone-change-store';
+import { verifyPassword } from '@/lib/password';
 
 function getSupabase() {
   return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
@@ -28,7 +29,7 @@ export async function POST(request) {
     const { data: seller } = await supabase
       .from('seller_applications').select('id, phone, password').eq('id', sellerId).maybeSingle();
     if (!seller) return NextResponse.json({ error: 'Account not found' }, { status: 404 });
-    if (String(seller.password) !== String(currentPassword)) {
+    if (!(await verifyPassword(currentPassword, seller.password))) {
       return NextResponse.json({ error: 'Current password is incorrect' }, { status: 401 });
     }
 

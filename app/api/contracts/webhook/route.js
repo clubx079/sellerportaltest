@@ -4,6 +4,9 @@ import { Resend } from 'resend'
 const resend = new Resend(process.env.RESEND_API_KEY)
 const FROM = 'DeelMap Contracts <noreply@deelmap.com>'
 const DOCUSEAL_BASE = 'https://api.docuseal.com'
+// Signing happens on the buyer marketplace (deelmap.com/sign/[slug]) — the seller
+// portal has no /sign page. Override with NEXT_PUBLIC_BUYER_APP_URL on staging.
+const BUYER_APP_URL = (process.env.NEXT_PUBLIC_BUYER_APP_URL || 'https://deelmap.com').replace(/\/+$/, '')
 
 function dsHeaders() {
   return { 'X-Auth-Token': process.env.DOCUSEAL_API_KEY, 'Content-Type': 'application/json' }
@@ -14,32 +17,41 @@ export async function POST(request) {
     const body = await request.json()
     const { event_type, data } = body
 
-    // Only act when the Assignor finishes signing
-    if (event_type !== 'submitter.completed') return NextResponse.json({ ok: true })
-    if (data?.role !== 'Assignor') return NextResponse.json({ ok: true })
-    if (!data?.submission?.submitters) return NextResponse.json({ ok: true })
+    // Act only when the First Party (seller) finishes signing → then activate the
+    // buyer (Second Party) and email them a DeelMap signing link.
+    if (event_type !== 'form.completed') return NextResponse.json({ ok: true })
+    if (data?.role !== 'First Party') return NextResponse.json({ ok: true })
 
-    // Real assignee info was stored in submission metadata at creation time
-    const metadata = data.submission.metadata || {}
+    const submissionId = data.submission_id || data.submission?.id
+    if (!submissionId) return NextResponse.json({ ok: true })
+
+    // The real buyer email was stored on the First Party submitter's metadata at
+    // creation time (the buyer is a placeholder until the seller signs).
+    const metadata = data.metadata || {}
     const assigneeEmail = metadata.assigneeEmail
     const assigneeName = metadata.assigneeName
-
     if (!assigneeEmail) return NextResponse.json({ ok: true })
 
-    // Find the Assignee submitter (currently has placeholder email)
-    const assigneeSubmitter = data.submission.submitters.find(s => s.role === 'Assignee')
+    // The webhook payload can carry the stale placeholder email — fetch the full
+    // submission to get the Second Party submitter and its current slug.
+    const submissionRes = await fetch(`${DOCUSEAL_BASE}/submissions/${submissionId}`, { headers: dsHeaders() })
+    const fullSubmission = await submissionRes.json()
+
+    const assigneeSubmitter = fullSubmission.submitters?.find(s => s.role === 'Second Party')
     if (!assigneeSubmitter?.id) return NextResponse.json({ ok: true })
 
-    // Activate the Assignee by updating their email to the real one
+    // Activate the buyer with their real email. send_email:false suppresses
+    // DocuSeal's own docuseal.com invitation so the buyer only receives our
+    // DeelMap-branded email with the deelmap.com/sign link below.
     await fetch(`${DOCUSEAL_BASE}/submitters/${assigneeSubmitter.id}`, {
       method: 'PATCH',
       headers: dsHeaders(),
-      body: JSON.stringify({ email: assigneeEmail, name: assigneeName }),
+      body: JSON.stringify({ email: assigneeEmail, name: assigneeName, send_email: false }),
     })
 
-    const assignorName = data.name || data.email || 'The Assignor'
-    const property = data.submission.name || ''
-    const signingUrl = `https://deelmap.com/sign/${assigneeSubmitter.slug}`
+    const assignorName = data.name || data.email || 'The Seller'
+    const property = fullSubmission.name || ''
+    const signingUrl = `${BUYER_APP_URL}/sign/${assigneeSubmitter.slug}`
 
     await resend.emails.send({
       from: FROM,

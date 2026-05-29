@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { Resend } from 'resend';
 import { setEmailChange } from '@/lib/email-change-store';
+import { verifyPassword } from '@/lib/password';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const FROM = 'DeelMap <noreply@deelmap.com>';
@@ -37,7 +38,7 @@ export async function POST(request) {
     if (error || !seller) {
       return NextResponse.json({ error: 'Account not found' }, { status: 404 });
     }
-    if (String(seller.password) !== String(currentPassword)) {
+    if (!(await verifyPassword(currentPassword, seller.password))) {
       return NextResponse.json({ error: 'Current password is incorrect' }, { status: 401 });
     }
     if (normalized === String(seller.email).toLowerCase().trim()) {
