@@ -192,7 +192,7 @@ export default function OffersReceivedPage() {
                       {offer.status === 'accepted' && (
                         offer.contract_submission_id ? (
                           <Link
-                            href="/contracts"
+                            href={`/contracts?contract=${offer.contract_submission_id}`}
                             className="flex items-center gap-1.5 px-3 py-2 border border-[#E8E8E4] hover:bg-[#FAFAF8] text-[#1A1816] text-[12px] font-semibold rounded transition-colors whitespace-nowrap"
                           >
                             <FileText className="w-3.5 h-3.5" />

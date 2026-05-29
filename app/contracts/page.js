@@ -1,6 +1,6 @@
 'use client'
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect, useRef } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { FileText, CheckCircle, Plus, Download, Trash2, ChevronLeft, PenLine, Pencil } from 'lucide-react'
 import { DocusealForm } from '@docuseal/react'
 
@@ -20,6 +20,8 @@ function fmtDate(d) {
 
 export default function ContractsPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const openedContractRef = useRef(false)
   const [contracts, setContracts] = useState([])
   const [drafts, setDrafts] = useState([])
   const [loading, setLoading] = useState(true)
@@ -63,6 +65,19 @@ export default function ContractsPage() {
     fetchDrafts()
   }, [effectiveSellerId])
 
+  // "View contract" deep link (/contracts?contract=<submission_id>): once loaded,
+  // open that specific contract instead of leaving the user on the list.
+  useEffect(() => {
+    if (openedContractRef.current || loading || !contracts.length) return
+    const wanted = searchParams.get('contract')
+    if (!wanted) return
+    const match = contracts.find(c => String(c.id) === String(wanted))
+    if (match) {
+      openedContractRef.current = true
+      handleOpenContract(match)
+    }
+  }, [searchParams, loading, contracts])
+
   function fetchContracts() {
     setLoading(true)
     fetch(`/api/contracts?email=${encodeURIComponent(email)}`, {
@@ -84,6 +99,17 @@ export default function ContractsPage() {
   function handleSignInline(contract) {
     const sub = contract.submitters?.find(s => s.email?.toLowerCase() === email?.toLowerCase())
     if (!sub || sub.status === 'completed' || sub.status === 'declined') return
+    setSigningTitle(contract.name || contract.template?.name || `Contract #${contract.id}`)
+    setSigningEmbedSrc(`https://docuseal.com/s/${sub.slug}`)
+  }
+
+  // Open a specific contract inline (any status) — used by the "View contract"
+  // deep link from the inbox/offers. A completed submitter sees the signed doc.
+  function handleOpenContract(contract) {
+    const sub = contract.submitters?.find(s => s.email?.toLowerCase() === email?.toLowerCase())
+      || contract.submitters?.find(s => !s.email?.includes('@noreply.deelmap.com'))
+      || contract.submitters?.[0]
+    if (!sub?.slug) return
     setSigningTitle(contract.name || contract.template?.name || `Contract #${contract.id}`)
     setSigningEmbedSrc(`https://docuseal.com/s/${sub.slug}`)
   }
@@ -137,7 +163,7 @@ export default function ContractsPage() {
           </div>
           <div>
             <h1 className="text-[18px] font-bold text-[#1A1816] leading-tight">{signingTitle}</h1>
-            <p className="text-[13px] text-[#737370]">Review and sign below</p>
+            <p className="text-[13px] text-[#737370]">Review your contract below</p>
           </div>
         </div>
         <div className="bg-white border border-[#E8E8E4] rounded overflow-hidden">

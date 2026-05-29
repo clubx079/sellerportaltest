@@ -1057,7 +1057,7 @@ export default function MessagesPage() {
                           <p className="text-[12px] text-[#0F6E56]">The contract was created and sent to the buyer. They'll sign once you've completed your part.</p>
                         </div>
                         <a
-                          href="/contracts"
+                          href={`/contracts?contract=${offer.contract_submission_id}`}
                           className="flex items-center justify-center gap-1.5 w-full py-3 border border-[#E8E8E4] hover:bg-[#FAFAF8] text-[#1A1816] text-[14px] font-semibold rounded transition-colors"
                         >
                           <FileText className="w-4 h-4" />
