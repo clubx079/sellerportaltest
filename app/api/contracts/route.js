@@ -83,6 +83,9 @@ export async function POST(request) {
       //   to status='sent' + docuseal_submission_id after a successful send.
       field_values,
       draft_id,
+      // When the contract is created from an accepted offer (inbox "Create
+      // Contract"), link the resulting DocuSeal submission back to that offer.
+      offer_id,
     } = await request.json()
 
     if (!buyerEmail || !templateId || !sellerEmail) {
@@ -180,6 +183,24 @@ export async function POST(request) {
       } catch (e) {
         // Non-fatal — the DocuSeal submission already exists.
         console.error('Failed to mark draft as sent:', e?.message)
+      }
+    }
+
+    // Link the submission back to the originating offer so the inbox/offers UI
+    // can show "Contract sent" instead of prompting to create one again.
+    // Non-fatal: contract creation must succeed even if the column/row update fails.
+    if (offer_id) {
+      try {
+        const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY)
+        await supabase
+          .from('offers')
+          .update({
+            contract_submission_id: String(assignorSubmitter.submission_id),
+            contract_created_at: new Date().toISOString(),
+          })
+          .eq('id', offer_id)
+      } catch (e) {
+        console.error('Failed to link contract to offer:', e?.message)
       }
     }
 

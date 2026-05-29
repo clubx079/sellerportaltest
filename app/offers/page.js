@@ -190,13 +190,23 @@ export default function OffersReceivedPage() {
                         Respond
                       </Link>
                       {offer.status === 'accepted' && (
-                        <Link
-                          href={`/contracts/new?from_offer=${offer.id}`}
-                          className="flex items-center gap-1.5 px-3 py-2 bg-[#0F6E56] hover:bg-[#0C5A47] text-white text-[12px] font-semibold rounded transition-colors whitespace-nowrap"
-                        >
-                          <FileText className="w-3.5 h-3.5" />
-                          Create Contract
-                        </Link>
+                        offer.contract_submission_id ? (
+                          <Link
+                            href="/contracts"
+                            className="flex items-center gap-1.5 px-3 py-2 border border-[#E8E8E4] hover:bg-[#FAFAF8] text-[#1A1816] text-[12px] font-semibold rounded transition-colors whitespace-nowrap"
+                          >
+                            <FileText className="w-3.5 h-3.5" />
+                            View Contract
+                          </Link>
+                        ) : (
+                          <Link
+                            href={`/contracts/new?from_offer=${offer.id}`}
+                            className="flex items-center gap-1.5 px-3 py-2 bg-[#0F6E56] hover:bg-[#0C5A47] text-white text-[12px] font-semibold rounded transition-colors whitespace-nowrap"
+                          >
+                            <FileText className="w-3.5 h-3.5" />
+                            Create Contract
+                          </Link>
+                        )
                       )}
                     </div>
                   </div>

@@ -1050,17 +1050,35 @@ export default function MessagesPage() {
                 {/* Post-action states */}
                 {offer && offer.status === 'accepted' && (
                   <div className="px-5 py-4">
-                    <div className="bg-[#E4F5EC] border border-[#A8DFBA] rounded px-4 py-3 mb-3">
-                      <p className="text-[13px] font-semibold text-[#0F6E56] mb-1">Offer accepted</p>
-                      <p className="text-[12px] text-[#0F6E56]">Send the contract to lock in the deal — we'll pre-fill it from this offer.</p>
-                    </div>
-                    <a
-                      href={`/contracts/new?from_offer=${offer.id}`}
-                      className="flex items-center justify-center gap-1.5 w-full py-3 bg-[#0F6E56] hover:bg-[#0C5A47] text-white text-[14px] font-semibold rounded transition-colors"
-                    >
-                      <FileText className="w-4 h-4" />
-                      Create Contract
-                    </a>
+                    {offer.contract_submission_id ? (
+                      <>
+                        <div className="bg-[#E4F5EC] border border-[#A8DFBA] rounded px-4 py-3 mb-3">
+                          <p className="text-[13px] font-semibold text-[#0F6E56] mb-1">Contract sent</p>
+                          <p className="text-[12px] text-[#0F6E56]">The contract was created and sent to the buyer. They'll sign once you've completed your part.</p>
+                        </div>
+                        <a
+                          href="/contracts"
+                          className="flex items-center justify-center gap-1.5 w-full py-3 border border-[#E8E8E4] hover:bg-[#FAFAF8] text-[#1A1816] text-[14px] font-semibold rounded transition-colors"
+                        >
+                          <FileText className="w-4 h-4" />
+                          View Contract
+                        </a>
+                      </>
+                    ) : (
+                      <>
+                        <div className="bg-[#E4F5EC] border border-[#A8DFBA] rounded px-4 py-3 mb-3">
+                          <p className="text-[13px] font-semibold text-[#0F6E56] mb-1">Offer accepted</p>
+                          <p className="text-[12px] text-[#0F6E56]">Send the contract to lock in the deal — we'll pre-fill it from this offer.</p>
+                        </div>
+                        <a
+                          href={`/contracts/new?from_offer=${offer.id}`}
+                          className="flex items-center justify-center gap-1.5 w-full py-3 bg-[#0F6E56] hover:bg-[#0C5A47] text-white text-[14px] font-semibold rounded transition-colors"
+                        >
+                          <FileText className="w-4 h-4" />
+                          Create Contract
+                        </a>
+                      </>
+                    )}
                   </div>
                 )}
                 {offer && offer.status === 'rejected' && (

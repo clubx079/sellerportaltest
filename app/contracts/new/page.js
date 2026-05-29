@@ -476,6 +476,7 @@ export default function NewContractWizardPage() {
           templateId,
           field_values: fieldValues,
           draft_id: currentDraftId,
+          offer_id: fromOfferId || null,
         }),
       })
       const data = await res.json()
