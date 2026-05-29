@@ -45,6 +45,20 @@ export async function GET(request) {
       return NextResponse.json({ url })
     }
 
+    // Lightweight status check for a single submission — used by the inbox/offers
+    // to decide whether a contract is still awaiting the buyer or fully signed
+    // (and, when signed, where its PDF lives).
+    if (type === 'status') {
+      const id = searchParams.get('id')
+      if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
+      const res = await fetch(`${DOCUSEAL_BASE}/submissions/${id}`, { headers: dsHeaders(), cache: 'no-store' })
+      const json = await res.json()
+      return NextResponse.json({
+        status: json.status || null,
+        document_url: json.combined_document_url || json.documents?.[0]?.url || null,
+      })
+    }
+
     const effectiveEmail = await resolveEffectiveEmail(request, email)
 
     // Get submission IDs belonging to this seller via application_key

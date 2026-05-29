@@ -117,6 +117,8 @@ export default function MessagesPage() {
   const [offer, setOffer] = useState(null);
   const [allOffers, setAllOffers] = useState([]);
   const [offerLoading, setOfferLoading] = useState(false);
+  // Live status of the contract linked to the current offer (null until fetched).
+  const [contractStatus, setContractStatus] = useState(null);
 
   // Buyer credibility state
   const [buyerStats, setBuyerStats] = useState(null);
@@ -438,6 +440,20 @@ export default function MessagesPage() {
     setShowRejectModal(false);
     setShowCounterForm(false);
   }, [openConversationId]);
+
+  // Fetch the linked contract's live status (so we can show "awaiting buyer"
+  // vs "signed" and only surface View Contract once it's fully executed).
+  useEffect(() => {
+    const submissionId = offer?.contract_submission_id;
+    if (!submissionId) { setContractStatus(null); return; }
+    let cancelled = false;
+    setContractStatus(null);
+    fetch(`/api/contracts?type=status&id=${encodeURIComponent(submissionId)}`)
+      .then(r => r.json())
+      .then(data => { if (!cancelled) setContractStatus(data || null); })
+      .catch(() => { if (!cancelled) setContractStatus(null); });
+    return () => { cancelled = true; };
+  }, [offer?.contract_submission_id]);
 
   // Fetch buyer credibility stats when conversation changes
   useEffect(() => {
@@ -1051,19 +1067,28 @@ export default function MessagesPage() {
                 {offer && offer.status === 'accepted' && (
                   <div className="px-5 py-4">
                     {offer.contract_submission_id ? (
-                      <>
-                        <div className="bg-[#E4F5EC] border border-[#A8DFBA] rounded px-4 py-3 mb-3">
-                          <p className="text-[13px] font-semibold text-[#0F6E56] mb-1">Contract sent</p>
-                          <p className="text-[12px] text-[#0F6E56]">The contract was created and sent to the buyer. They'll sign once you've completed your part.</p>
+                      contractStatus?.status === 'completed' ? (
+                        <>
+                          <div className="bg-[#E4F5EC] border border-[#A8DFBA] rounded px-4 py-3 mb-3">
+                            <p className="text-[13px] font-semibold text-[#0F6E56] mb-1">Contract signed</p>
+                            <p className="text-[12px] text-[#0F6E56]">Both parties have signed. You can view the fully executed contract.</p>
+                          </div>
+                          <a
+                            href={contractStatus.document_url || '/contracts'}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center justify-center gap-1.5 w-full py-3 border border-[#E8E8E4] hover:bg-[#FAFAF8] text-[#1A1816] text-[14px] font-semibold rounded transition-colors"
+                          >
+                            <FileText className="w-4 h-4" />
+                            View Contract
+                          </a>
+                        </>
+                      ) : (
+                        <div className="bg-[#FEF3E2] border border-[#F5D9A8] rounded px-4 py-3">
+                          <p className="text-[13px] font-semibold text-[#B5620A] mb-1">Contract sent</p>
+                          <p className="text-[12px] text-[#B5620A]">Waiting on the buyer's signature. We'll notify you once it's fully signed.</p>
                         </div>
-                        <a
-                          href={`/contracts?contract=${offer.contract_submission_id}`}
-                          className="flex items-center justify-center gap-1.5 w-full py-3 border border-[#E8E8E4] hover:bg-[#FAFAF8] text-[#1A1816] text-[14px] font-semibold rounded transition-colors"
-                        >
-                          <FileText className="w-4 h-4" />
-                          View Contract
-                        </a>
-                      </>
+                      )
                     ) : (
                       <>
                         <div className="bg-[#E4F5EC] border border-[#A8DFBA] rounded px-4 py-3 mb-3">
