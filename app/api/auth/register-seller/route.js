@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { hashPassword } from '@/lib/password'
 import { createClient } from '@supabase/supabase-js'
+import { emailSellerWelcome, sendSellerEmail } from '@/lib/sellerEmail'
 
 const getSupabase = () =>
   createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY)
@@ -74,6 +75,16 @@ export async function POST(request) {
         }).catch(() => {})
       }
     }
+
+    // Welcome email — fire and forget so a Resend hiccup never blocks signup
+    ;(async () => {
+      try {
+        const { subject, html } = emailSellerWelcome({ name: contact_person_name, email: email.trim().toLowerCase() })
+        await sendSellerEmail({ to: email.trim().toLowerCase(), subject, html })
+      } catch (e) {
+        console.error('[register-seller] welcome email failed:', e?.message || e)
+      }
+    })()
 
     return NextResponse.json({ seller_id: seller.id })
   } catch (err) {
