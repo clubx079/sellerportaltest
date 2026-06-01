@@ -57,7 +57,7 @@ export default function SupportPage() {
   const inputCls = 'w-full px-3 py-2.5 border border-[#E8E8E4] rounded text-[14px] text-[#1A1816] placeholder-[#A8A8A4] focus:outline-none focus:border-[#D03839] focus:ring-1 focus:ring-[#D03839]/20 transition-colors'
 
   return (
-    <div className="p-4 lg:p-6 max-w-2xl mx-auto" style={{ fontFamily: 'var(--font-dm-sans), sans-serif' }}>
+    <div className="p-4 lg:p-6" style={{ fontFamily: 'var(--font-dm-sans), sans-serif' }}>
       <div className="flex items-center gap-3 mb-1">
         <div className="w-9 h-9 rounded bg-[#FEF0EF] flex items-center justify-center shrink-0">
           <LifeBuoy className="w-4.5 h-4.5 text-[#D03839]" />
