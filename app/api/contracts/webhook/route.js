@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { Resend } from 'resend'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
-const FROM = 'DeelMap Contracts <noreply@deelmap.com>'
+const FROM = 'Deelmap <notifications@deelmap.com>'
 const DOCUSEAL_BASE = 'https://api.docuseal.com'
 // Signing happens on the buyer marketplace (deelmap.com/sign/[slug]) — the seller
 // portal has no /sign page. Override with NEXT_PUBLIC_BUYER_APP_URL on staging.

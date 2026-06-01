@@ -5,7 +5,7 @@ import { setEmailChange } from '@/lib/email-change-store';
 import { verifyPassword } from '@/lib/password';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
-const FROM = 'DeelMap <noreply@deelmap.com>';
+const FROM = 'Deelmap <notifications@deelmap.com>';
 
 function getSupabase() {
   return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);

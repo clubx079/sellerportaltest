@@ -34,7 +34,7 @@ export async function POST(request) {
       await supabase.from('referrals').update({ stripe_account_id: accountId }).eq('id', referral.id)
     }
 
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3001'
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://sell.deelmap.com'
     const accountLink = await stripe.accountLinks.create({
       account: accountId,
       refresh_url: `${baseUrl}/referral?connect=refresh`,
