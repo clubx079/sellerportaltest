@@ -104,6 +104,7 @@ function buildEmailHtml(logoUrl, title, titleColor, propertyBlock, bodyHtml, cta
       </tr>
       <tr>
         <td style="background:#ffffff;border-top:1px solid #E8E8E4;padding:20px 40px;text-align:center">
+          <p style="margin:0 0 4px;font-size:12px;color:#A8A8A4">Questions? <a href="https://deelmap.com/contact" style="color:#737370;text-decoration:underline">Reach us through our contact page</a></p>
           <p style="margin:0;font-size:12px;color:#A8A8A4">© 2026 Deelmap. All rights reserved.</p>
         </td>
       </tr>
