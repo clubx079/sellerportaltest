@@ -30,19 +30,22 @@ function fmtFee(cents) {
 }
 
 // Stripe card form shown when the contract fee needs an on-session card / 3DS.
-function ContractPayForm({ amount, onSuccess, onCancel }) {
+function ContractPayForm({ amount, onSuccess }) {
   const stripe = useStripe()
   const elements = useElements()
   const [processing, setProcessing] = useState(false)
   const [err, setErr] = useState(null)
 
-  async function pay() {
+  async function handlePay(e) {
+    e.preventDefault()
     if (!stripe || !elements) return
     setProcessing(true)
     setErr(null)
-    const { error } = await stripe.confirmPayment({ elements, redirect: 'if_required' })
-    if (error) {
-      setErr(error.message || 'Payment failed. Please try another card.')
+    const { error: submitErr } = await elements.submit()
+    if (submitErr) { setErr(submitErr.message); setProcessing(false); return }
+    const { error: confirmErr } = await stripe.confirmPayment({ elements, redirect: 'if_required' })
+    if (confirmErr) {
+      setErr(confirmErr.message || 'Payment failed. Please try another card.')
       setProcessing(false)
       return
     }
@@ -50,19 +53,19 @@ function ContractPayForm({ amount, onSuccess, onCancel }) {
   }
 
   return (
-    <div>
-      <p className="text-[13px] text-[#737370] mb-4">A one-time fee of <strong className="text-[#1A1816]">{fmtFee(amount)}</strong> covers sending this contract for e-signature.</p>
+    <form onSubmit={handlePay} className="space-y-4">
       <PaymentElement />
-      {err && <p className="text-[13px] text-[#D03839] mt-3">{err}</p>}
-      <div className="flex gap-2 justify-end mt-5">
-        <button type="button" onClick={onCancel} disabled={processing}
-          className="px-4 py-2 text-[13px] font-medium text-[#444441] border border-[#E8E8E4] rounded hover:bg-[#FAFAF8] transition-colors disabled:opacity-50">Cancel</button>
-        <button type="button" onClick={pay} disabled={processing || !stripe}
-          className="px-4 py-2 text-[13px] font-semibold text-white bg-[#D03839] hover:bg-[#E0493B] rounded transition-colors disabled:opacity-50">
-          {processing ? 'Processing…' : `Pay ${fmtFee(amount)} & send`}
-        </button>
-      </div>
-    </div>
+      {err && <div className="p-3 bg-[#FEF0EF] border border-[#F5C4C0] rounded text-[13px] text-[#D03839]">{err}</div>}
+      <button
+        type="submit"
+        disabled={!stripe || processing}
+        className="w-full h-[48px] bg-[#D03839] hover:bg-[#B8102A] active:scale-[0.98] text-white text-[14px] font-semibold rounded transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-[0_4px_12px_rgba(208,56,57,0.25)]"
+      >
+        {processing
+          ? <>Processing…</>
+          : `Pay ${fmtFee(amount)} & send contract`}
+      </button>
+    </form>
   )
 }
 
@@ -185,7 +188,6 @@ export default function NewContractWizardPage() {
   // Contract-fee payment
   const [payClientSecret, setPayClientSecret] = useState(null)
   const [payAmount, setPayAmount] = useState(299)
-  const [showPayModal, setShowPayModal] = useState(false)
   const [feeQuote, setFeeQuote] = useState(null) // { amount, free, reason, remaining }
 
   // Fetch the per-contract fee up-front so we can show the seller the cost.
@@ -552,7 +554,6 @@ export default function NewContractWizardPage() {
       if (payData.clientSecret) {
         setPayAmount(payData.amount || 299)
         setPayClientSecret(payData.clientSecret)
-        setShowPayModal(true)
         setSending(false)
         return
       }
@@ -602,6 +603,66 @@ export default function NewContractWizardPage() {
     }
   }
 
+  // ── Render: payment screen (shown before the contract is sent) ──
+  if (payClientSecret && stripePromise) {
+    return (
+      <div className="p-4 lg:p-6">
+        <div className="flex items-center gap-3 mb-6">
+          <button
+            onClick={() => { setPayClientSecret(null); setSending(false) }}
+            className="flex items-center gap-1.5 text-[13px] text-[#737370] hover:text-[#1A1816] transition-colors"
+          >
+            <ChevronLeft className="w-4 h-4" /> Back to contract
+          </button>
+        </div>
+        <div className="max-w-[460px] mx-auto">
+          <div className="bg-white border border-[#E8E8E4] rounded overflow-hidden">
+            {/* Header */}
+            <div className="px-5 py-4 border-b border-[#E8E8E4] flex items-center gap-3">
+              <div className="w-9 h-9 bg-[#D03839]/10 rounded flex items-center justify-center shrink-0">
+                <FileText className="w-4 h-4 text-[#D03839]" />
+              </div>
+              <div>
+                <h1 className="text-[16px] font-bold text-[#1A1816] leading-tight">Send contract</h1>
+                <p className="text-[12px] text-[#737370]">Pay the one-time fee to send it for signature</p>
+              </div>
+            </div>
+            {/* Order summary */}
+            <div className="px-5 py-4 border-b border-[#E8E8E4]">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-[14px] font-semibold text-[#1A1816]">Contract — 1 envelope</p>
+                  {fieldValues.property_address ? (
+                    <p className="text-[12px] text-[#737370] mt-0.5">{fieldValues.property_address}</p>
+                  ) : null}
+                </div>
+                <p className="text-[14px] font-bold text-[#1A1816] whitespace-nowrap">{fmtFee(payAmount)}</p>
+              </div>
+              <div className="flex items-center justify-between mt-3 pt-3 border-t border-[#E8E8E4]">
+                <span className="text-[13px] font-semibold text-[#1A1816]">Total due</span>
+                <span className="text-[16px] font-bold text-[#1A1816]">{fmtFee(payAmount)}</span>
+              </div>
+            </div>
+            {/* Payment form */}
+            <div className="p-5">
+              <Elements stripe={stripePromise} options={{ clientSecret: payClientSecret, appearance: { theme: 'stripe', variables: { colorPrimary: '#D03839' } } }}>
+                <ContractPayForm amount={payAmount} onSuccess={() => { setPayClientSecret(null); doSend() }} />
+              </Elements>
+            </div>
+            {/* Secure footer */}
+            <div className="px-5 py-3.5 bg-[#FAFAF8] border-t border-[#E8E8E4] text-center">
+              <div className="flex items-center justify-center gap-1.5 mb-1">
+                <svg className="w-3 h-3 text-[#737370]" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                <span className="text-[12px] text-[#737370]">Secured by Stripe</span>
+              </div>
+              <p className="text-[11px] text-[#A8A8A4]">One-time charge · No subscription · No auto-renewal</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   // ── Render: inline signing view ─────────────────────────────────
   if (signingEmbedSrc) {
     return (
@@ -646,23 +707,6 @@ export default function NewContractWizardPage() {
 
   return (
     <div className="space-y-4">
-      {/* Contract-fee payment modal */}
-      {showPayModal && payClientSecret && stripePromise && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center px-4">
-          <div className="absolute inset-0 bg-[#1A1816]/50" onClick={() => { setShowPayModal(false); setPayClientSecret(null); setSending(false) }} aria-hidden="true" />
-          <div className="relative w-full max-w-[440px] bg-white rounded shadow-lg border border-[#E8E8E4] p-6">
-            <h3 className="text-[16px] font-semibold text-[#1A1816] mb-1">Send this contract</h3>
-            <Elements stripe={stripePromise} options={{ clientSecret: payClientSecret, appearance: { theme: 'stripe', variables: { colorPrimary: '#D03839' } } }}>
-              <ContractPayForm
-                amount={payAmount}
-                onSuccess={() => { setShowPayModal(false); setPayClientSecret(null); doSend() }}
-                onCancel={() => { setShowPayModal(false); setPayClientSecret(null); setSending(false) }}
-              />
-            </Elements>
-          </div>
-        </div>
-      )}
-
       {/* Header */}
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0">

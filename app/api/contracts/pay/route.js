@@ -116,46 +116,18 @@ export async function POST(request) {
     }
 
     const customerId = await getOrCreateCustomer(supabase, stripe, sellerId)
-    const metadata = { seller_id: sellerId, purpose: 'contract', draft_id: draftId || '' }
 
-    // Try to charge a saved card off-session first (smooth one-click for subscribers).
-    const methods = await stripe.paymentMethods.list({ customer: customerId, type: 'card', limit: 1 })
-    const savedCard = methods.data[0]
-
-    if (savedCard) {
-      try {
-        const pi = await stripe.paymentIntents.create({
-          amount: fee.amount,
-          currency: 'usd',
-          customer: customerId,
-          payment_method: savedCard.id,
-          off_session: true,
-          confirm: true,
-          metadata,
-        })
-        if (pi.status === 'succeeded') {
-          return NextResponse.json({ paid: true, amount: fee.amount })
-        }
-        // Needs extra auth (3DS) — hand the client the secret to finish on-session.
-        return NextResponse.json({ requiresAction: true, clientSecret: pi.client_secret, amount: fee.amount })
-      } catch (err) {
-        // Off-session failed (auth required / declined) — fall back to a fresh
-        // on-session PaymentIntent the client can complete with a card form.
-        if (err?.raw?.payment_intent?.client_secret) {
-          return NextResponse.json({ requiresAction: true, clientSecret: err.raw.payment_intent.client_secret, amount: fee.amount })
-        }
-        // fall through to create a new intent below
-      }
-    }
-
-    // No saved card (or off-session couldn't start) → card form.
+    // Always present an on-session payment form so the seller explicitly reviews
+    // and confirms the charge (consistent with add-ons / plans). The customer is
+    // attached so any saved card is offered for one-click selection inside the
+    // payment form, and setup_future_usage stores a new card for next time.
     const pi = await stripe.paymentIntents.create({
       amount: fee.amount,
       currency: 'usd',
       customer: customerId,
-      payment_method_types: ['card'],
+      automatic_payment_methods: { enabled: true },
       setup_future_usage: 'off_session',
-      metadata,
+      metadata: { seller_id: sellerId, purpose: 'contract', draft_id: draftId || '' },
     })
     return NextResponse.json({ clientSecret: pi.client_secret, amount: fee.amount })
   } catch (e) {
