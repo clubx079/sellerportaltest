@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { LifeBuoy, Check, AlertCircle, Loader2 } from 'lucide-react'
+import { LifeBuoy, Check, AlertCircle, Loader2, ChevronDown } from 'lucide-react'
 
 const CATEGORIES = ['General question', 'Listing help', 'Offers & contracts', 'Billing & plans', 'Bug / something broken', 'Feedback', 'Other']
 
@@ -97,9 +97,16 @@ export default function SupportPage() {
           </div>
           <div>
             <label className="block text-[12px] font-semibold text-[#444441] mb-1.5">Topic</label>
-            <select value={form.subject} onChange={(e) => setForm(p => ({ ...p, subject: e.target.value }))} className={inputCls}>
-              {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-            </select>
+            <div className="relative">
+              <select
+                value={form.subject}
+                onChange={(e) => setForm(p => ({ ...p, subject: e.target.value }))}
+                className={`${inputCls} appearance-none pr-10 cursor-pointer bg-white`}
+              >
+                {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+              <ChevronDown className="w-4 h-4 text-[#737370] absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+            </div>
           </div>
           <div>
             <label className="block text-[12px] font-semibold text-[#444441] mb-1.5">Message</label>
