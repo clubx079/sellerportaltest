@@ -62,7 +62,7 @@ export default function SupportPage() {
         <div className="w-9 h-9 rounded bg-[#FEF0EF] flex items-center justify-center shrink-0">
           <LifeBuoy className="w-4.5 h-4.5 text-[#D03839]" />
         </div>
-        <h1 className="text-[22px] font-bold text-[#1A1816] tracking-[-0.44px]">Help &amp; Support</h1>
+        <h1 className="text-[22px] font-bold text-[#1A1816] tracking-[-0.44px]">Contact Us</h1>
       </div>
       <p className="text-[14px] text-[#737370] mb-6 ml-12">Have a question or hit a snag? Send us a message and our team will get back to you.</p>
 

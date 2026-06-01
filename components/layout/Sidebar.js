@@ -101,7 +101,7 @@ export default function Sidebar({ isOpen, setIsOpen, activeItem, setActiveItem }
           { id: 'billing',  label: 'Billing',  icon: CreditCard, path: '/billing' },
         ] : []),
         { id: 'settings', label: 'Settings', icon: Settings, path: '/settings' },
-        { id: 'support', label: 'Help & Support', icon: LifeBuoy, path: '/support' },
+        { id: 'support', label: 'Contact Us', icon: LifeBuoy, path: '/support' },
       ]
     }
   ]
