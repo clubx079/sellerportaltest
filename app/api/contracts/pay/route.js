@@ -1,0 +1,153 @@
+import { NextResponse } from 'next/server'
+import { createClient } from '@supabase/supabase-js'
+import Stripe from 'stripe'
+import { getWorkspaceSellerId } from '@/lib/workspace'
+
+// Per-contract ("per envelope") fee. Both values are env-overridable so they
+// can be changed without a deploy.
+const CONTRACT_FEE_CENTS = parseInt(process.env.CONTRACT_FEE_CENTS || '299', 10)
+const ENTERPRISE_FREE_CONTRACTS = parseInt(process.env.ENTERPRISE_FREE_CONTRACTS || '10', 10)
+
+const getClients = () => ({
+  supabase: createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY),
+  stripe: new Stripe(process.env.STRIPE_SECRET_KEY),
+})
+
+// Resolve the effective seller (handles team-member workspaces).
+async function resolveSellerId(request, fallback) {
+  const auth = request.headers.get('authorization')
+  if (!auth?.startsWith('Bearer ')) return fallback
+  const sellerId = auth.slice(7).trim()
+  try {
+    const { effectiveId } = await getWorkspaceSellerId(sellerId)
+    return effectiveId || sellerId || fallback
+  } catch {
+    return sellerId || fallback
+  }
+}
+
+// Decide what this seller owes for sending one contract.
+async function computeFee(supabase, sellerId) {
+  // 1. Lifetime-free internal accounts never pay.
+  const { data: app } = await supabase
+    .from('seller_applications')
+    .select('admin_notes')
+    .eq('id', sellerId)
+    .maybeSingle()
+  if (app?.admin_notes === 'LIFETIME_FREE') {
+    return { amount: 0, reason: 'lifetime_free' }
+  }
+
+  // 2. Enterprise plans get the first N envelopes free (N = ENTERPRISE_FREE_CONTRACTS).
+  const { data: plan } = await supabase
+    .from('seller_plans')
+    .select('plan_type, status')
+    .eq('seller_id', sellerId)
+    .maybeSingle()
+
+  const isActivePlan = plan && ['active', 'trialing', 'canceling', 'past_due'].includes(plan.status)
+  if (isActivePlan && plan.plan_type === 'enterprise') {
+    // Count envelopes already sent by this seller (status beyond draft).
+    const { count } = await supabase
+      .from('contract_drafts')
+      .select('id', { count: 'exact', head: true })
+      .eq('seller_id', sellerId)
+      .in('status', ['sent', 'signed', 'completed'])
+    const used = count || 0
+    if (used < ENTERPRISE_FREE_CONTRACTS) {
+      return { amount: 0, reason: 'enterprise_free', remaining: ENTERPRISE_FREE_CONTRACTS - used - 1 }
+    }
+  }
+
+  // 3. Everyone else (free, standard, pro, enterprise past quota) pays the flat fee.
+  return { amount: CONTRACT_FEE_CENTS, reason: 'paid' }
+}
+
+async function getOrCreateCustomer(supabase, stripe, sellerId) {
+  const { data: existingPlan } = await supabase
+    .from('seller_plans')
+    .select('stripe_customer_id')
+    .eq('seller_id', sellerId)
+    .not('stripe_customer_id', 'is', null)
+    .maybeSingle()
+  if (existingPlan?.stripe_customer_id) return existingPlan.stripe_customer_id
+
+  const { data: app } = await supabase
+    .from('seller_applications')
+    .select('email, contact_person_name, stripe_customer_id')
+    .eq('id', sellerId)
+    .maybeSingle()
+  if (app?.stripe_customer_id) return app.stripe_customer_id
+
+  const customer = await stripe.customers.create({
+    email: app?.email,
+    name: app?.contact_person_name || app?.email,
+    metadata: { seller_id: sellerId, source: 'deelmap_contract' },
+  })
+  await supabase.from('seller_applications').update({ stripe_customer_id: customer.id }).eq('id', sellerId)
+  return customer.id
+}
+
+export async function POST(request) {
+  const { supabase, stripe } = getClients()
+  try {
+    const body = await request.json().catch(() => ({}))
+    const sellerId = await resolveSellerId(request, body.seller_id)
+    if (!sellerId) return NextResponse.json({ error: 'seller_id required' }, { status: 400 })
+    const draftId = body.draft_id || null
+
+    const fee = await computeFee(supabase, sellerId)
+
+    // Free for this seller → no charge, let the send proceed.
+    if (fee.amount === 0) {
+      return NextResponse.json({ free: true, reason: fee.reason, ...(fee.remaining != null ? { remaining: fee.remaining } : {}) })
+    }
+
+    const customerId = await getOrCreateCustomer(supabase, stripe, sellerId)
+    const metadata = { seller_id: sellerId, purpose: 'contract', draft_id: draftId || '' }
+
+    // Try to charge a saved card off-session first (smooth one-click for subscribers).
+    const methods = await stripe.paymentMethods.list({ customer: customerId, type: 'card', limit: 1 })
+    const savedCard = methods.data[0]
+
+    if (savedCard) {
+      try {
+        const pi = await stripe.paymentIntents.create({
+          amount: fee.amount,
+          currency: 'usd',
+          customer: customerId,
+          payment_method: savedCard.id,
+          off_session: true,
+          confirm: true,
+          metadata,
+        })
+        if (pi.status === 'succeeded') {
+          return NextResponse.json({ paid: true, amount: fee.amount })
+        }
+        // Needs extra auth (3DS) — hand the client the secret to finish on-session.
+        return NextResponse.json({ requiresAction: true, clientSecret: pi.client_secret, amount: fee.amount })
+      } catch (err) {
+        // Off-session failed (auth required / declined) — fall back to a fresh
+        // on-session PaymentIntent the client can complete with a card form.
+        if (err?.raw?.payment_intent?.client_secret) {
+          return NextResponse.json({ requiresAction: true, clientSecret: err.raw.payment_intent.client_secret, amount: fee.amount })
+        }
+        // fall through to create a new intent below
+      }
+    }
+
+    // No saved card (or off-session couldn't start) → card form.
+    const pi = await stripe.paymentIntents.create({
+      amount: fee.amount,
+      currency: 'usd',
+      customer: customerId,
+      payment_method_types: ['card'],
+      setup_future_usage: 'off_session',
+      metadata,
+    })
+    return NextResponse.json({ clientSecret: pi.client_secret, amount: fee.amount })
+  } catch (e) {
+    console.error('[contracts/pay] error:', e?.message || e)
+    return NextResponse.json({ error: 'Could not start payment. Please try again.' }, { status: 500 })
+  }
+}

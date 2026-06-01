@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { DocusealForm } from '@docuseal/react'
+import { loadStripe } from '@stripe/stripe-js'
+import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js'
 import {
   ArrowLeft,
   ArrowRight,
@@ -18,6 +20,51 @@ import {
 import SaveStatus from '@/components/properties/SaveStatus'
 import StickyActionBar from '@/components/properties/StickyActionBar'
 import { decorateTemplates } from '@/lib/contract-templates'
+
+const stripePromise = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
+  ? loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY)
+  : null
+
+function fmtFee(cents) {
+  return `$${((cents || 0) / 100).toFixed(2)}`
+}
+
+// Stripe card form shown when the contract fee needs an on-session card / 3DS.
+function ContractPayForm({ amount, onSuccess, onCancel }) {
+  const stripe = useStripe()
+  const elements = useElements()
+  const [processing, setProcessing] = useState(false)
+  const [err, setErr] = useState(null)
+
+  async function pay() {
+    if (!stripe || !elements) return
+    setProcessing(true)
+    setErr(null)
+    const { error } = await stripe.confirmPayment({ elements, redirect: 'if_required' })
+    if (error) {
+      setErr(error.message || 'Payment failed. Please try another card.')
+      setProcessing(false)
+      return
+    }
+    onSuccess()
+  }
+
+  return (
+    <div>
+      <p className="text-[13px] text-[#737370] mb-4">A one-time fee of <strong className="text-[#1A1816]">{fmtFee(amount)}</strong> covers sending this contract for e-signature.</p>
+      <PaymentElement />
+      {err && <p className="text-[13px] text-[#D03839] mt-3">{err}</p>}
+      <div className="flex gap-2 justify-end mt-5">
+        <button type="button" onClick={onCancel} disabled={processing}
+          className="px-4 py-2 text-[13px] font-medium text-[#444441] border border-[#E8E8E4] rounded hover:bg-[#FAFAF8] transition-colors disabled:opacity-50">Cancel</button>
+        <button type="button" onClick={pay} disabled={processing || !stripe}
+          className="px-4 py-2 text-[13px] font-semibold text-white bg-[#D03839] hover:bg-[#E0493B] rounded transition-colors disabled:opacity-50">
+          {processing ? 'Processing…' : `Pay ${fmtFee(amount)} & send`}
+        </button>
+      </div>
+    </div>
+  )
+}
 
 const STEPS = [
   { id: 1, name: 'Contract Type' },
@@ -134,6 +181,11 @@ export default function NewContractWizardPage() {
   const [sendError, setSendError] = useState(null)
   const [signingEmbedSrc, setSigningEmbedSrc] = useState(null)
   const [signingTitle, setSigningTitle] = useState('')
+
+  // Contract-fee payment
+  const [payClientSecret, setPayClientSecret] = useState(null)
+  const [payAmount, setPayAmount] = useState(299)
+  const [showPayModal, setShowPayModal] = useState(false)
 
   // ── Identity bootstrap ──────────────────────────────────────────
   useEffect(() => {
@@ -434,7 +486,7 @@ export default function NewContractWizardPage() {
     setStep(s => Math.max(1, s - 1))
   }
 
-  // ── Send Contract (step 5) ─────────────────────────────────────
+  // ── Send Contract (step 5) — payment gate, then send ────────────
   async function handleSend() {
     if (!effectiveSellerId) return
     if (!templateId) { setSendError('Pick a contract type first.'); setStep(1); return }
@@ -444,6 +496,7 @@ export default function NewContractWizardPage() {
     setSendError(null)
 
     // Flush any pending auto-save first so the draft row is current.
+    let draftId = currentDraftId
     try {
       const payload = buildDraftPayload()
       if (currentDraftId) {
@@ -459,10 +512,43 @@ export default function NewContractWizardPage() {
           body: JSON.stringify(payload),
         })
         const json = await res.json()
-        if (json?.id) setCurrentDraftId(json.id)
+        if (json?.id) { draftId = json.id; setCurrentDraftId(json.id) }
       }
-    } catch { /* non-fatal — proceed to DocuSeal */ }
+    } catch { /* non-fatal — proceed */ }
 
+    // Payment gate: free for this seller → send; otherwise collect the fee first.
+    try {
+      const payRes = await fetch('/api/contracts/pay', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${userId}` },
+        body: JSON.stringify({ seller_id: effectiveSellerId, draft_id: draftId }),
+      })
+      const payData = await payRes.json().catch(() => ({}))
+      if (!payRes.ok) { setSendError(payData.error || 'Payment could not be started.'); setSending(false); return }
+
+      if (payData.free || payData.paid) {
+        await doSend()
+        return
+      }
+      if (payData.clientSecret) {
+        setPayAmount(payData.amount || 299)
+        setPayClientSecret(payData.clientSecret)
+        setShowPayModal(true)
+        setSending(false)
+        return
+      }
+      setSendError('Payment could not be started. Please try again.')
+      setSending(false)
+    } catch {
+      setSendError('Payment could not be started. Please try again.')
+      setSending(false)
+    }
+  }
+
+  // Create the DocuSeal submission + inline signing view. Called once payment clears.
+  async function doSend() {
+    setSending(true)
+    setSendError(null)
     try {
       const res = await fetch('/api/contracts', {
         method: 'POST',
@@ -541,6 +627,23 @@ export default function NewContractWizardPage() {
 
   return (
     <div className="space-y-4">
+      {/* Contract-fee payment modal */}
+      {showPayModal && payClientSecret && stripePromise && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center px-4">
+          <div className="absolute inset-0 bg-[#1A1816]/50" onClick={() => { setShowPayModal(false); setPayClientSecret(null); setSending(false) }} aria-hidden="true" />
+          <div className="relative w-full max-w-[440px] bg-white rounded shadow-lg border border-[#E8E8E4] p-6">
+            <h3 className="text-[16px] font-semibold text-[#1A1816] mb-1">Send this contract</h3>
+            <Elements stripe={stripePromise} options={{ clientSecret: payClientSecret, appearance: { theme: 'stripe', variables: { colorPrimary: '#D03839' } } }}>
+              <ContractPayForm
+                amount={payAmount}
+                onSuccess={() => { setShowPayModal(false); setPayClientSecret(null); doSend() }}
+                onCancel={() => { setShowPayModal(false); setPayClientSecret(null); setSending(false) }}
+              />
+            </Elements>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0">

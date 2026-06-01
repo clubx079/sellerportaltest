@@ -42,7 +42,7 @@ export async function POST(request) {
       // ── Standard plan OR add-on payment succeeded ──────────────────────
       case 'payment_intent.succeeded': {
         const pi = event.data.object
-        const { seller_id, plan_type, quantity, add_ons, property_id, promo_code_id } = pi.metadata
+        const { seller_id, plan_type, quantity, add_ons, property_id, promo_code_id, purpose } = pi.metadata
 
         // Track promo code usage
         if (promo_code_id) {
@@ -166,7 +166,7 @@ export async function POST(request) {
           const seller = await getSeller(supabase, seller_id)
           if (seller?.email) {
             const amount = pi.amount_received ?? pi.amount ?? 0
-            const desc = add_ons ? 'Listing promotion' : (plan_type ? `${plan_type} subscription` : 'Deelmap purchase')
+            const desc = purpose === 'contract' ? 'Contract fee' : add_ons ? 'Listing promotion' : (plan_type ? `${plan_type} subscription` : 'Deelmap purchase')
             const receipt_url = pi.charges?.data?.[0]?.receipt_url || null
             const r = emailPaymentReceipt({ name: seller.contact_person_name, amount_cents: amount, description: desc, receipt_url })
             await sendSellerEmail({ to: seller.email, subject: r.subject, html: r.html })
