@@ -98,6 +98,18 @@ export async function POST(request) {
 
     const fee = await computeFee(supabase, sellerId)
 
+    // Quote mode: report what this contract will cost WITHOUT charging. Used to
+    // show the price in the wizard before the seller commits.
+    if (body.quote) {
+      return NextResponse.json({
+        quote: true,
+        amount: fee.amount,
+        free: fee.amount === 0,
+        reason: fee.reason,
+        ...(fee.remaining != null ? { remaining: fee.remaining } : {}),
+      })
+    }
+
     // Free for this seller → no charge, let the send proceed.
     if (fee.amount === 0) {
       return NextResponse.json({ free: true, reason: fee.reason, ...(fee.remaining != null ? { remaining: fee.remaining } : {}) })

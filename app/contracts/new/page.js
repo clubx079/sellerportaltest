@@ -186,6 +186,25 @@ export default function NewContractWizardPage() {
   const [payClientSecret, setPayClientSecret] = useState(null)
   const [payAmount, setPayAmount] = useState(299)
   const [showPayModal, setShowPayModal] = useState(false)
+  const [feeQuote, setFeeQuote] = useState(null) // { amount, free, reason, remaining }
+
+  // Fetch the per-contract fee up-front so we can show the seller the cost.
+  useEffect(() => {
+    if (!effectiveSellerId) return
+    let cancelled = false
+    ;(async () => {
+      try {
+        const res = await fetch('/api/contracts/pay', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${userId}` },
+          body: JSON.stringify({ seller_id: effectiveSellerId, quote: true }),
+        })
+        const data = await res.json().catch(() => null)
+        if (!cancelled && res.ok) setFeeQuote(data)
+      } catch { /* non-fatal — banner just won't show */ }
+    })()
+    return () => { cancelled = true }
+  }, [effectiveSellerId, userId])
 
   // ── Identity bootstrap ──────────────────────────────────────────
   useEffect(() => {
@@ -684,6 +703,25 @@ export default function NewContractWizardPage() {
           />
         ))}
       </div>
+
+      {/* Contract-fee notice */}
+      {feeQuote && (
+        feeQuote.free ? (
+          <div className="flex items-start gap-2.5 px-4 py-3 rounded border border-[#A8DFBA] bg-[#E4F5EC]">
+            <Check className="w-4 h-4 text-[#0F6E56] flex-shrink-0 mt-0.5" />
+            <p className="text-[13px] text-[#0F6E56] leading-snug">
+              This contract is <strong>free</strong>{feeQuote.reason === 'enterprise_free' && feeQuote.remaining != null ? ` — ${feeQuote.remaining} free contract${feeQuote.remaining === 1 ? '' : 's'} left on your plan after this` : ' on your account'}.
+            </p>
+          </div>
+        ) : (
+          <div className="flex items-start gap-2.5 px-4 py-3 rounded border border-[#E8E8E4] bg-[#FAFAF8]">
+            <FileText className="w-4 h-4 text-[#737370] flex-shrink-0 mt-0.5" />
+            <p className="text-[13px] text-[#444441] leading-snug">
+              Sending this contract costs <strong className="text-[#1A1816]">{fmtFee(feeQuote.amount)}</strong> — one envelope, charged when you send it for signature.
+            </p>
+          </div>
+        )
+      )}
 
       {/* Step body */}
       <div className="bg-white border border-[#E8E8E4] rounded p-4 md:p-6">
