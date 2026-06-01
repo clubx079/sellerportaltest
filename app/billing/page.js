@@ -188,6 +188,19 @@ export default function BillingPage() {
         }
       }
 
+      // "Listings this period" = live count of the seller's active (non-archived)
+      // listings — the same source of truth the Plans page uses. The stored
+      // seller_plans.listings_used_this_period counter is not recomputed on
+      // add/archive, so it would otherwise show a stale number here.
+      if (planData) {
+        const { count: activeListings } = await supabase
+          .from('properties')
+          .select('id', { count: 'exact', head: true })
+          .eq('seller_id', sellerId)
+          .neq('status', 'archived')
+        planData = { ...planData, listings_used_this_period: activeListings ?? 0 }
+      }
+
       setPlan(planData)
 
       if (planData?.stripe_subscription_id) {
