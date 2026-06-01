@@ -73,10 +73,10 @@ export async function POST(request) {
               The email on your DeelMap account was just changed to <strong>${pending.newEmail}</strong>.
             </p>
             <p style="font-size:13px;color:#737370;line-height:1.6;">
-              If this was you, no action is needed. If you did NOT make this change, contact support immediately at admin@airosofts.com.
+              If this was you, no action is needed. If you did NOT make this change, contact support immediately at support@deelmap.com.
             </p>
           </div>`,
-        text: `Your DeelMap login email was changed to ${pending.newEmail}. If this wasn't you, contact admin@airosofts.com immediately.`,
+        text: `Your DeelMap login email was changed to ${pending.newEmail}. If this wasn't you, contact support@deelmap.com immediately.`,
       }).catch(() => {});
     }
 
