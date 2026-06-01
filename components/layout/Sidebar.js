@@ -6,7 +6,7 @@ import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard, Building2, MessageCircle, X, Settings,
-  FileText, TrendingUp, BarChart3, CreditCard, Zap, ScrollText, Gift, Users
+  FileText, TrendingUp, BarChart3, CreditCard, Zap, ScrollText, Gift, Users, LifeBuoy
 } from 'lucide-react'
 
 const DESKTOP_BREAKPOINT = 1024
@@ -101,6 +101,7 @@ export default function Sidebar({ isOpen, setIsOpen, activeItem, setActiveItem }
           { id: 'billing',  label: 'Billing',  icon: CreditCard, path: '/billing' },
         ] : []),
         { id: 'settings', label: 'Settings', icon: Settings, path: '/settings' },
+        { id: 'support', label: 'Help & Support', icon: LifeBuoy, path: '/support' },
       ]
     }
   ]
