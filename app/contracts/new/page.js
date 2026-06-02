@@ -472,7 +472,11 @@ export default function NewContractWizardPage() {
     if (s === 3) {
       // Buyer email is required; name is nice-to-have.
       const email = (buyerEmail || '').trim()
-      return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return false
+      // Can't send a contract to yourself.
+      const mine = (effectiveEmail || sellerEmail || '').trim().toLowerCase()
+      if (mine && email.toLowerCase() === mine) return false
+      return true
     }
     if (s === 4) {
       // Required deal terms must be filled so nothing lands as a blank,
@@ -507,6 +511,20 @@ export default function NewContractWizardPage() {
     if (!effectiveSellerId) return
     if (!templateId) { setSendError('Pick a contract type first.'); setStep(1); return }
     if (!buyerEmail) { setSendError('Buyer email is required.'); setStep(3); return }
+
+    // Self-deal guard: the counterparty can't be the seller themselves, or the
+    // two signers collide on one email and the sign order breaks.
+    const myEmail = (effectiveEmail || sellerEmail || '').trim().toLowerCase()
+    if (myEmail && buyerEmail.trim().toLowerCase() === myEmail) {
+      setSendError("The buyer's email can't be the same as your own."); setStep(3); return
+    }
+
+    // Required deal terms must all be filled before paying/sending. The "accept
+    // offer" shortcut jumps straight to Review, so enforce it here too — not
+    // just on the Step 4 Continue button — so nothing reaches signing blank.
+    if (!canContinueFromStep(4)) {
+      setSendError('Please fill in all required deal terms before sending.'); setStep(4); return
+    }
 
     setSending(true)
     setSendError(null)
@@ -773,6 +791,7 @@ export default function NewContractWizardPage() {
           <Step3Buyer
             buyerName={buyerName}
             buyerEmail={buyerEmail}
+            sellerEmail={effectiveEmail || sellerEmail}
             onBuyerNameChange={(v) => { setBuyerName(v); setDirty(true) }}
             onBuyerEmailChange={(v) => { setBuyerEmail(v); setDirty(true) }}
             template={templates.find(t => String(t.id) === String(templateId))}
@@ -987,7 +1006,9 @@ function Step2Property({ properties, propertiesLoading, propertyId, onChange, ma
   )
 }
 
-function Step3Buyer({ buyerName, buyerEmail, onBuyerNameChange, onBuyerEmailChange, template, coSellerName, onCoSellerNameChange }) {
+function Step3Buyer({ buyerName, buyerEmail, sellerEmail, onBuyerNameChange, onBuyerEmailChange, template, coSellerName, onCoSellerNameChange }) {
+  const isSelfDeal = !!buyerEmail.trim() && !!sellerEmail &&
+    buyerEmail.trim().toLowerCase() === sellerEmail.trim().toLowerCase()
   const isAssignment = template?.slug === 'assignment'
   // Match the form labels to the exact verbiage in the rendered contract so
   // there's no mental translation. Assignment → the counterparty is the
@@ -1026,9 +1047,15 @@ function Step3Buyer({ buyerName, buyerEmail, onBuyerNameChange, onBuyerEmailChan
             className="w-full h-10 px-3 border border-[#E8E8E4] rounded text-[13px] text-[#1A1816] placeholder:text-[#A8A8A4] focus:outline-none focus:border-[#1A1816]"
             required
           />
-          <p className="text-[12px] text-[#A8A8A4] mt-1.5">
-            The {partyLabel.toLowerCase()} will only get a signing link after you sign first.
-          </p>
+          {isSelfDeal ? (
+            <p className="text-[12px] text-[#D03839] mt-1.5">
+              This is your own email — the {partyLabel.toLowerCase()} must be a different person.
+            </p>
+          ) : (
+            <p className="text-[12px] text-[#A8A8A4] mt-1.5">
+              The {partyLabel.toLowerCase()} will only get a signing link after you sign first.
+            </p>
+          )}
         </div>
       </div>
 

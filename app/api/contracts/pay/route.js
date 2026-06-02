@@ -125,15 +125,32 @@ export async function POST(request) {
     // and confirms the charge (consistent with add-ons / plans). The customer is
     // attached so any saved card is offered for one-click selection inside the
     // payment form, and setup_future_usage stores a new card for next time.
-    const pi = await stripe.paymentIntents.create({
-      amount: fee.amount,
-      currency: 'usd',
-      customer: customerId,
-      automatic_payment_methods: { enabled: true },
-      setup_future_usage: 'off_session',
-      metadata: { seller_id: sellerId, purpose: 'contract', draft_id: draftId || '' },
-    })
-    return NextResponse.json({ clientSecret: pi.client_secret, amount: fee.amount })
+    //
+    // Idempotency: key the PaymentIntent to the draft + amount so retries of the
+    // SAME contract reuse the SAME intent instead of creating a second charge.
+    // This guards the "payment succeeded but the DocuSeal send failed → seller
+    // hits Send again" case (Stripe would otherwise start a fresh charge).
+    const idemKey = draftId ? `contract-pay-${draftId}-${fee.amount}` : undefined
+    const pi = await stripe.paymentIntents.create(
+      {
+        amount: fee.amount,
+        currency: 'usd',
+        customer: customerId,
+        automatic_payment_methods: { enabled: true },
+        setup_future_usage: 'off_session',
+        metadata: { seller_id: sellerId, purpose: 'contract', draft_id: draftId || '' },
+      },
+      idemKey ? { idempotencyKey: idemKey } : undefined,
+    )
+
+    // The idempotent create returns a cached response whose status can be stale.
+    // Retrieve the live intent: if this contract was already paid for on an
+    // earlier attempt, don't charge again — let the send proceed.
+    const live = await stripe.paymentIntents.retrieve(pi.id)
+    if (live.status === 'succeeded') {
+      return NextResponse.json({ paid: true })
+    }
+    return NextResponse.json({ clientSecret: live.client_secret, amount: fee.amount })
   } catch (e) {
     console.error('[contracts/pay] error:', e?.message || e)
     return NextResponse.json({ error: 'Could not start payment. Please try again.' }, { status: 500 })
