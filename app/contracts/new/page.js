@@ -309,9 +309,12 @@ export default function NewContractWizardPage() {
         const o = json?.offer
         if (!o) { appliedOfferRef.current = false; return }
 
-        // An accepted offer on a listing is a sale → default to the Purchase Contract.
-        const purchase = templates.find(t => t.slug === 'purchase') || templates[0]
-        if (purchase) setTemplateId(String(purchase.id))
+        // A wholesaler accepting an investor's offer ASSIGNS their deal to that
+        // investor → default to the Assignment of Contract (our user = Assignor,
+        // the investor who offered = Assignee). The seller can still switch to a
+        // Purchase contract on Step 1 if they double-close instead of assigning.
+        const assignment = templates.find(t => t.slug === 'assignment') || templates[0]
+        if (assignment) setTemplateId(String(assignment.id))
 
         // Property: use the matching listing if we have it; else manual entry with
         // the address resolved server-side.
