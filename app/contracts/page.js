@@ -225,7 +225,7 @@ export default function ContractsPage() {
                               : String(d.template_id) === '3706747' || String(d.template_id) === '3759339' ? 'Assignment Contract'
                               : 'Contract'
               const address = d.field_values?.property_address || `Untitled ${tplLabel}`
-              const buyer = d.buyer_name || d.buyer_email || 'Buyer not set'
+              const buyer = d.buyer_name || d.buyer_email || 'Other party not set'
               return (
                 <div key={d.id} className="bg-white border border-dashed border-[#E8E8E4] rounded p-4 flex items-center gap-4">
                   <div className="w-9 h-9 bg-[#FAFAF8] border border-[#E8E8E4] rounded flex items-center justify-center shrink-0">
@@ -340,7 +340,7 @@ export default function ContractsPage() {
                   <div className="flex items-center gap-3 text-[12px] text-[#737370] flex-wrap">
                     <span>{fmtDate(c.created_at)}</span>
                     {others.length > 0 && (
-                      <span>Buyer: {others.map(s => s.name || s.email).join(', ')}</span>
+                      <span>Other party: {others.map(s => s.name || s.email).join(', ')}</span>
                     )}
                   </div>
                 </div>
@@ -371,7 +371,7 @@ export default function ContractsPage() {
                     </button>
                   ) : (
                     <span className="text-[12px] text-[#737370]">
-                      {statusKey === 'viewed' ? 'Buyer viewed · not signed' : 'Awaiting buyer'}
+                      {statusKey === 'viewed' ? 'Viewed · not signed' : 'Awaiting other party'}
                     </span>
                   )}
                   <button
