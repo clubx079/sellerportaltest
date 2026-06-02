@@ -38,21 +38,25 @@ async function computeFee(supabase, sellerId) {
     return { amount: 0, reason: 'lifetime_free' }
   }
 
-  // 2. Enterprise plans get the first N envelopes free (N = ENTERPRISE_FREE_CONTRACTS).
+  // 2. Enterprise plans get a free allowance of contracts PER BILLING MONTH
+  //    (N = ENTERPRISE_FREE_CONTRACTS). The allowance resets every billing cycle,
+  //    so we only count envelopes sent since the current period started.
   const { data: plan } = await supabase
     .from('seller_plans')
-    .select('plan_type, status')
+    .select('plan_type, status, current_period_start')
     .eq('seller_id', sellerId)
     .maybeSingle()
 
   const isActivePlan = plan && ['active', 'trialing', 'canceling', 'past_due'].includes(plan.status)
   if (isActivePlan && plan.plan_type === 'enterprise') {
-    // Count envelopes already sent by this seller (status beyond draft).
-    const { count } = await supabase
+    let q = supabase
       .from('contract_drafts')
       .select('id', { count: 'exact', head: true })
       .eq('seller_id', sellerId)
       .in('status', ['sent', 'signed', 'completed'])
+    // Only count contracts sent in the current billing period (monthly reset).
+    if (plan.current_period_start) q = q.gte('created_at', plan.current_period_start)
+    const { count } = await q
     const used = count || 0
     if (used < ENTERPRISE_FREE_CONTRACTS) {
       return { amount: 0, reason: 'enterprise_free', remaining: ENTERPRISE_FREE_CONTRACTS - used - 1 }
