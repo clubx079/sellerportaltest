@@ -1,17 +1,16 @@
-// Flip the Purchase contract so the wholesaler (our logged-in user, who signs
-// first = First Party) is the BUYER, and the outside property owner (emailed
-// second = Second Party) is the SELLER.
+// Set which DocuSeal role signs which side of the Purchase & Sale Agreement.
 //
-// Wholesalers don't own the house — when they lock up a deal they sign as the
-// BUYER against the owner. The template shipped with First Party=Seller, which
-// is backwards for that flow. This reassigns ONLY the signing block:
-//   buyer_signature / buyer_print_name   -> First Party  (our user)
-//   seller*_signature / seller*_print_name -> Second Party (the owner)
-// All other (read-only, pre-filled) fields keep their submitter — assignment is
-// irrelevant for locked fields. Field NAMES are never changed.
+// On DealMap our logged-in user signs first (= First Party); the counterparty
+// is emailed (= Second Party). The default/correct direction is SELLER-first:
+// our user is the Seller selling to the Buyer.
+//   --to seller (default):  seller*_signature/print -> First Party (our user)
+//                           buyer_signature/print   -> Second Party (the buyer)
+//   --to buyer:             the reverse (only for the off-platform "wholesaler
+//                           buys from owner" variant — not used on DealMap).
 //
-// Must be run on BOTH DocuSeal accounts (main + staging) so the shared code in
-// lib/contract-templates.js stays in sync:
+// Only the signing block is reassigned; read-only pre-filled fields keep their
+// submitter and field NAMES are never changed. Run on BOTH DocuSeal accounts
+// (main + staging) so the shared code in lib/contract-templates.js stays in sync:
 //   DOCUSEAL_API_KEY=<main key>    node scripts/flip-purchase-roles.mjs 3801788
 //   DOCUSEAL_API_KEY=<staging key> node scripts/flip-purchase-roles.mjs 3802527
 
@@ -20,6 +19,12 @@ if (!KEY) { console.error('DOCUSEAL_API_KEY env var required'); process.exit(1) 
 
 const BASE = 'https://api.docuseal.com'
 const headers = { 'X-Auth-Token': KEY, 'Content-Type': 'application/json' }
+
+const args = process.argv.slice(2)
+const toIdx = args.indexOf('--to')
+const direction = toIdx !== -1 ? args[toIdx + 1] : 'seller'
+const ids = args.filter((a, i) => a !== '--to' && i !== toIdx + 1)
+if (!['seller', 'buyer'].includes(direction)) { console.error("--to must be 'seller' or 'buyer'"); process.exit(1) }
 
 async function flip(templateId) {
   const t = await (await fetch(`${BASE}/templates/${templateId}`, { headers })).json()
@@ -30,9 +35,13 @@ async function flip(templateId) {
   const second = (t.submitters || []).find(s => s.name === 'Second Party')?.uuid
   if (!first || !second) { console.error(`  ${templateId}: missing First/Second Party roles`); return }
 
+  // seller-first: our user (First Party) = Seller; buyer (Second Party) = Buyer.
+  const sellerRole = direction === 'seller' ? first : second
+  const buyerRole  = direction === 'seller' ? second : first
+
   const fields = t.fields.map(f => {
-    if (/^buyer_(signature|print_name)$/i.test(f.name)) return { ...f, submitter_uuid: first }
-    if (/^seller\d?_(signature|print_name)$/i.test(f.name)) return { ...f, submitter_uuid: second }
+    if (/^buyer_(signature|print_name)$/i.test(f.name)) return { ...f, submitter_uuid: buyerRole }
+    if (/^seller\d?_(signature|print_name)$/i.test(f.name)) return { ...f, submitter_uuid: sellerRole }
     return f
   })
 
@@ -41,11 +50,13 @@ async function flip(templateId) {
   })
   const out = await put.json()
   if (!put.ok) { console.error(`  ${templateId}: PUT failed — ${out?.error || put.status}`); return }
-  console.log(`  ${templateId} (${t.name}): buyer signs first (First Party), seller signs second (Second Party)`)
+  const who = direction === 'seller'
+    ? 'seller signs first (First Party), buyer signs second (Second Party)'
+    : 'buyer signs first (First Party), seller signs second (Second Party)'
+  console.log(`  ${templateId} (${t.name}): ${who}`)
 }
 
-const ids = process.argv.slice(2)
 if (!ids.length) { console.error('Pass at least one template ID'); process.exit(1) }
-console.log('Flipping Purchase roles…')
+console.log(`Setting Purchase roles (--to ${direction})…`)
 for (const id of ids) await flip(id)
 console.log('Done.')

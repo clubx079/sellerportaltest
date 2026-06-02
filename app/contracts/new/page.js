@@ -991,12 +991,12 @@ function Step3Buyer({ buyerName, buyerEmail, onBuyerNameChange, onBuyerEmailChan
   const isAssignment = template?.slug === 'assignment'
   // Match the form labels to the exact verbiage in the rendered contract so
   // there's no mental translation. Assignment → the counterparty is the
-  // "Assignee" (end buyer). Purchase → you're the Buyer locking up the deal, so
-  // the counterparty is the property "Seller" (the outside owner).
-  const partyLabel  = isAssignment ? 'Assignee' : 'Seller'
+  // "Assignee" (end buyer). Purchase & Sale → you sign as the Seller, so the
+  // counterparty is the "Buyer".
+  const partyLabel  = isAssignment ? 'Assignee' : 'Buyer'
   const partyDescription = isAssignment
     ? "The party you're assigning the contract to. They'll receive a copy to sign once you finish."
-    : "The current owner you're buying from. They'll receive a copy to sign once you finish."
+    : "The buyer you're selling to. They'll receive a copy to sign once you finish."
   return (
     <div>
       <div className="mb-5">
@@ -1168,7 +1168,7 @@ function Step4Terms({ values, onChange, template, onPersistDefault, savedDefault
         </FieldRow>
 
         {!isAssignment && (
-          <FieldRow label="Your Source of Funds (Buyer)" hint="cash or financing">
+          <FieldRow label="Buyer's Source of Funds" hint="cash or financing">
             <div className="flex items-center gap-2">
               {FINANCING_OPTIONS.map(opt => {
                 const selected = values.financing_type === opt.value
@@ -1221,7 +1221,7 @@ function Step4Terms({ values, onChange, template, onPersistDefault, savedDefault
             <p className="text-[11px] font-bold text-[#A8A8A4] uppercase tracking-wide">Parties' Addresses</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FieldRow label="Your Address (Buyer)">
+            <FieldRow label="Your Address (Seller)">
               <input
                 type="text"
                 value={values.seller_address || ''}
@@ -1231,7 +1231,7 @@ function Step4Terms({ values, onChange, template, onPersistDefault, savedDefault
               />
               <SavedAsDefault fieldKey="seller_address" />
             </FieldRow>
-            <FieldRow label="Seller's Address" hint="the owner">
+            <FieldRow label="Buyer's Address" hint="counterparty">
               <input
                 type="text"
                 value={values.buyer_address || ''}
@@ -1344,8 +1344,8 @@ function Step4Terms({ values, onChange, template, onPersistDefault, savedDefault
 
 function Step5Review({ template, propertyId, property, buyerName, buyerEmail, fieldValues, sellerName, sellerEmail, onJump }) {
   const isAssignment = template?.slug === 'assignment'
-  const counterpartyLabel = isAssignment ? 'Assignee' : 'Seller (owner)'
-  const userRoleLabel     = isAssignment ? 'Assignor (you)' : 'Buyer (you)'
+  const counterpartyLabel = isAssignment ? 'Assignee' : 'Buyer'
+  const userRoleLabel     = isAssignment ? 'Assignor (you)' : 'Seller (you)'
 
   const termsItems = isAssignment
     ? [
@@ -1360,15 +1360,15 @@ function Step5Review({ template, propertyId, property, buyerName, buyerEmail, fi
         { label: 'Agreed Sale Price',   value: fmtPrice(fieldValues.purchase_price) },
         { label: 'Earnest Money',       value: fmtPrice(fieldValues.emd) },
         { label: 'Title Company / Escrow Agent', value: fieldValues.emd_escrow || '—' },
-        { label: 'Your Source of Funds', value: fieldValues.financing_type ? (fieldValues.financing_type === 'cash' ? 'Cash' : 'Financing') : '—' },
+        { label: "Buyer's Source of Funds", value: fieldValues.financing_type ? (fieldValues.financing_type === 'cash' ? 'Cash' : 'Financing') : '—' },
         { label: 'Due Diligence',       value: fieldValues.due_diligence_days ? `${fieldValues.due_diligence_days} days` : '—' },
         { label: 'Acceptance Deadline', value: fmtDate(fieldValues.acceptance_deadline) },
         { label: 'Closing Date',        value: fmtDate(fieldValues.closing_date) },
         { label: 'Closing Location',    value: fieldValues.closing_location || '—' },
         { label: 'Property Tax ID',     value: fieldValues.property_tax_id || '—' },
         { label: 'Other Description',   value: fieldValues.other_description || '—' },
-        { label: 'Your Address (Buyer)', value: fieldValues.seller_address || '—' },
-        { label: "Seller's Address",     value: fieldValues.buyer_address || '—' },
+        { label: 'Your Address (Seller)', value: fieldValues.seller_address || '—' },
+        { label: 'Buyer Address',         value: fieldValues.buyer_address || '—' },
         { label: 'Special Terms',       value: fieldValues.special_terms || '—' },
       ]
 
