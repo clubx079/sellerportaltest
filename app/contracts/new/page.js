@@ -474,7 +474,18 @@ export default function NewContractWizardPage() {
       const email = (buyerEmail || '').trim()
       return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
     }
-    if (s === 4) return true // Terms are all optional in v1.
+    if (s === 4) {
+      // Required deal terms must be filled so nothing lands as a blank,
+      // editable field on the DocuSeal signing form (Roland's "why is it still
+      // fillable"). The contract terms are locked read-only in DocuSeal, so any
+      // value we don't pre-fill here would otherwise show up empty at signing.
+      const tpl = templates.find(t => String(t.id) === String(templateId))
+      const isAssignment = tpl?.slug === 'assignment'
+      const filled = k => String(fieldValues[k] ?? '').trim().length > 0
+      if (!filled('purchase_price') || !filled('emd') || !filled('closing_date')) return false
+      if (isAssignment && (!filled('original_seller_name') || !filled('original_psa_date'))) return false
+      return true
+    }
     if (s === 5) return true
     return false
   }
@@ -688,6 +699,12 @@ export default function NewContractWizardPage() {
 
   // ── Render: wizard ──────────────────────────────────────────────
   const currentStepMeta = STEPS.find(s => s.id === step) || STEPS[0]
+  // Step 3 collects the counterparty — that's the "Assignee" on an Assignment
+  // and the "Buyer" on a Purchase, so the step title adapts to the chosen type.
+  const activeTemplate = templates.find(t => String(t.id) === String(templateId))
+  const stepName = step === 3
+    ? (activeTemplate?.slug === 'assignment' ? 'Assignee Info' : 'Buyer Info')
+    : currentStepMeta.name
 
   return (
     <div className="space-y-4">
@@ -703,7 +720,7 @@ export default function NewContractWizardPage() {
           </button>
           <div className="min-w-0">
             <h1 className="text-lg md:text-xl font-semibold tracking-tight text-[#1A1816] truncate">
-              New Contract <span className="text-[#A8A8A4] font-normal">— Step {step} of 5 · {currentStepMeta.name}</span>
+              New Contract <span className="text-[#A8A8A4] font-normal">— Step {step} of 5 · {stepName}</span>
             </h1>
             <div className="mt-0.5">
               <SaveStatus
@@ -1120,7 +1137,7 @@ function Step4Terms({ values, onChange, template, onPersistDefault, savedDefault
 
       {/* ── Universal: price + earnest money + closing date + (financing if purchase) ── */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <FieldRow label={isAssignment ? 'Agreed Purchase Price ($)' : 'Agreed Sale Price ($)'} hint="*">
+        <FieldRow label={isAssignment ? 'Assignment Fee ($)' : 'Agreed Sale Price ($)'} hint="*">
           <input
             type="number"
             value={values.purchase_price || ''}
@@ -1331,7 +1348,7 @@ function Step5Review({ template, propertyId, property, buyerName, buyerEmail, fi
 
   const termsItems = isAssignment
     ? [
-        { label: 'Agreed Purchase Price', value: fmtPrice(fieldValues.purchase_price) },
+        { label: 'Assignment Fee', value: fmtPrice(fieldValues.purchase_price) },
         { label: 'Nonrefundable Deposit', value: fmtPrice(fieldValues.emd) },
         { label: 'Closing Date',        value: fmtDate(fieldValues.closing_date) },
         { label: 'Original Seller',     value: fieldValues.original_seller_name || '—' },

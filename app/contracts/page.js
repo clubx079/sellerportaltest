@@ -5,13 +5,39 @@ import { FileText, CheckCircle, Plus, Download, Trash2, ChevronLeft, PenLine, Pe
 import { DocusealForm } from '@docuseal/react'
 
 const STATUS = {
-  completed: { label: 'Completed', cls: 'text-[#16A34A] bg-[#DCFCE7]' },
-  pending: { label: 'Pending Signature', cls: 'text-[#D97706] bg-[#FEF3C7]' },
-  declined: { label: 'Declined', cls: 'text-[#D03839] bg-[#FEF0EF]' },
+  completed:    { label: 'Completed',         cls: 'text-[#16A34A] bg-[#DCFCE7]' },
+  awaiting_you: { label: 'Needs your signature', cls: 'text-[#D03839] bg-[#FEF0EF]' },
+  viewed:       { label: 'Viewed · not signed', cls: 'text-[#D97706] bg-[#FEF3C7]' },
+  awaiting:     { label: 'Awaiting signature', cls: 'text-[#D97706] bg-[#FEF3C7]' },
+  sent:         { label: 'Sent',              cls: 'text-[#2563EB] bg-[#DBEAFE]' },
+  declined:     { label: 'Declined',          cls: 'text-[#D03839] bg-[#FEF0EF]' },
 }
 
-function badge(status) {
-  return STATUS[status] || { label: status ?? 'Unknown', cls: 'text-[#737370] bg-[#F5F5F3]' }
+const isPlaceholder = e => !e || e.includes('@noreply.deelmap.com')
+
+// Derive a granular status for the whole contract from the per-signer states.
+// DocuSeal submitter.status is one of: sent | opened | completed | declined (or
+// null before the invite goes out). Returns one of the STATUS keys above.
+function deriveStatus(c, myEmail) {
+  const subs = c.submitters || []
+  if (c.status === 'declined' || subs.some(s => s.status === 'declined')) return 'declined'
+  if (c.status === 'completed' || (subs.length > 0 && subs.every(s => s.status === 'completed'))) return 'completed'
+
+  const me = subs.find(s => s.email?.toLowerCase() === myEmail?.toLowerCase())
+  // Our turn first: the seller signs inline before the counterparty is invited.
+  if (me && me.status !== 'completed' && me.status !== 'declined') return 'awaiting_you'
+
+  // We've signed — read the counterparty's progress.
+  const other = subs.find(s => s !== me && !isPlaceholder(s.email)) || subs.find(s => s !== me)
+  if (other) {
+    if (other.status === 'completed') return 'completed'
+    if (other.status === 'opened') return 'viewed'
+  }
+  return 'awaiting'
+}
+
+function badge(key) {
+  return STATUS[key] || { label: key ?? 'Unknown', cls: 'text-[#737370] bg-[#F5F5F3]' }
 }
 
 function fmtDate(d) {
@@ -261,11 +287,36 @@ export default function ContractsPage() {
         </div>
       ) : (
         <div className="space-y-2">
+          {/* Status summary — a quick dashboard of where every sent contract stands */}
+          {(() => {
+            const counts = contracts.reduce((acc, c) => {
+              const k = deriveStatus(c, email)
+              acc[k] = (acc[k] || 0) + 1
+              return acc
+            }, {})
+            const cards = [
+              { key: 'sent', label: 'Sent' },
+              { key: 'viewed', label: 'Viewed' },
+              { key: 'awaiting', label: 'Awaiting signature' },
+              { key: 'completed', label: 'Completed' },
+            ]
+            return (
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
+                {cards.map(card => (
+                  <div key={card.key} className="bg-white border border-[#E8E8E4] rounded p-3">
+                    <div className="text-[22px] font-bold text-[#1A1816] leading-none">{counts[card.key] || 0}</div>
+                    <div className="text-[12px] text-[#737370] mt-1">{card.label}</div>
+                  </div>
+                ))}
+              </div>
+            )
+          })()}
           {drafts.length > 0 && (
             <h2 className="text-[13px] font-bold text-[#1A1816] uppercase tracking-wide mb-1">Sent</h2>
           )}
           {contracts.map(c => {
-            const { label, cls } = badge(c.status)
+            const statusKey = deriveStatus(c, email)
+            const { label, cls } = badge(statusKey)
             const mySubmitter = c.submitters?.find(s => s.email?.toLowerCase() === email?.toLowerCase())
             const canSign = mySubmitter && mySubmitter.status !== 'completed' && mySubmitter.status !== 'declined'
             const others = c.submitters?.filter(s => s.email?.toLowerCase() !== email?.toLowerCase() && !s.email?.includes('@noreply.deelmap.com')) ?? []
@@ -319,7 +370,9 @@ export default function ContractsPage() {
                       <PenLine className="w-3.5 h-3.5" /> Sign Now
                     </button>
                   ) : (
-                    <span className="text-[12px] text-[#737370]">Awaiting buyer</span>
+                    <span className="text-[12px] text-[#737370]">
+                      {statusKey === 'viewed' ? 'Buyer viewed · not signed' : 'Awaiting buyer'}
+                    </span>
                   )}
                   <button
                     onClick={() => handleDelete(c.id)}
