@@ -644,7 +644,7 @@ export default function NewContractWizardPage() {
             <div className="px-5 py-4 border-b border-[#E8E8E4]">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <p className="text-[14px] font-semibold text-[#1A1816]">Contract — 1 envelope</p>
+                  <p className="text-[14px] font-semibold text-[#1A1816]">Contract</p>
                   {fieldValues.property_address ? (
                     <p className="text-[12px] text-[#737370] mt-0.5">{fieldValues.property_address}</p>
                   ) : null}
@@ -900,7 +900,7 @@ function Step1ContractType({ templates, templatesLoading, templateId, onSelect }
       <div className="text-center py-8">
         <FileText className="w-10 h-10 text-[#A8A8A4] mx-auto mb-3" />
         <p className="text-[14px] font-semibold text-[#1A1816] mb-1">No contract templates available</p>
-        <p className="text-[13px] text-[#737370]">Set up templates in DocuSeal to enable contracts.</p>
+        <p className="text-[13px] text-[#737370]">Contracts aren't available right now. Please try again later or contact support.</p>
       </div>
     )
   }
