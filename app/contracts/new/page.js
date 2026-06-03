@@ -1012,7 +1012,7 @@ function Step3Buyer({ buyerName, buyerEmail, sellerEmail, onBuyerNameChange, onB
   const isAssignment = template?.slug === 'assignment'
   // Match the form labels to the exact verbiage in the rendered contract so
   // there's no mental translation. Assignment → the counterparty is the
-  // "Assignee" (end buyer). Purchase & Sale → you sign as the Seller, so the
+  // "Assignee" (end buyer). Purchase Contract → you sign as the Seller, so the
   // counterparty is the "Buyer".
   const partyLabel  = isAssignment ? 'Assignee' : 'Buyer'
   const partyDescription = isAssignment
