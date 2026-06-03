@@ -199,7 +199,10 @@ export default function ContractsPage() {
     <div className="p-4 lg:p-6">
       <div className="flex items-start justify-between mb-6">
         <div>
-          <h1 className="text-[24px] font-bold text-[#1A1816] mb-1">Contracts</h1>
+          <h1 className="text-[24px] font-bold text-[#1A1816] mb-1 flex items-center gap-2">
+            Contracts
+            <span className="text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded bg-[#FEF3E2] text-[#B5620A]">Beta</span>
+          </h1>
           <p className="text-[14px] text-[#737370]">Send and manage e-signature contracts with buyers.</p>
         </div>
         {canCreateContract && (
