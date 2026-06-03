@@ -225,9 +225,9 @@ export async function GET(request) {
     const propertyId = searchParams.get('property_id');
 
     if (action === 'get_messages' && conversationId) {
-      const { data: messages, error } = await supabase
+      const { data: rawMessages, error } = await supabase
         .from('messages')
-        .select('id, conversation_id, sender_type, sender_id, message_text, has_attachment, attachment_url, attachment_name, is_read, created_at')
+        .select('id, conversation_id, sender_type, sender_id, message_text, has_attachment, attachment_url, attachment_name, is_read, is_deleted, reply_to_id, created_at')
         .eq('conversation_id', conversationId)
         .order('created_at', { ascending: true });
 
@@ -236,7 +236,25 @@ export async function GET(request) {
         return NextResponse.json({ error: 'Failed to fetch messages' }, { status: 500 });
       }
 
-      return NextResponse.json({ success: true, messages: messages || [] });
+      // Quoted-reply previews + never send soft-deleted content to the client.
+      const replyIds = [...new Set((rawMessages || []).map(m => m.reply_to_id).filter(Boolean))];
+      const replyMap = {};
+      if (replyIds.length) {
+        const { data: replied } = await supabase
+          .from('messages')
+          .select('id, sender_type, message_text, is_deleted, has_attachment')
+          .in('id', replyIds);
+        for (const r of replied || []) {
+          replyMap[r.id] = { id: r.id, sender_type: r.sender_type, text: r.is_deleted ? 'Deleted message' : (r.message_text || (r.has_attachment ? '[Attachment]' : '')).slice(0, 140) };
+        }
+      }
+      const messages = (rawMessages || []).map(m => {
+        const out = { ...m, reply_preview: m.reply_to_id ? (replyMap[m.reply_to_id] || null) : null };
+        if (m.is_deleted) { out.message_text = null; out.has_attachment = false; out.attachment_url = null; out.attachment_name = null; }
+        return out;
+      });
+
+      return NextResponse.json({ success: true, messages });
     }
 
     if (action === 'get_blocked_users') {
@@ -498,6 +516,53 @@ export async function POST(request) {
       return NextResponse.json({ success: true });
     }
 
+    // Soft-delete the seller's OWN message
+    if (action === 'delete_message') {
+      const { messageId } = body;
+      if (!conversationId || !messageId) return NextResponse.json({ success: false, error: 'Missing conversation or message ID' }, { status: 400 });
+      const { data: conv } = await supabase.from('conversations').select('id').eq('id', conversationId).eq('seller_id', sellerId).single();
+      if (!conv) return NextResponse.json({ success: false, error: 'Conversation not found' }, { status: 404 });
+      const { data: m } = await supabase.from('messages').select('id, sender_type, sender_id').eq('id', messageId).eq('conversation_id', conversationId).single();
+      if (!m) return NextResponse.json({ success: false, error: 'Message not found' }, { status: 404 });
+      if (!(m.sender_type === 'seller' && String(m.sender_id) === String(sellerId))) {
+        return NextResponse.json({ success: false, error: 'You can only delete your own messages' }, { status: 403 });
+      }
+      const { error } = await supabase.from('messages')
+        .update({ is_deleted: true, deleted_at: new Date().toISOString(), message_text: null, has_attachment: false, attachment_url: null, attachment_name: null })
+        .eq('id', messageId);
+      if (error) return NextResponse.json({ success: false, error: 'Failed to delete message' }, { status: 500 });
+      return NextResponse.json({ success: true });
+    }
+
+    // Report a message → message_reports + admin notification (activity_log)
+    if (action === 'report_message') {
+      const { messageId, reason = null, details = null } = body;
+      if (!conversationId || !messageId) return NextResponse.json({ success: false, error: 'Missing conversation or message ID' }, { status: 400 });
+      const { data: conv } = await supabase.from('conversations').select('id, property_address').eq('id', conversationId).eq('seller_id', sellerId).single();
+      if (!conv) return NextResponse.json({ success: false, error: 'Conversation not found' }, { status: 404 });
+      const { data: m } = await supabase.from('messages').select('id, sender_type, sender_id, message_text').eq('id', messageId).eq('conversation_id', conversationId).single();
+      if (!m) return NextResponse.json({ success: false, error: 'Message not found' }, { status: 404 });
+      const { data: report, error } = await supabase.from('message_reports').insert({
+        message_id: messageId, conversation_id: conversationId,
+        reporter_id: String(sellerId), reported_sender: m.sender_id != null ? String(m.sender_id) : null,
+        reason, details, status: 'open',
+      }).select('id').single();
+      if (error) return NextResponse.json({ success: false, error: 'Failed to submit report' }, { status: 500 });
+      try {
+        const { data: sellerApp } = await supabase.from('seller_applications').select('email').eq('id', sellerId).maybeSingle();
+        const snippet = (m.message_text || '[no text / attachment]').slice(0, 140);
+        await supabase.from('activity_log').insert({
+          event_type: 'message_reported',
+          title: `Message reported${reason ? ` — ${reason}` : ''}`,
+          detail: `"${snippet}"${conv.property_address ? ` · ${conv.property_address}` : ''} (conversation #${conversationId})`,
+          actor_email: sellerApp?.email || null,
+          entity_type: 'message_report',
+          entity_id: report?.id != null ? String(report.id) : null,
+        });
+      } catch (e) { console.error('report notification failed:', e?.message); }
+      return NextResponse.json({ success: true });
+    }
+
     if (action === 'send_message' && conversationId && (messageText != null || attachmentUrl)) {
       const pref = await getSellerConversationPref(conversationId, sellerId);
       if (pref?.is_blocked) {
@@ -525,9 +590,10 @@ export async function POST(request) {
           has_attachment: !!attachmentUrl,
           attachment_url: attachmentUrl || null,
           attachment_name: attachmentName || null,
+          reply_to_id: body.replyToId || null,
           is_read: false
         })
-        .select('id, conversation_id, sender_type, message_text, has_attachment, attachment_url, attachment_name, created_at')
+        .select('id, conversation_id, sender_type, message_text, has_attachment, attachment_url, attachment_name, reply_to_id, created_at')
         .single();
 
       if (error) {

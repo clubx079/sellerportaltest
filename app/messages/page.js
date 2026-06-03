@@ -4,11 +4,30 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import {
   MessageCircle, Send, Search, ArrowLeft, Loader2, Check, CheckCheck,
-  Pin, Paperclip, Smile, MapPin, Mail, Phone, Shield, AlertCircle, X, MoreVertical, Ban, FileText } from 'lucide-react';
+  Pin, Paperclip, Smile, MapPin, Mail, Phone, Shield, AlertCircle, X, MoreVertical, Ban, FileText,
+  CornerUpLeft, Copy, Trash2, Flag } from 'lucide-react';
 import { createClient } from '@supabase/supabase-js';
 
 const API = '/api/seller/chat';
 const FONT = 'var(--font-dm-sans), sans-serif';
+
+// Hover-revealed per-message actions (Reply/Copy always; Delete on your own,
+// Report on the other party's) — inline, no three-dot menu.
+function MessageActions({ isSeller, onReply, onCopy, onDelete, onReport, copied }) {
+  const btn = 'p-1.5 rounded text-[#737370] transition-colors';
+  return (
+    <div className="flex items-center gap-0.5 self-center opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+      <button type="button" onClick={onReply} title="Reply" className={`${btn} hover:bg-[#FAFAF8] hover:text-[#1A1816]`}><CornerUpLeft className="w-3.5 h-3.5" /></button>
+      <button type="button" onClick={onCopy} title={copied ? 'Copied' : 'Copy'} className={`${btn} hover:bg-[#FAFAF8] hover:text-[#1A1816]`}>{copied ? <Check className="w-3.5 h-3.5 text-[#0F6E56]" /> : <Copy className="w-3.5 h-3.5" />}</button>
+      {isSeller && onDelete && (
+        <button type="button" onClick={onDelete} title="Delete" className={`${btn} hover:bg-[#FEF0EF] hover:text-[#D03839]`}><Trash2 className="w-3.5 h-3.5" /></button>
+      )}
+      {!isSeller && onReport && (
+        <button type="button" onClick={onReport} title="Report" className={`${btn} hover:bg-[#FEF0EF] hover:text-[#D03839]`}><Flag className="w-3.5 h-3.5" /></button>
+      )}
+    </div>
+  );
+}
 
 function getSupabase() {
   if (typeof window === 'undefined') return null;
@@ -98,6 +117,15 @@ export default function MessagesPage() {
   const [filteredConversations, setFilteredConversations] = useState([]);
   const [openConversationId, setOpenConversationId] = useState(null);
   const [messages, setMessages] = useState([]);
+  // Message actions: reply / report / delete
+  const [replyingTo, setReplyingTo] = useState(null);
+  const [reportingMsg, setReportingMsg] = useState(null);
+  const [reportReason, setReportReason] = useState('spam');
+  const [reportDetails, setReportDetails] = useState('');
+  const [submittingReport, setSubmittingReport] = useState(false);
+  const [deletingMsg, setDeletingMsg] = useState(null);
+  const [copiedKey, setCopiedKey] = useState(null);
+  const [msgToast, setMsgToast] = useState(null);
   const [messageText, setMessageText] = useState('');
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
@@ -353,13 +381,17 @@ export default function MessagesPage() {
     const headers = getAuthHeaders();
     if (!headers.Authorization) return;
     setSending(true);
-    fetch(API, { method: 'POST', headers: { 'Content-Type': 'application/json', ...headers }, body: JSON.stringify({ action: 'send_message', conversationId: openConversationId, messageText: text }) })
+    const replyTo = replyingTo;
+    fetch(API, { method: 'POST', headers: { 'Content-Type': 'application/json', ...headers }, body: JSON.stringify({ action: 'send_message', conversationId: openConversationId, messageText: text, replyToId: replyTo?.id || null }) })
       .then(r => r.json())
       .then(data => {
         if (data.message) {
-          const msg = data.message;
+          const msg = replyTo
+            ? { ...data.message, reply_preview: { id: replyTo.id, sender_type: replyTo.sender_type, text: (replyTo.message_text || '[Attachment]').slice(0, 140) } }
+            : data.message;
           setMessages(prev => prev.some(m => String(m.id) === String(msg.id)) ? prev : [...prev, msg]);
           setMessageText('');
+          setReplyingTo(null);
           const preview = (msg.message_text || text).slice(0, 200);
           const at = msg.created_at || new Date().toISOString();
           const updateList = prev => {
@@ -375,6 +407,41 @@ export default function MessagesPage() {
       })
       .catch(() => {})
       .finally(() => setSending(false));
+  };
+
+  // ── Message actions ──────────────────────────────────────────────
+  const showToast = (text, kind = 'success') => { setMsgToast({ text, kind }); setTimeout(() => setMsgToast(null), 3000); };
+
+  const copyMessage = (m) => {
+    const t = m?.message_text || '';
+    if (!t || !navigator?.clipboard) return;
+    navigator.clipboard.writeText(t).then(() => { setCopiedKey(m.id); setTimeout(() => setCopiedKey(k => (k === m.id ? null : k)), 1500); }).catch(() => {});
+  };
+
+  const deleteMessage = (messageId) => {
+    setDeletingMsg(null);
+    const headers = getAuthHeaders();
+    fetch(API, { method: 'POST', headers: { 'Content-Type': 'application/json', ...headers }, body: JSON.stringify({ action: 'delete_message', conversationId: openConversationId, messageId }) })
+      .then(r => r.json())
+      .then(data => {
+        if (data.success) setMessages(prev => prev.map(m => String(m.id) === String(messageId) ? { ...m, is_deleted: true, message_text: null, has_attachment: false } : m));
+        else showToast(data.error || 'Could not delete message.', 'error');
+      })
+      .catch(() => showToast('Could not delete message.', 'error'));
+  };
+
+  const submitReport = () => {
+    if (!reportingMsg) return;
+    setSubmittingReport(true);
+    const headers = getAuthHeaders();
+    fetch(API, { method: 'POST', headers: { 'Content-Type': 'application/json', ...headers }, body: JSON.stringify({ action: 'report_message', conversationId: openConversationId, messageId: reportingMsg.id, reason: reportReason, details: reportDetails.trim() || null }) })
+      .then(r => r.json())
+      .then(data => {
+        if (data.success) { setReportingMsg(null); setReportDetails(''); setReportReason('spam'); showToast('Reported — our team will review it.'); }
+        else showToast(data.error || 'Could not submit report.', 'error');
+      })
+      .catch(() => showToast('Could not submit report.', 'error'))
+      .finally(() => setSubmittingReport(false));
   };
 
   // H6 — upload a file to Supabase storage and send it as an attachment message
@@ -786,8 +853,22 @@ export default function MessagesPage() {
                               <div key={m.id}>
                                 {isSeller && <p className="text-[12px] font-medium text-[#444441] mb-1 text-right">You</p>}
                                 {!isSeller && <p className="text-[12px] font-medium text-[#444441] mb-1">{buyerDisplayName}</p>}
-                                <div className={`flex ${isSeller ? 'justify-end' : 'justify-start'}`}>
+                                <div className={`group flex items-center gap-1.5 ${isSeller ? 'justify-end' : 'justify-start'}`}>
+                                  {isSeller && !m.is_deleted && (
+                                    <MessageActions isSeller onReply={() => setReplyingTo(m)} onCopy={() => copyMessage(m)} onDelete={() => setDeletingMsg(m)} copied={copiedKey === m.id} />
+                                  )}
                                   <div className="max-w-[70%]">
+                                    {m.reply_preview && (
+                                      <div className="mb-1 px-3 py-1.5 rounded bg-[#FAFAF8] border-l-2 border-[#D03839]">
+                                        <p className="text-[10px] font-semibold text-[#737370]">{m.reply_preview.sender_type === 'seller' ? 'You' : buyerDisplayName}</p>
+                                        <p className="text-[12px] text-[#737370] truncate">{m.reply_preview.text}</p>
+                                      </div>
+                                    )}
+                                    {m.is_deleted ? (
+                                      <div className="rounded px-4 py-3 border border-dashed border-[#E8E8E4]">
+                                        <p className="text-[13px] italic text-[#A8A8A4]">This message was deleted</p>
+                                      </div>
+                                    ) : (
                                     <div className={`rounded px-4 py-3 ${isSeller ? 'bg-[#FEF0EF] text-[#1A1816] border border-[#F5C4C0]' : 'bg-[#FAFAF8] text-[#1A1816] border border-[#E8E8E4]'}`}>
                                       {m.message_text && <p className="text-[14px] leading-relaxed whitespace-pre-wrap break-words">{m.message_text}</p>}
                                       {m.has_attachment && m.attachment_url && (
@@ -800,14 +881,18 @@ export default function MessagesPage() {
                                             </a>
                                       )}
                                     </div>
+                                    )}
                                     <div className={`flex items-center gap-1 mt-1 ${isSeller ? 'justify-end' : 'justify-start'}`}>
                                       <span className="text-[11px] text-[#A8A8A4]">{formatTime(m.created_at)}</span>
-                                      {isSeller && (m.is_read
+                                      {isSeller && !m.is_deleted && (m.is_read
                                         ? <CheckCheck className="w-3.5 h-3.5 text-[#4A90E2]" />
                                         : <Check className="w-3.5 h-3.5 text-[#A8A8A4]" />
                                       )}
                                     </div>
                                   </div>
+                                  {!isSeller && !m.is_deleted && (
+                                    <MessageActions onReply={() => setReplyingTo(m)} onCopy={() => copyMessage(m)} onReport={() => setReportingMsg(m)} copied={copiedKey === m.id} />
+                                  )}
                                 </div>
                               </div>
                             );
@@ -819,6 +904,20 @@ export default function MessagesPage() {
                   </div>
                 )}
               </div>
+
+              {/* Replying-to banner */}
+              {replyingTo && (
+                <div className="flex-shrink-0 px-6 pt-3">
+                  <div className="flex items-center gap-2 px-3 py-2 bg-[#FAFAF8] border-l-2 border-[#D03839] rounded">
+                    <CornerUpLeft className="w-3.5 h-3.5 text-[#D03839] shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[11px] font-semibold text-[#737370]">Replying to {replyingTo.sender_type === 'seller' ? 'yourself' : buyerDisplayName}</p>
+                      <p className="text-[12px] text-[#737370] truncate">{replyingTo.message_text || '[Attachment]'}</p>
+                    </div>
+                    <button type="button" onClick={() => setReplyingTo(null)} className="p-1 rounded hover:bg-white text-[#737370]"><X className="w-3.5 h-3.5" /></button>
+                  </div>
+                </div>
+              )}
 
               {/* Input */}
               <div className="flex-shrink-0 px-6 py-4 border-t border-[#E8E8E4] bg-white">
@@ -1302,6 +1401,62 @@ export default function MessagesPage() {
                 onClick={() => { updateConversationPref(blockConfirm.id, { is_blocked: true }); setBlockConfirm(null); }}
                 className="flex-1 h-10 px-4 text-[13px] font-semibold text-white bg-[#D03839] hover:bg-[#E0493B] rounded transition-colors"
               >Block buyer</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Toast */}
+      {msgToast && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] px-4 py-2.5 rounded shadow-lg text-[13px] font-medium text-white flex items-center gap-2"
+          style={{ background: msgToast.kind === 'error' ? '#D03839' : '#1A1816' }}>
+          {msgToast.kind === 'error' ? <X className="w-4 h-4" /> : <Check className="w-4 h-4" />}
+          {msgToast.text}
+        </div>
+      )}
+
+      {/* Delete-message confirm */}
+      {deletingMsg && (
+        <div className="fixed inset-0 z-[100] bg-black/40 flex items-center justify-center p-4" onClick={() => setDeletingMsg(null)}>
+          <div className="bg-white rounded w-full max-w-sm shadow-xl p-5" onClick={e => e.stopPropagation()}>
+            <h3 className="text-[16px] font-bold text-[#1A1816] mb-1">Delete this message?</h3>
+            <p className="text-[13px] text-[#737370] mb-4">It will be removed for everyone in this chat and replaced with &ldquo;This message was deleted.&rdquo;</p>
+            <div className="flex justify-end gap-2">
+              <button type="button" onClick={() => setDeletingMsg(null)} className="h-9 px-4 border border-[#E8E8E4] text-[#444441] text-[13px] font-semibold rounded hover:bg-[#FAFAF8] transition-colors">Cancel</button>
+              <button type="button" onClick={() => deleteMessage(deletingMsg.id)} className="h-9 px-4 bg-[#D03839] hover:bg-[#E0493B] text-white text-[13px] font-semibold rounded transition-colors">Delete</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Report-message dialog */}
+      {reportingMsg && (
+        <div className="fixed inset-0 z-[100] bg-black/40 flex items-center justify-center p-4" onClick={() => !submittingReport && setReportingMsg(null)}>
+          <div className="bg-white rounded w-full max-w-md shadow-xl" onClick={e => e.stopPropagation()}>
+            <div className="px-5 py-4 border-b border-[#E8E8E4] flex items-center gap-2">
+              <Flag className="w-4 h-4 text-[#D03839]" />
+              <h3 className="text-[16px] font-bold text-[#1A1816]">Report message</h3>
+            </div>
+            <div className="px-5 py-4 space-y-4">
+              <p className="text-[13px] text-[#737370]">Our team will review this. Reports help us keep DeelMap safe from scams and abuse.</p>
+              <div>
+                <label className="block text-[12px] font-semibold text-[#444441] mb-1.5">Reason</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {[['spam', 'Spam'], ['scam', 'Scam / fraud'], ['abuse', 'Abusive'], ['other', 'Other']].map(([val, lbl]) => (
+                    <button key={val} type="button" onClick={() => setReportReason(val)}
+                      className={`h-9 px-3 rounded border text-[13px] font-medium transition-colors ${reportReason === val ? 'border-[#D03839] bg-[#FEF0EF] text-[#D03839]' : 'border-[#E8E8E4] text-[#444441] hover:border-[#1A1816]'}`}>{lbl}</button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="block text-[12px] font-semibold text-[#444441] mb-1.5">Details <span className="font-normal text-[#A8A8A4]">(optional)</span></label>
+                <textarea value={reportDetails} onChange={e => setReportDetails(e.target.value)} rows={3} placeholder="Add anything that helps us review this…"
+                  className="w-full px-3 py-2 border border-[#E8E8E4] rounded text-[13px] text-[#1A1816] placeholder-[#A8A8A4] focus:outline-none focus:border-[#D03839] resize-none" />
+              </div>
+            </div>
+            <div className="px-5 py-3.5 border-t border-[#E8E8E4] flex justify-end gap-2">
+              <button type="button" onClick={() => setReportingMsg(null)} disabled={submittingReport} className="h-9 px-4 border border-[#E8E8E4] text-[#444441] text-[13px] font-semibold rounded hover:bg-[#FAFAF8] transition-colors disabled:opacity-50">Cancel</button>
+              <button type="button" onClick={submitReport} disabled={submittingReport} className="h-9 px-4 bg-[#D03839] hover:bg-[#E0493B] text-white text-[13px] font-semibold rounded transition-colors disabled:opacity-50 flex items-center gap-1.5">{submittingReport && <Loader2 className="w-3.5 h-3.5 animate-spin" />} Submit report</button>
             </div>
           </div>
         </div>
