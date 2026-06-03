@@ -12,6 +12,8 @@ const STATUS_ERRORS = {
   on_hold: 'Your application is on hold. Please contact support for more information.',
   requires_info: 'Your application requires additional information. Please check your email.',
   rejected: 'Your application has been rejected. Please contact support for more information.',
+  suspended: 'Your account has been suspended. Please contact support for more information.',
+  blocked: 'Your account has been blocked. Please contact support for more information.',
 };
 
 export async function POST(request) {
