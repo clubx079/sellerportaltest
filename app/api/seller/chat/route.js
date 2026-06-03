@@ -545,8 +545,8 @@ export async function POST(request) {
       if (!reportedId) return NextResponse.json({ success: false, error: 'Nothing to report here' }, { status: 400 });
 
       const { data: existing } = await supabase.from('message_reports')
-        .select('id').eq('reporter_id', String(sellerId)).eq('reported_sender', reportedId).eq('status', 'open').maybeSingle();
-      if (existing) return NextResponse.json({ success: true, already: true });
+        .select('id').eq('reporter_id', String(sellerId)).eq('reported_sender', reportedId).eq('status', 'open').limit(1);
+      if (existing && existing.length > 0) return NextResponse.json({ success: true, already: true });
 
       const { data: report, error } = await supabase.from('message_reports').insert({
         message_id: null, conversation_id: conversationId,
