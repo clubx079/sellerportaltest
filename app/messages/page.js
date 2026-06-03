@@ -119,7 +119,7 @@ export default function MessagesPage() {
   const [messages, setMessages] = useState([]);
   // Message actions: reply / report / delete
   const [replyingTo, setReplyingTo] = useState(null);
-  const [reportingMsg, setReportingMsg] = useState(null);
+  const [reportingConv, setReportingConv] = useState(null);
   const [reportReason, setReportReason] = useState('spam');
   const [reportDetails, setReportDetails] = useState('');
   const [submittingReport, setSubmittingReport] = useState(false);
@@ -431,13 +431,13 @@ export default function MessagesPage() {
   };
 
   const submitReport = () => {
-    if (!reportingMsg) return;
+    if (!reportingConv) return;
     setSubmittingReport(true);
     const headers = getAuthHeaders();
-    fetch(API, { method: 'POST', headers: { 'Content-Type': 'application/json', ...headers }, body: JSON.stringify({ action: 'report_message', conversationId: openConversationId, messageId: reportingMsg.id, reason: reportReason, details: reportDetails.trim() || null }) })
+    fetch(API, { method: 'POST', headers: { 'Content-Type': 'application/json', ...headers }, body: JSON.stringify({ action: 'report_user', conversationId: reportingConv.id, reason: reportReason, details: reportDetails.trim() || null }) })
       .then(r => r.json())
       .then(data => {
-        if (data.success) { setReportingMsg(null); setReportDetails(''); setReportReason('spam'); showToast('Reported — our team will review it.'); }
+        if (data.success) { setReportingConv(null); setReportDetails(''); setReportReason('spam'); showToast(data.already ? 'You already reported this person — our team is reviewing it.' : 'Reported — our team will review it.'); }
         else showToast(data.error || 'Could not submit report.', 'error');
       })
       .catch(() => showToast('Could not submit report.', 'error'))
@@ -891,7 +891,7 @@ export default function MessagesPage() {
                                     </div>
                                   </div>
                                   {!isSeller && !m.is_deleted && (
-                                    <MessageActions onReply={() => setReplyingTo(m)} onCopy={() => copyMessage(m)} onReport={() => setReportingMsg(m)} copied={copiedKey === m.id} />
+                                    <MessageActions onReply={() => setReplyingTo(m)} onCopy={() => copyMessage(m)} copied={copiedKey === m.id} />
                                   )}
                                 </div>
                               </div>
@@ -1365,6 +1365,9 @@ export default function MessagesPage() {
           <button className="w-full text-left text-[13px] px-3 py-2 rounded text-[#D03839] hover:bg-[#FEF0EF] transition-colors duration-200" onClick={() => { setBlockConfirm(contextMenu.conv); setContextMenu(null); }}>
             Block user
           </button>
+          <button className="w-full text-left text-[13px] px-3 py-2 rounded text-[#D03839] hover:bg-[#FEF0EF] transition-colors duration-200" onClick={() => { setReportingConv(contextMenu.conv); setContextMenu(null); }}>
+            Report user
+          </button>
         </div>
       )}
 
@@ -1430,15 +1433,15 @@ export default function MessagesPage() {
       )}
 
       {/* Report-message dialog */}
-      {reportingMsg && (
-        <div className="fixed inset-0 z-[100] bg-black/40 flex items-center justify-center p-4" onClick={() => !submittingReport && setReportingMsg(null)}>
+      {reportingConv && (
+        <div className="fixed inset-0 z-[100] bg-black/40 flex items-center justify-center p-4" onClick={() => !submittingReport && setReportingConv(null)}>
           <div className="bg-white rounded w-full max-w-md shadow-xl" onClick={e => e.stopPropagation()}>
             <div className="px-5 py-4 border-b border-[#E8E8E4] flex items-center gap-2">
               <Flag className="w-4 h-4 text-[#D03839]" />
-              <h3 className="text-[16px] font-bold text-[#1A1816]">Report message</h3>
+              <h3 className="text-[16px] font-bold text-[#1A1816]">Report this person</h3>
             </div>
             <div className="px-5 py-4 space-y-4">
-              <p className="text-[13px] text-[#737370]">Our team will review this. Reports help us keep DeelMap safe from scams and abuse.</p>
+              <p className="text-[13px] text-[#737370]">Our team will review this conversation. Reports help us keep DeelMap safe from scams and abuse.</p>
               <div>
                 <label className="block text-[12px] font-semibold text-[#444441] mb-1.5">Reason</label>
                 <div className="grid grid-cols-2 gap-2">
@@ -1455,7 +1458,7 @@ export default function MessagesPage() {
               </div>
             </div>
             <div className="px-5 py-3.5 border-t border-[#E8E8E4] flex justify-end gap-2">
-              <button type="button" onClick={() => setReportingMsg(null)} disabled={submittingReport} className="h-9 px-4 border border-[#E8E8E4] text-[#444441] text-[13px] font-semibold rounded hover:bg-[#FAFAF8] transition-colors disabled:opacity-50">Cancel</button>
+              <button type="button" onClick={() => setReportingConv(null)} disabled={submittingReport} className="h-9 px-4 border border-[#E8E8E4] text-[#444441] text-[13px] font-semibold rounded hover:bg-[#FAFAF8] transition-colors disabled:opacity-50">Cancel</button>
               <button type="button" onClick={submitReport} disabled={submittingReport} className="h-9 px-4 bg-[#D03839] hover:bg-[#E0493B] text-white text-[13px] font-semibold rounded transition-colors disabled:opacity-50 flex items-center gap-1.5">{submittingReport && <Loader2 className="w-3.5 h-3.5 animate-spin" />} Submit report</button>
             </div>
           </div>

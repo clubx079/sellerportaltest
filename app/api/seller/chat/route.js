@@ -535,26 +535,33 @@ export async function POST(request) {
     }
 
     // Report a message → message_reports + admin notification (activity_log)
-    if (action === 'report_message') {
-      const { messageId, reason = null, details = null } = body;
-      if (!conversationId || !messageId) return NextResponse.json({ success: false, error: 'Missing conversation or message ID' }, { status: 400 });
-      const { data: conv } = await supabase.from('conversations').select('id, property_address').eq('id', conversationId).eq('seller_id', sellerId).single();
+    // Report the buyer in a conversation (user-level). Deduped per reporter -> user.
+    if (action === 'report_user') {
+      const { reason = null, details = null } = body;
+      if (!conversationId) return NextResponse.json({ success: false, error: 'Missing conversation ID' }, { status: 400 });
+      const { data: conv } = await supabase.from('conversations').select('id, property_address, buyer_uuid, user_id').eq('id', conversationId).eq('seller_id', sellerId).single();
       if (!conv) return NextResponse.json({ success: false, error: 'Conversation not found' }, { status: 404 });
-      const { data: m } = await supabase.from('messages').select('id, sender_type, sender_id, message_text').eq('id', messageId).eq('conversation_id', conversationId).single();
-      if (!m) return NextResponse.json({ success: false, error: 'Message not found' }, { status: 404 });
+      const reportedId = conv.buyer_uuid != null ? String(conv.buyer_uuid) : (conv.user_id != null ? String(conv.user_id) : null);
+      if (!reportedId) return NextResponse.json({ success: false, error: 'Nothing to report here' }, { status: 400 });
+
+      const { data: existing } = await supabase.from('message_reports')
+        .select('id').eq('reporter_id', String(sellerId)).eq('reported_sender', reportedId).eq('status', 'open').maybeSingle();
+      if (existing) return NextResponse.json({ success: true, already: true });
+
       const { data: report, error } = await supabase.from('message_reports').insert({
-        message_id: messageId, conversation_id: conversationId,
-        reporter_id: String(sellerId), reported_sender: m.sender_id != null ? String(m.sender_id) : null,
+        message_id: null, conversation_id: conversationId,
+        reporter_id: String(sellerId), reported_sender: reportedId,
         reason, details, status: 'open',
       }).select('id').single();
       if (error) return NextResponse.json({ success: false, error: 'Failed to submit report' }, { status: 500 });
       try {
+        const { data: buyer } = await supabase.from('users').select('first_name, last_name, nickname, is_anonymous').eq('id', reportedId).maybeSingle();
+        const reportedName = buyer ? (buyer.is_anonymous ? (buyer.nickname || 'Anonymous') : ([buyer.first_name, buyer.last_name].filter(Boolean).join(' ').trim() || 'a buyer')) : 'a user';
         const { data: sellerApp } = await supabase.from('seller_applications').select('email').eq('id', sellerId).maybeSingle();
-        const snippet = (m.message_text || '[no text / attachment]').slice(0, 140);
         await supabase.from('activity_log').insert({
           event_type: 'message_reported',
-          title: `Message reported${reason ? ` — ${reason}` : ''}`,
-          detail: `"${snippet}"${conv.property_address ? ` · ${conv.property_address}` : ''} (conversation #${conversationId})`,
+          title: `User reported${reason ? ` — ${reason}` : ''}`,
+          detail: `${reportedName} was reported by a seller${conv.property_address ? ` (re: ${conv.property_address})` : ''}.`,
           actor_email: sellerApp?.email || null,
           entity_type: 'message_report',
           entity_id: report?.id != null ? String(report.id) : null,
