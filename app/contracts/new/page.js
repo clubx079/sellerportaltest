@@ -603,7 +603,7 @@ export default function NewContractWizardPage() {
   const stepName = STEP_NAMES[step - 1]
 
   return (
-    <div className="p-4 lg:p-6 pb-24 max-w-4xl mx-auto space-y-4">
+    <div className="p-4 lg:p-6 pb-24 max-w-7xl mx-auto space-y-4">
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
           <h1 className="text-lg md:text-xl font-semibold tracking-tight text-[#1A1816] truncate">
@@ -614,6 +614,9 @@ export default function NewContractWizardPage() {
           </div>
         </div>
       </div>
+
+      <div className="grid lg:grid-cols-[minmax(0,1fr)_minmax(0,420px)] gap-6 items-start">
+        <div className="min-w-0 space-y-4">
 
       <div className="flex items-center gap-1.5">
         {STEP_NAMES.map((_, i) => <div key={i} className={`h-1.5 flex-1 rounded-full transition-colors ${i + 1 <= step ? 'bg-[#D03839]' : 'bg-[#E8E8E4]'}`} />)}
@@ -634,6 +637,12 @@ export default function NewContractWizardPage() {
           <p className="text-sm font-medium flex-1">{sendError}</p>
         </div>
       )}
+        </div>
+
+        <div className="hidden lg:block lg:sticky lg:top-6">
+          <LiveContractPreview isAssignment={isAssignment} L={L} contractRole={contractRole} buyerName={buyerName} sellerName={sellerPartyName} fieldValues={fieldValues} />
+        </div>
+      </div>
 
       <StickyActionBar>
         <button type="button" onClick={handleBack} className="h-9 px-4 border border-[#E8E8E4] text-[#444441] text-[13px] font-semibold rounded hover:border-[#1A1816] transition-colors flex items-center gap-1.5">
@@ -859,6 +868,93 @@ function Step5Terms({ values, onChange, template, L, onPersistDefault }) {
         <FieldRow label="Additional Terms" hint={isAssignment ? 'one per line (up to 6 lines)' : 'optional'}>
           <textarea value={values.special_terms || ''} onChange={e => onChange('special_terms', e.target.value)} rows={isAssignment ? 6 : 4} placeholder={isAssignment ? 'Each line becomes one of the 6 numbered lines on the contract.' : 'Any other deal-specific terms…'} className="w-full p-3 border border-[#E8E8E4] rounded text-[13px] text-[#1A1816] placeholder:text-[#A8A8A4] focus:outline-none focus:border-[#D03839] focus:ring-1 focus:ring-[#D03839]/20 resize-none" />
         </FieldRow>
+      </div>
+    </div>
+  )
+}
+
+// ── Live contract preview (fills in as the user types) ──────────────────────
+function PvField({ value, w = 'w-28' }) {
+  if (value !== undefined && value !== null && String(value).trim() !== '') {
+    return <span className="text-[#1A1816] font-semibold">{value}</span>
+  }
+  return <span className={`inline-block align-middle rounded-sm bg-[#FEF9E7] border-b border-dashed border-[#E0B100] ${w}`} style={{ height: '0.95em' }} />
+}
+function PvSection({ title, children }) {
+  return (
+    <div className="mb-4">
+      <p className="text-[10px] font-bold uppercase tracking-wide text-[#A8A8A4] mb-1.5" style={{ fontFamily: 'DM Sans, sans-serif' }}>{title}</p>
+      <div className="space-y-1">{children}</div>
+    </div>
+  )
+}
+function PvLine({ label, children }) {
+  return (
+    <div className="flex items-baseline gap-2">
+      <span className="text-[11px] text-[#737370] w-32 shrink-0" style={{ fontFamily: 'DM Sans, sans-serif' }}>{label}</span>
+      <span className="flex-1 min-w-0">{children}</span>
+    </div>
+  )
+}
+function LiveContractPreview({ isAssignment, L, contractRole, buyerName, sellerName, fieldValues: fv }) {
+  const today = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+  const money = (v) => (v !== '' && v != null && !Number.isNaN(Number(v))) ? `$${Number(v).toLocaleString('en-US', { maximumFractionDigits: 0 })}` : null
+  const longDate = (v) => v ? (() => { try { return new Date(v).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) } catch { return v } })() : null
+  return (
+    <div className="bg-white border border-[#E8E8E4] rounded shadow-sm overflow-hidden">
+      <div className="px-4 py-2 bg-[#FAFAF8] border-b border-[#E8E8E4] flex items-center gap-2">
+        <FileText className="w-3.5 h-3.5 text-[#737370]" />
+        <span className="text-[11px] font-semibold text-[#737370] uppercase tracking-wide" style={{ fontFamily: 'DM Sans, sans-serif' }}>Live preview · fills in as you type</span>
+      </div>
+      <div className="p-6 max-h-[74vh] overflow-y-auto text-[12.5px] leading-relaxed text-[#444441]" style={{ fontFamily: 'Georgia, "Times New Roman", serif' }}>
+        <div className="text-center mb-5">
+          <h3 className="text-[15px] font-bold text-[#1A1816] uppercase tracking-wide">{isAssignment ? 'Assignment of Contract' : 'Purchase & Sale Contract'}</h3>
+          <p className="text-[11px] text-[#A8A8A4] mt-0.5">Dated {today}</p>
+        </div>
+        <p className="mb-4">This Agreement is entered into by and between the parties below for the property described herein.</p>
+
+        <PvSection title={isAssignment ? 'Assignor (Seller)' : 'Seller'}>
+          <PvLine label="Name / LLC"><PvField value={sellerName} w="w-44" /></PvLine>
+          <PvLine label="Mailing Address"><PvField value={fv.seller_address} w="w-44" /></PvLine>
+          {fv.co_seller_name ? <PvLine label="Co-signer">{fv.co_seller_name}</PvLine> : null}
+        </PvSection>
+        <PvSection title={isAssignment ? 'Assignee (Buyer)' : 'Buyer'}>
+          <PvLine label="Name / LLC"><PvField value={buyerName} w="w-44" /></PvLine>
+          <PvLine label="Mailing Address"><PvField value={fv.buyer_address} w="w-44" /></PvLine>
+          {fv.co_buyer_name ? <PvLine label="Co-signer">{fv.co_buyer_name}</PvLine> : null}
+        </PvSection>
+        <PvSection title="Property">
+          <PvLine label="Address"><PvField value={fv.property_address} w="w-44" /></PvLine>
+          {!isAssignment ? <PvLine label="Tax ID(s)"><PvField value={fv.property_tax_id} /></PvLine> : null}
+        </PvSection>
+        <PvSection title="Terms">
+          <PvLine label={isAssignment ? 'Purchase Price' : 'Sale Price'}><PvField value={money(fv.purchase_price)} /></PvLine>
+          <PvLine label={isAssignment ? 'Deposit' : 'Earnest Money'}><PvField value={money(fv.emd)} /></PvLine>
+          {!isAssignment ? <PvLine label="Due Diligence"><PvField value={fv.due_diligence_days ? `${fv.due_diligence_days} days` : null} /></PvLine> : null}
+          <PvLine label="Closing Date"><PvField value={longDate(fv.closing_date)} /></PvLine>
+          {!isAssignment ? <PvLine label="Source of Funds"><PvField value={fv.financing_type ? (fv.financing_type === 'cash' ? 'Cash' : 'Financing') : null} /></PvLine> : null}
+          {!isAssignment ? <PvLine label={`${L.seller} Accepts By`}><PvField value={longDate(fv.acceptance_deadline)} /></PvLine> : null}
+          {!isAssignment && fv.emd_escrow ? <PvLine label="Escrow Agent">{fv.emd_escrow}</PvLine> : null}
+          {!isAssignment && fv.closing_location ? <PvLine label="Closing Location">{fv.closing_location}</PvLine> : null}
+          {isAssignment ? <PvLine label="Original Seller"><PvField value={fv.original_seller_name} /></PvLine> : null}
+          {isAssignment ? <PvLine label="Original PSA Date"><PvField value={longDate(fv.original_psa_date)} /></PvLine> : null}
+        </PvSection>
+        {fv.special_terms ? (
+          <PvSection title="Additional Terms"><p className="whitespace-pre-wrap text-[12px]">{fv.special_terms}</p></PvSection>
+        ) : null}
+
+        <div className="mt-6 pt-4 border-t border-[#E8E8E4] grid grid-cols-2 gap-5">
+          <div>
+            <div className="h-7 border-b border-[#1A1816]" />
+            <p className="text-[10px] text-[#737370] mt-1" style={{ fontFamily: 'DM Sans, sans-serif' }}>{L.seller}{contractRole === 'seller' ? ' (you)' : ''} · signs first</p>
+            <p className="text-[11px] text-[#1A1816] truncate">{sellerName || ''}</p>
+          </div>
+          <div>
+            <div className="h-7 border-b border-[#1A1816]" />
+            <p className="text-[10px] text-[#737370] mt-1" style={{ fontFamily: 'DM Sans, sans-serif' }}>{L.buyer}{contractRole === 'buyer' ? ' (you)' : ''}</p>
+            <p className="text-[11px] text-[#1A1816] truncate">{buyerName || ''}</p>
+          </div>
+        </div>
       </div>
     </div>
   )
