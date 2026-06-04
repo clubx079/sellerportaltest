@@ -587,6 +587,20 @@ export async function POST(request) {
         console.warn('[Seller chat] Conversation fetch for email:', convError.message, { conversationId, sellerId });
       }
 
+      // True block: reject the send if the recipient (buyer) has blocked this seller.
+      if (conv?.buyer_uuid) {
+        const { data: rPref } = await supabase
+          .from('chat_user_preferences')
+          .select('is_blocked')
+          .eq('conversation_id', conversationId)
+          .eq('actor_type', 'buyer')
+          .eq('actor_id', conv.buyer_uuid)
+          .maybeSingle();
+        if (rPref?.is_blocked) {
+          return NextResponse.json({ success: false, error: 'You can no longer send messages in this conversation.' }, { status: 403 });
+        }
+      }
+
       const { data: msg, error } = await supabase
         .from('messages')
         .insert({
