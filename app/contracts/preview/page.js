@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { Printer, X, FileText } from 'lucide-react'
+import { X, FileText } from 'lucide-react'
 import LiveContractPreview from '@/components/contracts/LiveContractPreview'
 
 export default function ContractPreviewPage() {
@@ -36,9 +36,6 @@ export default function ContractPreviewPage() {
           <span>Contract preview · for review only — not yet signed</span>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={() => window.print()} className="h-9 px-4 flex items-center gap-1.5 text-[13px] font-semibold bg-white border border-[#E8E8E4] text-[#1A1816] rounded hover:bg-[#FAFAF8]">
-            <Printer className="w-4 h-4" /> Print
-          </button>
           <button onClick={() => window.close()} className="h-9 px-4 flex items-center gap-1.5 text-[13px] font-semibold bg-[#1A1816] text-white rounded hover:bg-black">
             <X className="w-4 h-4" /> Close
           </button>
