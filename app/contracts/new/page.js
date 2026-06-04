@@ -603,7 +603,7 @@ export default function NewContractWizardPage() {
   const stepName = STEP_NAMES[step - 1]
 
   return (
-    <div className="p-4 lg:p-6 pb-24 max-w-7xl mx-auto space-y-4">
+    <div className="p-4 lg:p-6 pb-24 space-y-4">
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
           <h1 className="text-lg md:text-xl font-semibold tracking-tight text-[#1A1816] truncate">
