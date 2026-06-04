@@ -10,7 +10,7 @@ import PropertyViewModal from '@/components/properties/PropertyViewModal';
 import PropertyAnalyticsSidebar from '@/components/properties/PropertyAnalyticsSidebar';
 import { UTMLinksModal } from '@/components/properties/UTMLinksModal';
 
-const DEELMAP_VIEW_BASE_URL = process.env.NEXT_PUBLIC_DEELMAP_VIEW_BASE_URL || 'https://deelmap-production-16a1.up.railway.app';
+const DEELMAP_VIEW_BASE_URL = process.env.NEXT_PUBLIC_DEELMAP_VIEW_BASE_URL || 'https://deelmap.com';
 
 const PropertiesManagement = () => {
   const router = useRouter();

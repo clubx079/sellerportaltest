@@ -4,7 +4,7 @@ import { Resend } from 'resend';
 import { getEmailChange, clearEmailChange } from '@/lib/email-change-store';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
-const FROM = 'DeelMap <noreply@deelmap.com>';
+const FROM = 'Deelmap <notifications@deelmap.com>';
 
 function getSupabase() {
   return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
@@ -73,10 +73,10 @@ export async function POST(request) {
               The email on your DeelMap account was just changed to <strong>${pending.newEmail}</strong>.
             </p>
             <p style="font-size:13px;color:#737370;line-height:1.6;">
-              If this was you, no action is needed. If you did NOT make this change, contact support immediately at admin@airosofts.com.
+              If this was you, no action is needed. If you did NOT make this change, <a href="${(process.env.NEXT_PUBLIC_APP_URL || 'https://sell.deelmap.com').replace(/\/+$/, '')}/support" style="color:#1A1816;text-decoration:underline">contact us immediately through our Contact Us page</a>.
             </p>
           </div>`,
-        text: `Your DeelMap login email was changed to ${pending.newEmail}. If this wasn't you, contact admin@airosofts.com immediately.`,
+        text: `Your DeelMap login email was changed to ${pending.newEmail}. If this wasn't you, contact us immediately through our Contact Us page: ${(process.env.NEXT_PUBLIC_APP_URL || 'https://sell.deelmap.com').replace(/\/+$/, '')}/support`,
       }).catch(() => {});
     }
 

@@ -6,7 +6,7 @@ import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard, Building2, MessageCircle, X, Settings,
-  FileText, TrendingUp, BarChart3, CreditCard, Zap, ScrollText, Gift, Users
+  FileText, TrendingUp, BarChart3, CreditCard, Zap, ScrollText, Gift, Users, LifeBuoy
 } from 'lucide-react'
 
 const DESKTOP_BREAKPOINT = 1024
@@ -88,7 +88,7 @@ export default function Sidebar({ isOpen, setIsOpen, activeItem, setActiveItem }
       label: 'TOOLS',
       items: [
         ...(hasFullAccess || perms.analytics_view ? [{ id: 'analytics', label: 'Analytics', icon: BarChart3, path: '/analytics' }] : []),
-        { id: 'contracts', label: 'Contracts', icon: ScrollText, path: '/contracts' },
+        { id: 'contracts', label: 'Contracts', icon: ScrollText, path: '/contracts', beta: true },
         { id: 'team', label: 'Team', icon: Users, path: '/team' },
       ]
     },
@@ -101,6 +101,7 @@ export default function Sidebar({ isOpen, setIsOpen, activeItem, setActiveItem }
           { id: 'billing',  label: 'Billing',  icon: CreditCard, path: '/billing' },
         ] : []),
         { id: 'settings', label: 'Settings', icon: Settings, path: '/settings' },
+        { id: 'support', label: 'Contact Us', icon: LifeBuoy, path: '/support' },
       ]
     }
   ]
@@ -156,7 +157,12 @@ export default function Sidebar({ isOpen, setIsOpen, activeItem, setActiveItem }
                     >
                       <Icon className={`w-[18px] h-[18px] flex-shrink-0 ${isActive ? 'text-[#1A1816]' : 'text-[#737370]'}`} />
                       <div className="flex items-center justify-between gap-2 min-w-0 flex-1">
-                        <span className="truncate">{item.label}</span>
+                        <span className="truncate flex items-center gap-2">
+                          {item.label}
+                          {item.beta && (
+                            <span className="text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded bg-[#FEF3E2] text-[#B5620A] flex-shrink-0">Beta</span>
+                          )}
+                        </span>
                         {hasBadge && (
                           <span className={`inline-flex items-center justify-center min-w-[22px] h-[22px] px-1.5 text-[11px] font-semibold rounded ${
                             item.badgeRed ? 'bg-[#D03839] text-white' : 'bg-[#FAFAF8] text-[#444441] border border-[#E8E8E4]'

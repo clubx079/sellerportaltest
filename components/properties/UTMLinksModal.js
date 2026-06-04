@@ -11,7 +11,7 @@ const PLATFORMS = [
 ];
 
 const DEELMAP_VIEW_BASE_URL = typeof window !== 'undefined'
-  ? (process.env.NEXT_PUBLIC_DEELMAP_VIEW_BASE_URL || 'https://deelmap-production-16a1.up.railway.app').replace(/\/$/, '')
+  ? (process.env.NEXT_PUBLIC_DEELMAP_VIEW_BASE_URL || 'https://deelmap.com').replace(/\/$/, '')
   : '';
 
 export function UTMLinksModal({ isOpen, onClose, property, baseUrl, userId }) {

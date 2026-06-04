@@ -84,11 +84,13 @@ export async function GET(request) {
 export async function POST(request) {
   try {
     const {
+      contractRole,
       buyerName,
       buyerEmail,
       property,
       sellerEmail,
       sellerName,
+      coSellerEmail,
       templateId,
       // Wizard additions:
       // - field_values: normalized wizard keys (property_address, purchase_price, …)
@@ -106,10 +108,22 @@ export async function POST(request) {
       return NextResponse.json({ error: 'buyerEmail, sellerEmail and templateId are required' }, { status: 400 })
     }
 
+    // The Seller is always First Party (signs first). The creator may be on
+    // either side: creator=Seller signs inline now; creator=Buyer → the Seller
+    // (counterparty) is emailed to sign first and the creator signs after.
+    const creatorIsSeller = contractRole !== 'buyer'
+    const creatorEmail = creatorIsSeller ? sellerEmail : buyerEmail
+
+    // Optional co-seller: only a real (conditional) signer when both a name and
+    // email are present. The name comes through field_values → seller2_print_name.
+    const coSellerName = (field_values && field_values.co_seller_name) || ''
+    const hasCoSeller = !!(coSellerName && coSellerEmail)
+
     // Use a placeholder email for the Assignee — their real email is stored in metadata.
     // The webhook will PATCH the Assignee with their real email after the Assignor signs,
     // ensuring the Assignee cannot sign until the Assignor completes.
     const assigneePlaceholder = `pending-${Date.now()}@noreply.deelmap.com`
+    const coSellerPlaceholder = `pending-co-${Date.now()}@noreply.deelmap.com`
 
     // Translate normalized wizard fields → DocuSeal field names defined on the template.
     // ctx provides derived values (today's date, the assignor's name from profile)
@@ -137,14 +151,31 @@ export async function POST(request) {
         role: 'First Party',
         email: sellerEmail,
         name: sellerName || sellerEmail,
+        // creator=Seller signs inline (no email); creator=Buyer → email the Seller to sign first.
+        send_email: !creatorIsSeller,
+        // Tag with the creator's email so the seller-portal list finds contracts
+        // they created, regardless of which side they're on.
+        application_key: `seller:${creatorEmail}`,
+        metadata: {
+          assigneeEmail: buyerEmail,
+          assigneeName: buyerName || buyerEmail,
+          ...(hasCoSeller ? { coSellerEmail, coSellerName } : {}),
+        },
+        ...(hasValues ? { values: mappedValues } : {}),
+      },
+      // Co-Seller signs second (Seller → Co-Seller → Buyer). Placeholder email +
+      // send_email:false so the webhook activates them once First Party completes.
+      ...(hasCoSeller ? [{
+        role: 'Co-Seller',
+        email: coSellerPlaceholder,
+        name: coSellerName,
         send_email: false,
-        application_key: `seller:${sellerEmail}`,
         metadata: {
           assigneeEmail: buyerEmail,
           assigneeName: buyerName || buyerEmail,
         },
         ...(hasValues ? { values: mappedValues } : {}),
-      },
+      }] : []),
       {
         role: 'Second Party',
         email: assigneePlaceholder,
@@ -168,8 +199,11 @@ export async function POST(request) {
     if (!Array.isArray(json) || !json[0]) return NextResponse.json({ error: 'DocuSeal error' }, { status: 500 })
 
     const assignorSubmitter = json.find(s => s.role === 'First Party') || json[0]
+    const coSellerSubmitter = json.find(s => s.role === 'Co-Seller')
 
-    // PATCH the First Party submitter to explicitly set metadata (POST body metadata is ignored by DocuSeal)
+    // PATCH metadata onto the submitters (POST body metadata is ignored by DocuSeal).
+    // First Party carries the co-seller (next) + buyer (final) info; the Co-Seller
+    // carries the buyer info so the chain continues after they sign.
     await fetch(`${DOCUSEAL_BASE}/submitters/${assignorSubmitter.id}`, {
       method: 'PATCH',
       headers: dsHeaders(),
@@ -177,9 +211,22 @@ export async function POST(request) {
         metadata: {
           assigneeEmail: buyerEmail,
           assigneeName: buyerName || buyerEmail,
+          ...(hasCoSeller ? { coSellerEmail, coSellerName } : {}),
         },
       }),
     })
+    if (coSellerSubmitter?.id) {
+      await fetch(`${DOCUSEAL_BASE}/submitters/${coSellerSubmitter.id}`, {
+        method: 'PATCH',
+        headers: dsHeaders(),
+        body: JSON.stringify({
+          metadata: {
+            assigneeEmail: buyerEmail,
+            assigneeName: buyerName || buyerEmail,
+          },
+        }),
+      })
+    }
 
     // If this came from a wizard draft, mark the draft as sent so it disappears
     // from the seller's drafts list and we keep an audit trail to the submission.
@@ -221,7 +268,11 @@ export async function POST(request) {
     return NextResponse.json({
       submission_id: assignorSubmitter.submission_id,
       assignor_slug: assignorSubmitter.slug,
-      embed_src: assignorSubmitter.embed_src,
+      // Creator signs inline only when they're the Seller (First Party). When the
+      // creator is the Buyer, no embed — the Seller is emailed to sign first.
+      ...(creatorIsSeller
+        ? { embed_src: assignorSubmitter.embed_src }
+        : { firstSignerName: sellerName || sellerEmail }),
     })
   } catch {
     return NextResponse.json({ error: 'Failed to create contract' }, { status: 500 })

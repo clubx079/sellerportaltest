@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import Stripe from 'stripe'
 
-const SELLER_PORTAL_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://sellerportaldeelmap-production-bea8.up.railway.app'
+const SELLER_PORTAL_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://sell.deelmap.com'
 
 export async function POST(request) {
   const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)

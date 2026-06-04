@@ -87,7 +87,7 @@ function buildEmailHtml(logoUrl, title, titleColor, propertyBlock, bodyHtml, cta
     <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;background:#ffffff">
       <tr>
         <td style="background:#ffffff;padding:12px 40px;text-align:center;border-bottom:2px solid #D03839">
-          <img src="https://sellerportaldeelmap-production-bea8.up.railway.app/deelmap.png" alt="Deelmap" height="72" style="display:inline-block;height:72px;width:auto;border:0" />
+          <img src="https://deelmap.com/deelmap.png" alt="Deelmap" height="72" style="display:inline-block;height:72px;width:auto;border:0" />
         </td>
       </tr>
       <tr>
@@ -104,6 +104,7 @@ function buildEmailHtml(logoUrl, title, titleColor, propertyBlock, bodyHtml, cta
       </tr>
       <tr>
         <td style="background:#ffffff;border-top:1px solid #E8E8E4;padding:20px 40px;text-align:center">
+          <p style="margin:0 0 4px;font-size:12px;color:#A8A8A4">Questions? <a href="https://deelmap.com/contact" style="color:#737370;text-decoration:underline">Reach us through our contact page</a></p>
           <p style="margin:0;font-size:12px;color:#A8A8A4">© 2026 Deelmap. All rights reserved.</p>
         </td>
       </tr>
@@ -278,8 +279,8 @@ export async function PATCH(request) {
 
     if (offerErr || !offer) return NextResponse.json({ error: 'Offer not found' }, { status: 404 });
 
-    const buyerBase = (process.env.NEXT_PUBLIC_DEELMAP_VIEW_BASE_URL || 'https://deelmap-production-16a1.up.railway.app').replace(/\/$/, '');
-    const sellerBase = (process.env.NEXT_PUBLIC_SELLER_PORTAL_URL || 'https://sellerportaldeelmap-production-bea8.up.railway.app').replace(/\/$/, '');
+    const buyerBase = (process.env.NEXT_PUBLIC_DEELMAP_VIEW_BASE_URL || 'https://deelmap.com').replace(/\/$/, '');
+    const sellerBase = (process.env.NEXT_PUBLIC_SELLER_PORTAL_URL || 'https://sell.deelmap.com').replace(/\/$/, '');
     const logoUrl = `${sellerBase}/deelmap.png`;
     const buyerInboxUrl = `${buyerBase}/buyer/inbox?conversation=${offer.conversation_id}`;
 

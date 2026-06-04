@@ -1,6 +1,24 @@
 import { NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { createClient } from '@supabase/supabase-js'
+import {
+  emailPaymentReceipt,
+  emailPaymentFailed,
+  emailSubscriptionCreated,
+  emailTrialConverted,
+  emailListingPromoted,
+  sendSellerEmail,
+} from '@/lib/sellerEmail'
+
+async function getSeller(supabase, sellerId) {
+  if (!sellerId) return null
+  const { data } = await supabase
+    .from('seller_applications')
+    .select('email, contact_person_name')
+    .eq('id', sellerId)
+    .maybeSingle()
+  return data || null
+}
 
 const toISO = (ts) => (ts && ts > 0) ? new Date(ts * 1000).toISOString() : null
 
@@ -24,7 +42,7 @@ export async function POST(request) {
       // ── Standard plan OR add-on payment succeeded ──────────────────────
       case 'payment_intent.succeeded': {
         const pi = event.data.object
-        const { seller_id, plan_type, quantity, add_ons, property_id, promo_code_id } = pi.metadata
+        const { seller_id, plan_type, quantity, add_ons, property_id, promo_code_id, purpose } = pi.metadata
 
         // Track promo code usage
         if (promo_code_id) {
@@ -143,6 +161,35 @@ export async function POST(request) {
           }
         }
 
+        // ── Receipt + (if add-ons) listing-promoted email ──
+        try {
+          const seller = await getSeller(supabase, seller_id)
+          if (seller?.email) {
+            const amount = pi.amount_received ?? pi.amount ?? 0
+            const desc = purpose === 'contract' ? 'Contract fee' : add_ons ? 'Listing promotion' : (plan_type ? `${plan_type} subscription` : 'Deelmap purchase')
+            const receipt_url = pi.charges?.data?.[0]?.receipt_url || null
+            const r = emailPaymentReceipt({ name: seller.contact_person_name, amount_cents: amount, description: desc, receipt_url })
+            await sendSellerEmail({ to: seller.email, subject: r.subject, html: r.html })
+
+            if (add_ons && property_id) {
+              const ADDON_DAYS = { highlight: 30, boost: 7, homepage: 7, bundle: 30 }
+              const ts = Date.now()
+              const addons = add_ons.split(',').filter(Boolean).map(type => ({
+                type,
+                ends_at: new Date(ts + (ADDON_DAYS[type] || 7) * 86400000).toISOString(),
+              }))
+              const { data: property } = await supabase
+                .from('properties')
+                .select('address, city, state')
+                .eq('id', property_id)
+                .maybeSingle()
+              const property_address = property ? [property.address, property.city, property.state].filter(Boolean).join(', ') : null
+              const p = emailListingPromoted({ name: seller.contact_person_name, addons, property_address })
+              await sendSellerEmail({ to: seller.email, subject: p.subject, html: p.html })
+            }
+          }
+        } catch (e) { console.error('[stripe.payment_intent.succeeded] email failed:', e?.message || e) }
+
         break
       }
 
@@ -184,6 +231,20 @@ export async function POST(request) {
           .update({ status: 'approved' })
           .eq('id', seller_id)
 
+        // ── Subscription confirmation email ──
+        try {
+          const seller = await getSeller(supabase, seller_id)
+          if (seller?.email) {
+            const s = emailSubscriptionCreated({
+              name: seller.contact_person_name,
+              plan_type,
+              billing_cycle: billing_cycle || 'monthly',
+              trial_ends_at: toISO(sub.trial_end),
+            })
+            await sendSellerEmail({ to: seller.email, subject: s.subject, html: s.html })
+          }
+        } catch (e) { console.error('[stripe.subscription.created] email failed:', e?.message || e) }
+
         break
       }
 
@@ -191,6 +252,14 @@ export async function POST(request) {
       case 'customer.subscription.updated': {
         const sub = event.data.object
         const { plan_type: metaPlanType, billing_cycle: metaBillingCycle } = sub.metadata || {}
+
+        // Read prior status so we can detect a trial-to-paid conversion after the update
+        const { data: existingPlan } = await supabase
+          .from('seller_plans')
+          .select('status, seller_id')
+          .eq('stripe_subscription_id', sub.id)
+          .maybeSingle()
+        const wasInTrial = existingPlan?.status === 'trialing'
 
         // Derive plan_type from the live price ID — this is the authoritative source
         // when a subscription schedule transitions (metadata still has old plan type).
@@ -236,6 +305,22 @@ export async function POST(request) {
           .from('seller_plans')
           .update(updateData)
           .eq('stripe_subscription_id', sub.id)
+
+        // ── Trial converted to paid? ──
+        if (wasInTrial && newStatus === 'active' && existingPlan?.seller_id) {
+          try {
+            const seller = await getSeller(supabase, existingPlan.seller_id)
+            if (seller?.email) {
+              const t = emailTrialConverted({
+                name: seller.contact_person_name,
+                plan_type: updateData.plan_type || metaPlanType,
+                billing_cycle: updateData.billing_cycle || metaBillingCycle,
+                next_charge_at: updateData.current_period_end,
+              })
+              await sendSellerEmail({ to: seller.email, subject: t.subject, html: t.html })
+            }
+          } catch (e) { console.error('[stripe.subscription.updated] trial-converted email failed:', e?.message || e) }
+        }
 
         break
       }
@@ -319,7 +404,21 @@ export async function POST(request) {
                 )
               }
             }
-          } catch {}
+
+            // ── Recurring-charge receipt email ──
+            if (sellerId && invoice.amount_paid > 0) {
+              const seller = await getSeller(supabase, sellerId)
+              if (seller?.email) {
+                const r = emailPaymentReceipt({
+                  name: seller.contact_person_name,
+                  amount_cents: invoice.amount_paid,
+                  description: 'Deelmap subscription',
+                  receipt_url: invoice.hosted_invoice_url || invoice.invoice_pdf || null,
+                })
+                await sendSellerEmail({ to: seller.email, subject: r.subject, html: r.html })
+              }
+            }
+          } catch (e) { console.error('[stripe.invoice.payment_succeeded] email failed:', e?.message || e) }
         }
         break
       }
@@ -332,6 +431,25 @@ export async function POST(request) {
           .from('seller_plans')
           .update({ status: 'past_due', updated_at: new Date().toISOString() })
           .eq('stripe_subscription_id', invoice.subscription)
+
+        // ── Payment-failed email ──
+        try {
+          if (invoice.subscription) {
+            const sub = await stripe.subscriptions.retrieve(invoice.subscription)
+            const sellerId = sub.metadata?.seller_id
+            if (sellerId) {
+              const seller = await getSeller(supabase, sellerId)
+              if (seller?.email) {
+                const f = emailPaymentFailed({
+                  name: seller.contact_person_name,
+                  amount_cents: invoice.amount_due ?? invoice.amount_remaining ?? 0,
+                  hosted_invoice_url: invoice.hosted_invoice_url || null,
+                })
+                await sendSellerEmail({ to: seller.email, subject: f.subject, html: f.html })
+              }
+            }
+          }
+        } catch (e) { console.error('[stripe.invoice.payment_failed] email failed:', e?.message || e) }
 
         break
       }

@@ -87,8 +87,29 @@ export async function POST(request) {
         }
       })
 
+    // Contract fees — PaymentIntents created when a seller sends a contract
+    // (purpose=contract). These have no add_ons, so they're matched separately.
+    const contractCharges = piList.data
+      .filter(pi => pi.status === 'succeeded' && pi.metadata?.purpose === 'contract')
+      .map(pi => ({
+        id:                 pi.id,
+        number:             null,
+        created:            pi.created,
+        amount_paid:        pi.amount,
+        amount_due:         pi.amount,
+        subtotal:           pi.amount,
+        discount_amount:    0,
+        discount_label:     null,
+        currency:           pi.currency,
+        status:             'paid',
+        hosted_invoice_url: pi.charges?.data?.[0]?.receipt_url || null,
+        invoice_pdf:        null,
+        description:        'Contract fee',
+        type:               'charge',
+      }))
+
     // Merge and sort by date descending
-    const all = [...invoices, ...addonCharges].sort((a, b) => b.created - a.created)
+    const all = [...invoices, ...addonCharges, ...contractCharges].sort((a, b) => b.created - a.created)
 
     return NextResponse.json({ invoices: all })
   } catch (err) {

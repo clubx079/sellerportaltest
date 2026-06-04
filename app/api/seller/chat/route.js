@@ -46,9 +46,9 @@ async function sendEmailToBuyer(buyerEmail, buyerName, sellerName, messageText, 
   }
   try {
     const resend = new Resend(apiKey);
-    const buyerBase = (process.env.NEXT_PUBLIC_DEELMAP_VIEW_BASE_URL || '').replace(/\/$/, '') || 'https://deelmap-production-16a1.up.railway.app';
+    const buyerBase = (process.env.NEXT_PUBLIC_DEELMAP_VIEW_BASE_URL || '').replace(/\/$/, '') || 'https://deelmap.com';
     const messagesUrl = `${buyerBase}/buyer/inbox?conversation=${conversationId}`;
-    const logoBase = (process.env.NEXT_PUBLIC_SELLER_PORTAL_URL || 'https://sellerportaldeelmap-production-bea8.up.railway.app').replace(/\/$/, '');
+    const logoBase = (process.env.NEXT_PUBLIC_SELLER_PORTAL_URL || 'https://sell.deelmap.com').replace(/\/$/, '');
     const logoUrl = `${logoBase}/deelmap.png`;
     const preview = (messageText || '[Attachment]').slice(0, 200);
     const propertyText = String(propertyAddress || '').trim();
@@ -60,7 +60,7 @@ async function sendEmailToBuyer(buyerEmail, buyerName, sellerName, messageText, 
     <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;background:#ffffff">
       <tr>
         <td style="background:#ffffff;padding:12px 40px;text-align:center;border-bottom:2px solid #D03839">
-          <img src="https://sellerportaldeelmap-production-bea8.up.railway.app/deelmap.png" alt="Deelmap" height="72" style="display:inline-block;height:72px;width:auto;border:0" />
+          <img src="https://deelmap.com/deelmap.png" alt="Deelmap" height="72" style="display:inline-block;height:72px;width:auto;border:0" />
         </td>
       </tr>
       <tr>
@@ -81,6 +81,7 @@ async function sendEmailToBuyer(buyerEmail, buyerName, sellerName, messageText, 
       </tr>
       <tr>
         <td style="background:#ffffff;border-top:1px solid #E8E8E4;padding:20px 40px;text-align:center">
+          <p style="margin:0 0 4px;font-size:12px;color:#A8A8A4">Questions? <a href="https://deelmap.com/contact" style="color:#737370;text-decoration:underline">Reach us through our contact page</a></p>
           <p style="margin:0;font-size:12px;color:#A8A8A4">© 2026 Deelmap. All rights reserved.</p>
         </td>
       </tr>
@@ -224,9 +225,9 @@ export async function GET(request) {
     const propertyId = searchParams.get('property_id');
 
     if (action === 'get_messages' && conversationId) {
-      const { data: messages, error } = await supabase
+      const { data: rawMessages, error } = await supabase
         .from('messages')
-        .select('id, conversation_id, sender_type, sender_id, message_text, has_attachment, attachment_url, attachment_name, is_read, created_at')
+        .select('id, conversation_id, sender_type, sender_id, message_text, has_attachment, attachment_url, attachment_name, is_read, is_deleted, reply_to_id, created_at')
         .eq('conversation_id', conversationId)
         .order('created_at', { ascending: true });
 
@@ -235,7 +236,25 @@ export async function GET(request) {
         return NextResponse.json({ error: 'Failed to fetch messages' }, { status: 500 });
       }
 
-      return NextResponse.json({ success: true, messages: messages || [] });
+      // Quoted-reply previews + never send soft-deleted content to the client.
+      const replyIds = [...new Set((rawMessages || []).map(m => m.reply_to_id).filter(Boolean))];
+      const replyMap = {};
+      if (replyIds.length) {
+        const { data: replied } = await supabase
+          .from('messages')
+          .select('id, sender_type, message_text, is_deleted, has_attachment')
+          .in('id', replyIds);
+        for (const r of replied || []) {
+          replyMap[r.id] = { id: r.id, sender_type: r.sender_type, text: r.is_deleted ? 'Deleted message' : (r.message_text || (r.has_attachment ? '[Attachment]' : '')).slice(0, 140) };
+        }
+      }
+      const messages = (rawMessages || []).map(m => {
+        const out = { ...m, reply_preview: m.reply_to_id ? (replyMap[m.reply_to_id] || null) : null };
+        if (m.is_deleted) { out.message_text = null; out.has_attachment = false; out.attachment_url = null; out.attachment_name = null; }
+        return out;
+      });
+
+      return NextResponse.json({ success: true, messages });
     }
 
     if (action === 'get_blocked_users') {
@@ -497,6 +516,60 @@ export async function POST(request) {
       return NextResponse.json({ success: true });
     }
 
+    // Soft-delete the seller's OWN message
+    if (action === 'delete_message') {
+      const { messageId } = body;
+      if (!conversationId || !messageId) return NextResponse.json({ success: false, error: 'Missing conversation or message ID' }, { status: 400 });
+      const { data: conv } = await supabase.from('conversations').select('id').eq('id', conversationId).eq('seller_id', sellerId).single();
+      if (!conv) return NextResponse.json({ success: false, error: 'Conversation not found' }, { status: 404 });
+      const { data: m } = await supabase.from('messages').select('id, sender_type, sender_id').eq('id', messageId).eq('conversation_id', conversationId).single();
+      if (!m) return NextResponse.json({ success: false, error: 'Message not found' }, { status: 404 });
+      if (!(m.sender_type === 'seller' && String(m.sender_id) === String(sellerId))) {
+        return NextResponse.json({ success: false, error: 'You can only delete your own messages' }, { status: 403 });
+      }
+      const { error } = await supabase.from('messages')
+        .update({ is_deleted: true, deleted_at: new Date().toISOString(), message_text: null, has_attachment: false, attachment_url: null, attachment_name: null })
+        .eq('id', messageId);
+      if (error) return NextResponse.json({ success: false, error: 'Failed to delete message' }, { status: 500 });
+      return NextResponse.json({ success: true });
+    }
+
+    // Report a message → message_reports + admin notification (activity_log)
+    // Report the buyer in a conversation (user-level). Deduped per reporter -> user.
+    if (action === 'report_user') {
+      const { reason = null, details = null } = body;
+      if (!conversationId) return NextResponse.json({ success: false, error: 'Missing conversation ID' }, { status: 400 });
+      const { data: conv } = await supabase.from('conversations').select('id, property_address, buyer_uuid, user_id').eq('id', conversationId).eq('seller_id', sellerId).single();
+      if (!conv) return NextResponse.json({ success: false, error: 'Conversation not found' }, { status: 404 });
+      const reportedId = conv.buyer_uuid != null ? String(conv.buyer_uuid) : (conv.user_id != null ? String(conv.user_id) : null);
+      if (!reportedId) return NextResponse.json({ success: false, error: 'Nothing to report here' }, { status: 400 });
+
+      const { data: existing } = await supabase.from('message_reports')
+        .select('id').eq('reporter_id', String(sellerId)).eq('reported_sender', reportedId).eq('status', 'open').limit(1);
+      if (existing && existing.length > 0) return NextResponse.json({ success: true, already: true });
+
+      const { data: report, error } = await supabase.from('message_reports').insert({
+        message_id: null, conversation_id: conversationId,
+        reporter_id: String(sellerId), reported_sender: reportedId,
+        reason, details, status: 'open',
+      }).select('id').single();
+      if (error) return NextResponse.json({ success: false, error: 'Failed to submit report' }, { status: 500 });
+      try {
+        const { data: buyer } = await supabase.from('users').select('first_name, last_name, nickname, is_anonymous').eq('id', reportedId).maybeSingle();
+        const reportedName = buyer ? (buyer.is_anonymous ? (buyer.nickname || 'Anonymous') : ([buyer.first_name, buyer.last_name].filter(Boolean).join(' ').trim() || 'a buyer')) : 'a user';
+        const { data: sellerApp } = await supabase.from('seller_applications').select('email').eq('id', sellerId).maybeSingle();
+        await supabase.from('activity_log').insert({
+          event_type: 'message_reported',
+          title: `User reported${reason ? ` — ${reason}` : ''}`,
+          detail: `${reportedName} was reported by a seller${conv.property_address ? ` (re: ${conv.property_address})` : ''}.`,
+          actor_email: sellerApp?.email || null,
+          entity_type: 'message_report',
+          entity_id: report?.id != null ? String(report.id) : null,
+        });
+      } catch (e) { console.error('report notification failed:', e?.message); }
+      return NextResponse.json({ success: true });
+    }
+
     if (action === 'send_message' && conversationId && (messageText != null || attachmentUrl)) {
       const pref = await getSellerConversationPref(conversationId, sellerId);
       if (pref?.is_blocked) {
@@ -514,6 +587,20 @@ export async function POST(request) {
         console.warn('[Seller chat] Conversation fetch for email:', convError.message, { conversationId, sellerId });
       }
 
+      // True block: reject the send if the recipient (buyer) has blocked this seller.
+      if (conv?.buyer_uuid) {
+        const { data: rPref } = await supabase
+          .from('chat_user_preferences')
+          .select('is_blocked')
+          .eq('conversation_id', conversationId)
+          .eq('actor_type', 'buyer')
+          .eq('actor_id', conv.buyer_uuid)
+          .maybeSingle();
+        if (rPref?.is_blocked) {
+          return NextResponse.json({ success: false, error: 'You can no longer send messages in this conversation.' }, { status: 403 });
+        }
+      }
+
       const { data: msg, error } = await supabase
         .from('messages')
         .insert({
@@ -524,9 +611,10 @@ export async function POST(request) {
           has_attachment: !!attachmentUrl,
           attachment_url: attachmentUrl || null,
           attachment_name: attachmentName || null,
+          reply_to_id: body.replyToId || null,
           is_read: false
         })
-        .select('id, conversation_id, sender_type, message_text, has_attachment, attachment_url, attachment_name, created_at')
+        .select('id, conversation_id, sender_type, message_text, has_attachment, attachment_url, attachment_name, reply_to_id, created_at')
         .single();
 
       if (error) {

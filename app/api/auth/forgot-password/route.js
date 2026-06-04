@@ -43,7 +43,7 @@ export async function POST(request) {
     <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;background:#ffffff">
       <tr>
         <td style="background:#ffffff;padding:12px 40px;text-align:center;border-bottom:2px solid #D03839">
-          <img src="https://sellerportaldeelmap-production-bea8.up.railway.app/deelmap.png" alt="Deelmap" height="72" style="display:inline-block;height:72px;width:auto;border:0" />
+          <img src="https://deelmap.com/deelmap.png" alt="Deelmap" height="72" style="display:inline-block;height:72px;width:auto;border:0" />
         </td>
       </tr>
       <tr>
@@ -69,6 +69,7 @@ export async function POST(request) {
       </tr>
       <tr>
         <td style="background:#ffffff;border-top:1px solid #E8E8E4;padding:20px 40px;text-align:center">
+          <p style="margin:0 0 4px;font-size:12px;color:#A8A8A4">Questions? <a href="https://sell.deelmap.com/support" style="color:#737370;text-decoration:underline">Reach us through our Contact Us page</a></p>
           <p style="margin:0;font-size:12px;color:#A8A8A4">© 2026 Deelmap. All rights reserved.</p>
         </td>
       </tr>

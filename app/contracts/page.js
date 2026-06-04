@@ -5,13 +5,39 @@ import { FileText, CheckCircle, Plus, Download, Trash2, ChevronLeft, PenLine, Pe
 import { DocusealForm } from '@docuseal/react'
 
 const STATUS = {
-  completed: { label: 'Completed', cls: 'text-[#16A34A] bg-[#DCFCE7]' },
-  pending: { label: 'Pending Signature', cls: 'text-[#D97706] bg-[#FEF3C7]' },
-  declined: { label: 'Declined', cls: 'text-[#D03839] bg-[#FEF0EF]' },
+  completed:    { label: 'Completed',         cls: 'text-[#16A34A] bg-[#DCFCE7]' },
+  awaiting_you: { label: 'Needs your signature', cls: 'text-[#D03839] bg-[#FEF0EF]' },
+  viewed:       { label: 'Viewed · not signed', cls: 'text-[#D97706] bg-[#FEF3C7]' },
+  awaiting:     { label: 'Awaiting signature', cls: 'text-[#D97706] bg-[#FEF3C7]' },
+  sent:         { label: 'Sent',              cls: 'text-[#2563EB] bg-[#DBEAFE]' },
+  declined:     { label: 'Declined',          cls: 'text-[#D03839] bg-[#FEF0EF]' },
 }
 
-function badge(status) {
-  return STATUS[status] || { label: status ?? 'Unknown', cls: 'text-[#737370] bg-[#F5F5F3]' }
+const isPlaceholder = e => !e || e.includes('@noreply.deelmap.com')
+
+// Derive a granular status for the whole contract from the per-signer states.
+// DocuSeal submitter.status is one of: sent | opened | completed | declined (or
+// null before the invite goes out). Returns one of the STATUS keys above.
+function deriveStatus(c, myEmail) {
+  const subs = c.submitters || []
+  if (c.status === 'declined' || subs.some(s => s.status === 'declined')) return 'declined'
+  if (c.status === 'completed' || (subs.length > 0 && subs.every(s => s.status === 'completed'))) return 'completed'
+
+  const me = subs.find(s => s.email?.toLowerCase() === myEmail?.toLowerCase())
+  // Our turn first: the seller signs inline before the counterparty is invited.
+  if (me && me.status !== 'completed' && me.status !== 'declined') return 'awaiting_you'
+
+  // We've signed — read the counterparty's progress.
+  const other = subs.find(s => s !== me && !isPlaceholder(s.email)) || subs.find(s => s !== me)
+  if (other) {
+    if (other.status === 'completed') return 'completed'
+    if (other.status === 'opened') return 'viewed'
+  }
+  return 'awaiting'
+}
+
+function badge(key) {
+  return STATUS[key] || { label: key ?? 'Unknown', cls: 'text-[#737370] bg-[#F5F5F3]' }
 }
 
 function fmtDate(d) {
@@ -34,6 +60,13 @@ export default function ContractsPage() {
   // Signing view
   const [signingEmbedSrc, setSigningEmbedSrc] = useState(null)
   const [signingTitle, setSigningTitle] = useState('')
+
+  // Beta intro popup — shown once per browser
+  const [showBetaPopup, setShowBetaPopup] = useState(false)
+  useEffect(() => {
+    try { if (!localStorage.getItem('deelmap_contracts_beta_seen')) setShowBetaPopup(true) } catch {}
+  }, [])
+  const dismissBeta = () => { setShowBetaPopup(false); try { localStorage.setItem('deelmap_contracts_beta_seen', '1') } catch {} }
 
   useEffect(() => {
     const raw = localStorage.getItem('seller_user')
@@ -171,9 +204,35 @@ export default function ContractsPage() {
 
   return (
     <div className="p-4 lg:p-6">
+      {showBetaPopup && (
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={dismissBeta}>
+          <div className="bg-white rounded-lg w-full max-w-md shadow-xl overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="px-6 pt-6 pb-2 flex items-start gap-3">
+              <div className="w-10 h-10 bg-[#FEF3E2] rounded-full flex items-center justify-center shrink-0"><FileText className="w-5 h-5 text-[#B5620A]" /></div>
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <h2 className="text-[17px] font-bold text-[#1A1816]">Contracts is in beta</h2>
+                  <span className="text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded bg-[#FEF3E2] text-[#B5620A]">Beta</span>
+                </div>
+                <p className="text-[13px] text-[#737370] leading-relaxed">We're beta-testing contract sharing. Try it out and let us know what you think — your feedback shapes it.</p>
+              </div>
+            </div>
+            <div className="px-4 py-3 mx-6 my-3 bg-[#FAFAF8] border border-[#E8E8E4] rounded flex items-center justify-between">
+              <span className="text-[13px] text-[#444441]">Cost per contract</span>
+              <span className="text-[15px] font-bold text-[#1A1816]">$2.99</span>
+            </div>
+            <div className="px-6 pb-6 pt-2">
+              <button onClick={dismissBeta} className="w-full h-10 bg-[#D03839] hover:bg-[#E0493B] text-white text-[14px] font-semibold rounded transition-colors">Got it</button>
+            </div>
+          </div>
+        </div>
+      )}
       <div className="flex items-start justify-between mb-6">
         <div>
-          <h1 className="text-[24px] font-bold text-[#1A1816] mb-1">Contracts</h1>
+          <h1 className="text-[24px] font-bold text-[#1A1816] mb-1 flex items-center gap-2">
+            Contracts
+            <span className="text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded bg-[#FEF3E2] text-[#B5620A]">Beta</span>
+          </h1>
           <p className="text-[14px] text-[#737370]">Send and manage e-signature contracts with buyers.</p>
         </div>
         {canCreateContract && (
@@ -186,7 +245,32 @@ export default function ContractsPage() {
         )}
       </div>
 
-      {/* Drafts section — only shown when there's at least one in-progress draft */}
+      {/* Status summary — a quick dashboard of where every sent contract stands */}
+      {contracts.length > 0 && (() => {
+        const counts = contracts.reduce((acc, c) => {
+          const k = deriveStatus(c, email)
+          acc[k] = (acc[k] || 0) + 1
+          return acc
+        }, {})
+        const cards = [
+          { key: 'sent', label: 'Sent' },
+          { key: 'viewed', label: 'Viewed' },
+          { key: 'awaiting', label: 'Awaiting signature' },
+          { key: 'completed', label: 'Completed' },
+        ]
+        return (
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-6">
+            {cards.map(card => (
+              <div key={card.key} className="bg-white border border-[#E8E8E4] rounded p-3">
+                <div className="text-[22px] font-bold text-[#1A1816] leading-none">{counts[card.key] || 0}</div>
+                <div className="text-[12px] text-[#737370] mt-1">{card.label}</div>
+              </div>
+            ))}
+          </div>
+        )
+      })()}
+
+      {/* Drafts section — In Progress, shown below the status cards */}
       {drafts.length > 0 && (
         <div className="mb-6">
           <div className="flex items-center justify-between mb-2">
@@ -199,7 +283,7 @@ export default function ContractsPage() {
                               : String(d.template_id) === '3706747' || String(d.template_id) === '3759339' ? 'Assignment Contract'
                               : 'Contract'
               const address = d.field_values?.property_address || `Untitled ${tplLabel}`
-              const buyer = d.buyer_name || d.buyer_email || 'Buyer not set'
+              const buyer = d.buyer_name || d.buyer_email || 'Other party not set'
               return (
                 <div key={d.id} className="bg-white border border-dashed border-[#E8E8E4] rounded p-4 flex items-center gap-4">
                   <div className="w-9 h-9 bg-[#FAFAF8] border border-[#E8E8E4] rounded flex items-center justify-center shrink-0">
@@ -243,7 +327,7 @@ export default function ContractsPage() {
         </div>
       )}
 
-      {contracts.length === 0 ? (
+      {contracts.length === 0 && drafts.length === 0 ? (
         <div className="border border-[#E8E8E4] rounded bg-white p-12 text-center">
           <div className="w-12 h-12 bg-[#D03839]/10 rounded flex items-center justify-center mx-auto mb-4">
             <FileText className="w-6 h-6 text-[#D03839]" />
@@ -261,11 +345,12 @@ export default function ContractsPage() {
         </div>
       ) : (
         <div className="space-y-2">
-          {drafts.length > 0 && (
+          {contracts.length > 0 && (
             <h2 className="text-[13px] font-bold text-[#1A1816] uppercase tracking-wide mb-1">Sent</h2>
           )}
           {contracts.map(c => {
-            const { label, cls } = badge(c.status)
+            const statusKey = deriveStatus(c, email)
+            const { label, cls } = badge(statusKey)
             const mySubmitter = c.submitters?.find(s => s.email?.toLowerCase() === email?.toLowerCase())
             const canSign = mySubmitter && mySubmitter.status !== 'completed' && mySubmitter.status !== 'declined'
             const others = c.submitters?.filter(s => s.email?.toLowerCase() !== email?.toLowerCase() && !s.email?.includes('@noreply.deelmap.com')) ?? []
@@ -289,7 +374,7 @@ export default function ContractsPage() {
                   <div className="flex items-center gap-3 text-[12px] text-[#737370] flex-wrap">
                     <span>{fmtDate(c.created_at)}</span>
                     {others.length > 0 && (
-                      <span>Buyer: {others.map(s => s.name || s.email).join(', ')}</span>
+                      <span>Other party: {others.map(s => s.name || s.email).join(', ')}</span>
                     )}
                   </div>
                 </div>
@@ -319,7 +404,9 @@ export default function ContractsPage() {
                       <PenLine className="w-3.5 h-3.5" /> Sign Now
                     </button>
                   ) : (
-                    <span className="text-[12px] text-[#737370]">Awaiting buyer</span>
+                    <span className="text-[12px] text-[#737370]">
+                      {statusKey === 'viewed' ? 'Viewed · not signed' : 'Awaiting other party'}
+                    </span>
                   )}
                   <button
                     onClick={() => handleDelete(c.id)}
