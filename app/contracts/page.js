@@ -61,6 +61,13 @@ export default function ContractsPage() {
   const [signingEmbedSrc, setSigningEmbedSrc] = useState(null)
   const [signingTitle, setSigningTitle] = useState('')
 
+  // Beta intro popup — shown once per browser
+  const [showBetaPopup, setShowBetaPopup] = useState(false)
+  useEffect(() => {
+    try { if (!localStorage.getItem('deelmap_contracts_beta_seen')) setShowBetaPopup(true) } catch {}
+  }, [])
+  const dismissBeta = () => { setShowBetaPopup(false); try { localStorage.setItem('deelmap_contracts_beta_seen', '1') } catch {} }
+
   useEffect(() => {
     const raw = localStorage.getItem('seller_user')
     if (raw) {
@@ -197,6 +204,29 @@ export default function ContractsPage() {
 
   return (
     <div className="p-4 lg:p-6">
+      {showBetaPopup && (
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={dismissBeta}>
+          <div className="bg-white rounded-lg w-full max-w-md shadow-xl overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="px-6 pt-6 pb-2 flex items-start gap-3">
+              <div className="w-10 h-10 bg-[#FEF3E2] rounded-full flex items-center justify-center shrink-0"><FileText className="w-5 h-5 text-[#B5620A]" /></div>
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <h2 className="text-[17px] font-bold text-[#1A1816]">Contracts is in beta</h2>
+                  <span className="text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded bg-[#FEF3E2] text-[#B5620A]">Beta</span>
+                </div>
+                <p className="text-[13px] text-[#737370] leading-relaxed">We're beta-testing contract sharing. Try it out and let us know what you think — your feedback shapes it.</p>
+              </div>
+            </div>
+            <div className="px-4 py-3 mx-6 my-3 bg-[#FAFAF8] border border-[#E8E8E4] rounded flex items-center justify-between">
+              <span className="text-[13px] text-[#444441]">Cost per contract</span>
+              <span className="text-[15px] font-bold text-[#1A1816]">$2.99</span>
+            </div>
+            <div className="px-6 pb-6 pt-2">
+              <button onClick={dismissBeta} className="w-full h-10 bg-[#D03839] hover:bg-[#E0493B] text-white text-[14px] font-semibold rounded transition-colors">Got it</button>
+            </div>
+          </div>
+        </div>
+      )}
       <div className="flex items-start justify-between mb-6">
         <div>
           <h1 className="text-[24px] font-bold text-[#1A1816] mb-1 flex items-center gap-2">
