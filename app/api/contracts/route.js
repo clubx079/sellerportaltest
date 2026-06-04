@@ -90,6 +90,7 @@ export async function POST(request) {
       property,
       sellerEmail,
       sellerName,
+      coSellerEmail,
       templateId,
       // Wizard additions:
       // - field_values: normalized wizard keys (property_address, purchase_price, …)
@@ -113,10 +114,16 @@ export async function POST(request) {
     const creatorIsSeller = contractRole !== 'buyer'
     const creatorEmail = creatorIsSeller ? sellerEmail : buyerEmail
 
+    // Optional co-seller: only a real (conditional) signer when both a name and
+    // email are present. The name comes through field_values → seller2_print_name.
+    const coSellerName = (field_values && field_values.co_seller_name) || ''
+    const hasCoSeller = !!(coSellerName && coSellerEmail)
+
     // Use a placeholder email for the Assignee — their real email is stored in metadata.
     // The webhook will PATCH the Assignee with their real email after the Assignor signs,
     // ensuring the Assignee cannot sign until the Assignor completes.
     const assigneePlaceholder = `pending-${Date.now()}@noreply.deelmap.com`
+    const coSellerPlaceholder = `pending-co-${Date.now()}@noreply.deelmap.com`
 
     // Translate normalized wizard fields → DocuSeal field names defined on the template.
     // ctx provides derived values (today's date, the assignor's name from profile)
@@ -152,9 +159,23 @@ export async function POST(request) {
         metadata: {
           assigneeEmail: buyerEmail,
           assigneeName: buyerName || buyerEmail,
+          ...(hasCoSeller ? { coSellerEmail, coSellerName } : {}),
         },
         ...(hasValues ? { values: mappedValues } : {}),
       },
+      // Co-Seller signs second (Seller → Co-Seller → Buyer). Placeholder email +
+      // send_email:false so the webhook activates them once First Party completes.
+      ...(hasCoSeller ? [{
+        role: 'Co-Seller',
+        email: coSellerPlaceholder,
+        name: coSellerName,
+        send_email: false,
+        metadata: {
+          assigneeEmail: buyerEmail,
+          assigneeName: buyerName || buyerEmail,
+        },
+        ...(hasValues ? { values: mappedValues } : {}),
+      }] : []),
       {
         role: 'Second Party',
         email: assigneePlaceholder,
@@ -178,8 +199,11 @@ export async function POST(request) {
     if (!Array.isArray(json) || !json[0]) return NextResponse.json({ error: 'DocuSeal error' }, { status: 500 })
 
     const assignorSubmitter = json.find(s => s.role === 'First Party') || json[0]
+    const coSellerSubmitter = json.find(s => s.role === 'Co-Seller')
 
-    // PATCH the First Party submitter to explicitly set metadata (POST body metadata is ignored by DocuSeal)
+    // PATCH metadata onto the submitters (POST body metadata is ignored by DocuSeal).
+    // First Party carries the co-seller (next) + buyer (final) info; the Co-Seller
+    // carries the buyer info so the chain continues after they sign.
     await fetch(`${DOCUSEAL_BASE}/submitters/${assignorSubmitter.id}`, {
       method: 'PATCH',
       headers: dsHeaders(),
@@ -187,9 +211,22 @@ export async function POST(request) {
         metadata: {
           assigneeEmail: buyerEmail,
           assigneeName: buyerName || buyerEmail,
+          ...(hasCoSeller ? { coSellerEmail, coSellerName } : {}),
         },
       }),
     })
+    if (coSellerSubmitter?.id) {
+      await fetch(`${DOCUSEAL_BASE}/submitters/${coSellerSubmitter.id}`, {
+        method: 'PATCH',
+        headers: dsHeaders(),
+        body: JSON.stringify({
+          metadata: {
+            assigneeEmail: buyerEmail,
+            assigneeName: buyerName || buyerEmail,
+          },
+        }),
+      })
+    }
 
     // If this came from a wizard draft, mark the draft as sent so it disappears
     // from the seller's drafts list and we keep an audit trail to the submission.

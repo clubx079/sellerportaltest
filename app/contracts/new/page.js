@@ -154,6 +154,7 @@ export default function NewContractWizardPage() {
     property_tax_id:     '',
     other_description:   '',
     co_seller_name:      '',
+    co_seller_email:     '',
     co_buyer_name:       '',
     emd_escrow:          savedDefaults.emd_escrow || '',
     due_diligence_days:  '14',
@@ -423,7 +424,13 @@ export default function NewContractWizardPage() {
       return false
     }
     if (s === 3) return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test((buyerEmail || '').trim()) && (buyerName || '').trim().length > 0
-    if (s === 4) return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test((sellerPartyEmail || '').trim()) && (sellerPartyName || '').trim().length > 0
+    if (s === 4) {
+      const base = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test((sellerPartyEmail || '').trim()) && (sellerPartyName || '').trim().length > 0
+      // If a co-seller name is entered, their email is required (they sign too).
+      const coName = (fieldValues.co_seller_name || '').trim()
+      const coOk = !coName || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test((fieldValues.co_seller_email || '').trim())
+      return base && coOk
+    }
     if (s === 5) {
       const filled = k => String(fieldValues[k] ?? '').trim().length > 0
       if (!filled('purchase_price') || !filled('emd') || !filled('closing_date')) return false
@@ -496,6 +503,7 @@ export default function NewContractWizardPage() {
           buyerEmail,
           sellerName: sellerPartyName,
           sellerEmail: sellerPartyEmail,
+          coSellerEmail: fieldValues.co_seller_email || '',
           property: fieldValues.property_address || '',
           templateId,
           field_values: fieldValues,
@@ -632,7 +640,7 @@ export default function NewContractWizardPage() {
         {step === 1 && <Step1Setup templates={templates} templatesLoading={templatesLoading} templateId={templateId} onSelectTemplate={(id) => { setTemplateId(String(id)); setDirty(true) }} contractRole={contractRole} onSelectRole={(r) => { setContractRole(r); setDirty(true) }} />}
         {step === 2 && <Step2Property properties={properties} propertiesLoading={propertiesLoading} propertyId={propertyId} onChange={handlePropertyChange} manualAddress={fieldValues.property_address} onManualAddressChange={(v) => setField('property_address', v)} />}
         {step === 3 && <StepPartyInfo party="buyer" L={L} isYou={contractRole === 'buyer'} name={buyerName} email={buyerEmail} address={fieldValues.buyer_address} coName={fieldValues.co_buyer_name} onName={(v) => { setBuyerName(v); setDirty(true) }} onEmail={(v) => { setBuyerEmail(v); setDirty(true) }} onAddress={v => setField('buyer_address', v)} onCoName={v => setField('co_buyer_name', v)} />}
-        {step === 4 && <StepPartyInfo party="seller" L={L} isYou={contractRole === 'seller'} name={sellerPartyName} email={sellerPartyEmail} address={fieldValues.seller_address} coName={fieldValues.co_seller_name} onName={(v) => { setSellerPartyName(v); setDirty(true) }} onEmail={(v) => { setSellerPartyEmail(v); setDirty(true) }} onAddress={v => setField('seller_address', v)} onCoName={v => setField('co_seller_name', v)} />}
+        {step === 4 && <StepPartyInfo party="seller" L={L} isYou={contractRole === 'seller'} name={sellerPartyName} email={sellerPartyEmail} address={fieldValues.seller_address} coName={fieldValues.co_seller_name} coEmail={fieldValues.co_seller_email} onName={(v) => { setSellerPartyName(v); setDirty(true) }} onEmail={(v) => { setSellerPartyEmail(v); setDirty(true) }} onAddress={v => setField('seller_address', v)} onCoName={v => setField('co_seller_name', v)} onCoEmail={v => setField('co_seller_email', v)} />}
         {step === 5 && <Step5Terms values={fieldValues} onChange={setField} template={template} L={L} onPersistDefault={persistDefault} />}
         {step === 6 && <Step6Review template={template} L={L} fieldValues={fieldValues} buyerName={buyerName} buyerEmail={buyerEmail} sellerName={sellerPartyName} sellerEmail={sellerPartyEmail} contractRole={contractRole} selfDeal={selfDeal} onJump={setStep} />}
       </div>
@@ -762,7 +770,7 @@ function Step2Property({ properties, propertiesLoading, propertyId, onChange, ma
   )
 }
 
-function StepPartyInfo({ party, L, isYou, name, email, address, coName, onName, onEmail, onAddress, onCoName }) {
+function StepPartyInfo({ party, L, isYou, name, email, address, coName, coEmail, onName, onEmail, onAddress, onCoName, onCoEmail }) {
   const roleLabel = party === 'buyer' ? L.buyer : L.seller
   const coLabel = party === 'buyer' ? 'co-buyer' : 'co-seller'
   const [coOpen, setCoOpen] = useState(!!coName)
@@ -796,12 +804,21 @@ function StepPartyInfo({ party, L, isYou, name, email, address, coName, onName, 
               <div className="flex items-center justify-between mb-3">
                 <div>
                   <p className="text-[13px] font-semibold text-[#1A1816] capitalize">{coLabel}</p>
-                  <p className="text-[12px] text-[#737370]">For jointly-held deals. Their name prints on the contract.</p>
+                  <p className="text-[12px] text-[#737370]">For jointly-held deals. They&apos;ll sign the contract too, right after you.</p>
                 </div>
-                <button type="button" onClick={() => { onCoName(''); setCoOpen(false) }} className="text-[12px] text-[#737370] hover:text-[#1A1816]">Remove</button>
+                <button type="button" onClick={() => { onCoName(''); onCoEmail?.(''); setCoOpen(false) }} className="text-[12px] text-[#737370] hover:text-[#1A1816]">Remove</button>
               </div>
-              <label className={LABEL_CLS}>Co-Signer Full Name / LLC</label>
-              <input type="text" value={coName || ''} onChange={e => onCoName(e.target.value)} placeholder="Jane Smith" className={INPUT_CLS} />
+              <div className="space-y-3">
+                <div>
+                  <label className={LABEL_CLS}>Co-Signer Full Name / LLC</label>
+                  <input type="text" value={coName || ''} onChange={e => onCoName(e.target.value)} placeholder="Jane Smith" className={INPUT_CLS} />
+                </div>
+                <div>
+                  <label className={LABEL_CLS}>Co-Signer Email <span className="text-[#D03839]">*</span></label>
+                  <input type="email" value={coEmail || ''} onChange={e => onCoEmail?.(e.target.value)} placeholder="co-seller@example.com" className={INPUT_CLS} />
+                  <p className="text-[11px] text-[#A8A8A4] mt-1">They&apos;ll get a signing link by email once you&apos;ve signed.</p>
+                </div>
+              </div>
             </div>
           )}
         </div>

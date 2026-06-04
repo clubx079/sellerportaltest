@@ -17,31 +17,40 @@ export async function POST(request) {
     const body = await request.json()
     const { event_type, data } = body
 
-    // Act only when the First Party (seller) finishes signing → then activate the
-    // buyer (Second Party) and email them a DeelMap signing link.
+    // Signing chain: First Party (seller) → Co-Seller (optional) → Second Party
+    // (buyer). Only sell-side completions advance the chain; each activates the
+    // next party and emails them a DeelMap signing link.
     if (event_type !== 'form.completed') return NextResponse.json({ ok: true })
-    if (data?.role !== 'First Party') return NextResponse.json({ ok: true })
+    if (data?.role !== 'First Party' && data?.role !== 'Co-Seller') return NextResponse.json({ ok: true })
 
     const submissionId = data.submission_id || data.submission?.id
     if (!submissionId) return NextResponse.json({ ok: true })
 
-    // The real buyer email was stored on the First Party submitter's metadata at
-    // creation time (the buyer is a placeholder until the seller signs).
     const metadata = data.metadata || {}
-    const assigneeEmail = metadata.assigneeEmail
-    const assigneeName = metadata.assigneeName
-    if (!assigneeEmail) return NextResponse.json({ ok: true })
 
     // The webhook payload can carry the stale placeholder email — fetch the full
-    // submission to get the Second Party submitter and its current slug.
+    // submission to get the next submitter and its current slug.
     const submissionRes = await fetch(`${DOCUSEAL_BASE}/submissions/${submissionId}`, { headers: dsHeaders() })
     const fullSubmission = await submissionRes.json()
+    const coSellerSubmitter = fullSubmission.submitters?.find(s => s.role === 'Co-Seller')
 
-    const assigneeSubmitter = fullSubmission.submitters?.find(s => s.role === 'Second Party')
+    // After the seller signs, the co-seller goes next when present; otherwise the
+    // buyer. After the co-seller signs, the buyer goes next.
+    let assigneeSubmitter, assigneeEmail, assigneeName
+    if (data.role === 'First Party' && metadata.coSellerEmail && coSellerSubmitter?.id) {
+      assigneeSubmitter = coSellerSubmitter
+      assigneeEmail = metadata.coSellerEmail
+      assigneeName = metadata.coSellerName
+    } else {
+      assigneeSubmitter = fullSubmission.submitters?.find(s => s.role === 'Second Party')
+      assigneeEmail = metadata.assigneeEmail
+      assigneeName = metadata.assigneeName
+    }
+    if (!assigneeEmail) return NextResponse.json({ ok: true })
     if (!assigneeSubmitter?.id) return NextResponse.json({ ok: true })
 
-    // Activate the buyer with their real email. send_email:false suppresses
-    // DocuSeal's own docuseal.com invitation so the buyer only receives our
+    // Activate the next party with their real email. send_email:false suppresses
+    // DocuSeal's own docuseal.com invitation so they only receive our
     // DeelMap-branded email with the deelmap.com/sign link below.
     await fetch(`${DOCUSEAL_BASE}/submitters/${assigneeSubmitter.id}`, {
       method: 'PATCH',
@@ -49,7 +58,7 @@ export async function POST(request) {
       body: JSON.stringify({ email: assigneeEmail, name: assigneeName, send_email: false }),
     })
 
-    const assignorName = data.name || data.email || 'The Seller'
+    const assignorName = data.name || data.email || 'The other party'
     const property = fullSubmission.name || ''
     const signingUrl = `${BUYER_APP_URL}/sign/${assigneeSubmitter.slug}`
 
