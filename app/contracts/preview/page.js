@@ -9,7 +9,7 @@ export default function ContractPreviewPage() {
 
   useEffect(() => {
     try {
-      const raw = sessionStorage.getItem('deelmap_contract_preview')
+      const raw = localStorage.getItem('deelmap_contract_preview') || sessionStorage.getItem('deelmap_contract_preview')
       if (raw) setData(JSON.parse(raw))
     } catch {}
     setLoaded(true)

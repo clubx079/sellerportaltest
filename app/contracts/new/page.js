@@ -937,7 +937,7 @@ function Step6Review({ template, L, fieldValues, buyerName, buyerEmail, sellerNa
   ]
   const openFullPreview = () => {
     try {
-      sessionStorage.setItem('deelmap_contract_preview', JSON.stringify({ isAssignment, buyerName, sellerName, fieldValues }))
+      localStorage.setItem('deelmap_contract_preview', JSON.stringify({ isAssignment, buyerName, sellerName, fieldValues }))
     } catch {}
     window.open('/contracts/preview', '_blank', 'noopener')
   }
