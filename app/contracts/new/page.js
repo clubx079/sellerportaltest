@@ -221,8 +221,10 @@ export default function NewContractWizardPage() {
     const myEmail = effectiveEmail || accountEmail || ''
     if (contractRole === 'seller') {
       setSellerPartyName(prev => prev || myName); setSellerPartyEmail(prev => prev || myEmail)
+      setBuyerName(prev => prev === myName ? '' : prev); setBuyerEmail(prev => prev === myEmail ? '' : prev)
     } else if (contractRole === 'buyer') {
       setBuyerName(prev => prev || myName); setBuyerEmail(prev => prev || myEmail)
+      setSellerPartyName(prev => prev === myName ? '' : prev); setSellerPartyEmail(prev => prev === myEmail ? '' : prev)
     }
   }, [contractRole, effectiveName, effectiveEmail, accountName, accountEmail])
 
@@ -615,7 +617,7 @@ export default function NewContractWizardPage() {
         </div>
       </div>
 
-      <div className="grid lg:grid-cols-[minmax(0,1fr)_minmax(0,420px)] gap-6 items-start">
+      <div className={step >= 2 ? 'grid lg:grid-cols-[minmax(0,1fr)_minmax(0,420px)] gap-6 items-start' : ''}>
         <div className="min-w-0 space-y-4">
 
       <div className="flex items-center gap-1.5">
@@ -639,9 +641,11 @@ export default function NewContractWizardPage() {
       )}
         </div>
 
-        <div className="hidden lg:block lg:sticky lg:top-6">
-          <LiveContractPreview isAssignment={isAssignment} L={L} contractRole={contractRole} buyerName={buyerName} sellerName={sellerPartyName} fieldValues={fieldValues} />
-        </div>
+        {step >= 2 && (
+          <div className="hidden lg:block lg:sticky lg:top-6">
+            <LiveContractPreview isAssignment={isAssignment} L={L} contractRole={contractRole} buyerName={buyerName} sellerName={sellerPartyName} fieldValues={fieldValues} />
+          </div>
+        )}
       </div>
 
       <StickyActionBar>

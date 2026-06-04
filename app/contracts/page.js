@@ -245,7 +245,32 @@ export default function ContractsPage() {
         )}
       </div>
 
-      {/* Drafts section — only shown when there's at least one in-progress draft */}
+      {/* Status summary — a quick dashboard of where every sent contract stands */}
+      {contracts.length > 0 && (() => {
+        const counts = contracts.reduce((acc, c) => {
+          const k = deriveStatus(c, email)
+          acc[k] = (acc[k] || 0) + 1
+          return acc
+        }, {})
+        const cards = [
+          { key: 'sent', label: 'Sent' },
+          { key: 'viewed', label: 'Viewed' },
+          { key: 'awaiting', label: 'Awaiting signature' },
+          { key: 'completed', label: 'Completed' },
+        ]
+        return (
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-6">
+            {cards.map(card => (
+              <div key={card.key} className="bg-white border border-[#E8E8E4] rounded p-3">
+                <div className="text-[22px] font-bold text-[#1A1816] leading-none">{counts[card.key] || 0}</div>
+                <div className="text-[12px] text-[#737370] mt-1">{card.label}</div>
+              </div>
+            ))}
+          </div>
+        )
+      })()}
+
+      {/* Drafts section — In Progress, shown below the status cards */}
       {drafts.length > 0 && (
         <div className="mb-6">
           <div className="flex items-center justify-between mb-2">
@@ -302,7 +327,7 @@ export default function ContractsPage() {
         </div>
       )}
 
-      {contracts.length === 0 ? (
+      {contracts.length === 0 && drafts.length === 0 ? (
         <div className="border border-[#E8E8E4] rounded bg-white p-12 text-center">
           <div className="w-12 h-12 bg-[#D03839]/10 rounded flex items-center justify-center mx-auto mb-4">
             <FileText className="w-6 h-6 text-[#D03839]" />
@@ -320,31 +345,7 @@ export default function ContractsPage() {
         </div>
       ) : (
         <div className="space-y-2">
-          {/* Status summary — a quick dashboard of where every sent contract stands */}
-          {(() => {
-            const counts = contracts.reduce((acc, c) => {
-              const k = deriveStatus(c, email)
-              acc[k] = (acc[k] || 0) + 1
-              return acc
-            }, {})
-            const cards = [
-              { key: 'sent', label: 'Sent' },
-              { key: 'viewed', label: 'Viewed' },
-              { key: 'awaiting', label: 'Awaiting signature' },
-              { key: 'completed', label: 'Completed' },
-            ]
-            return (
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
-                {cards.map(card => (
-                  <div key={card.key} className="bg-white border border-[#E8E8E4] rounded p-3">
-                    <div className="text-[22px] font-bold text-[#1A1816] leading-none">{counts[card.key] || 0}</div>
-                    <div className="text-[12px] text-[#737370] mt-1">{card.label}</div>
-                  </div>
-                ))}
-              </div>
-            )
-          })()}
-          {drafts.length > 0 && (
+          {contracts.length > 0 && (
             <h2 className="text-[13px] font-bold text-[#1A1816] uppercase tracking-wide mb-1">Sent</h2>
           )}
           {contracts.map(c => {
