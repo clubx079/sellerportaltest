@@ -429,6 +429,8 @@ export default function NewContractWizardPage() {
       const t = todayISOf()
       if (fieldValues.closing_date && fieldValues.closing_date < t) return false
       if (fieldValues.acceptance_deadline && fieldValues.acceptance_deadline < t) return false
+      // The original purchase contract was already signed — can't be in the future
+      if (fieldValues.original_psa_date && fieldValues.original_psa_date > t) return false
       return true
     }
     return true
@@ -865,7 +867,10 @@ function Step5Terms({ values, onChange, template, L, onPersistDefault }) {
           <p className="text-[12px] text-[#737370] mb-3">Reference the original Purchase Contract you're assigning.</p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FieldRow label="Original Seller Name" hint="* property owner from the original Purchase Contract"><input type="text" value={values.original_seller_name || ''} onChange={e => onChange('original_seller_name', e.target.value)} placeholder="Jane Doe" className={INPUT_CLS} /></FieldRow>
-            <FieldRow label="Original Purchase Contract Signed Date" hint="*"><input type="date" value={values.original_psa_date || ''} onChange={e => onChange('original_psa_date', e.target.value)} className={INPUT_CLS} /></FieldRow>
+            <FieldRow label="Original Purchase Contract Signed Date" hint="* already signed — today or earlier">
+              <input type="date" max={todayISO} value={values.original_psa_date || ''} onChange={e => onChange('original_psa_date', e.target.value)} className={`${INPUT_CLS} ${values.original_psa_date && values.original_psa_date > todayISO ? 'border-[#D03839] focus:border-[#D03839]' : ''}`} />
+              {values.original_psa_date && values.original_psa_date > todayISO && <p className="text-[11px] text-[#D03839] mt-1">This contract was already signed — the date can&rsquo;t be in the future.</p>}
+            </FieldRow>
           </div>
         </div>
       )}
