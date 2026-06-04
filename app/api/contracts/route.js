@@ -76,8 +76,9 @@ export async function GET(request) {
     const submissions = (allJson.data || []).filter(s => sellerSubmissionIds.has(s.id) && !s.archived_at)
 
     return NextResponse.json(submissions)
-  } catch {
-    return NextResponse.json([], { status: 500 })
+  } catch (err) {
+    // TEMP diagnostic — surface the real error on staging to debug the 500.
+    return NextResponse.json({ __error: String(err?.message || err), __stack: String(err?.stack || '').split('\n').slice(0, 4) }, { status: 500 })
   }
 }
 
