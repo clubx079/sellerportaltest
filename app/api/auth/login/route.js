@@ -26,7 +26,7 @@ export async function POST(request) {
     const { data: application, error } = await supabase
       .from('seller_applications')
       .select('*')
-      .eq('email', String(email).trim())
+      .eq('email', String(email).trim().toLowerCase())
       .maybeSingle();
 
     if (error || !application) {
