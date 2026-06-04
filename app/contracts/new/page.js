@@ -895,24 +895,33 @@ function LiveContractPreview({ isAssignment, buyerName, sellerName, fieldValues:
       </div>
       <div className="px-6 py-5 max-h-[74vh] overflow-y-auto text-[11px] leading-[1.55] text-[#1A1816]" style={{ fontFamily: 'Georgia, "Times New Roman", serif', textAlign: 'justify' }}>
         <div className="flex items-start justify-between gap-3 mb-3">
-          <h3 className="text-[12px] font-bold uppercase tracking-wide">{isAssignment ? 'Assignment of Real Estate Contract' : 'Contract to Purchase Real Estate'}</h3>
+          <h3 className="text-[12px] font-bold uppercase tracking-wide">{isAssignment ? 'Assignment of Sale Contract Agreement' : 'Contract to Purchase Real Estate'}</h3>
           <span className="text-[11px] font-extrabold text-[#D03839] shrink-0" style={{ fontFamily: 'DM Sans, sans-serif' }}>DeelMap</span>
         </div>
 
         {isAssignment ? (
           <>
-            <p className="mb-2">This Assignment of Contract, dated <Fill value={today} />, is made between <Fill value={sellerName} /> (&ldquo;ASSIGNOR&rdquo;) and <Fill value={buyerName} /> (&ldquo;ASSIGNEE&rdquo;) regarding the property located at <Fill value={fv.property_address} />.</p>
-            <p className="mb-1.5">WHEREAS, the ASSIGNOR entered into a Purchase Contract with <Fill value={fv.original_seller_name} /> dated <Fill value={longDate(fv.original_psa_date)} /> for the above property, and now assigns all rights thereunder to the ASSIGNEE.</p>
-            <p className="mb-1.5"><b>1) ASSIGNMENT FEE:</b> <Fill value={money(fv.purchase_price)} /></p>
-            <p className="mb-1.5"><b>2) NONREFUNDABLE DEPOSIT:</b> <Fill value={money(fv.emd)} /></p>
-            <p className="mb-1.5"><b>3) CLOSING DATE:</b> on or before <Fill value={longDate(fv.closing_date)} /></p>
-            <p className="mb-1.5"><b>4) ADDITIONAL TERMS (if applicable):</b> <Fill value={fv.special_terms} /></p>
-            <p className="mb-3 text-[#444441]">The ASSIGNEE accepts all rights and obligations under the original Purchase Contract and will close directly with the original owner. The original property owner is not a party to, and does not sign, this assignment.</p>
-            <div className="space-y-2 pt-2 border-t border-[#E8E8E4]">
-              <p>ASSIGNOR Print: <Fill value={sellerName} /> &nbsp;&nbsp; Sign/Date: <Fill value={null} /></p>
-              <p>ASSIGNEE Print: <Fill value={buyerName} /> &nbsp;&nbsp; Sign/Date: <Fill value={null} /></p>
+            <p className="mb-1">Property Address: <Fill value={fv.property_address} /></p>
+            <p className="mb-2">This agreement is made this <Fill value={today} />, by and between <Fill value={sellerName} /> (Assignor) and <Fill value={buyerName} /> (Assignee) regarding the sale of the above referenced property.</p>
+            <p className="mb-1.5">Whereas <Fill value={sellerName} /> (Assignor) has entered into a Purchase and Sale Contract with <Fill value={fv.original_seller_name} /> (Seller) on <Fill value={longDate(fv.original_psa_date)} /> for the purchase of subject property.</p>
+            <p className="mb-1.5 text-[#444441]">Whereas, Assignor wishes to assign its rights, interests and obligations in the Purchase and Sale Contract to Assignee for the final purchase of subject property.</p>
+            <p className="mb-1.5">Now therefore, it is hereby agreed between Assignor and Assignee as follows:</p>
+            <p className="mb-1.5"><b>1) ASSIGNMENT FEE:</b> Assignee shall pay Assignor an assignment fee of <Fill value={money(fv.purchase_price)} /> of which <Fill value={money(fv.emd)} /> shall be paid upon execution and shall represent a nonrefundable deposit. The balance shall be payable to Assignor at time of closing.</p>
+            <p className="mb-1.5 text-[#444441]"><b className="text-[#1A1816]">2) INSPECTION PERIOD:</b> Assignee waives any inspection period contained in the attached contract. All inspections have been completed prior to the execution of this agreement.</p>
+            <p className="mb-1.5 text-[#444441]"><b className="text-[#1A1816]">3) OWNERSHIP &amp; PROPERTY ACCESS ACKNOWLEDGMENT:</b> Assignee acknowledges that Assignor does not authorize Assignee to enter the Subject Property without Assignor&rsquo;s direct authorization, and holds Assignor harmless from related liability.</p>
+            <p className="mb-1.5 text-[#444441]">Assignee agrees and accepts all terms and conditions of the subject contract for Purchase and Sale between Buyer and Seller in its entirety.</p>
+            <p className="mb-1.5 text-[#444441]"><b className="text-[#1A1816]">4) LIMITATION OF ASSIGNMENT:</b> This Agreement and the subject contract are not assignable by Assignee without the written consent of the Assignor.</p>
+            <p className="mb-1.5 text-[#444441]"><b className="text-[#1A1816]">5) DISCLOSURES &amp; ACKNOWLEDGMENT:</b> Assignor makes no warranty regarding inspection or other reports. Assignee is dealing directly with Assignor, is not represented by a real estate agent, and acknowledges receipt of the original Purchase and Sale Contract and all addendums.</p>
+            <p className="mb-1.5"><b>6) CLOSING DATE:</b> The closing date of the subject transaction shall be <Fill value={longDate(fv.closing_date)} />.</p>
+            <p className="mb-3"><b>7) ADDITIONAL TERMS:</b> <Fill value={fv.special_terms} /></p>
+            <p className="mb-3 text-[#444441]">All other terms and conditions of the Subject Purchase and Sale Contract not specifically amended hereby or inconsistent herewith shall remain in full force and effect.</p>
+            <p className="font-bold mb-2">AGREED AND ACCEPTED</p>
+            <div className="space-y-1.5 pt-2 border-t border-[#E8E8E4]">
+              <p>Assignor: <Fill value={null} /> &nbsp;&nbsp; Date: <Fill value={null} /></p>
+              <p>Print Name: <Fill value={sellerName} /></p>
+              <p className="pt-1">Assignee: <Fill value={null} /> &nbsp;&nbsp; Date: <Fill value={null} /></p>
+              <p>Print Name: <Fill value={buyerName} /></p>
             </div>
-            <p className="mt-3 text-[10px] text-[#A8A8A4] italic" style={{ fontFamily: 'DM Sans, sans-serif' }}>Preview approximation — the assignment template&rsquo;s exact wording applies on the signed document.</p>
           </>
         ) : (
           <>
