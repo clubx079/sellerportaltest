@@ -32,7 +32,7 @@ const loadGoogleMaps = () => {
   return googleMapsLoaderPromise;
 };
 
-export default function GooglePlacesAutocomplete({ onAddressSelect, defaultValue = '' }) {
+export default function GooglePlacesAutocomplete({ onAddressSelect, onInputChange, defaultValue = '', className, placeholder = 'Enter property address...' }) {
   const [value, setValue] = useState(defaultValue);
   const autocompleteRef = useRef(null);
   const inputRef = useRef(null);
@@ -125,9 +125,9 @@ export default function GooglePlacesAutocomplete({ onAddressSelect, defaultValue
       ref={inputRef}
       type="text"
       value={value}
-      onChange={(e) => setValue(e.target.value)}
-      placeholder="Enter property address..."
-      className="w-full px-4 py-3 border border-[#E8E8E4] rounded focus:border-[#D03839] focus:outline-none transition-colors text-[13px] text-[#1A1816] placeholder:text-[#A8A8A4]"
+      onChange={(e) => { setValue(e.target.value); onInputChange?.(e.target.value); }}
+      placeholder={placeholder}
+      className={className || "w-full px-4 py-3 border border-[#E8E8E4] rounded focus:border-[#D03839] focus:outline-none transition-colors text-[13px] text-[#1A1816] placeholder:text-[#A8A8A4]"}
     />
   );
 }
