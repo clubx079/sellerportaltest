@@ -7,7 +7,6 @@ import { DocusealForm } from '@docuseal/react'
 import { loadStripe } from '@stripe/stripe-js'
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js'
 import {
-  ArrowLeft,
   ArrowRight,
   ChevronLeft,
   FileText,
@@ -488,6 +487,9 @@ export default function NewContractWizardPage() {
       const filled = k => String(fieldValues[k] ?? '').trim().length > 0
       if (!filled('purchase_price') || !filled('emd') || !filled('closing_date')) return false
       if (isAssignment && (!filled('original_seller_name') || !filled('original_psa_date'))) return false
+      // Dates can't be in the past
+      if (fieldValues.closing_date && fieldValues.closing_date < todayISO) return false
+      if (fieldValues.acceptance_deadline && fieldValues.acceptance_deadline < todayISO) return false
       return true
     }
     if (s === 5) return true
@@ -729,13 +731,6 @@ export default function NewContractWizardPage() {
       {/* Header */}
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0">
-          <button
-            onClick={() => router.push('/contracts')}
-            className="p-2 rounded hover:bg-[#FAFAF8] transition-colors shrink-0"
-            aria-label="Back to contracts"
-          >
-            <ArrowLeft size={20} className="text-[#737370]" />
-          </button>
           <div className="min-w-0">
             <h1 className="text-lg md:text-xl font-semibold tracking-tight text-[#1A1816] truncate">
               New Contract <span className="text-[#A8A8A4] font-normal">— Step {step} of 5 · {stepName}</span>
@@ -1188,6 +1183,7 @@ function Step4Terms({ values, onChange, template, onPersistDefault, savedDefault
         <FieldRow label="Closing Date" hint="*">
           <input
             type="date"
+            min={new Date().toISOString().slice(0, 10)}
             value={values.closing_date || ''}
             onChange={e => onChange('closing_date', e.target.value)}
             className={INPUT_CLS}
@@ -1311,6 +1307,7 @@ function Step4Terms({ values, onChange, template, onPersistDefault, savedDefault
             <FieldRow label="Seller's Acceptance Deadline" hint="default 3 days from today">
               <input
                 type="date"
+                min={new Date().toISOString().slice(0, 10)}
                 value={values.acceptance_deadline || ''}
                 onChange={e => onChange('acceptance_deadline', e.target.value)}
                 className={INPUT_CLS}
