@@ -84,6 +84,7 @@ export async function GET(request) {
 export async function POST(request) {
   try {
     const {
+      contractRole,
       buyerName,
       buyerEmail,
       property,
@@ -105,6 +106,12 @@ export async function POST(request) {
     if (!buyerEmail || !templateId || !sellerEmail) {
       return NextResponse.json({ error: 'buyerEmail, sellerEmail and templateId are required' }, { status: 400 })
     }
+
+    // The Seller is always First Party (signs first). The creator may be on
+    // either side: creator=Seller signs inline now; creator=Buyer → the Seller
+    // (counterparty) is emailed to sign first and the creator signs after.
+    const creatorIsSeller = contractRole !== 'buyer'
+    const creatorEmail = creatorIsSeller ? sellerEmail : buyerEmail
 
     // Use a placeholder email for the Assignee — their real email is stored in metadata.
     // The webhook will PATCH the Assignee with their real email after the Assignor signs,
@@ -137,8 +144,11 @@ export async function POST(request) {
         role: 'First Party',
         email: sellerEmail,
         name: sellerName || sellerEmail,
-        send_email: false,
-        application_key: `seller:${sellerEmail}`,
+        // creator=Seller signs inline (no email); creator=Buyer → email the Seller to sign first.
+        send_email: !creatorIsSeller,
+        // Tag with the creator's email so the seller-portal list finds contracts
+        // they created, regardless of which side they're on.
+        application_key: `seller:${creatorEmail}`,
         metadata: {
           assigneeEmail: buyerEmail,
           assigneeName: buyerName || buyerEmail,
@@ -221,7 +231,11 @@ export async function POST(request) {
     return NextResponse.json({
       submission_id: assignorSubmitter.submission_id,
       assignor_slug: assignorSubmitter.slug,
-      embed_src: assignorSubmitter.embed_src,
+      // Creator signs inline only when they're the Seller (First Party). When the
+      // creator is the Buyer, no embed — the Seller is emailed to sign first.
+      ...(creatorIsSeller
+        ? { embed_src: assignorSubmitter.embed_src }
+        : { firstSignerName: sellerName || sellerEmail }),
     })
   } catch {
     return NextResponse.json({ error: 'Failed to create contract' }, { status: 500 })
