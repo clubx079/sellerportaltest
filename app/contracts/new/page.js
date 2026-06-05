@@ -513,12 +513,10 @@ export default function NewContractWizardPage() {
       })
       const data = await res.json()
       if (!res.ok || data.error) { setSendError(data.error || 'Failed to send contract.'); return }
-      if (data.embed_src) {
-        setSigningTitle(fieldValues.property_address || 'New Contract')
-        setSigningEmbedSrc(data.embed_src)
-      } else {
-        setSentInfo({ firstSignerName: data.firstSignerName || sellerPartyName || 'the seller' })
-      }
+      // No inline signing — every party (seller → co-seller → buyer) signs via an
+      // emailed link, in order. Always show the "sent" confirmation.
+      setSigningTitle(fieldValues.property_address || 'New Contract')
+      setSentInfo({ firstSignerName: data.firstSignerName || sellerPartyName || 'the seller' })
     } catch {
       setSendError('Something went wrong. Please try again.')
     } finally {
@@ -604,8 +602,7 @@ export default function NewContractWizardPage() {
           <div className="w-12 h-12 bg-[#E4F5EC] rounded-full flex items-center justify-center mx-auto mb-4"><Check className="w-6 h-6 text-[#0F6E56]" /></div>
           <h1 className="text-[18px] font-bold text-[#1A1816] mb-1.5">Contract sent</h1>
           <p className="text-[13px] text-[#737370] leading-relaxed">
-            It's been sent to <span className="font-semibold text-[#1A1816]">{sentInfo.firstSignerName}</span> (the {L.seller.toLowerCase()}) to sign first.
-            You'll get a signing link by email as soon as they do.
+            Each party gets a signing link by email — the {L.seller.toLowerCase()} signs first, then the {L.buyer.toLowerCase()}. Once everyone has signed, all parties receive the completed contract by email.
           </p>
           <button onClick={() => router.push('/contracts')} className="mt-6 h-10 px-5 inline-flex items-center gap-1.5 text-[13px] font-semibold bg-[#1A1816] text-white rounded hover:bg-black">Go to Contracts</button>
         </div>
@@ -629,7 +626,7 @@ export default function NewContractWizardPage() {
         </div>
       </div>
 
-      <div className={step >= 2 ? 'grid lg:grid-cols-[minmax(0,1fr)_minmax(0,420px)] gap-6 items-start' : ''}>
+      <div className={step === NUM_STEPS ? 'grid lg:grid-cols-[minmax(0,1fr)_minmax(0,420px)] gap-6 items-start' : ''}>
         <div className="min-w-0 space-y-4">
 
       <div className="flex items-center gap-1.5">
@@ -653,7 +650,7 @@ export default function NewContractWizardPage() {
       )}
         </div>
 
-        {step >= 2 && (
+        {step === NUM_STEPS && (
           <div className="hidden lg:block lg:sticky lg:top-6">
             <LiveContractPreview isAssignment={isAssignment} L={L} contractRole={contractRole} buyerName={buyerName} sellerName={sellerPartyName} fieldValues={fieldValues} />
           </div>
@@ -830,7 +827,9 @@ function StepPartyInfo({ party, L, isYou, name, email, address, coName, coEmail,
 function FieldRow({ label, hint, children, span }) {
   return (
     <div className={span === 'full' ? 'md:col-span-2' : ''}>
-      <label className={LABEL_CLS}>{label}{hint && <span className="text-[#A8A8A4] font-normal ml-1">{hint}</span>}</label>
+      {/* min-height reserves two lines so a wrapped label doesn't push its input
+          out of line with the adjacent cell's input in the 2-column grid. */}
+      <label className={`${LABEL_CLS} md:min-h-[2rem]`}>{label}{hint && <span className="text-[#A8A8A4] font-normal ml-1">{hint}</span>}</label>
       {children}
     </div>
   )

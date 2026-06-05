@@ -151,8 +151,9 @@ export async function POST(request) {
         role: 'First Party',
         email: sellerEmail,
         name: sellerName || sellerEmail,
-        // creator=Seller signs inline (no email); creator=Buyer → email the Seller to sign first.
-        send_email: !creatorIsSeller,
+        // The seller always signs first — email them the signing link (no inline
+        // signing). The co-seller and buyer are activated by the webhook in turn.
+        send_email: true,
         // Tag with the creator's email so the seller-portal list finds contracts
         // they created, regardless of which side they're on.
         application_key: `seller:${creatorEmail}`,
@@ -268,11 +269,9 @@ export async function POST(request) {
     return NextResponse.json({
       submission_id: assignorSubmitter.submission_id,
       assignor_slug: assignorSubmitter.slug,
-      // Creator signs inline only when they're the Seller (First Party). When the
-      // creator is the Buyer, no embed — the Seller is emailed to sign first.
-      ...(creatorIsSeller
-        ? { embed_src: assignorSubmitter.embed_src }
-        : { firstSignerName: sellerName || sellerEmail }),
+      // No inline signing — the seller is emailed the signing link, then the
+      // co-seller and buyer in turn via the webhook chain.
+      firstSignerName: sellerName || sellerEmail,
     })
   } catch {
     return NextResponse.json({ error: 'Failed to create contract' }, { status: 500 })
