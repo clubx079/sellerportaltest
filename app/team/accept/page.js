@@ -2,7 +2,8 @@
 import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import Image from 'next/image'
-import { CheckCircle, Loader2, AlertCircle } from 'lucide-react'
+import Link from 'next/link'
+import { CheckCircle, Loader2, AlertCircle, Eye, EyeOff } from 'lucide-react'
 
 function AcceptContent() {
   const searchParams = useSearchParams()
@@ -15,6 +16,8 @@ function AcceptContent() {
   const [form, setForm]           = useState({ name: '', password: '', confirm: '' })
   const [submitting, setSubmitting] = useState(false)
   const [done, setDone]           = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirm, setShowConfirm]   = useState(false)
 
   useEffect(() => {
     if (!token) { setError('Invalid invitation link.'); setLoading(false); return }
@@ -129,14 +132,34 @@ function AcceptContent() {
                   <label className="block text-[12px] font-semibold text-[#444441] mb-1.5">
                     Password <span className="text-[#D03839]">*</span>
                   </label>
-                  <input
-                    type="password"
-                    placeholder={isLogin ? 'Your account password' : 'Min. 8 characters'}
-                    value={form.password}
-                    onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
-                    className="w-full h-9 px-3 border border-[#E8E8E4] rounded text-[13px] text-[#1A1816] placeholder:text-[#A8A8A4] focus:outline-none focus:border-[#1A1816]"
-                    required
-                  />
+                  <div className="relative">
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      placeholder={isLogin ? 'Your account password' : 'Min. 8 characters'}
+                      value={form.password}
+                      onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
+                      className="w-full h-9 px-3 pr-9 border border-[#E8E8E4] rounded text-[13px] text-[#1A1816] placeholder:text-[#A8A8A4] focus:outline-none focus:border-[#1A1816]"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(s => !s)}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#A8A8A4] hover:text-[#444441] transition-colors"
+                      aria-label={showPassword ? 'Hide password' : 'Show password'}
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                  {isLogin && (
+                    <div className="mt-1.5 text-right">
+                      <Link
+                        href={`/forgot-password${info?.member?.email ? `?email=${encodeURIComponent(info.member.email)}` : ''}`}
+                        className="text-[12px] font-medium text-[#444441] hover:text-[#1A1816] transition-colors"
+                      >
+                        Forgot password?
+                      </Link>
+                    </div>
+                  )}
                 </div>
 
                 {!isLogin && (
@@ -144,14 +167,24 @@ function AcceptContent() {
                     <label className="block text-[12px] font-semibold text-[#444441] mb-1.5">
                       Confirm Password <span className="text-[#D03839]">*</span>
                     </label>
-                    <input
-                      type="password"
-                      placeholder="Repeat password"
-                      value={form.confirm}
-                      onChange={e => setForm(f => ({ ...f, confirm: e.target.value }))}
-                      className="w-full h-9 px-3 border border-[#E8E8E4] rounded text-[13px] text-[#1A1816] placeholder:text-[#A8A8A4] focus:outline-none focus:border-[#1A1816]"
-                      required
-                    />
+                    <div className="relative">
+                      <input
+                        type={showConfirm ? 'text' : 'password'}
+                        placeholder="Repeat password"
+                        value={form.confirm}
+                        onChange={e => setForm(f => ({ ...f, confirm: e.target.value }))}
+                        className="w-full h-9 px-3 pr-9 border border-[#E8E8E4] rounded text-[13px] text-[#1A1816] placeholder:text-[#A8A8A4] focus:outline-none focus:border-[#1A1816]"
+                        required
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowConfirm(s => !s)}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#A8A8A4] hover:text-[#444441] transition-colors"
+                        aria-label={showConfirm ? 'Hide password' : 'Show password'}
+                      >
+                        {showConfirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
                   </div>
                 )}
 

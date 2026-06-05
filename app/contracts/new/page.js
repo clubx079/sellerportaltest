@@ -17,6 +17,7 @@ import {
   Check,
   User,
   AlertCircle,
+  Info,
 } from 'lucide-react'
 import SaveStatus from '@/components/properties/SaveStatus'
 import StickyActionBar from '@/components/properties/StickyActionBar'
@@ -269,17 +270,35 @@ export default function NewContractWizardPage() {
         if (!d || d.error) return
         setCurrentDraftId(d.id)
         if (d.template_id) setTemplateId(String(d.template_id))
-        if (d.property_id) setPropertyId(d.property_id)
         if (d.buyer_name) setBuyerName(d.buyer_name)
         if (d.buyer_email) setBuyerEmail(d.buyer_email)
-        if (d.field_values && typeof d.field_values === 'object') {
-          const fv = d.field_values
-          if (fv.__contract_role) setContractRole(fv.__contract_role)
-          if (fv.__seller_name) setSellerPartyName(fv.__seller_name)
-          if (fv.__seller_email) setSellerPartyEmail(fv.__seller_email)
-          setFieldValues(prev => ({ ...prev, ...fv }))
+
+        const fv = (d.field_values && typeof d.field_values === 'object') ? d.field_values : {}
+        if (fv.__contract_role) setContractRole(fv.__contract_role)
+        if (fv.__seller_name) setSellerPartyName(fv.__seller_name)
+        if (fv.__seller_email) setSellerPartyEmail(fv.__seller_email)
+        if (Object.keys(fv).length) setFieldValues(prev => ({ ...prev, ...fv }))
+
+        // Restore the property selection. Manual entries are stored with
+        // property_id=null, so fall back to the manual marker (or a saved address)
+        // to bring back the manual field and its typed-in value.
+        if (d.property_id) setPropertyId(d.property_id)
+        else if (fv.__property_manual || (fv.property_address || '').trim()) setPropertyId('manual')
+
+        // Resume at the last step the user was on. Clamp to a valid range and, if
+        // no step was saved, fall back to the last step that already has data.
+        const lastFilledStep = () => {
+          if (fv.purchase_price || fv.emd || fv.closing_date || fv.special_terms) return 5
+          if (fv.__seller_name || fv.__seller_email) return 4
+          if (d.buyer_name || d.buyer_email) return 3
+          if (d.property_id || fv.property_address) return 2
+          return 1
         }
-        setStep(1)
+        const savedStep = Number(fv.__step)
+        const target = Number.isFinite(savedStep) && savedStep >= 1
+          ? Math.min(NUM_STEPS, Math.max(1, savedStep))
+          : lastFilledStep()
+        setStep(target)
       })
       .catch(() => {})
   }, [resumeDraftId])
@@ -368,6 +387,11 @@ export default function NewContractWizardPage() {
         __contract_role: contractRole || '',
         __seller_name: sellerPartyName || '',
         __seller_email: sellerPartyEmail || '',
+        // Persist that the address was entered manually (property_id is stored as
+        // null for manual entries) so resume can restore the manual field + value.
+        __property_manual: propertyId === 'manual',
+        // Persist the wizard position so resume returns to the last step.
+        __step: step,
       },
     }
   }
@@ -411,7 +435,7 @@ export default function NewContractWizardPage() {
     }, 2000)
     return () => clearTimeout(timer)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dirty, readyForAutoSave, templateId, contractRole, propertyId, buyerName, buyerEmail, sellerPartyName, sellerPartyEmail, fieldValues, currentDraftId, autoSaving])
+  }, [dirty, readyForAutoSave, templateId, contractRole, propertyId, buyerName, buyerEmail, sellerPartyName, sellerPartyEmail, fieldValues, step, currentDraftId, autoSaving])
 
   // ── Step validation ─────────────────────────────────────────────
   const selfDeal = !!buyerEmail && !!sellerPartyEmail && buyerEmail.trim().toLowerCase() === sellerPartyEmail.trim().toLowerCase()
@@ -448,10 +472,12 @@ export default function NewContractWizardPage() {
   function handleContinue() {
     if (!canContinueFromStep(step)) return
     setStep(s => Math.min(NUM_STEPS, s + 1))
+    setDirty(true) // persist the new step position into the draft
   }
   function handleBack() {
     if (step === 1) { router.push('/contracts'); return }
     setStep(s => Math.max(1, s - 1))
+    setDirty(true) // persist the new step position into the draft
   }
 
   // ── Send (payment gate → create submission) ─────────────────────
@@ -620,6 +646,10 @@ export default function NewContractWizardPage() {
           <h1 className="text-lg md:text-xl font-semibold tracking-tight text-[#1A1816] truncate">
             New Contract <span className="text-[#A8A8A4] font-normal">— Step {step} of {NUM_STEPS} · {stepName}</span>
           </h1>
+          <p className="mt-1 flex items-start gap-1.5 text-[11px] leading-relaxed text-[#A8A8A4]">
+            <Info className="w-3.5 h-3.5 shrink-0 mt-px" />
+            <span>This is a template provided for your convenience. DeelMap is not a law firm and does not provide legal advice. We strongly recommend you have this document reviewed by a licensed attorney before signing. DeelMap and its affiliates accept no liability for the content, validity, or enforceability of any agreement created using this platform.</span>
+          </p>
           <div className="mt-0.5">
             <SaveStatus autoSaving={autoSaving} lastSavedAt={lastSavedAt} dirty={dirty} error={autoSaveError} status="draft" />
           </div>
