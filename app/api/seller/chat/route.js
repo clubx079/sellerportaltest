@@ -342,6 +342,30 @@ export async function GET(request) {
       }
 
       const list = conversations || [];
+
+      // Buyer contact (email + phone) is an ENTERPRISE-only feature. Non-enterprise
+      // sellers communicate in-app only and never see the buyer's personal contact —
+      // this upholds the "contact info is never shared" promise for everyone else.
+      let isEnterprise = false;
+      {
+        const { data: plan } = await supabase
+          .from('seller_plans')
+          .select('plan_type, status')
+          .eq('seller_id', sellerId)
+          .maybeSingle();
+        if (plan?.plan_type === 'enterprise' && ['active', 'trialing', 'canceling', 'past_due'].includes(plan.status)) {
+          isEnterprise = true;
+        }
+        if (!isEnterprise) {
+          const { data: appRow } = await supabase
+            .from('seller_applications')
+            .select('admin_notes')
+            .eq('id', sellerId)
+            .maybeSingle();
+          if (appRow?.admin_notes === 'LIFETIME_FREE') isEnterprise = true; // internal free = enterprise tier
+        }
+      }
+
       const enriched = await Promise.all(
         list.map(async (c) => {
           const property_thumbnail_url = await getConversationPropertyThumbnail(c.property_id);
@@ -407,10 +431,12 @@ export async function GET(request) {
           const is_blocked = !!pref?.is_blocked;
           return {
             ...c,
+            // Enterprise-only: buyer's personal contact. Stripped for everyone else.
+            buyer_phone: isEnterprise ? (c.buyer_phone ?? null) : null,
             property_address: resolvedAddress || null,
             buyer_name,
             buyer_first_name,
-            buyer_email,
+            buyer_email: isEnterprise ? buyer_email : null,
             property_thumbnail_url,
             unread_count,
             is_done: !!pref?.is_done,
