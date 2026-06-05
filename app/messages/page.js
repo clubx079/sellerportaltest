@@ -1003,9 +1003,6 @@ export default function MessagesPage() {
                     className="p-2.5 rounded hover:bg-[#FAFAF8] transition-colors duration-200 flex-shrink-0 disabled:opacity-50">
                     {uploadingAttachment ? <Loader2 className="w-5 h-5 text-[#737370] animate-spin" /> : <Paperclip className="w-5 h-5 text-[#737370]" />}
                   </button>
-                  <button type="button" className="p-2.5 rounded hover:bg-[#FAFAF8] transition-colors duration-200 flex-shrink-0">
-                    <Smile className="w-5 h-5 text-[#737370]" />
-                  </button>
                   <textarea
                     ref={messageInputRef} value={messageText}
                     onChange={e => setMessageText(e.target.value)}
