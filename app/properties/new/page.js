@@ -610,6 +610,8 @@ export default function NewPropertyPage() {
     // Add SEO fields (using correct column names from schema)
     saveData.seo_title = formData.seo_title || formData.meta_title || formData.location || '';
     if (formData.meta_description) saveData.seo_description = formData.meta_description;
+    if (formData.social_title) saveData.social_title = formData.social_title;
+    if (formData.social_description) saveData.social_description = formData.social_description;
     if (formData.social_share_image) saveData.social_image_url = formData.social_share_image;
 
     // Add inspection report if provided
@@ -1708,6 +1710,11 @@ function AddOnsTab({
     }
   }
 
+  const addOnFlags = {}
+  if (selectedAddOns.includes('highlight') || selectedAddOns.includes('bundle')) addOnFlags.is_highlighted = true
+  if (selectedAddOns.includes('boost') || selectedAddOns.includes('bundle')) addOnFlags.is_boosted = true
+  if (selectedAddOns.includes('homepage')) addOnFlags.is_homepage_featured = true
+
   const handleInitPayment = async () => {
     if (!userId || selectedAddOns.length === 0) return
 
@@ -1744,11 +1751,6 @@ function AddOnsTab({
       setAddOnLoading(false)
     }
   }
-
-  const addOnFlags = {}
-  if (selectedAddOns.includes('highlight') || selectedAddOns.includes('bundle')) addOnFlags.is_highlighted = true
-  if (selectedAddOns.includes('boost') || selectedAddOns.includes('bundle')) addOnFlags.is_boosted = true
-  if (selectedAddOns.includes('homepage')) addOnFlags.is_homepage_featured = true
 
   const featuredImage = (images || []).find(img => img.isFeatured && img.status === 'completed')
     || (images || []).find(img => img.status === 'completed')
