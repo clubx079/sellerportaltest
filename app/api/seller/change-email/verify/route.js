@@ -1,10 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { Resend } from 'resend';
 import { getEmailChange, clearEmailChange } from '@/lib/email-change-store';
-
-const resend = new Resend(process.env.RESEND_API_KEY);
-const FROM = 'Deelmap <notifications@deelmap.com>';
+import { sendSellerEmail, emailChanged } from '@/lib/sellerEmail';
 
 function getSupabase() {
   return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
@@ -60,23 +57,12 @@ export async function POST(request) {
 
     clearEmailChange(sellerId);
 
-    // Heads-up to the old address
+    // Heads-up to the old address (branded; security notice)
     if (oldEmail) {
-      resend.emails.send({
-        from: FROM,
+      sendSellerEmail({
         to: oldEmail,
         subject: 'Your DeelMap email was changed',
-        html: `
-          <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;max-width:480px;margin:0 auto;">
-            <h2 style="font-size:18px;color:#1A1816;">Your login email was changed</h2>
-            <p style="font-size:14px;color:#444441;line-height:1.6;">
-              The email on your DeelMap account was just changed to <strong>${pending.newEmail}</strong>.
-            </p>
-            <p style="font-size:13px;color:#737370;line-height:1.6;">
-              If this was you, no action is needed. If you did NOT make this change, <a href="${(process.env.NEXT_PUBLIC_APP_URL || 'https://sell.deelmap.com').replace(/\/+$/, '')}/support" style="color:#1A1816;text-decoration:underline">contact us immediately through our Contact Us page</a>.
-            </p>
-          </div>`,
-        text: `Your DeelMap login email was changed to ${pending.newEmail}. If this wasn't you, contact us immediately through our Contact Us page: ${(process.env.NEXT_PUBLIC_APP_URL || 'https://sell.deelmap.com').replace(/\/+$/, '')}/support`,
+        html: emailChanged({ newEmail: pending.newEmail }),
       }).catch(() => {});
     }
 

@@ -36,7 +36,7 @@ export async function GET(request) {
       const res = await fetch(`${DOCUSEAL_BASE}/templates?limit=50`, { headers: dsHeaders(), cache: 'no-store' })
       const json = await res.json()
       // Decorate with friendly labels + sortOrder from TEMPLATE_CONFIG so the
-      // wizard can show "Purchase Contract" instead of "(A to B) Deelmap…".
+      // wizard can show "Purchase Contract" instead of "(A to B) DeelMap…".
       return NextResponse.json(decorateTemplates(json.data || []))
     }
 

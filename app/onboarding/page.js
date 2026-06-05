@@ -819,7 +819,7 @@ function StepSuccess() {
       </div>
       <div>
         <h2 className="text-[20px] font-bold text-[#1A1816] mb-1">You're all set!</h2>
-        <p className="text-[14px] text-[#737370]">Your account is active. Start listing your deals on Deelmap.</p>
+        <p className="text-[14px] text-[#737370]">Your account is active. Start listing your deals on DeelMap.</p>
       </div>
       <button
         onClick={handleContinue}
@@ -833,7 +833,7 @@ function StepSuccess() {
 
 // ─── Main page ────────────────────────────────────────────────────────────────
 const STEP_TITLES = [
-  { title: 'Create your account', sub: 'Start selling on Deelmap' },
+  { title: 'Create your account', sub: 'Start selling on DeelMap' },
   { title: 'Verify your phone', sub: "We'll send a quick code" },
   { title: 'Choose your plan', sub: 'Pick what fits your pipeline' },
   { title: 'Complete payment', sub: 'Secure checkout via Stripe' },
@@ -872,7 +872,7 @@ function OnboardingContent() {
         {/* Logo */}
         <div className="flex justify-center mb-8">
           <a href="/">
-            <img src="/assets/logo.svg" alt="Deelmap" className="h-14 w-auto object-contain" onError={e => { e.target.style.display = 'none' }} />
+            <img src="/assets/logo.svg" alt="DeelMap" className="h-14 w-auto object-contain" onError={e => { e.target.style.display = 'none' }} />
           </a>
         </div>
 
@@ -916,7 +916,7 @@ function OnboardingContent() {
         </div>
 
         <p className="text-center text-[12px] text-[#A8A8A4] mt-6">
-          By continuing you agree to Deelmap's{' '}
+          By continuing you agree to DeelMap's{' '}
           <a href="/terms" className="hover:underline">Terms</a> &amp;{' '}
           <a href="/privacy" className="hover:underline">Privacy Policy</a>
         </p>

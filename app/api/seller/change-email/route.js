@@ -1,11 +1,8 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { Resend } from 'resend';
 import { setEmailChange } from '@/lib/email-change-store';
 import { verifyPassword } from '@/lib/password';
-
-const resend = new Resend(process.env.RESEND_API_KEY);
-const FROM = 'Deelmap <notifications@deelmap.com>';
+import { sendSellerEmail, emailVerificationCode } from '@/lib/sellerEmail';
 
 function getSupabase() {
   return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
@@ -58,20 +55,10 @@ export async function POST(request) {
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     setEmailChange(sellerId, normalized, otp);
 
-    await resend.emails.send({
-      from: FROM,
+    await sendSellerEmail({
       to: normalized,
       subject: 'Verify your new DeelMap email',
-      html: `
-        <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;max-width:480px;margin:0 auto;">
-          <h2 style="font-size:18px;color:#1A1816;">Confirm your new email</h2>
-          <p style="font-size:14px;color:#444441;line-height:1.6;">
-            Use this code to confirm <strong>${normalized}</strong> as your new DeelMap login email:
-          </p>
-          <p style="font-size:30px;font-weight:700;letter-spacing:6px;color:#D03839;margin:24px 0;">${otp}</p>
-          <p style="font-size:12px;color:#A8A8A4;">This code expires in 15 minutes. If you didn't request this, you can ignore this email — your account is unchanged.</p>
-        </div>`,
-      text: `Your DeelMap email verification code is ${otp}. Expires in 15 minutes.`,
+      html: emailVerificationCode({ code: otp, newEmail: normalized }),
     });
 
     return NextResponse.json({ ok: true });

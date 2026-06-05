@@ -7,7 +7,7 @@ const openSans = Open_Sans({ subsets: ['latin'], weight: ['300', '400', '500', '
 const dmSans = DM_Sans({ subsets: ['latin'], variable: '--font-dm-sans' })
 
 export const metadata = {
-  title: 'Deelmap Seller Dashboard',
+  title: 'DeelMap Seller Dashboard',
   description: 'Property management platform for real estate sellers',
   icons: {
     icon: '/assets/favicon.ico',

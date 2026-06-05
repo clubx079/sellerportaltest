@@ -166,7 +166,7 @@ export async function POST(request) {
           const seller = await getSeller(supabase, seller_id)
           if (seller?.email) {
             const amount = pi.amount_received ?? pi.amount ?? 0
-            const desc = purpose === 'contract' ? 'Contract fee' : add_ons ? 'Listing promotion' : (plan_type ? `${plan_type} subscription` : 'Deelmap purchase')
+            const desc = purpose === 'contract' ? 'Contract fee' : add_ons ? 'Listing promotion' : (plan_type ? `${plan_type} subscription` : 'DeelMap purchase')
             const receipt_url = pi.charges?.data?.[0]?.receipt_url || null
             const r = emailPaymentReceipt({ name: seller.contact_person_name, amount_cents: amount, description: desc, receipt_url })
             await sendSellerEmail({ to: seller.email, subject: r.subject, html: r.html })
@@ -412,7 +412,7 @@ export async function POST(request) {
                 const r = emailPaymentReceipt({
                   name: seller.contact_person_name,
                   amount_cents: invoice.amount_paid,
-                  description: 'Deelmap subscription',
+                  description: 'DeelMap subscription',
                   receipt_url: invoice.hosted_invoice_url || invoice.invoice_pdf || null,
                 })
                 await sendSellerEmail({ to: seller.email, subject: r.subject, html: r.html })

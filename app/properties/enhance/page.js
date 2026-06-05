@@ -527,7 +527,7 @@ function EnhanceContent() {
           <div className="px-5 py-4 flex justify-between items-baseline border-b border-[#E8E8E4]">
             <div>
               <p className="text-[15px] font-bold text-[#1A1816]">Total</p>
-              <p className="text-[11px] text-[#737370] mt-0.5">{isLifetimeFree ? 'Complimentary — Deelmap account' : 'One-time charge'}</p>
+              <p className="text-[11px] text-[#737370] mt-0.5">{isLifetimeFree ? 'Complimentary — DeelMap account' : 'One-time charge'}</p>
             </div>
             <div className="text-right">
               {!isLifetimeFree && discountAmount > 0 && (
