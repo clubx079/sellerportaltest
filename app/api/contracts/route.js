@@ -2,8 +2,12 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { getWorkspaceSellerId } from '@/lib/workspace'
 import { mapFieldValues, decorateTemplates } from '@/lib/contract-templates'
+import { sendSigningEmail } from '@/lib/contract-emails'
 
 const DOCUSEAL_BASE = 'https://api.docuseal.com'
+// Signing happens on the buyer marketplace (/sign/[slug]) — the seller portal
+// has no /sign page. Override with NEXT_PUBLIC_BUYER_APP_URL on staging.
+const BUYER_APP_URL = (process.env.NEXT_PUBLIC_BUYER_APP_URL || 'https://deelmap.com').replace(/\/+$/, '')
 
 function dsHeaders() {
   return { 'X-Auth-Token': process.env.DOCUSEAL_API_KEY, 'Content-Type': 'application/json' }
@@ -151,9 +155,10 @@ export async function POST(request) {
         role: 'First Party',
         email: sellerEmail,
         name: sellerName || sellerEmail,
-        // The seller always signs first — email them the signing link (no inline
-        // signing). The co-seller and buyer are activated by the webhook in turn.
-        send_email: true,
+        // The seller always signs first. Suppress DocuSeal's own email — we send
+        // our branded signing email below instead (no inline signing). The
+        // co-seller and buyer are activated by the webhook in turn.
+        send_email: false,
         // Tag with the creator's email so the seller-portal list finds contracts
         // they created, regardless of which side they're on.
         application_key: `seller:${creatorEmail}`,
@@ -264,6 +269,20 @@ export async function POST(request) {
       } catch (e) {
         console.error('Failed to link contract to offer:', e?.message)
       }
+    }
+
+    // Email the seller our branded signing link (DocuSeal's own email is
+    // suppressed). The /sign page lives on the buyer marketplace.
+    try {
+      await sendSigningEmail({
+        to: sellerEmail,
+        signerName: sellerName || sellerEmail,
+        property: property || '',
+        signingUrl: `${BUYER_APP_URL}/sign/${assignorSubmitter.slug}`,
+        leadLine: 'A contract is ready for your signature. Please review and sign below — once you sign, it moves to the next party automatically.',
+      })
+    } catch (e) {
+      console.error('[contracts] first-signer email failed:', e?.message || e)
     }
 
     return NextResponse.json({
