@@ -8,7 +8,7 @@ module.exports = {
     theme: {
       extend: {
         colors: {
-          // Deelmap brand (aligned with deelmap-buyer)
+          // DeelMap brand (aligned with deelmap-buyer)
           primary: {
             DEFAULT: '#D03839',
             50: '#fef2f2',

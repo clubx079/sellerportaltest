@@ -60,7 +60,7 @@ async function sendEmailToBuyer(buyerEmail, buyerName, sellerName, messageText, 
     <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;background:#ffffff">
       <tr>
         <td style="background:#ffffff;padding:12px 40px;text-align:center;border-bottom:2px solid #D03839">
-          <img src="https://deelmap.com/deelmap.png" alt="Deelmap" height="72" style="display:inline-block;height:72px;width:auto;border:0" />
+          <img src="https://deelmap.com/deelmap.png" alt="DeelMap" height="72" style="display:inline-block;height:72px;width:auto;border:0" />
         </td>
       </tr>
       <tr>
@@ -82,16 +82,16 @@ async function sendEmailToBuyer(buyerEmail, buyerName, sellerName, messageText, 
       <tr>
         <td style="background:#ffffff;border-top:1px solid #E8E8E4;padding:20px 40px;text-align:center">
           <p style="margin:0 0 4px;font-size:12px;color:#A8A8A4">Questions? <a href="https://deelmap.com/contact" style="color:#737370;text-decoration:underline">Reach us through our contact page</a></p>
-          <p style="margin:0;font-size:12px;color:#A8A8A4">© 2026 Deelmap. All rights reserved.</p>
+          <p style="margin:0;font-size:12px;color:#A8A8A4">© 2026 DeelMap. All rights reserved.</p>
         </td>
       </tr>
     </table>
   </td></tr></table>
 </body></html>`;
     await resend.emails.send({
-      from: process.env.RESEND_FROM_EMAIL || 'Deelmap <notifications@deelmap.com>',
+      from: process.env.RESEND_FROM_EMAIL || 'DeelMap <notifications@deelmap.com>',
       to: buyerEmail,
-      subject: `New message from ${(sellerName || 'Property seller').slice(0, 50)}${propertyText ? ` • ${propertyText.slice(0, 70)}` : ''} - Deelmap`,
+      subject: `New message from ${(sellerName || 'Property seller').slice(0, 50)}${propertyText ? ` • ${propertyText.slice(0, 70)}` : ''} - DeelMap`,
       html
     });
     console.log('[Seller chat] Email sent to buyer:', buyerEmail);
@@ -342,6 +342,30 @@ export async function GET(request) {
       }
 
       const list = conversations || [];
+
+      // Buyer contact (email + phone) is an ENTERPRISE-only feature. Non-enterprise
+      // sellers communicate in-app only and never see the buyer's personal contact —
+      // this upholds the "contact info is never shared" promise for everyone else.
+      let isEnterprise = false;
+      {
+        const { data: plan } = await supabase
+          .from('seller_plans')
+          .select('plan_type, status')
+          .eq('seller_id', sellerId)
+          .maybeSingle();
+        if (plan?.plan_type === 'enterprise' && ['active', 'trialing', 'canceling', 'past_due'].includes(plan.status)) {
+          isEnterprise = true;
+        }
+        if (!isEnterprise) {
+          const { data: appRow } = await supabase
+            .from('seller_applications')
+            .select('admin_notes')
+            .eq('id', sellerId)
+            .maybeSingle();
+          if (appRow?.admin_notes === 'LIFETIME_FREE') isEnterprise = true; // internal free = enterprise tier
+        }
+      }
+
       const enriched = await Promise.all(
         list.map(async (c) => {
           const property_thumbnail_url = await getConversationPropertyThumbnail(c.property_id);
@@ -407,10 +431,12 @@ export async function GET(request) {
           const is_blocked = !!pref?.is_blocked;
           return {
             ...c,
+            // Enterprise-only: buyer's personal contact. Stripped for everyone else.
+            buyer_phone: isEnterprise ? (c.buyer_phone ?? null) : null,
             property_address: resolvedAddress || null,
             buyer_name,
             buyer_first_name,
-            buyer_email,
+            buyer_email: isEnterprise ? buyer_email : null,
             property_thumbnail_url,
             unread_count,
             is_done: !!pref?.is_done,

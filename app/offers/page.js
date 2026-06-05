@@ -40,6 +40,46 @@ export default function OffersReceivedPage() {
   const [filter, setFilter] = useState('All');
   // submission_id -> { status, document_url } for accepted offers that have a contract.
   const [contractStatuses, setContractStatuses] = useState({});
+  // offer_id currently performing a PATCH action
+  const [actionLoading, setActionLoading] = useState(null);
+  // offer_id whose inline counter input is open, plus its amount
+  const [counterFor, setCounterFor] = useState(null);
+  const [counterAmount, setCounterAmount] = useState('');
+
+  const refreshOffers = () => {
+    const headers = getAuthHeaders();
+    if (!headers.Authorization) return;
+    fetch('/api/seller/offers', { headers })
+      .then(r => r.json())
+      .then(data => setOffers(data.offers || []))
+      .catch(() => {});
+  };
+
+  const handleOfferAction = async (offerId, action, extraData = {}) => {
+    const headers = getAuthHeaders();
+    if (!headers.Authorization) return;
+    setActionLoading(offerId);
+    // Optimistic status update
+    const optimisticStatus = action === 'accept' ? 'accepted' : action === 'reject' ? 'rejected' : action === 'counter' ? 'countered' : null;
+    if (optimisticStatus) {
+      setOffers(prev => prev.map(o => o.id === offerId ? { ...o, status: optimisticStatus } : o));
+    }
+    try {
+      const res = await fetch('/api/seller/offers', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', ...headers },
+        body: JSON.stringify({ offer_id: offerId, action, ...extraData }),
+      });
+      if (!res.ok) throw new Error('Action failed');
+    } catch {
+      // ignore — refresh reconciles
+    } finally {
+      setCounterFor(null);
+      setCounterAmount('');
+      setActionLoading(null);
+      refreshOffers();
+    }
+  };
 
   useEffect(() => {
     const headers = getAuthHeaders();
@@ -209,6 +249,63 @@ export default function OffersReceivedPage() {
                           </p>
                         )}
                       </div>
+                      {offer.status === 'pending' && (
+                        counterFor === offer.id ? (
+                          <div className="flex flex-col items-stretch gap-1.5 w-[150px]">
+                            <div className="relative">
+                              <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[#737370] text-[12px]">$</span>
+                              <input
+                                type="text"
+                                autoFocus
+                                value={counterAmount}
+                                onChange={e => setCounterAmount(e.target.value.replace(/[^0-9]/g, ''))}
+                                placeholder="Counter amount"
+                                className="w-full pl-5 pr-2 py-2 border border-[#E8E8E4] rounded text-[12px] text-[#1A1816] focus:outline-none focus:border-[#D03839]"
+                              />
+                            </div>
+                            <div className="flex gap-1.5">
+                              <button
+                                onClick={() => counterAmount && handleOfferAction(offer.id, 'counter', { counter_data: { amount: Number(counterAmount) } })}
+                                disabled={!counterAmount || actionLoading === offer.id}
+                                className="flex-1 px-2 py-1.5 bg-[#1A1816] hover:bg-[#333330] text-white text-[12px] font-semibold rounded transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                              >
+                                {actionLoading === offer.id ? 'Sending…' : 'Send'}
+                              </button>
+                              <button
+                                onClick={() => { setCounterFor(null); setCounterAmount(''); }}
+                                disabled={actionLoading === offer.id}
+                                className="px-2 py-1.5 border border-[#E8E8E4] hover:bg-[#FAFAF8] text-[#444441] text-[12px] font-semibold rounded transition-colors"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex flex-col items-stretch gap-1.5 w-[150px]">
+                            <button
+                              onClick={() => handleOfferAction(offer.id, 'accept')}
+                              disabled={actionLoading === offer.id}
+                              className="w-full px-3 py-2 bg-[#0F6E56] hover:bg-[#0C5A47] text-white text-[12px] font-semibold rounded transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                            >
+                              {actionLoading === offer.id ? 'Working…' : 'Accept'}
+                            </button>
+                            <button
+                              onClick={() => { setCounterFor(offer.id); setCounterAmount(String(Math.round(offer.offer_price || 0))); }}
+                              disabled={actionLoading === offer.id}
+                              className="w-full px-3 py-2 border border-[#E8E8E4] hover:bg-[#FAFAF8] text-[#1A1816] text-[12px] font-semibold rounded transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                            >
+                              Counter
+                            </button>
+                            <button
+                              onClick={() => handleOfferAction(offer.id, 'reject')}
+                              disabled={actionLoading === offer.id}
+                              className="w-full px-3 py-1.5 text-[#737370] hover:text-[#D03839] text-[12px] font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                            >
+                              Reject
+                            </button>
+                          </div>
+                        )
+                      )}
                       <Link
                         href={convLink}
                         className="flex items-center gap-1.5 px-3 py-2 bg-[#D03839] hover:bg-[#E0493B] text-white text-[12px] font-semibold rounded transition-colors whitespace-nowrap"

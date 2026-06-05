@@ -136,6 +136,9 @@ export default function MessagesPage() {
   const [contextConversationId, setContextConversationId] = useState(null);
   const [contextMenu, setContextMenu] = useState(null);
   const [blockConfirm, setBlockConfirm] = useState(null);
+  const [showBlocked, setShowBlocked] = useState(false);
+  const [blockedUsers, setBlockedUsers] = useState([]);
+  const [blockedLoading, setBlockedLoading] = useState(false);
   const messagesEndRef = useRef(null);
   const messageInputRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -365,6 +368,26 @@ export default function MessagesPage() {
     const headers = getAuthHeaders();
     if (!headers.Authorization) return;
     await fetch(API, { method: 'POST', headers: { 'Content-Type': 'application/json', ...headers }, body: JSON.stringify({ action: 'update_conversation_pref', conversationId, ...patch }) }).catch(() => {});
+    fetchConversations(headers);
+  };
+
+  const fetchBlockedUsers = async () => {
+    const headers = getAuthHeaders();
+    if (!headers.Authorization) return;
+    setBlockedLoading(true);
+    try {
+      const res = await fetch(`${API}?action=get_blocked_users`, { headers });
+      const data = await res.json().catch(() => ({}));
+      setBlockedUsers(data?.blocked || []);
+    } catch { setBlockedUsers([]); }
+    finally { setBlockedLoading(false); }
+  };
+
+  const unblockConversation = async (conversationId) => {
+    const headers = getAuthHeaders();
+    if (!headers.Authorization) return;
+    await fetch(API, { method: 'POST', headers: { 'Content-Type': 'application/json', ...headers }, body: JSON.stringify({ action: 'update_conversation_pref', conversationId, is_blocked: false }) }).catch(() => {});
+    fetchBlockedUsers();
     fetchConversations(headers);
   };
 
@@ -688,19 +711,69 @@ export default function MessagesPage() {
         {/* Left Panel — Conversation List */}
         <div className={`${openConversationId ? 'hidden lg:flex' : 'flex'} flex-col w-full lg:w-[320px] border-r border-[#E8E8E4] bg-white shrink-0 min-h-0 overflow-hidden`}>
           <div className="flex-shrink-0 px-5 pt-5 pb-4">
-            <h2 className="text-[20px] font-bold text-[#1A1816] tracking-[-0.66px] mb-4">All Messages</h2>
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#A8A8A4]" />
-              <input
-                type="text" placeholder="Search conversations"
-                value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 bg-[#FAFAF8] border border-[#E8E8E4] rounded text-[14px] text-[#1A1816] placeholder-[#A8A8A4] focus:outline-none focus:border-[#D03839] focus:ring-1 focus:ring-[rgba(208,56,57,.12)] transition-all duration-200"
-              />
+            <div className="flex items-center justify-between gap-2 mb-4">
+              <h2 className="text-[20px] font-bold text-[#1A1816] tracking-[-0.66px]">{showBlocked ? 'Blocked users' : 'All Messages'}</h2>
+              <button
+                type="button"
+                onClick={() => { const next = !showBlocked; setShowBlocked(next); if (next) fetchBlockedUsers(); }}
+                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded text-[12px] font-medium transition-colors duration-200 ${showBlocked ? 'bg-[#1A1816] text-white' : 'text-[#737370] hover:bg-[#FAFAF8]'}`}
+              >
+                <Ban className="w-3.5 h-3.5" />
+                {showBlocked ? 'Back' : 'Blocked'}
+              </button>
             </div>
+            {!showBlocked && (
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#A8A8A4]" />
+                <input
+                  type="text" placeholder="Search conversations"
+                  value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2.5 bg-[#FAFAF8] border border-[#E8E8E4] rounded text-[14px] text-[#1A1816] placeholder-[#A8A8A4] focus:outline-none focus:border-[#D03839] focus:ring-1 focus:ring-[rgba(208,56,57,.12)] transition-all duration-200"
+                />
+              </div>
+            )}
           </div>
 
           <div className="flex-1 min-h-0 overflow-y-auto">
-            {loading ? (
+            {showBlocked ? (
+              blockedLoading ? (
+                <div className="flex items-center justify-center h-40">
+                  <div className="animate-spin rounded-full h-8 w-8 border-2 border-[#E8E8E4] border-t-[#1A1816]" />
+                </div>
+              ) : blockedUsers.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-40 text-center px-6">
+                  <Ban className="w-8 h-8 text-[#A8A8A4] mb-3" />
+                  <p className="text-[14px] font-medium text-[#444441]">No blocked users</p>
+                </div>
+              ) : (
+                <div>
+                  {blockedUsers.map(row => {
+                    const name = capitalizeFirst(row.buyer_name || 'Buyer');
+                    return (
+                      <div key={row.conversation_id} className="flex items-center gap-3 px-5 py-3.5 border-b border-[#F3F3F1]">
+                        <div
+                          className="w-10 h-10 rounded-full flex items-center justify-center text-[13px] font-semibold flex-shrink-0"
+                          style={{ backgroundColor: getAvatarPair(name).bg, color: getAvatarPair(name).text }}
+                        >
+                          {getInitials(name)}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h3 className="text-[14px] font-medium text-[#1A1816] truncate">{name}</h3>
+                          <p className="text-[11px] text-[#A8A8A4] truncate">Blocked {row.blocked_at ? new Date(row.blocked_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : ''}</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => unblockConversation(row.conversation_id)}
+                          className="flex-shrink-0 px-3 py-1.5 border border-[#E8E8E4] hover:bg-[#FAFAF8] text-[#1A1816] text-[12px] font-semibold rounded transition-colors duration-200"
+                        >
+                          Unblock
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )
+            ) : loading ? (
               <div className="flex items-center justify-center h-40">
                 <div className="animate-spin rounded-full h-8 w-8 border-2 border-[#E8E8E4] border-t-[#1A1816]" />
               </div>
@@ -777,7 +850,7 @@ export default function MessagesPage() {
                     <h2 className="text-[16px] font-bold text-[#1A1816]">{buyerDisplayName}</h2>
                     <p className="text-[13px] text-[#737370] truncate">{selectedPropertyAddress || 'Interested Buyer'}</p>
                   </div>
-                  {selectedPropertyAddress && (
+                  {(selectedPropertyAddress || offer) && (
                     <button
                       type="button"
                       onClick={() => setShowMobilePropPanel(true)}
@@ -929,9 +1002,6 @@ export default function MessagesPage() {
                     title="Attach a file"
                     className="p-2.5 rounded hover:bg-[#FAFAF8] transition-colors duration-200 flex-shrink-0 disabled:opacity-50">
                     {uploadingAttachment ? <Loader2 className="w-5 h-5 text-[#737370] animate-spin" /> : <Paperclip className="w-5 h-5 text-[#737370]" />}
-                  </button>
-                  <button type="button" className="p-2.5 rounded hover:bg-[#FAFAF8] transition-colors duration-200 flex-shrink-0">
-                    <Smile className="w-5 h-5 text-[#737370]" />
                   </button>
                   <textarea
                     ref={messageInputRef} value={messageText}
@@ -1274,6 +1344,30 @@ export default function MessagesPage() {
                   {offer.status === 'accepted' && <span className="inline-block px-2 py-0.5 bg-[#E4F5EC] text-[#0F6E56] text-[11px] font-semibold rounded">Accepted</span>}
                   {offer.status === 'rejected' && <span className="inline-block px-2 py-0.5 bg-[#FEF0EF] text-[#D03839] text-[11px] font-semibold rounded">Rejected</span>}
                   {offer.status === 'countered' && <span className="inline-block px-2 py-0.5 bg-[#EBF3FC] text-[#4A90E2] text-[11px] font-semibold rounded">Counter Sent</span>}
+
+                  {offer.status === 'pending' && (
+                    <div className="mt-4">
+                      <p className="text-[11px] font-semibold text-[#A8A8A4] uppercase tracking-[1.1px] mb-3">Respond to Offer</p>
+                      <button
+                        onClick={() => setShowAcceptModal(true)}
+                        disabled={offerActionLoading}
+                        className="w-full py-3 bg-[#D03839] text-white text-[14px] font-semibold rounded transition-colors duration-200 mb-2 disabled:opacity-40 disabled:cursor-not-allowed hover:enabled:bg-[#E0493B]">
+                        Accept Offer
+                      </button>
+                      <button
+                        onClick={() => { setShowMobilePropPanel(false); setCounterAmount(String(Math.round(offer.offer_price || 0))); setShowCounterPreview(true); }}
+                        disabled={offerActionLoading}
+                        className="w-full py-3 border border-[#E8E8E4] text-[#1A1816] text-[14px] font-semibold rounded transition-colors duration-200 mb-2 disabled:opacity-40 disabled:cursor-not-allowed hover:enabled:bg-[#FAFAF8]">
+                        Counter Offer
+                      </button>
+                      <button
+                        onClick={() => setShowRejectModal(true)}
+                        disabled={offerActionLoading}
+                        className="w-full py-2.5 text-[#737370] text-[13px] font-medium transition-colors duration-200 text-center disabled:opacity-40 disabled:cursor-not-allowed hover:enabled:text-[#D03839]">
+                        Reject Offer
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
               {selectedPropertyAddress && (

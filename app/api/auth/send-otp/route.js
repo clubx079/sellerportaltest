@@ -44,7 +44,7 @@ export async function POST(request) {
       body: JSON.stringify({
         from: process.env.AIROSOFTS_SMS_FROM,
         to: e164Phone,
-        message: `Your Deelmap verification code is ${otp}. Valid for 10 minutes. Do not share this code.`
+        message: `Your DeelMap verification code is ${otp}. Valid for 10 minutes. Do not share this code.`
       })
     })
 

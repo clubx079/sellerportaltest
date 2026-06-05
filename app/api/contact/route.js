@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 
 // Seller help/support submissions are recorded on the shared Monday board
-// "Deelmap Contact & Support" (same board as the buyer website). Server-side only.
+// "DeelMap Contact & Support" (same board as the buyer website). Server-side only.
 const MONDAY_API_URL = 'https://api.monday.com/v2'
 const BOARD_ID = '18415712401'
 const COL = {

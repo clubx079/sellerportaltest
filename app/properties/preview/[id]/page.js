@@ -38,7 +38,7 @@ function Footer() {
             <div className="max-w-lg">
               <p className="text-[11px] font-semibold text-[#737370] uppercase tracking-[2px] mb-4">GET STARTED TODAY</p>
               <h2 className="text-4xl sm:text-5xl font-bold text-white leading-tight mb-4">Find and close better<br />real estate deals</h2>
-              <p className="text-[#737370] text-[15px] leading-relaxed">Join thousands of investors already using Deelmap to source, analyze, and close off-market deals across the United States.</p>
+              <p className="text-[#737370] text-[15px] leading-relaxed">Join thousands of investors already using DeelMap to source, analyze, and close off-market deals across the United States.</p>
             </div>
             <div className="flex flex-col gap-3 lg:min-w-[260px]">
               <button className="flex items-center justify-center gap-2 h-14 bg-[#D03839] hover:bg-[#E0493B] text-white font-semibold text-[16px] rounded transition-colors">Start finding deals →</button>
@@ -87,7 +87,7 @@ function Footer() {
         </div>
         <div className="border-t border-[#222222]">
           <div className="w-full px-6 lg:px-10 py-5 flex flex-col sm:flex-row items-center justify-between gap-3">
-            <p className="text-[13px] text-[#555555]">© 2025 Deelmap. All rights reserved.</p>
+            <p className="text-[13px] text-[#555555]">© 2025 DeelMap. All rights reserved.</p>
             <div className="flex items-center gap-5">
               {['Privacy', 'Terms', 'Cookies'].map(l => (
                 <a key={l} href="#" className="text-[13px] text-[#555555] hover:text-white transition-colors">{l}</a>

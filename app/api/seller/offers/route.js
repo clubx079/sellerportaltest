@@ -48,7 +48,7 @@ async function sendEmailToBuyer(buyerEmail, subject, html) {
   try {
     const resend = new Resend(apiKey);
     await resend.emails.send({
-      from: process.env.RESEND_FROM_EMAIL || 'Deelmap <notifications@deelmap.com>',
+      from: process.env.RESEND_FROM_EMAIL || 'DeelMap <notifications@deelmap.com>',
       to: buyerEmail,
       subject,
       html,
@@ -87,7 +87,7 @@ function buildEmailHtml(logoUrl, title, titleColor, propertyBlock, bodyHtml, cta
     <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;background:#ffffff">
       <tr>
         <td style="background:#ffffff;padding:12px 40px;text-align:center;border-bottom:2px solid #D03839">
-          <img src="https://deelmap.com/deelmap.png" alt="Deelmap" height="72" style="display:inline-block;height:72px;width:auto;border:0" />
+          <img src="https://deelmap.com/deelmap.png" alt="DeelMap" height="72" style="display:inline-block;height:72px;width:auto;border:0" />
         </td>
       </tr>
       <tr>
@@ -105,7 +105,7 @@ function buildEmailHtml(logoUrl, title, titleColor, propertyBlock, bodyHtml, cta
       <tr>
         <td style="background:#ffffff;border-top:1px solid #E8E8E4;padding:20px 40px;text-align:center">
           <p style="margin:0 0 4px;font-size:12px;color:#A8A8A4">Questions? <a href="https://deelmap.com/contact" style="color:#737370;text-decoration:underline">Reach us through our contact page</a></p>
-          <p style="margin:0;font-size:12px;color:#A8A8A4">© 2026 Deelmap. All rights reserved.</p>
+          <p style="margin:0;font-size:12px;color:#A8A8A4">© 2026 DeelMap. All rights reserved.</p>
         </td>
       </tr>
     </table>
@@ -350,7 +350,7 @@ export async function PATCH(request) {
         }),
         buyerEmail && sendEmailToBuyer(
           buyerEmail,
-          `Your offer of ${formatCurrency(offer.offer_price)} was accepted - Deelmap`,
+          `Your offer of ${formatCurrency(offer.offer_price)} was accepted - DeelMap`,
           buildEmailHtml(
             logoUrl,
             'Your offer was accepted!',
@@ -385,7 +385,7 @@ export async function PATCH(request) {
         }),
         buyerEmail && sendEmailToBuyer(
           buyerEmail,
-          `Update on your offer for ${formatCurrency(offer.offer_price)} - Deelmap`,
+          `Update on your offer for ${formatCurrency(offer.offer_price)} - DeelMap`,
           buildEmailHtml(
             logoUrl,
             'Your offer was declined',
@@ -468,7 +468,7 @@ export async function PATCH(request) {
         }),
         buyerEmail && sendEmailToBuyer(
           buyerEmail,
-          `${sellerName} sent a counter offer of ${counterAmountStr} - Deelmap`,
+          `${sellerName} sent a counter offer of ${counterAmountStr} - DeelMap`,
           buildEmailHtml(
             logoUrl,
             `Counter offer received: ${counterAmountStr}`,

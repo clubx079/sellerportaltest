@@ -42,7 +42,7 @@ export async function POST(request) {
       body: JSON.stringify({
         from: process.env.AIROSOFTS_SMS_FROM,
         to: e164,
-        message: `Your Deelmap phone verification code is ${otp}. Valid for 15 minutes. Do not share this code.`,
+        message: `Your DeelMap phone verification code is ${otp}. Valid for 15 minutes. Do not share this code.`,
       }),
     });
     if (!sms.ok) return NextResponse.json({ error: 'Failed to send verification code' }, { status: 500 });
