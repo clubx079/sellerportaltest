@@ -90,7 +90,7 @@ export async function DELETE(request, { params }) {
 
     const { data: member } = await supabase
       .from('org_members')
-      .select('org_id, seller_id')
+      .select('org_id, seller_id, invited_at')
       .eq('id', memberId)
       .maybeSingle()
 
@@ -106,15 +106,52 @@ export async function DELETE(request, { params }) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    if (member.seller_id) {
-      await supabase
-        .from('seller_applications')
-        .update({ org_id: null })
-        .eq('id', member.seller_id)
+    // Guard: the org owner can never be removed (they are the last owner and
+    // cannot remove themselves). The owner is normally not an org_members row,
+    // but reject defensively in case one was ever created.
+    if (member.seller_id && member.seller_id === org.owner_seller_id) {
+      return NextResponse.json({ error: 'The owner cannot be removed from the team' }, { status: 403 })
     }
 
+    let accountDeleted = false
+    if (member.seller_id) {
+      // Decide delete-vs-unlink. A team-created sub-account is made at accept time
+      // (its created_at is at/after the invite was sent); deleting it means a
+      // re-invite starts fresh (the person sets a new password). A pre-existing
+      // independent seller who merely joined is only unlinked — we never destroy
+      // an account that existed before the invite (that would nuke their own data).
+      const { data: acct } = await supabase
+        .from('seller_applications')
+        .select('id, created_at')
+        .eq('id', member.seller_id)
+        .maybeSingle()
+
+      const invitedAt = member.invited_at ? new Date(member.invited_at).getTime() : 0
+      const createdAt = acct?.created_at ? new Date(acct.created_at).getTime() : 0
+      const isTeamSubAccount = !!acct && invitedAt > 0 && createdAt >= invitedAt
+
+      // Remove the membership row first so any FK to it is cleared.
+      await supabase.from('org_members').delete().eq('id', memberId)
+
+      if (isTeamSubAccount) {
+        const { error: delErr } = await supabase.from('seller_applications').delete().eq('id', member.seller_id)
+        if (delErr) {
+          // Constraint blocked the delete — fall back to unlinking so removal still succeeds.
+          await supabase.from('seller_applications').update({ org_id: null }).eq('id', member.seller_id)
+        } else {
+          accountDeleted = true
+        }
+      } else {
+        // Pre-existing independent account → only unlink it from the team.
+        await supabase.from('seller_applications').update({ org_id: null }).eq('id', member.seller_id)
+      }
+
+      return NextResponse.json({ success: true, accountDeleted })
+    }
+
+    // Pending invite (never accepted, no account) → just delete the invite row.
     await supabase.from('org_members').delete().eq('id', memberId)
-    return NextResponse.json({ success: true })
+    return NextResponse.json({ success: true, accountDeleted })
   } catch (err) {
     console.error('[team DELETE]', err)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

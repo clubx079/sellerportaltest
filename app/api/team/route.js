@@ -119,6 +119,37 @@ export async function GET(request) {
   }
 }
 
+// PATCH /api/team — update the org/team name (owner only)
+export async function PATCH(request) {
+  const sellerId = getSellerId(request)
+  if (!sellerId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  try {
+    const { name } = await request.json()
+    const trimmed = typeof name === 'string' ? name.trim() : ''
+    if (!trimmed) return NextResponse.json({ error: 'Team name is required' }, { status: 400 })
+
+    const { data: org } = await supabase
+      .from('seller_organizations')
+      .select('id, owner_seller_id')
+      .eq('owner_seller_id', sellerId)
+      .maybeSingle()
+
+    if (!org) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+
+    const { error: updateErr } = await supabase
+      .from('seller_organizations')
+      .update({ name: trimmed })
+      .eq('id', org.id)
+
+    if (updateErr) return NextResponse.json({ error: 'Failed to update team name' }, { status: 500 })
+    return NextResponse.json({ success: true, name: trimmed })
+  } catch (err) {
+    console.error('[team PATCH]', err)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}
+
 // POST /api/team — invite a member (or create org first if none exists)
 export async function POST(request) {
   const sellerId = getSellerId(request)
@@ -228,14 +259,6 @@ export async function POST(request) {
             <tr><td>
               <a href="${acceptUrl}" style="display:inline-block;background:#D03839;color:#ffffff;font-size:14px;font-weight:600;padding:12px 28px;border-radius:4px;text-decoration:none;letter-spacing:0.1px">Accept Invitation</a>
             </td></tr>
-          </table>
-          <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:28px">
-            <tr>
-              <td style="background:#FAFAF8;border:1px solid #E8E8E4;border-radius:4px;padding:16px 20px">
-                <p style="margin:0 0 4px;font-size:11px;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;color:#A8A8A4">Invitation link</p>
-                <p style="margin:0;font-size:12px;color:#737370;word-break:break-all;line-height:1.5">${acceptUrl}</p>
-              </td>
-            </tr>
           </table>
           <p style="margin:0;font-size:12px;color:#A8A8A4;line-height:1.6">This link expires in 7 days. If you weren't expecting this invitation, you can safely ignore this email.</p>
         </td>

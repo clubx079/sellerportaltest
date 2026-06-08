@@ -99,6 +99,7 @@ export default function EditPropertyPage() {
   const TAB_ORDER = ['basic', 'images', 'ownership', 'content', 'seo'];
   const [rejectionReason, setRejectionReason] = useState(null);
   const [userId, setUserId] = useState(null);
+  const [accessDenied, setAccessDenied] = useState(false);
   const [sourceType, setSourceType] = useState(null); // 'manual' | 'scraped'
   const [tempSellerId, setTempSellerId] = useState(null); // for scraped fetch/save
   // ── Auto-save state ────────────────────────────────────────────
@@ -163,6 +164,14 @@ export default function EditPropertyPage() {
       const name = user.contactPersonName || user.businessName || '';
       const phone = user.phone || '';
       setSellerProfileContact({ name, phone });
+      // Owner/personal always allowed; members need listings_update.
+      fetch('/api/team/workspaces', { headers: { Authorization: `Bearer ${user.id}` } })
+        .then(r => r.json())
+        .then(ws => {
+          const isOwner = !ws?.current?.id || ws?.current?.role === 'admin';
+          if (!isOwner && !ws?.current?.permissions?.listings_update) setAccessDenied(true);
+        })
+        .catch(() => {});
     }
   }, []);
 
@@ -914,6 +923,20 @@ export default function EditPropertyPage() {
     }
     setContractUpload({ url: null, key: null, filename: null, uploading: false });
   };
+
+  if (accessDenied) {
+    return (
+      <div className="min-h-screen bg-[#FAFAF8] flex items-center justify-center p-6" style={{ fontFamily: 'var(--font-dm-sans), sans-serif' }}>
+        <div className="bg-white border border-[#E8E8E4] rounded p-10 text-center max-w-sm">
+          <div className="w-12 h-12 bg-[#F3F3F0] rounded flex items-center justify-center mx-auto mb-4">
+            <AlertTriangle className="w-6 h-6 text-[#A8A8A4]" />
+          </div>
+          <h2 className="text-[16px] font-bold text-[#1A1816] mb-2">Access Restricted</h2>
+          <p className="text-[13px] text-[#737370] leading-relaxed">You don&apos;t have permission to edit listings. Contact your team owner to request access.</p>
+        </div>
+      </div>
+    );
+  }
 
   if (loadingProperty) {
     return (

@@ -64,7 +64,7 @@ export async function GET(request) {
 
     const { data: rows, error } = await supabase
       .from('property_analytics')
-      .select('page_views, view_start_time, created_at')
+      .select('page_views, view_start_time, created_at, user_email')
       .in('property_id', propertyIds);
 
     if (error) {
@@ -72,12 +72,20 @@ export async function GET(request) {
       return NextResponse.json({ totalViews: 0, viewsLast30Days: 0, viewsPrevious30Days: 0 });
     }
 
-    const totalViews = (rows || []).reduce((sum, r) => sum + (Number(r.page_views) || 0), 0);
+    // Exclude in-company / internal staff (system_users) from seller-facing analytics.
+    // Keep rows with null email (genuine anonymous visitors).
+    const { data: sysUsers } = await supabase.from('system_users').select('email');
+    const excludedEmails = new Set((sysUsers || []).map(u => (u.email || '').trim().toLowerCase()).filter(Boolean));
+    const isExcluded = (email) => excludedEmails.has((email || '').trim().toLowerCase());
+
+    const filteredRows = (rows || []).filter(r => !isExcluded(r.user_email));
+
+    const totalViews = filteredRows.reduce((sum, r) => sum + (Number(r.page_views) || 0), 0);
 
     const { currentStart, currentEnd, previousStart, previousEnd } = getPeriodDates();
     let viewsLast30Days = 0;
     let viewsPrevious30Days = 0;
-    (rows || []).forEach((r) => {
+    filteredRows.forEach((r) => {
       const t = r.view_start_time || r.created_at;
       const views = Number(r.page_views) || 0;
       if (t) {

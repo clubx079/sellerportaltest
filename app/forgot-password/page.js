@@ -20,6 +20,13 @@ export default function ForgotPasswordPage() {
   const [message, setMessage] = useState("");
   const [logoError, setLogoError] = useState(false);
 
+  // Prefill email from ?email= query param (e.g. coming from team invite)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const prefill = params.get("email");
+    if (prefill) setEmail(prefill);
+  }, []);
+
   // 30s resend cooldown timer (same as buyer)
   useEffect(() => {
     const timer = setInterval(() => {

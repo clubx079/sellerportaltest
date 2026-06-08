@@ -136,12 +136,22 @@ function EnhanceContent() {
   const [promoValidating, setPromoValidating] = useState(false)
   const [promoError, setPromoError] = useState(null)
   const [appliedPromo, setAppliedPromo] = useState(null)
+  const [accessDenied, setAccessDenied] = useState(false)
 
   useEffect(() => {
     const userStr = localStorage.getItem('seller_user')
     if (!userStr) { router.push('/login'); return }
     const user = JSON.parse(userStr)
     setUserId(user.id)
+
+    // Owner/personal always allowed; members need addons_buy.
+    fetch('/api/team/workspaces', { headers: { Authorization: `Bearer ${user.id}` } })
+      .then(r => r.json())
+      .then(ws => {
+        const isOwner = !ws?.current?.id || ws?.current?.role === 'admin'
+        if (!isOwner && !ws?.current?.permissions?.addons_buy) setAccessDenied(true)
+      })
+      .catch(() => {})
 
     supabase
       .from('seller_applications')
@@ -278,6 +288,20 @@ function EnhanceContent() {
     } finally {
       setLoading(false)
     }
+  }
+
+  if (accessDenied) {
+    return (
+      <div className="min-h-screen bg-[#FAFAF8] flex items-center justify-center p-6" style={{ fontFamily: 'var(--font-dm-sans), sans-serif' }}>
+        <div className="bg-white border border-[#E8E8E4] rounded p-10 text-center max-w-sm">
+          <div className="w-12 h-12 bg-[#F3F3F0] rounded flex items-center justify-center mx-auto mb-4">
+            <Star className="w-6 h-6 text-[#A8A8A4]" />
+          </div>
+          <h2 className="text-[16px] font-bold text-[#1A1816] mb-2">Access Restricted</h2>
+          <p className="text-[13px] text-[#737370] leading-relaxed">You don&apos;t have permission to buy add-ons. Contact your team owner to request access.</p>
+        </div>
+      </div>
+    )
   }
 
   if (success) {

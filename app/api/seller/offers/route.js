@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { Resend } from 'resend';
-import { getWorkspaceSellerId } from '@/lib/workspace';
+import { getWorkspaceSellerId, getCallerAccess, requirePermission } from '@/lib/workspace';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -260,6 +260,12 @@ export async function PATCH(request) {
   try {
     const rawSellerId = getSellerId(request);
     if (!rawSellerId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+    const access = await getCallerAccess(rawSellerId);
+    if (!requirePermission(access, 'offers_create')) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
     const { effectiveId: sellerId } = await getWorkspaceSellerId(rawSellerId);
 
     const body = await request.json();

@@ -83,6 +83,7 @@ export default function NewPropertyPage() {
   const [showAllPreviewImages, setShowAllPreviewImages] = useState(false);
   const [userId, setUserId] = useState(null);
   const [workspaceRole, setWorkspaceRole] = useState('admin');
+  const [accessDenied, setAccessDenied] = useState(false);
   const [trialPlan, setTrialPlan] = useState(null);
   const [isLifetimeFree, setIsLifetimeFree] = useState(false);
   const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
@@ -158,6 +159,9 @@ export default function NewPropertyPage() {
       .then(ws => {
         const effectiveId = ws?.current?.effectiveSellerId || user.id;
         setWorkspaceRole(ws?.current?.role || 'admin');
+        // Owner/personal (no org id, or admin role) always allowed; members need listings_create.
+        const isOwner = !ws?.current?.id || ws?.current?.role === 'admin';
+        if (!isOwner && !ws?.current?.permissions?.listings_create) setAccessDenied(true);
         setUserId(effectiveId);
         supabase
           .from('seller_plans')
@@ -865,6 +869,20 @@ export default function NewPropertyPage() {
     }
     setContractUpload({ url: null, key: null, filename: null, uploading: false });
   };
+
+  if (accessDenied) {
+    return (
+      <div className="min-h-screen bg-[#FAFAF8] flex items-center justify-center p-6" style={{ fontFamily: 'var(--font-dm-sans), sans-serif' }}>
+        <div className="bg-white border border-[#E8E8E4] rounded p-10 text-center max-w-sm">
+          <div className="w-12 h-12 bg-[#F3F3F0] rounded flex items-center justify-center mx-auto mb-4">
+            <Lock className="w-6 h-6 text-[#A8A8A4]" />
+          </div>
+          <h2 className="text-[16px] font-bold text-[#1A1816] mb-2">Access Restricted</h2>
+          <p className="text-[13px] text-[#737370] leading-relaxed">You don&apos;t have permission to create listings. Contact your team owner to request access.</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-3 md:space-y-4" style={{ fontFamily: 'var(--font-dm-sans), sans-serif' }}>

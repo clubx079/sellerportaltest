@@ -103,7 +103,13 @@ export async function GET(request, { params }) {
       );
     }
 
-    let list = analyticsRows || [];
+    // Exclude in-company / internal staff (system_users) from seller-facing analytics.
+    // Keep rows with null email (genuine anonymous visitors).
+    const { data: sysUsers } = await supabase.from('system_users').select('email');
+    const excludedEmails = new Set((sysUsers || []).map(u => (u.email || '').trim().toLowerCase()).filter(Boolean));
+    const isExcluded = (email) => excludedEmails.has((email || '').trim().toLowerCase());
+
+    let list = (analyticsRows || []).filter(r => !isExcluded(r.user_email));
     if (periodStart) {
       list = list.filter((r) => {
         const t = r.view_start_time || r.created_at;
@@ -117,7 +123,7 @@ export async function GET(request, { params }) {
       .select('session_id, user_id, user_email, visited_at, time_spent_seconds')
       .eq('property_id', propertyId);
 
-    let visits = visitRows || [];
+    let visits = (visitRows || []).filter(v => !isExcluded(v.user_email));
     if (periodStart) {
       visits = visits.filter((v) => v.visited_at && v.visited_at >= periodStart);
     }

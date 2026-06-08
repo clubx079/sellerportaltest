@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { getWorkspaceSellerId } from '@/lib/workspace';
+import { getWorkspaceSellerId, getCallerAccess, requirePermission } from '@/lib/workspace';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -92,6 +92,12 @@ export async function GET(request) {
     const period = searchParams.get('period') || 'last30days';
 
     if (!rawUserId) return NextResponse.json({ error: 'Missing userId' }, { status: 400 });
+
+    const access = await getCallerAccess(rawUserId);
+    if (!requirePermission(access, 'analytics_view')) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
     const { effectiveId: userId } = await getWorkspaceSellerId(rawUserId);
 
     // Get all property IDs for this seller
@@ -146,8 +152,14 @@ export async function GET(request) {
       .select('property_id, user_email, visited_at, time_spent_seconds, session_id')
       .in('property_id', propertyIds);
 
-    const analyticsAll = analyticsRows || [];
-    const visitsAll = visitRows || [];
+    // Exclude in-company / internal staff (system_users) from seller-facing analytics.
+    // Keep rows with null email (genuine anonymous visitors).
+    const { data: sysUsers } = await supabase.from('system_users').select('email');
+    const excludedEmails = new Set((sysUsers || []).map(u => (u.email || '').trim().toLowerCase()).filter(Boolean));
+    const isExcluded = (email) => excludedEmails.has((email || '').trim().toLowerCase());
+
+    const analyticsAll = (analyticsRows || []).filter(r => !isExcluded(r.user_email));
+    const visitsAll = (visitRows || []).filter(v => !isExcluded(v.user_email));
 
     // Helper to check if a row falls in a period
     const inRange = (t, start, end) => {
