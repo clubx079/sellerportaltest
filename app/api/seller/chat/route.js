@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { Resend } from 'resend';
-import { getWorkspaceSellerId } from '@/lib/workspace';
+import { getWorkspaceSellerId, getCallerAccess, requirePermission } from '@/lib/workspace';
 
 // Single shared DB for sellers, buyers, admins. Use service role key so we can read users (e.g. buyer email); anon + RLS would block cross-user lookups.
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -217,6 +217,11 @@ export async function GET(request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     const { effectiveId: sellerId } = await getWorkspaceSellerId(rawSellerId);
+
+    const access = await getCallerAccess(rawSellerId);
+    if (!requirePermission(access, 'inbox_access')) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
 
     const { searchParams } = new URL(request.url);
     const action = searchParams.get('action');
@@ -484,6 +489,11 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     const { effectiveId: sellerId } = await getWorkspaceSellerId(rawSellerId);
+
+    const access = await getCallerAccess(rawSellerId);
+    if (!requirePermission(access, 'inbox_access')) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
 
     const body = await request.json().catch(() => ({}));
     const { action, conversationId, messageText, buyerId, propertyId, propertyAddress, attachmentUrl, attachmentName } = body;

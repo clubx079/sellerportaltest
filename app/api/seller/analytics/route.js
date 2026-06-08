@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { getWorkspaceSellerId } from '@/lib/workspace';
+import { getWorkspaceSellerId, getCallerAccess, requirePermission } from '@/lib/workspace';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -92,6 +92,12 @@ export async function GET(request) {
     const period = searchParams.get('period') || 'last30days';
 
     if (!rawUserId) return NextResponse.json({ error: 'Missing userId' }, { status: 400 });
+
+    const access = await getCallerAccess(rawUserId);
+    if (!requirePermission(access, 'analytics_view')) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
     const { effectiveId: userId } = await getWorkspaceSellerId(rawUserId);
 
     // Get all property IDs for this seller

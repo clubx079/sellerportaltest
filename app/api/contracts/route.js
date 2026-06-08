@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { getWorkspaceSellerId } from '@/lib/workspace'
+import { getWorkspaceSellerId, getCallerAccess, requirePermission } from '@/lib/workspace'
 import { mapFieldValues, decorateTemplates } from '@/lib/contract-templates'
 import { sendSigningEmail } from '@/lib/contract-emails'
 
@@ -119,6 +119,17 @@ export async function GET(request) {
 
 export async function POST(request) {
   try {
+    // Permission gate (contracts_create) — owner/personal accounts always pass;
+    // a team member is only blocked when they explicitly lack the key. Resolve the
+    // caller from the Bearer id; if there's no Bearer header at all, getCallerAccess
+    // returns full access (isOwner) so the owner/legacy flow is never blocked.
+    const contractAuth = request.headers.get('authorization')
+    const contractCallerId = contractAuth?.startsWith('Bearer ') ? contractAuth.slice(7).trim() : null
+    const contractAccess = await getCallerAccess(contractCallerId)
+    if (!requirePermission(contractAccess, 'contracts_create')) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+
     const {
       contractRole,
       buyerName,
