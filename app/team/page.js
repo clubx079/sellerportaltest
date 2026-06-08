@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
-import { Users, Plus, Trash2, X, Mail, Crown, Clock, CheckCircle, Check, Zap, AlertTriangle, Shield, Settings2, Phone, RefreshCw } from 'lucide-react'
+import { Users, Plus, Trash2, X, Mail, Crown, Clock, CheckCircle, Check, Zap, AlertTriangle, Shield, Settings2, Phone, RefreshCw, Pencil } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
 function fmtDate(d) {
@@ -79,8 +79,22 @@ function derivePermissionsFromRole(role) {
 }
 
 function PermissionToggles({ permissions, onChange }) {
+  const allSelected = ALL_PERMISSION_KEYS.every(k => permissions[k])
   return (
     <div className="space-y-4">
+      <div className="flex items-center justify-between pb-3 border-b border-[#E8E8E4]">
+        <span className="text-[12px] font-semibold text-[#1A1816]">All permissions</span>
+        <button
+          type="button"
+          onClick={() => {
+            const next = !allSelected
+            onChange(Object.fromEntries(ALL_PERMISSION_KEYS.map(k => [k, next])))
+          }}
+          className="text-[11px] text-[#D03839] hover:underline font-semibold"
+        >
+          {allSelected ? 'Clear all' : 'Select all'}
+        </button>
+      </div>
       {PERMISSION_GROUPS.map(group => {
         const allOn = group.items.every(i => permissions[i.key])
         return (
@@ -414,8 +428,35 @@ export default function TeamPage() {
   const [resending, setResending] = useState(null)
   const [confirmRemove, setConfirmRemove] = useState(null)
   const [toast, setToast] = useState(null)
+  const [editingName, setEditingName] = useState(false)
+  const [nameDraft, setNameDraft] = useState('')
+  const [savingName, setSavingName] = useState(false)
 
   useEffect(() => { fetchTeam() }, [])
+
+  async function saveTeamName() {
+    const next = nameDraft.trim()
+    if (!next) { showToast('Team name is required', 'error'); return }
+    setSavingName(true)
+    try {
+      const res = await fetch('/api/team', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getSellerId()}` },
+        body: JSON.stringify({ name: next }),
+      })
+      const result = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        showToast(result.error || 'Failed to update team name', 'error')
+      } else {
+        setData(prev => prev ? { ...prev, org: prev.org ? { ...prev.org, name: next } : prev.org } : prev)
+        setEditingName(false)
+        showToast('Team name updated')
+      }
+    } catch {
+      showToast('Failed to update team name', 'error')
+    }
+    setSavingName(false)
+  }
 
   function showToast(text, kind = 'success') {
     setToast({ text, kind })
@@ -553,9 +594,51 @@ export default function TeamPage() {
         <div>
           <h1 className="text-[24px] font-bold text-[#1A1816] mb-1">Team</h1>
           {org ? (
-            <p className="text-[14px] text-[#737370]">
-              {isOwner ? org.name : `You're a member of ${org.name}`}
-            </p>
+            isOwner ? (
+              editingName ? (
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    autoFocus
+                    value={nameDraft}
+                    onChange={e => setNameDraft(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') saveTeamName()
+                      if (e.key === 'Escape') setEditingName(false)
+                    }}
+                    disabled={savingName}
+                    className="h-8 px-2.5 border border-[#1A1816] rounded text-[14px] text-[#1A1816] focus:outline-none disabled:opacity-50 w-[240px]"
+                  />
+                  <button
+                    onClick={saveTeamName}
+                    disabled={savingName}
+                    className="h-8 px-3 bg-[#D03839] hover:bg-[#E0493B] text-white text-[12px] font-semibold rounded disabled:opacity-50"
+                  >
+                    {savingName ? 'Saving…' : 'Save'}
+                  </button>
+                  <button
+                    onClick={() => setEditingName(false)}
+                    disabled={savingName}
+                    className="h-8 px-3 border border-[#E8E8E4] text-[#444441] text-[12px] font-medium rounded hover:border-[#1A1816] disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-1.5 group">
+                  <p className="text-[14px] text-[#737370]">{org.name}</p>
+                  <button
+                    onClick={() => { setNameDraft(org.name || ''); setEditingName(true) }}
+                    className="p-1 rounded text-[#A8A8A4] hover:text-[#1A1816] hover:bg-[#FAFAF8] transition-colors"
+                    title="Edit team name"
+                  >
+                    <Pencil className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              )
+            ) : (
+              <p className="text-[14px] text-[#737370]">{`You're a member of ${org.name}`}</p>
+            )
           ) : (
             <p className="text-[14px] text-[#737370]">Invite colleagues to collaborate on your listings.</p>
           )}

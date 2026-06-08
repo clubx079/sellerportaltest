@@ -119,6 +119,37 @@ export async function GET(request) {
   }
 }
 
+// PATCH /api/team — update the org/team name (owner only)
+export async function PATCH(request) {
+  const sellerId = getSellerId(request)
+  if (!sellerId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  try {
+    const { name } = await request.json()
+    const trimmed = typeof name === 'string' ? name.trim() : ''
+    if (!trimmed) return NextResponse.json({ error: 'Team name is required' }, { status: 400 })
+
+    const { data: org } = await supabase
+      .from('seller_organizations')
+      .select('id, owner_seller_id')
+      .eq('owner_seller_id', sellerId)
+      .maybeSingle()
+
+    if (!org) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+
+    const { error: updateErr } = await supabase
+      .from('seller_organizations')
+      .update({ name: trimmed })
+      .eq('id', org.id)
+
+    if (updateErr) return NextResponse.json({ error: 'Failed to update team name' }, { status: 500 })
+    return NextResponse.json({ success: true, name: trimmed })
+  } catch (err) {
+    console.error('[team PATCH]', err)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}
+
 // POST /api/team — invite a member (or create org first if none exists)
 export async function POST(request) {
   const sellerId = getSellerId(request)
