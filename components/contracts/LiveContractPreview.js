@@ -16,9 +16,8 @@ export default function LiveContractPreview({ isAssignment, buyerName, sellerNam
 
   const body = (
     <>
-      <div className="flex items-start justify-between gap-3 mb-3">
+      <div className="mb-3">
         <h3 className={`${fullPage ? 'text-[15px]' : 'text-[12px]'} font-bold uppercase tracking-wide`}>{isAssignment ? 'Assignment of Sale Contract Agreement' : 'Contract to Purchase Real Estate'}</h3>
-        <span className={`${fullPage ? 'text-[13px]' : 'text-[11px]'} font-extrabold text-[#D03839] shrink-0`} style={{ fontFamily: 'DM Sans, sans-serif' }}>DeelMap</span>
       </div>
 
       {isAssignment ? (
@@ -73,6 +72,10 @@ export default function LiveContractPreview({ isAssignment, buyerName, sellerNam
           </div>
         </>
       )}
+
+      <p className={`${fullPage ? 'text-[11px]' : 'text-[9px]'} text-[#A8A8A4] mt-6 pt-2.5 border-t border-[#E8E8E4]`} style={{ fontFamily: 'DM Sans, sans-serif', textAlign: 'left' }}>
+        Contract provided by DeelMap &middot; {today}
+      </p>
     </>
   )
 
