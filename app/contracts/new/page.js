@@ -110,6 +110,7 @@ export default function NewContractWizardPage() {
   const [step, setStep] = useState(1)
   const [templates, setTemplates] = useState([])
   const [templatesLoading, setTemplatesLoading] = useState(true)
+  const [templatesError, setTemplatesError] = useState(false)
   const [properties, setProperties] = useState([])
   const [propertiesLoading, setPropertiesLoading] = useState(true)
 
@@ -233,13 +234,24 @@ export default function NewContractWizardPage() {
   }, [contractRole, effectiveName, effectiveEmail, accountName, accountEmail])
 
   // ── Load templates ──────────────────────────────────────────────
-  useEffect(() => {
+  // Distinguish a fetch FAILURE (show Retry) from a genuine empty list. A
+  // non-ok response or thrown error sets templatesError so the user gets a
+  // retryable message instead of a permanent dead-end.
+  const loadTemplates = () => {
     setTemplatesLoading(true)
+    setTemplatesError(false)
     fetch('/api/contracts?type=templates')
-      .then(r => r.json())
-      .then(raw => setTemplates(decorateTemplates(raw)))
-      .catch(() => setTemplates([]))
+      .then(r => {
+        if (!r.ok) throw new Error('templates fetch failed')
+        return r.json()
+      })
+      .then(raw => setTemplates(Array.isArray(raw) ? decorateTemplates(raw) : []))
+      .catch(() => { setTemplates([]); setTemplatesError(true) })
       .finally(() => setTemplatesLoading(false))
+  }
+
+  useEffect(() => {
+    loadTemplates()
   }, [])
 
   useEffect(() => {
@@ -664,7 +676,7 @@ export default function NewContractWizardPage() {
       </div>
 
       <div className="bg-white border border-[#E8E8E4] rounded p-4 md:p-6">
-        {step === 1 && <Step1Setup templates={templates} templatesLoading={templatesLoading} templateId={templateId} onSelectTemplate={(id) => { setTemplateId(String(id)); setDirty(true) }} contractRole={contractRole} onSelectRole={(r) => { setContractRole(r); setDirty(true) }} />}
+        {step === 1 && <Step1Setup templates={templates} templatesLoading={templatesLoading} templatesError={templatesError} onRetryTemplates={loadTemplates} templateId={templateId} onSelectTemplate={(id) => { setTemplateId(String(id)); setDirty(true) }} contractRole={contractRole} onSelectRole={(r) => { setContractRole(r); setDirty(true) }} />}
         {step === 2 && <Step2Property properties={properties} propertiesLoading={propertiesLoading} propertyId={propertyId} onChange={handlePropertyChange} manualAddress={fieldValues.property_address} onManualAddressChange={(v) => setField('property_address', v)} />}
         {step === 3 && <StepPartyInfo party="buyer" L={L} isYou={contractRole === 'buyer'} name={buyerName} email={buyerEmail} address={fieldValues.buyer_address} coName={fieldValues.co_buyer_name} onName={(v) => { setBuyerName(v); setDirty(true) }} onEmail={(v) => { setBuyerEmail(v); setDirty(true) }} onAddress={v => setField('buyer_address', v)} onCoName={v => setField('co_buyer_name', v)} />}
         {step === 4 && <StepPartyInfo party="seller" L={L} isYou={contractRole === 'seller'} name={sellerPartyName} email={sellerPartyEmail} address={fieldValues.seller_address} coName={fieldValues.co_seller_name} coEmail={fieldValues.co_seller_email} onName={(v) => { setSellerPartyName(v); setDirty(true) }} onEmail={(v) => { setSellerPartyEmail(v); setDirty(true) }} onAddress={v => setField('seller_address', v)} onCoName={v => setField('co_seller_name', v)} onCoEmail={v => setField('co_seller_email', v)} />}
@@ -705,10 +717,19 @@ export default function NewContractWizardPage() {
   )
 }
 
-function Step1Setup({ templates, templatesLoading, templateId, onSelectTemplate, contractRole, onSelectRole }) {
+function Step1Setup({ templates, templatesLoading, templatesError, onRetryTemplates, templateId, onSelectTemplate, contractRole, onSelectRole }) {
   const selectedTemplate = templates.find(t => String(t.id) === String(templateId))
   const L = roleLabels(selectedTemplate?.slug === 'assignment')
   if (templatesLoading) return <div className="space-y-2">{[1, 2].map(i => <div key={i} className="h-20 bg-[#FAFAF8] border border-[#E8E8E4] rounded animate-pulse" />)}</div>
+  // The request FAILED — offer a retry rather than the permanent empty-state.
+  if (!templates.length && templatesError) return (
+    <div className="text-center py-10 text-[13px] text-[#737370]">
+      <p className="text-[14px] font-semibold text-[#1A1816] mb-1">Couldn't load contract templates</p>
+      <p>Something went wrong reaching our contracts service. Please try again.</p>
+      <button type="button" onClick={onRetryTemplates} className="mt-4 h-10 px-5 inline-flex items-center gap-1.5 text-[13px] font-semibold bg-[#1A1816] text-white rounded hover:bg-black">Retry</button>
+    </div>
+  )
+  // The request SUCCEEDED but returned zero templates — genuine empty state.
   if (!templates.length) return <div className="text-center py-10 text-[13px] text-[#737370]"><p className="text-[14px] font-semibold text-[#1A1816] mb-1">No contract templates available</p><p>Contracts aren't available right now. Please try again later or contact support.</p></div>
   return (
     <div>

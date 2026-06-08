@@ -98,10 +98,6 @@ export async function POST(request) {
                     <a href="${signingUrl}" style="display:inline-block;background:#D03839;color:#ffffff;font-size:14px;font-weight:600;text-decoration:none;padding:12px 28px;border-radius:6px;">
                       Review &amp; Sign Contract →
                     </a>
-                    <p style="margin:24px 0 0;font-size:12px;color:#A8A8A4;line-height:1.6;">
-                      Or copy this link:<br>
-                      <span style="color:#737370;word-break:break-all;">${signingUrl}</span>
-                    </p>
                   </td>
                 </tr>
                 <tr>

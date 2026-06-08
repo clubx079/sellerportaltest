@@ -106,6 +106,13 @@ export async function DELETE(request, { params }) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
+    // Guard: the org owner can never be removed (they are the last owner and
+    // cannot remove themselves). The owner is normally not an org_members row,
+    // but reject defensively in case one was ever created.
+    if (member.seller_id && member.seller_id === org.owner_seller_id) {
+      return NextResponse.json({ error: 'The owner cannot be removed from the team' }, { status: 403 })
+    }
+
     if (member.seller_id) {
       await supabase
         .from('seller_applications')

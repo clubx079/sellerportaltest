@@ -146,8 +146,14 @@ export async function GET(request) {
       .select('property_id, user_email, visited_at, time_spent_seconds, session_id')
       .in('property_id', propertyIds);
 
-    const analyticsAll = analyticsRows || [];
-    const visitsAll = visitRows || [];
+    // Exclude in-company / internal staff (system_users) from seller-facing analytics.
+    // Keep rows with null email (genuine anonymous visitors).
+    const { data: sysUsers } = await supabase.from('system_users').select('email');
+    const excludedEmails = new Set((sysUsers || []).map(u => (u.email || '').trim().toLowerCase()).filter(Boolean));
+    const isExcluded = (email) => excludedEmails.has((email || '').trim().toLowerCase());
+
+    const analyticsAll = (analyticsRows || []).filter(r => !isExcluded(r.user_email));
+    const visitsAll = (visitRows || []).filter(v => !isExcluded(v.user_email));
 
     // Helper to check if a row falls in a period
     const inRange = (t, start, end) => {

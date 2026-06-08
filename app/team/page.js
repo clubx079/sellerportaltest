@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
-import { Users, Plus, Trash2, X, Mail, Crown, Clock, CheckCircle, Check, Zap, AlertTriangle, Shield, Settings2, Phone } from 'lucide-react'
+import { Users, Plus, Trash2, X, Mail, Crown, Clock, CheckCircle, Check, Zap, AlertTriangle, Shield, Settings2, Phone, RefreshCw } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
 function fmtDate(d) {
@@ -125,7 +125,7 @@ function PermissionToggles({ permissions, onChange }) {
   )
 }
 
-function PermissionsPopup({ memberId, currentPermissions, memberRole, onChanged }) {
+function PermissionsPopup({ memberId, currentPermissions, memberRole, onChanged, onToast }) {
   const [open, setOpen] = useState(false)
   const [perms, setPerms] = useState(() => currentPermissions || derivePermissionsFromRole(memberRole))
   const [saving, setSaving] = useState(false)
@@ -147,14 +147,23 @@ function PermissionsPopup({ memberId, currentPermissions, memberRole, onChanged 
     setSaving(true)
     try {
       const sellerId = JSON.parse(localStorage.getItem('seller_user') || '{}')?.id
-      await fetch(`/api/team/${memberId}`, {
+      const res = await fetch(`/api/team/${memberId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${sellerId}` },
         body: JSON.stringify({ permissions: perms }),
       })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        onToast?.(data.error || 'Failed to update access', 'error')
+        setSaving(false)
+        return
+      }
       onChanged()
+      onToast?.('Access updated')
       setOpen(false)
-    } catch {}
+    } catch {
+      onToast?.('Failed to update access', 'error')
+    }
     setSaving(false)
   }
 
@@ -399,10 +408,19 @@ export default function TeamPage() {
   const router = useRouter()
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
   const [showModal, setShowModal] = useState(false)
   const [removing, setRemoving] = useState(null)
+  const [resending, setResending] = useState(null)
+  const [confirmRemove, setConfirmRemove] = useState(null)
+  const [toast, setToast] = useState(null)
 
   useEffect(() => { fetchTeam() }, [])
+
+  function showToast(text, kind = 'success') {
+    setToast({ text, kind })
+    setTimeout(() => setToast(null), 3000)
+  }
 
   function getSellerId() {
     try { return JSON.parse(localStorage.getItem('seller_user') || '{}')?.id } catch { return null }
@@ -410,21 +428,48 @@ export default function TeamPage() {
 
   async function fetchTeam() {
     setLoading(true)
+    setError('')
     try {
       const res = await fetch('/api/team', { headers: { Authorization: `Bearer ${getSellerId()}` } })
       const json = await res.json()
-      setData(json)
-    } catch {}
+      if (!res.ok) { setError(json.error || 'Failed to load your team'); setData(null) }
+      else setData(json)
+    } catch {
+      setError('Failed to load your team. Please try again.')
+    }
     setLoading(false)
   }
 
-  async function removeMember(memberId) {
-    setRemoving(memberId)
+  async function removeMember(member) {
+    setRemoving(member.id)
+    const pending = member.status !== 'active'
     try {
-      await fetch(`/api/team/${memberId}`, { method: 'DELETE', headers: { Authorization: `Bearer ${getSellerId()}` } })
-      fetchTeam()
-    } catch {}
+      const res = await fetch(`/api/team/${member.id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${getSellerId()}` } })
+      const result = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        showToast(result.error || 'Failed to remove member', 'error')
+      } else {
+        showToast(pending ? 'Invitation revoked' : 'Member removed')
+        setConfirmRemove(null)
+        await fetchTeam()
+      }
+    } catch {
+      showToast('Failed to remove member', 'error')
+    }
     setRemoving(null)
+  }
+
+  async function resendInvite(member) {
+    setResending(member.id)
+    try {
+      const res = await fetch(`/api/team/${member.id}/resend`, { method: 'POST', headers: { Authorization: `Bearer ${getSellerId()}` } })
+      const result = await res.json().catch(() => ({}))
+      if (!res.ok) showToast(result.error || 'Failed to resend invite', 'error')
+      else showToast('Invitation resent')
+    } catch {
+      showToast('Failed to resend invite', 'error')
+    }
+    setResending(null)
   }
 
   if (loading) {
@@ -433,6 +478,26 @@ export default function TeamPage() {
         <div className="h-7 bg-[#E8E8E4] rounded w-32" />
         <div className="h-4 bg-[#E8E8E4] rounded w-64" />
         {[1, 2].map(i => <div key={i} className="h-16 bg-[#E8E8E4] rounded" />)}
+      </div>
+    )
+  }
+
+  if (error && !data) {
+    return (
+      <div className="p-4 lg:p-6">
+        <div className="border border-[#F5C6C2] bg-[#FEF0EF] rounded p-8 text-center max-w-lg mx-auto">
+          <div className="w-12 h-12 bg-[#D03839]/10 rounded flex items-center justify-center mx-auto mb-4">
+            <AlertTriangle className="w-6 h-6 text-[#D03839]" />
+          </div>
+          <h3 className="text-[16px] font-bold text-[#1A1816] mb-2">Couldn&apos;t load your team</h3>
+          <p className="text-[13px] text-[#737370] leading-relaxed mb-6">{error}</p>
+          <button
+            onClick={fetchTeam}
+            className="inline-flex items-center gap-2 h-9 px-5 bg-[#D03839] hover:bg-[#E0493B] text-white text-[13px] font-semibold rounded"
+          >
+            <RefreshCw className="w-4 h-4" /> Try again
+          </button>
+        </div>
       </div>
     )
   }
@@ -573,12 +638,24 @@ export default function TeamPage() {
                     currentPermissions={perms}
                     memberRole={m.role}
                     onChanged={fetchTeam}
+                    onToast={showToast}
                   />
+                  {m.status !== 'active' && (
+                    <button
+                      onClick={() => resendInvite(m)}
+                      disabled={resending === m.id}
+                      className="flex items-center gap-1.5 h-7 px-2.5 border border-[#E8E8E4] rounded text-[12px] font-medium text-[#444441] hover:border-[#1A1816] disabled:opacity-50 transition-colors"
+                      title="Resend invitation email"
+                    >
+                      <RefreshCw className={`w-3 h-3 ${resending === m.id ? 'animate-spin' : ''}`} />
+                      {resending === m.id ? 'Sending…' : 'Resend'}
+                    </button>
+                  )}
                   <button
-                    onClick={() => removeMember(m.id)}
+                    onClick={() => setConfirmRemove(m)}
                     disabled={removing === m.id}
                     className="p-2 rounded hover:bg-[#FEF0EF] text-[#737370] hover:text-[#D03839] disabled:opacity-50 transition-colors"
-                    title="Remove member"
+                    title={m.status === 'active' ? 'Remove member' : 'Revoke invitation'}
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -595,6 +672,49 @@ export default function TeamPage() {
           </div>
         )}
       </div>
+
+      {/* Remove / revoke confirmation */}
+      {confirmRemove && (
+        <div className="fixed inset-0 z-[100] bg-black/40 flex items-center justify-center p-4" onClick={() => removing ? null : setConfirmRemove(null)}>
+          <div className="bg-white rounded w-full max-w-sm shadow-xl p-5" onClick={e => e.stopPropagation()}>
+            <h3 className="text-[16px] font-bold text-[#1A1816] mb-1">
+              {confirmRemove.status === 'active' ? 'Remove this member?' : 'Revoke this invitation?'}
+            </h3>
+            <p className="text-[13px] text-[#737370] mb-4">
+              {confirmRemove.status === 'active'
+                ? <>This will revoke <span className="font-semibold text-[#1A1816]">{confirmRemove.name || confirmRemove.email}</span>&apos;s access to your team and workspace. They can be re-invited later.</>
+                : <>The invitation link sent to <span className="font-semibold text-[#1A1816]">{confirmRemove.email}</span> will stop working. You can invite them again anytime.</>}
+            </p>
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setConfirmRemove(null)}
+                disabled={removing === confirmRemove.id}
+                className="h-9 px-4 border border-[#E8E8E4] text-[#444441] text-[13px] font-semibold rounded hover:bg-[#FAFAF8] disabled:opacity-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => removeMember(confirmRemove)}
+                disabled={removing === confirmRemove.id}
+                className="h-9 px-4 bg-[#D03839] hover:bg-[#E0493B] text-white text-[13px] font-semibold rounded disabled:opacity-50 transition-colors"
+              >
+                {removing === confirmRemove.id ? 'Removing…' : (confirmRemove.status === 'active' ? 'Remove' : 'Revoke')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Toast */}
+      {toast && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] px-4 py-2.5 rounded shadow-lg text-[13px] font-medium text-white flex items-center gap-2"
+          style={{ background: toast.kind === 'error' ? '#D03839' : '#1A1816' }}>
+          {toast.kind === 'error' ? <X className="w-4 h-4" /> : <Check className="w-4 h-4" />}
+          {toast.text}
+        </div>
+      )}
     </div>
   )
 }
