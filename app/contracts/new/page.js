@@ -658,10 +658,12 @@ export default function NewContractWizardPage() {
           <h1 className="text-lg md:text-xl font-semibold tracking-tight text-[#1A1816] truncate">
             New Contract <span className="text-[#A8A8A4] font-normal">— Step {step} of {NUM_STEPS} · {stepName}</span>
           </h1>
-          <p className="mt-1 flex items-start gap-1.5 text-[11px] leading-relaxed text-[#A8A8A4]">
-            <Info className="w-3.5 h-3.5 shrink-0 mt-px" />
-            <span>This is a template provided for your convenience. DeelMap is not a law firm and does not provide legal advice. We strongly recommend you have this document reviewed by a licensed attorney before signing. DeelMap and its affiliates accept no liability for the content, validity, or enforceability of any agreement created using this platform.</span>
-          </p>
+          {(step === 1 || step === NUM_STEPS) && (
+            <p className="mt-1 flex items-start gap-1.5 text-[11px] leading-relaxed text-[#A8A8A4]">
+              <Info className="w-3.5 h-3.5 shrink-0 mt-px" />
+              <span>This is a template provided for your convenience. DeelMap is not a law firm and does not provide legal advice. We strongly recommend you have this document reviewed by a licensed attorney before signing. DeelMap and its affiliates accept no liability for the content, validity, or enforceability of any agreement created using this platform.</span>
+            </p>
+          )}
           <div className="mt-0.5">
             <SaveStatus autoSaving={autoSaving} lastSavedAt={lastSavedAt} dirty={dirty} error={autoSaveError} status="draft" />
           </div>
