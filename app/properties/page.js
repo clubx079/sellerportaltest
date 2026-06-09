@@ -63,11 +63,27 @@ const PropertiesManagement = () => {
   const searchParams = useSearchParams();
   const viewFromUrl = searchParams.get('view') === 'trash' ? 'trash' : 'active';
   const [viewMode, setViewMode] = useState(viewFromUrl); // 'active' or 'trash'
+  // Deep-link guard: open the analytics sidebar for ?analytics=<id> exactly once.
+  const analyticsDeepLinkDone = useRef(false);
 
   // Keep viewMode in sync with URL (e.g. when opening "View Archived" from dashboard)
   useEffect(() => {
     setViewMode(viewFromUrl);
   }, [viewFromUrl]);
+
+  // Deep-link from the Analytics page: ?analytics=<propertyId>. Once listings
+  // are loaded, if the id matches a loaded property, open its analytics sidebar.
+  // Runs once so it doesn't reopen on every render / after the user closes it.
+  useEffect(() => {
+    if (analyticsDeepLinkDone.current) return;
+    const targetId = searchParams.get('analytics');
+    if (!targetId || loading || properties.length === 0) return;
+    const match = properties.find(p => String(p.id) === String(targetId));
+    if (!match) return;
+    analyticsDeepLinkDone.current = true;
+    setPropertyForAnalytics(match);
+    setShowAnalyticsSidebar(true);
+  }, [searchParams, loading, properties]);
 
   useEffect(() => {
     const msg = sessionStorage.getItem('listingSuccess');

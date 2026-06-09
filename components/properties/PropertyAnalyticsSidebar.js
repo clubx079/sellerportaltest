@@ -45,6 +45,9 @@ function getDeviceIcon(deviceType) {
   return <Monitor className="w-3 h-3" />;
 }
 
+// Viewer list reveals this many rows at a time via "Show more".
+const VIEWER_PAGE = 10;
+
 const PERIOD_OPTIONS = [
   { value: 'last7days', label: '7 Days' },
   { value: 'last30days', label: '30 Days' },
@@ -119,6 +122,8 @@ export default function PropertyAnalyticsSidebar({ propertyId, propertyName, onC
   const [period, setPeriod] = useState('all');
   const [sortBy, setSortBy] = useState('last_visit');
   const [sortOpen, setSortOpen] = useState(false);
+  // Viewer list is paginated client-side; reveal +VIEWER_PAGE at a time.
+  const [visibleViewers, setVisibleViewers] = useState(VIEWER_PAGE);
 
   useEffect(() => {
     setMounted(true);
@@ -129,6 +134,7 @@ export default function PropertyAnalyticsSidebar({ propertyId, propertyName, onC
     let cancelled = false;
     setLoading(true);
     setError(null);
+    setVisibleViewers(VIEWER_PAGE);
     const userId = (() => {
       try {
         const s = typeof window !== 'undefined' ? localStorage.getItem('seller_user') : null;
@@ -453,7 +459,7 @@ export default function PropertyAnalyticsSidebar({ propertyId, propertyName, onC
                   </div>
                 ) : (
                   <div className="space-y-2">
-                    {scoredBuyers.map((row, idx) => {
+                    {scoredBuyers.slice(0, visibleViewers).map((row, idx) => {
                       const name = displayName(row);
                       const initial = (name && name !== 'Guest' ? name.charAt(0) : (row.user_email || 'G').charAt(0)).toUpperCase();
                       const avatarPair = getAvatarPair(name);
@@ -582,6 +588,16 @@ export default function PropertyAnalyticsSidebar({ propertyId, propertyName, onC
                         </div>
                       );
                     })}
+                    {scoredBuyers.length > visibleViewers && (
+                      <button
+                        type="button"
+                        onClick={() => setVisibleViewers(v => v + VIEWER_PAGE)}
+                        className="w-full flex items-center justify-center gap-1 py-2.5 text-[12px] font-semibold text-[#D03839] hover:text-[#E0493B] transition-colors"
+                      >
+                        Show {Math.min(VIEWER_PAGE, scoredBuyers.length - visibleViewers)} more
+                        <ChevronDown className="w-3.5 h-3.5" />
+                      </button>
+                    )}
                   </div>
                 )}
               </div>

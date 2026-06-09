@@ -229,7 +229,7 @@ export async function GET(request) {
         avgDuration: v.sessions > 0 ? Math.round(v.duration / v.sessions) : 0,
       }))
       .sort((a, b) => b.views - a.views)
-      .slice(0, 8);
+      .slice(0, 50);
 
     // Daily views
     const dailyMap = buildDailyMap(period);
