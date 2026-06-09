@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
-import { Users, Eye, Clock, Image as ImageIcon, Smartphone, Monitor, Tablet, X, ChevronDown, ChevronRight, BarChart2, Heart, FileText, MessageSquare, Flame, RefreshCw, Lightbulb } from 'lucide-react';
+import { Users, Eye, Clock, Image as ImageIcon, Smartphone, Monitor, Tablet, X, ChevronDown, ChevronRight, BarChart2, Heart, FileText, MessageSquare, Flame, RefreshCw, Lightbulb, Download } from 'lucide-react';
+import { downloadCSV, downloadPDF } from '@/lib/exportData';
 
 function formatDuration(seconds) {
   if (seconds == null || seconds === 0) return '—';
@@ -192,6 +193,64 @@ export default function PropertyAnalyticsSidebar({ propertyId, propertyName, onC
 
   const sortLabel = SORT_OPTIONS.find(o => o.value === sortBy)?.label || 'Sort';
 
+  // ── Buyer export ──────────────────────────────────────────────────────────
+  // Respect enterprise gating: only enterprise sellers can see buyer contact
+  // info (the "Message buyer" action is enterprise-only). For non-enterprise
+  // sellers we export ONLY what's already visible in the UI — name (which the
+  // UI itself derives from email as a fallback), tier/score and engagement —
+  // and omit the dedicated email/phone columns entirely.
+  function buildBuyerRows() {
+    const baseCols = ['Buyer', 'Tier', 'Score', 'Views', 'Photos', 'Time', 'Visits', 'Saved', 'Offered', 'Source', 'Last seen'];
+    const columns = isEnterprise
+      ? [...baseCols.slice(0, 1), 'Email', 'Phone', ...baseCols.slice(1)]
+      : baseCols;
+    const rows = scoredBuyers.map((b) => {
+      const name = displayName(b);
+      const duration = b.duration_seconds ?? b.active_time_seconds;
+      const tier = TEMP_STYLE[b._eng?.temp]?.label || 'Cold';
+      const lastSeen = b.view_end_time || b.view_start_time || b.created_at;
+      const base = [
+        name,
+        tier,
+        b._eng ? String(Math.round(b._eng.score * 10) / 10) : '0',
+        String(b.page_views != null ? Number(b.page_views) : 0),
+        String(b.images_viewed != null ? Number(b.images_viewed) : 0),
+        formatDuration(duration),
+        String(b.visit_count || 1),
+        b.saved ? 'Yes' : 'No',
+        b.offered ? 'Yes' : 'No',
+        b.utm_source || 'Direct',
+        lastSeen ? formatDateShort(lastSeen) : '—',
+      ];
+      if (isEnterprise) {
+        base.splice(1, 0, b.user_email || '', b.user_phone || '');
+      }
+      return base;
+    });
+    return { columns, rows };
+  }
+
+  const buyerDateStr = new Date().toISOString().slice(0, 10);
+  const buyerSlug = String(propertyName || propertyId || 'property')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 40) || 'property';
+  const buyerFileBase = `deelmap-${buyerSlug}-buyers-${buyerDateStr}`;
+
+  function exportBuyersCSV() {
+    const { columns, rows } = buildBuyerRows();
+    downloadCSV(`${buyerFileBase}.csv`, { columns, data: rows });
+  }
+
+  function exportBuyersPDF() {
+    const { columns, rows } = buildBuyerRows();
+    downloadPDF(`${buyerFileBase}.pdf`, {
+      title: `Interested Buyers — ${propertyName || ''}`.trim(),
+      sections: [{ heading: `${rows.length} buyer${rows.length !== 1 ? 's' : ''}`, columns, rows }],
+    });
+  }
+
   return (
     <>
       {/* Backdrop */}
@@ -333,6 +392,26 @@ export default function PropertyAnalyticsSidebar({ propertyId, propertyName, onC
                       {scoredBuyers.length}
                     </span>
                   </div>
+                  <div className="flex items-center gap-1.5">
+                  {/* Export buyers */}
+                  {scoredBuyers.length > 0 && (
+                    <>
+                      <button
+                        onClick={exportBuyersCSV}
+                        title="Export buyers as CSV"
+                        className="flex items-center gap-1 h-7 px-2 bg-white border border-[#E8E8E4] rounded text-[12px] font-semibold text-[#1A1816] hover:border-[#1A1816] transition-colors"
+                      >
+                        <Download className="w-3 h-3 text-[#737370]" /> CSV
+                      </button>
+                      <button
+                        onClick={exportBuyersPDF}
+                        title="Export buyers as PDF"
+                        className="flex items-center gap-1 h-7 px-2 bg-white border border-[#E8E8E4] rounded text-[12px] font-semibold text-[#1A1816] hover:border-[#1A1816] transition-colors"
+                      >
+                        <Download className="w-3 h-3 text-[#737370]" /> PDF
+                      </button>
+                    </>
+                  )}
                   {/* Sort dropdown */}
                   <div className="relative">
                     <button
@@ -357,6 +436,7 @@ export default function PropertyAnalyticsSidebar({ propertyId, propertyName, onC
                         ))}
                       </div>
                     )}
+                  </div>
                   </div>
                 </div>
 

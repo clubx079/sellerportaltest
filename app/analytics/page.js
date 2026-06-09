@@ -4,8 +4,9 @@ import { useState, useEffect } from 'react';
 import {
   Eye, Users, Clock, TrendingUp, TrendingDown, Smartphone, Monitor,
   BarChart2, Link2, MapPin, ArrowUpRight, Minus, Activity, Image, FileText,
-  ChevronDown, Loader2, Check
+  ChevronDown, Loader2, Check, Download
 } from 'lucide-react';
+import { downloadCSV, downloadPDF } from '@/lib/exportData';
 
 function formatDuration(s) {
   if (!s || s === 0) return '—';
@@ -201,6 +202,52 @@ export default function SellerAnalyticsPage() {
 
   const maxPropViews = topProps[0]?.views || 1;
 
+  const periodLabel = PERIOD_OPTIONS.find(o => o.value === period)?.label || 'Last 30 days';
+  const dateStr = new Date().toISOString().slice(0, 10);
+  const fileBase = `deelmap-analytics-${dateStr}`;
+
+  // Shared export sections: KPIs, traffic sources, top listings.
+  const kpiRows = [
+    ['Total views', (s.totalViews || 0).toLocaleString()],
+    ['Unique buyers', (s.uniqueViewers || 0).toLocaleString()],
+    ['Total sessions', (s.totalSessions || 0).toLocaleString()],
+    ['Avg. time on page', formatDuration(s.avgDuration)],
+    ['View trend vs prev period', s.viewTrend != null ? `${s.viewTrend >= 0 ? '+' : ''}${s.viewTrend}%` : '—'],
+    ['Total listings', (data?.totalListings || 0).toLocaleString()],
+  ];
+  const sourceRows = utms.map(u => [u.source, String(u.count)]);
+  const topListingRows = topProps.map((p, i) => [String(i + 1), p.name, String(p.views), String(p.uniqueViewers)]);
+
+  function handleExportCSV() {
+    const lines = [];
+    const push = (cols) => lines.push(cols);
+    push(['DeelMap Analytics', periodLabel]);
+    push([]);
+    push(['KPIs']);
+    push(['Metric', 'Value']);
+    kpiRows.forEach(r => push(r));
+    push([]);
+    push(['Traffic Sources']);
+    push(['Source', 'Sessions']);
+    (sourceRows.length ? sourceRows : [['No UTM traffic tracked', '']]).forEach(r => push(r));
+    push([]);
+    push(['Top Listings']);
+    push(['Rank', 'Listing', 'Views', 'Unique buyers']);
+    (topListingRows.length ? topListingRows : [['', 'No data', '', '']]).forEach(r => push(r));
+    downloadCSV(`${fileBase}.csv`, { columns: lines[0], data: lines.slice(1) });
+  }
+
+  function handleExportPDF() {
+    downloadPDF(`${fileBase}.pdf`, {
+      title: `Analytics — ${periodLabel}`,
+      sections: [
+        { heading: 'KPIs', columns: ['Metric', 'Value'], rows: kpiRows },
+        { heading: 'Traffic Sources', columns: ['Source', 'Sessions'], rows: sourceRows.length ? sourceRows : [['No UTM traffic tracked', '—']] },
+        { heading: 'Top Listings', columns: ['#', 'Listing', 'Views', 'Unique buyers'], rows: topListingRows.length ? topListingRows : [['', 'No data', '', '']] },
+      ],
+    });
+  }
+
   if (accessDenied) {
     return (
       <div className="min-h-screen bg-[#FAFAF8] flex items-center justify-center p-6">
@@ -230,6 +277,27 @@ export default function SellerAnalyticsPage() {
         </div>
         <div className="flex items-center gap-2 shrink-0">
           {loading && <Loader2 className="w-4 h-4 text-[#A8A8A4] animate-spin" />}
+          {/* Export controls */}
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={handleExportCSV}
+              disabled={loading || !data}
+              className="flex items-center gap-1.5 px-3 py-2 bg-white border border-[#E8E8E4] rounded text-[13px] font-semibold text-[#1A1816] hover:bg-[#FAFAF8] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Download className="w-3.5 h-3.5 text-[#737370]" />
+              CSV
+            </button>
+            <button
+              type="button"
+              onClick={handleExportPDF}
+              disabled={loading || !data}
+              className="flex items-center gap-1.5 px-3 py-2 bg-white border border-[#E8E8E4] rounded text-[13px] font-semibold text-[#1A1816] hover:bg-[#FAFAF8] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Download className="w-3.5 h-3.5 text-[#737370]" />
+              PDF
+            </button>
+          </div>
           {/* Custom period dropdown */}
           <div className="relative" onClick={e => e.stopPropagation()}>
             <button
