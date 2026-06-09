@@ -283,7 +283,11 @@ export default function ContractsPage() {
                               : String(d.template_id) === '3706747' || String(d.template_id) === '3759339' ? 'Assignment Contract'
                               : 'Contract'
               const address = d.field_values?.property_address || `Untitled ${tplLabel}`
-              const buyer = d.buyer_name || d.buyer_email || 'Other party not set'
+              // The "other party" is whoever the creator is NOT. If they created
+              // this as the seller, the other party is the buyer, and vice-versa.
+              const counterparty = d.field_values?.__contract_role === 'buyer'
+                ? (d.field_values?.__seller_name || d.field_values?.__seller_email || 'Other party not set')
+                : (d.buyer_name || d.buyer_email || 'Other party not set')
               return (
                 <div key={d.id} className="bg-white border border-dashed border-[#E8E8E4] rounded p-4 flex items-center gap-4">
                   <div className="w-9 h-9 bg-[#FAFAF8] border border-[#E8E8E4] rounded flex items-center justify-center shrink-0">
@@ -300,7 +304,7 @@ export default function ContractsPage() {
                     </div>
                     <div className="flex items-center gap-3 text-[12px] text-[#737370] flex-wrap">
                       <span>Last updated {fmtDate(d.updated_at)}</span>
-                      <span>Buyer: {buyer}</span>
+                      <span>Other party: {counterparty}</span>
                     </div>
                   </div>
                   <div className="shrink-0 flex items-center gap-2">

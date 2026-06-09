@@ -7,6 +7,16 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 )
 
+function getClientIP(request) {
+  const cf = request.headers.get('cf-connecting-ip')
+  if (cf) return cf
+  const forwarded = request.headers.get('x-forwarded-for')
+  if (forwarded) return forwarded.split(',')[0].trim()
+  const realIP = request.headers.get('x-real-ip')
+  if (realIP) return realIP
+  return null
+}
+
 // GET /api/team/accept?token=xxx — validate token, return member info
 export async function GET(request) {
   const { searchParams } = new URL(request.url)
@@ -90,24 +100,36 @@ export async function POST(request) {
       const firstName = nameParts[0] || displayName
       const lastName = nameParts.slice(1).join(' ') || ''
 
-      const { data: newSeller, error: sellerErr } = await supabase
+      const clientIP = getClientIP(request)
+      const baseRow = {
+        contact_person_name: displayName,
+        email: member.email,
+        password: await hashPassword(password),
+        phone: '',
+        business_name: displayName,
+        business_type: 'individual',
+        deals_per_month: 'not_specified',
+        primary_markets: '',
+        property_types: [],
+        description: '',
+        status: 'approved',
+        org_id: member.org_id,
+      }
+
+      let { data: newSeller, error: sellerErr } = await supabase
         .from('seller_applications')
-        .insert({
-          contact_person_name: displayName,
-          email: member.email,
-          password: await hashPassword(password),
-          phone: '',
-          business_name: displayName,
-          business_type: 'individual',
-          deals_per_month: 'not_specified',
-          primary_markets: '',
-          property_types: [],
-          description: '',
-          status: 'approved',
-          org_id: member.org_id,
-        })
+        .insert({ ...baseRow, ip_address: clientIP || null })
         .select('id')
         .single()
+
+      // Fallback if ip_address column doesn't exist yet (migration not run)
+      if (sellerErr && /ip_address/i.test(sellerErr.message || '')) {
+        ;({ data: newSeller, error: sellerErr } = await supabase
+          .from('seller_applications')
+          .insert(baseRow)
+          .select('id')
+          .single())
+      }
 
       if (sellerErr) {
         console.error('[team/accept] create seller error:', sellerErr)
