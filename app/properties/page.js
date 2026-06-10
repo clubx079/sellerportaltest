@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, Suspense } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Plus, Edit2, Trash2, Search, X, Building2, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, ChevronsUpDown, MapPin, BarChart2, Link2, Home, FileEdit, Eye, Zap, CheckCircle } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -305,48 +305,6 @@ const PropertiesManagement = () => {
     setCurrentPage(1);
   };
 
-  // ── Live per-row view counts ─────────────────────────────────────────────
-  // Batched: ONE query over property_analytics for the visible page's ids,
-  // summing page_views per property (no N+1). We cap to the current page's rows
-  // and skip ids we've already counted. Mirrors the analytics route's notion of
-  // views (sum of page_views) closely enough for an at-a-glance row number.
-  const viewCountKeysRef = useRef('');
-  useEffect(() => {
-    const rows = currentEntries;
-    if (rows.length === 0) return;
-    const need = rows.filter(p => viewCounts[`${p._source}-${p.id}`] === undefined);
-    if (need.length === 0) return;
-    const ids = need.map(p => p.id);
-    const cacheKey = ids.join(',');
-    if (viewCountKeysRef.current === cacheKey) return;
-    viewCountKeysRef.current = cacheKey;
-    let cancelled = false;
-    (async () => {
-      try {
-        const { data } = await supabase
-          .from('property_analytics')
-          .select('property_id, page_views')
-          .in('property_id', ids);
-        const totals = {};
-        (data || []).forEach(r => {
-          totals[String(r.property_id)] = (totals[String(r.property_id)] || 0) + (Number(r.page_views) || 1);
-        });
-        if (cancelled) return;
-        setViewCounts(prev => {
-          const next = { ...prev };
-          for (const p of need) {
-            next[`${p._source}-${p.id}`] = totals[String(p.id)] || 0;
-          }
-          return next;
-        });
-      } catch {
-        // best-effort; leave counts undefined (rendered as —)
-      }
-    })();
-    return () => { cancelled = true; };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentEntries.map(p => `${p._source}-${p.id}`).join(',')]);
-
   // Close the per-row status dropdown on outside click / Escape.
   useEffect(() => {
     if (!openStatusKey) return;
@@ -555,6 +513,48 @@ const PropertiesManagement = () => {
   const indexOfFirstEntry = indexOfLastEntry - entriesPerPage;
   const currentEntries = sortedProperties.slice(indexOfFirstEntry, indexOfLastEntry);
   const totalPages = Math.ceil(sortedProperties.length / entriesPerPage);
+
+  // ── Live per-row view counts ─────────────────────────────────────────────
+  // Batched: ONE query over property_analytics for the visible page's ids,
+  // summing page_views per property (no N+1). We cap to the current page's rows
+  // and skip ids we've already counted. Mirrors the analytics route's notion of
+  // views (sum of page_views) closely enough for an at-a-glance row number.
+  const viewCountKeysRef = useRef('');
+  useEffect(() => {
+    const rows = currentEntries;
+    if (rows.length === 0) return;
+    const need = rows.filter(p => viewCounts[`${p._source}-${p.id}`] === undefined);
+    if (need.length === 0) return;
+    const ids = need.map(p => p.id);
+    const cacheKey = ids.join(',');
+    if (viewCountKeysRef.current === cacheKey) return;
+    viewCountKeysRef.current = cacheKey;
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data } = await supabase
+          .from('property_analytics')
+          .select('property_id, page_views')
+          .in('property_id', ids);
+        const totals = {};
+        (data || []).forEach(r => {
+          totals[String(r.property_id)] = (totals[String(r.property_id)] || 0) + (Number(r.page_views) || 1);
+        });
+        if (cancelled) return;
+        setViewCounts(prev => {
+          const next = { ...prev };
+          for (const p of need) {
+            next[`${p._source}-${p.id}`] = totals[String(p.id)] || 0;
+          }
+          return next;
+        });
+      } catch {
+        // best-effort; leave counts undefined (rendered as —)
+      }
+    })();
+    return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentEntries.map(p => `${p._source}-${p.id}`).join(',')]);
 
   // ── Bulk-select (page-scoped) ────────────────────────────────────────────
   const pageKeys = currentEntries.map(p => `${p._source}-${p.id}`);
@@ -1622,4 +1622,11 @@ const PropertiesManagement = () => {
   );
 };
 
-export default PropertiesManagement;
+// useSearchParams() must be inside a Suspense boundary in the App Router.
+export default function PropertiesPage() {
+  return (
+    <Suspense fallback={null}>
+      <PropertiesManagement />
+    </Suspense>
+  );
+}
