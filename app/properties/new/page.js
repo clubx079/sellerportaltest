@@ -163,12 +163,12 @@ export default function NewPropertyPage() {
         const isOwner = !ws?.current?.id || ws?.current?.role === 'admin';
         if (!isOwner && !ws?.current?.permissions?.listings_create) setAccessDenied(true);
         setUserId(effectiveId);
-        supabase
-          .from('seller_plans')
-          .select('status, plan_type, billing_cycle, listings_used_this_period, trial_ends_at, current_period_end')
-          .eq('seller_id', effectiveId)
-          .maybeSingle()
-          .then(({ data }) => { if (data) setTrialPlan(data) });
+        // Load the plan via plan/info so listings_used_this_period is the live
+        // recomputed count (drift-proof), not the mutable stored counter.
+        fetch('/api/seller/plan/info', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ seller_id: effectiveId }) })
+          .then(r => r.json())
+          .then(({ plan }) => { if (plan) setTrialPlan(plan) })
+          .catch(() => {});
         supabase
           .from('seller_applications')
           .select('admin_notes')
@@ -178,12 +178,10 @@ export default function NewPropertyPage() {
       })
       .catch(() => {
         setUserId(user.id);
-        supabase
-          .from('seller_plans')
-          .select('status, plan_type, billing_cycle, listings_used_this_period, trial_ends_at, current_period_end')
-          .eq('seller_id', user.id)
-          .maybeSingle()
-          .then(({ data }) => { if (data) setTrialPlan(data) });
+        fetch('/api/seller/plan/info', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ seller_id: user.id }) })
+          .then(r => r.json())
+          .then(({ plan }) => { if (plan) setTrialPlan(plan) })
+          .catch(() => {});
         supabase
           .from('seller_applications')
           .select('admin_notes')
