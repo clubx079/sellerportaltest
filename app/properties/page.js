@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useState, useEffect, useRef, Suspense } from 'react';
+import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { Plus, Edit2, Trash2, Search, X, Building2, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, ChevronsUpDown, MapPin, BarChart2, Link2, Home, FileEdit, Eye, Zap, CheckCircle } from 'lucide-react';
+import { Plus, Edit2, Trash2, Search, X, Building2, ChevronLeft, ChevronRight, ChevronDown, MapPin, DollarSign, RotateCcw, BarChart2, Link2, Home, FileEdit, Eye, Zap, CheckCircle } from 'lucide-react';
+import ToggleSwitch from '@/components/properties/ToggleSwitch';
 import { useRouter, useSearchParams } from 'next/navigation';
 import DeleteConfirmModal from '@/components/properties/DeleteConfirmModal';
 import PropertyViewModal from '@/components/properties/PropertyViewModal';
@@ -10,15 +11,6 @@ import PropertyAnalyticsSidebar from '@/components/properties/PropertyAnalyticsS
 import { UTMLinksModal } from '@/components/properties/UTMLinksModal';
 
 const DEELMAP_VIEW_BASE_URL = process.env.NEXT_PUBLIC_DEELMAP_VIEW_BASE_URL || 'https://deelmap.com';
-
-// Per-source fetch cap. Listings come from TWO tables (manual `properties` +
-// scraped `wholesale_deals`) and are unioned client-side, so a single clean
-// server-side paginated query isn't possible. We instead bound each source with
-// .range() and paginate the unioned result client-side. PAGE_SIZE is the rows
-// shown per page; FETCH_CAP bounds how many rows we pull per source so we never
-// fetch unbounded (covers the deepest reachable page).
-const PAGE_SIZE = 10;
-const FETCH_CAP = 300;
 
 const PropertiesManagement = () => {
   const router = useRouter();
@@ -34,19 +26,8 @@ const PropertiesManagement = () => {
   const [showAnalyticsSidebar, setShowAnalyticsSidebar] = useState(false);
   const [propertyForAnalytics, setPropertyForAnalytics] = useState(null);
   const [selectedProperty, setSelectedProperty] = useState(null);
-  const [entriesPerPage, setEntriesPerPage] = useState(PAGE_SIZE);
+  const [entriesPerPage, setEntriesPerPage] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
-  // Bulk-select (page-scoped): set of `${_source}-${id}` keys.
-  const [selectedKeys, setSelectedKeys] = useState(new Set());
-  const [bulkRunning, setBulkRunning] = useState(false);
-  const [actionMsg, setActionMsg] = useState('');
-  // Sort: { key, dir } where dir is 'asc' | 'desc'.
-  const [sort, setSort] = useState({ key: 'created_at', dir: 'desc' });
-  // Per-row status dropdown open key (`${_source}-${id}`).
-  const [openStatusKey, setOpenStatusKey] = useState(null);
-  // Per-row live view counts keyed by `${_source}-${id}`.
-  const [viewCounts, setViewCounts] = useState({});
-  const statusMenuRef = useRef(null);
   const [filterStatus, setFilterStatus] = useState('');
   const [filterPropertyStatus, setFilterPropertyStatus] = useState('');
   const [statusUpdatingId, setStatusUpdatingId] = useState(null);
@@ -63,27 +44,11 @@ const PropertiesManagement = () => {
   const searchParams = useSearchParams();
   const viewFromUrl = searchParams.get('view') === 'trash' ? 'trash' : 'active';
   const [viewMode, setViewMode] = useState(viewFromUrl); // 'active' or 'trash'
-  // Deep-link guard: open the analytics sidebar for ?analytics=<id> exactly once.
-  const analyticsDeepLinkDone = useRef(false);
 
   // Keep viewMode in sync with URL (e.g. when opening "View Archived" from dashboard)
   useEffect(() => {
     setViewMode(viewFromUrl);
   }, [viewFromUrl]);
-
-  // Deep-link from the Analytics page: ?analytics=<propertyId>. Once listings
-  // are loaded, if the id matches a loaded property, open its analytics sidebar.
-  // Runs once so it doesn't reopen on every render / after the user closes it.
-  useEffect(() => {
-    if (analyticsDeepLinkDone.current) return;
-    const targetId = searchParams.get('analytics');
-    if (!targetId || loading || properties.length === 0) return;
-    const match = properties.find(p => String(p.id) === String(targetId));
-    if (!match) return;
-    analyticsDeepLinkDone.current = true;
-    setPropertyForAnalytics(match);
-    setShowAnalyticsSidebar(true);
-  }, [searchParams, loading, properties]);
 
   useEffect(() => {
     const msg = sessionStorage.getItem('listingSuccess');
@@ -131,198 +96,6 @@ const PropertiesManagement = () => {
       .then(({ data }) => setPlanType(data?.plan_type || null));
   }, [effectiveUserId]);
 
-  // ── Centralized lifecycle action caller ──────────────────────────────────
-  // Every listing lifecycle action (activate, deactivate, mark_sold,
-  // mark_available, archive, restore, delete) goes through the server route
-  // POST /api/seller/listings/actions. The route is the SINGLE owner of the
-  // billing counter (seller_plans.listings_used_this_period) — we never mutate
-  // that counter client-side anymore. Returns the parsed JSON response (with
-  // per-id `results` + optional `counterWarning`) or throws.
-  const callListingAction = async (action, ids) => {
-    const userStr = localStorage.getItem('seller_user');
-    const sellerId = userStr ? JSON.parse(userStr).id : userId;
-    const res = await fetch('/api/seller/listings/actions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${sellerId}`,
-      },
-      body: JSON.stringify({ action, ids: ids.map(String) }),
-    });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data?.error || 'Action failed');
-    return data;
-  };
-
-  // Build a friendly summary line from the route's per-id `results` and surface
-  // any counter warning. setActionMsg auto-clears after a few seconds.
-  const summarizeResults = (data) => {
-    const results = data?.results || [];
-    const ok = results.filter(r => r.ok).length;
-    const failed = results.filter(r => !r.ok);
-    let msg = '';
-    if (ok > 0 && failed.length === 0) msg = `${ok} updated`;
-    else if (ok > 0 && failed.length > 0) msg = `${ok} updated, ${failed.length} skipped`;
-    else if (failed.length > 0) msg = failed[0].error || `${failed.length} skipped`;
-    if (data?.counterWarning) msg = `${msg ? msg + '. ' : ''}${data.counterWarning}`;
-    if (msg) {
-      setActionMsg(msg);
-      setTimeout(() => setActionMsg(''), 6000);
-    }
-    return { ok, failed };
-  };
-
-  // ── Effective listing state + valid transitions ──────────────────────────
-  // Collapse (status, property_status) into ONE label shown by the status pill.
-  const getEffectiveState = (property) => {
-    const status = (property.status || '').toLowerCase();
-    const propStatus = (property.property_status || 'available').toLowerCase();
-    if (status === 'archived') return 'archived';
-    if (status === 'draft' || status === '') {
-      if (property._source === 'scraped' && status === '') return propStatus === 'sold' ? 'sold' : 'live';
-      if (status === 'draft') return 'draft';
-    }
-    if (status === 'under_review') return 'under_review';
-    if (status === 'rejected') return 'rejected';
-    if (propStatus === 'sold') return 'sold';
-    if (status === 'active' || status === 'published') return 'live';
-    if (status === 'inactive') return 'paused';
-    return propStatus === 'sold' ? 'sold' : 'paused';
-  };
-
-  const STATE_META = {
-    live:         { label: 'Live',        cls: 'bg-green-50 text-green-700 border-green-200' },
-    paused:       { label: 'Paused',      cls: 'bg-[#E8E8E4] text-[#737370] border-[#E8E8E4]' },
-    sold:         { label: 'Sold',        cls: 'bg-blue-50 text-blue-700 border-blue-200' },
-    under_review: { label: 'In review',   cls: 'bg-orange-50 text-orange-700 border-orange-200' },
-    rejected:     { label: 'Update required', cls: 'bg-[#FEF3E2] text-[#B5620A] border-[#F3C97D]' },
-    archived:     { label: 'Archived',    cls: 'bg-[#E8E8E4] text-[#737370] border-[#E8E8E4]' },
-    draft:        { label: 'Draft',       cls: 'bg-yellow-50 text-yellow-700 border-yellow-200' },
-  };
-
-  // Valid next actions per effective state (label + route action key + destructive).
-  // The route is the final authority; this just hides clearly-invalid options.
-  const getValidActions = (property) => {
-    const state = getEffectiveState(property);
-    const canUpdate = workspaceRole === 'admin' || workspacePerms?.listings_update;
-    const canDelete = workspaceRole === 'admin' || workspacePerms?.listings_delete;
-    const out = [];
-    if (state === 'live') {
-      if (canUpdate) out.push({ key: 'deactivate', label: 'Pause' }, { key: 'mark_sold', label: 'Mark sold' });
-      if (canDelete) out.push({ key: 'archive', label: 'Archive', destructive: true });
-    } else if (state === 'paused') {
-      if (canUpdate) out.push({ key: 'activate', label: 'Activate' }, { key: 'mark_sold', label: 'Mark sold' });
-      if (canDelete) out.push({ key: 'archive', label: 'Archive', destructive: true });
-    } else if (state === 'sold') {
-      if (canUpdate) out.push({ key: 'mark_available', label: 'Mark available' });
-      if (canDelete) out.push({ key: 'archive', label: 'Archive', destructive: true });
-    } else if (state === 'archived') {
-      if (canDelete) out.push({ key: 'restore', label: 'Restore' }, { key: 'delete', label: 'Delete', destructive: true });
-    }
-    // draft / under_review / rejected expose no lifecycle actions here
-    // (those flows live on the dedicated Complete / Fix Issues buttons).
-    return out;
-  };
-
-  // Run a single lifecycle action for one property (from the status dropdown).
-  // Destructive actions (archive/delete) and mark_sold open the existing branded
-  // confirm modals; the rest run immediately. All apply the route's result.
-  const runRowAction = async (property, actionKey) => {
-    setOpenStatusKey(null);
-    if (actionKey === 'archive') { setSelectedProperty(property); setShowArchiveModal(true); return; }
-    if (actionKey === 'delete') { setSelectedProperty(property); setShowDeleteModal(true); return; }
-    if (actionKey === 'mark_sold') { setPropertyToMarkSold(property); setShowMarkSoldModal(true); return; }
-    try {
-      setStatusUpdatingId(`${property._source}-${property.id}`);
-      const data = await callListingAction(actionKey, [property.id]);
-      applyActionResults(actionKey, [property], data);
-      summarizeResults(data);
-    } catch (e) {
-      alert('Action failed: ' + (e?.message || 'Unknown error'));
-    } finally {
-      setStatusUpdatingId(null);
-    }
-  };
-
-  // Apply a successful action's results to local `properties` state. Rows that
-  // leave the current view (archive from Active, restore/delete from Trash) are
-  // removed; status/property_status changes are merged in place.
-  const applyActionResults = (actionKey, targetProps, data) => {
-    const okIds = new Set((data.results || []).filter(r => r.ok).map(r => String(r.id)));
-    if (okIds.size === 0) return;
-    const targetBySrc = new Map(targetProps.map(p => [`${p._source}-${p.id}`, p]));
-    setProperties(prev => {
-      const next = [];
-      for (const p of prev) {
-        if (!okIds.has(String(p.id)) || !targetBySrc.has(`${p._source}-${p.id}`)) { next.push(p); continue; }
-        // Leaves the list: archive (Active view) / restore + delete (Trash view).
-        if (actionKey === 'delete') continue;
-        if (actionKey === 'archive' && viewMode === 'active') continue;
-        if (actionKey === 'restore' && viewMode === 'trash') continue;
-        const isManual = p._source === 'manual';
-        if (actionKey === 'mark_sold') { next.push({ ...p, property_status: 'sold' }); continue; }
-        if (actionKey === 'mark_available') { next.push({ ...p, status: 'active', property_status: 'available' }); continue; }
-        if (actionKey === 'activate') { next.push({ ...p, status: 'active', ...(isManual ? { property_status: 'available' } : {}) }); continue; }
-        if (actionKey === 'deactivate') { next.push({ ...p, status: 'inactive', ...(isManual ? { property_status: 'unavailable' } : {}) }); continue; }
-        next.push(p);
-      }
-      return next;
-    });
-    setSelectedKeys(prev => {
-      const n = new Set(prev);
-      for (const p of targetProps) n.delete(`${p._source}-${p.id}`);
-      return n;
-    });
-  };
-
-  // ── Bulk actions ─────────────────────────────────────────────────────────
-  const runBulkAction = async (actionKey) => {
-    if (bulkRunning) return;
-    const targets = currentEntries.filter(p => selectedKeys.has(`${p._source}-${p.id}`));
-    if (targets.length === 0) return;
-    const destructive = ['archive', 'delete'].includes(actionKey);
-    if (destructive) {
-      const verb = actionKey === 'delete' ? 'permanently delete' : 'archive';
-      if (!window.confirm(`Are you sure you want to ${verb} ${targets.length} listing${targets.length === 1 ? '' : 's'}?`)) return;
-    }
-    setBulkRunning(true);
-    try {
-      const data = await callListingAction(actionKey, targets.map(p => p.id));
-      applyActionResults(actionKey, targets, data);
-      summarizeResults(data);
-    } catch (e) {
-      alert('Bulk action failed: ' + (e?.message || 'Unknown error'));
-    } finally {
-      setBulkRunning(false);
-    }
-  };
-
-  // ── Sorting (client-side, on the loaded+filtered rows) ───────────────────
-  const toggleSort = (key) => {
-    setSort(prev => prev.key === key
-      ? { key, dir: prev.dir === 'asc' ? 'desc' : 'asc' }
-      : { key, dir: key === 'title' ? 'asc' : 'desc' });
-    setCurrentPage(1);
-  };
-
-  // Close the per-row status dropdown on outside click / Escape.
-  useEffect(() => {
-    if (!openStatusKey) return;
-    const onDocClick = (e) => {
-      if (statusMenuRef.current && !statusMenuRef.current.contains(e.target)) setOpenStatusKey(null);
-    };
-    const onKey = (e) => { if (e.key === 'Escape') setOpenStatusKey(null); };
-    document.addEventListener('mousedown', onDocClick);
-    document.addEventListener('keydown', onKey);
-    return () => { document.removeEventListener('mousedown', onDocClick); document.removeEventListener('keydown', onKey); };
-  }, [openStatusKey]);
-
-  // Reset to page 1 when the result set changes (search/filter/tab/sort).
-  useEffect(() => { setCurrentPage(1); }, [searchTerm, filterStatus, filterPropertyStatus, viewMode]);
-
-  // Clear page-scoped selection whenever the page or tab changes.
-  useEffect(() => { setSelectedKeys(new Set()); }, [currentPage, viewMode]);
-
   const fetchProperties = async () => {
     try {
       setLoading(true);
@@ -335,15 +108,11 @@ const PropertiesManagement = () => {
         .maybeSingle();
 
       // 1) Manual listings: from properties table (seller_id = current seller)
-      // NOTE: two-table union (see PAGE_SIZE/FETCH_CAP comment). We bound each
-      // source with .range() so we never fetch unbounded; the union is then
-      // paginated client-side.
       const { data: manualList, error: manualError } = await supabase
         .from('properties')
         .select('*')
         .eq('seller_id', effectiveUserId)
-        .order('created_at', { ascending: false })
-        .range(0, FETCH_CAP - 1);
+        .order('created_at', { ascending: false });
 
       if (manualError) {
         console.error('Error fetching manual properties:', manualError);
@@ -394,8 +163,7 @@ const PropertiesManagement = () => {
             )
           `)
           .eq('temp_seller_id', sellerData.temp_seller_id)
-          .order('created_at', { ascending: false })
-          .range(0, FETCH_CAP - 1);
+          .order('created_at', { ascending: false });
 
         if (wholesaleError) {
           console.error('Error fetching wholesale deals:', wholesaleError);
@@ -450,22 +218,13 @@ const PropertiesManagement = () => {
   const filteredProperties = properties.filter(property => {
     const searchLower = searchTerm.toLowerCase();
     const title = property.slug?.replace(/-/g, ' ') || '';
-    // Expanded search: title/location AND description, price, and contact fields.
-    const priceStr = String(property.price ?? '');
     const matchesSearch = !searchTerm ||
       property.id?.toString().includes(searchTerm) ||
       title.toLowerCase().includes(searchLower) ||
       (property.address || '').toLowerCase().includes(searchLower) ||
       (property.full_address || '').toLowerCase().includes(searchLower) ||
       (property.city || '').toLowerCase().includes(searchLower) ||
-      (property.state || '').toLowerCase().includes(searchLower) ||
-      (property.zip_code || property.zip || '').toString().toLowerCase().includes(searchLower) ||
-      (property.description || '').toLowerCase().includes(searchLower) ||
-      priceStr.includes(searchTerm) ||
-      priceStr.replace(/[^\d]/g, '').includes(searchTerm.replace(/[^\d]/g, '')) ||
-      (property.contact_name || property.contact_person_name || '').toLowerCase().includes(searchLower) ||
-      (property.contact_email || '').toLowerCase().includes(searchLower) ||
-      (property.contact_phone || property.phone || '').toString().toLowerCase().includes(searchLower);
+      (property.state || '').toLowerCase().includes(searchLower);
 
     // Status: normalize empty to 'active' for scraped; treat 'published' as 'active' when filtering Active
     const status = (property.status || 'active').toLowerCase();
@@ -482,153 +241,11 @@ const PropertiesManagement = () => {
     return matchesSearch && matchesStatus && matchesPropertyStatus;
   });
 
-  // Sort the filtered rows (client-side) by the active column header.
-  const sortedProperties = [...filteredProperties].sort((a, b) => {
-    const dir = sort.dir === 'asc' ? 1 : -1;
-    let av, bv;
-    switch (sort.key) {
-      case 'title':
-        av = (a.full_address || a.address || a.slug || '').toLowerCase();
-        bv = (b.full_address || b.address || b.slug || '').toLowerCase();
-        return av.localeCompare(bv) * dir;
-      case 'price':
-        return ((parseFloat(a.price) || 0) - (parseFloat(b.price) || 0)) * dir;
-      case 'views': {
-        av = viewCounts[`${a._source}-${a.id}`] ?? -1;
-        bv = viewCounts[`${b._source}-${b.id}`] ?? -1;
-        return (av - bv) * dir;
-      }
-      case 'status':
-        av = getEffectiveState(a);
-        bv = getEffectiveState(b);
-        return av.localeCompare(bv) * dir;
-      case 'created_at':
-      default:
-        return (new Date(a.created_at || 0) - new Date(b.created_at || 0)) * dir;
-    }
-  });
-
-  // Pagination (client-side over the sorted union; see PAGE_SIZE/FETCH_CAP note).
+  // Pagination
   const indexOfLastEntry = currentPage * entriesPerPage;
   const indexOfFirstEntry = indexOfLastEntry - entriesPerPage;
-  const currentEntries = sortedProperties.slice(indexOfFirstEntry, indexOfLastEntry);
-  const totalPages = Math.ceil(sortedProperties.length / entriesPerPage);
-
-  // ── Live per-row view counts ─────────────────────────────────────────────
-  // Batched: ONE query over property_analytics for the visible page's ids,
-  // summing page_views per property (no N+1). We cap to the current page's rows
-  // and skip ids we've already counted. Mirrors the analytics route's notion of
-  // views (sum of page_views) closely enough for an at-a-glance row number.
-  const viewCountKeysRef = useRef('');
-  useEffect(() => {
-    const rows = currentEntries;
-    if (rows.length === 0) return;
-    const need = rows.filter(p => viewCounts[`${p._source}-${p.id}`] === undefined);
-    if (need.length === 0) return;
-    const ids = need.map(p => p.id);
-    const cacheKey = ids.join(',');
-    if (viewCountKeysRef.current === cacheKey) return;
-    viewCountKeysRef.current = cacheKey;
-    let cancelled = false;
-    (async () => {
-      try {
-        const { data } = await supabase
-          .from('property_analytics')
-          .select('property_id, page_views')
-          .in('property_id', ids);
-        const totals = {};
-        (data || []).forEach(r => {
-          totals[String(r.property_id)] = (totals[String(r.property_id)] || 0) + (Number(r.page_views) || 1);
-        });
-        if (cancelled) return;
-        setViewCounts(prev => {
-          const next = { ...prev };
-          for (const p of need) {
-            next[`${p._source}-${p.id}`] = totals[String(p.id)] || 0;
-          }
-          return next;
-        });
-      } catch {
-        // best-effort; leave counts undefined (rendered as —)
-      }
-    })();
-    return () => { cancelled = true; };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentEntries.map(p => `${p._source}-${p.id}`).join(',')]);
-
-  // ── Bulk-select (page-scoped) ────────────────────────────────────────────
-  const pageKeys = currentEntries.map(p => `${p._source}-${p.id}`);
-  const selectedCount = pageKeys.filter(k => selectedKeys.has(k)).length;
-  const allPageSelected = pageKeys.length > 0 && selectedCount === pageKeys.length;
-  const toggleSelectAll = () => {
-    setSelectedKeys(prev => {
-      const n = new Set(prev);
-      if (allPageSelected) pageKeys.forEach(k => n.delete(k));
-      else pageKeys.forEach(k => n.add(k));
-      return n;
-    });
-  };
-  const toggleSelectRow = (key) => {
-    setSelectedKeys(prev => {
-      const n = new Set(prev);
-      if (n.has(key)) n.delete(key); else n.add(key);
-      return n;
-    });
-  };
-
-  // Valid bulk actions for the current tab. Trash exposes restore/delete;
-  // Active exposes the live-listing lifecycle. The route still validates each
-  // id individually (per-id partial success), so mixed-state selections are safe.
-  const bulkActionDefs = viewMode === 'trash'
-    ? [
-        ...((workspaceRole === 'admin' || workspacePerms?.listings_delete) ? [{ key: 'restore', label: 'Restore' }] : []),
-        ...((workspaceRole === 'admin' || workspacePerms?.listings_delete) ? [{ key: 'delete', label: 'Delete', destructive: true }] : []),
-      ]
-    : [
-        ...((workspaceRole === 'admin' || workspacePerms?.listings_update) ? [
-          { key: 'activate', label: 'Activate' },
-          { key: 'deactivate', label: 'Pause' },
-          { key: 'mark_sold', label: 'Mark sold' },
-        ] : []),
-        ...((workspaceRole === 'admin' || workspacePerms?.listings_delete) ? [{ key: 'archive', label: 'Archive', destructive: true }] : []),
-      ];
-
-  // Single status pill + valid-transition dropdown (desktop + mobile share it).
-  const StatusPill = ({ property }) => {
-    const state = getEffectiveState(property);
-    const meta = STATE_META[state] || STATE_META.draft;
-    const actions = getValidActions(property);
-    const key = `${property._source}-${property.id}`;
-    const open = openStatusKey === key;
-    const busy = statusUpdatingId === key;
-    return (
-      <div className="relative inline-block" ref={open ? statusMenuRef : null}>
-        <button
-          type="button"
-          onClick={() => actions.length > 0 && setOpenStatusKey(open ? null : key)}
-          disabled={busy}
-          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium border ${meta.cls} ${actions.length > 0 ? 'cursor-pointer hover:opacity-80' : 'cursor-default'} ${busy ? 'opacity-50' : ''}`}
-          title={actions.length > 0 ? 'Change status' : meta.label}
-        >
-          {meta.label}
-          {actions.length > 0 && <ChevronDown className="w-3 h-3" />}
-        </button>
-        {open && actions.length > 0 && (
-          <div className="absolute left-0 mt-1 z-30 min-w-[150px] bg-white border border-[#E8E8E4] rounded shadow-lg py-1">
-            {actions.map(a => (
-              <button
-                key={a.key}
-                onClick={() => runRowAction(property, a.key)}
-                className={`w-full text-left px-3 py-1.5 text-[12px] font-medium hover:bg-[#FAFAF8] transition-colors ${a.destructive ? 'text-[#D03839]' : 'text-[#1A1816]'}`}
-              >
-                {a.label}
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-    );
-  };
+  const currentEntries = filteredProperties.slice(indexOfFirstEntry, indexOfLastEntry);
+  const totalPages = Math.ceil(filteredProperties.length / entriesPerPage);
 
   // Normalize property for view modal (modal expects property_images; scraped has property_photos)
   const getPropertyForModal = (property) => {
@@ -652,23 +269,36 @@ const PropertiesManagement = () => {
     setShowViewModal(true);
   };
 
+  // Handle archive/restore
+  const handleArchiveClick = (property) => {
+    setSelectedProperty(property);
+    setShowArchiveModal(true);
+  };
+
+  // Mark Listing as Sold — quick row-level action.
+  // Only manual listings (not DeelScout-sourced) support this. Sets
+  // property_status='sold' but keeps the listing visible in the seller's table
+  // (it just gets a Sold badge). Doesn't archive or delete.
+  const handleMarkSoldClick = (property) => {
+    setPropertyToMarkSold(property);
+    setShowMarkSoldModal(true);
+  };
+
   const handleMarkSoldConfirm = async () => {
     if (!propertyToMarkSold || markingSold) return;
     setMarkingSold(true);
     try {
-      // Route owns the counter + buyer notifications on sold.
-      const data = await callListingAction('mark_sold', [propertyToMarkSold.id]);
-      const r = (data.results || [])[0];
-      if (r?.ok) {
-        setProperties(prev => prev.map(p =>
-          p.id === propertyToMarkSold.id && p._source === propertyToMarkSold._source
-            ? { ...p, property_status: 'sold' }
-            : p
-        ));
-      } else if (r) {
-        alert('Failed to mark as sold: ' + (r.error || 'Unknown error'));
-      }
-      summarizeResults(data);
+      const { error } = await supabase
+        .from('properties')
+        .update({ property_status: 'sold' })
+        .eq('id', propertyToMarkSold.id)
+        .eq('seller_id', effectiveUserId);
+      if (error) throw error;
+      setProperties(prev => prev.map(p =>
+        p.id === propertyToMarkSold.id && p._source === 'manual'
+          ? { ...p, property_status: 'sold' }
+          : p
+      ));
       setShowMarkSoldModal(false);
       setPropertyToMarkSold(null);
     } catch (e) {
@@ -682,15 +312,44 @@ const PropertiesManagement = () => {
   const handleArchiveConfirm = async () => {
     if (!selectedProperty) return;
     try {
-      // Route archives the listing AND decrements the counter (single owner).
-      const data = await callListingAction('archive', [selectedProperty.id]);
-      const r = (data.results || [])[0];
-      if (r?.ok) {
-        setProperties(prev => prev.filter(p => !(p.id === selectedProperty.id && p._source === selectedProperty._source)));
-      } else if (r) {
-        alert('Failed to archive property: ' + (r.error || 'Unknown error'));
+      if (selectedProperty._source === 'manual') {
+        const { error } = await supabase
+          .from('properties')
+          .update({ status: 'archived', property_status: 'unavailable' })
+          .eq('id', selectedProperty.id)
+          .eq('seller_id', effectiveUserId);
+        if (error) throw error;
+      } else {
+        const { data: sellerRow } = await supabase
+          .from('seller_applications')
+          .select('temp_seller_id')
+          .eq('id', effectiveUserId)
+          .maybeSingle();
+        const tempSellerId = sellerRow?.temp_seller_id;
+        if (!tempSellerId) {
+          alert('Unable to verify ownership. Please try again.');
+          return;
+        }
+        const { error } = await supabase
+          .from('wholesale_deals')
+          .update({ status: 'archived' })
+          .eq('id', selectedProperty.id)
+          .eq('temp_seller_id', tempSellerId);
+        if (error) throw error;
       }
-      summarizeResults(data);
+      // Decrement listings_used_this_period when moved to trash
+      const { data: planRow } = await supabase
+        .from('seller_plans')
+        .select('id, listings_used_this_period')
+        .eq('seller_id', effectiveUserId)
+        .maybeSingle()
+      if (planRow && planRow.listings_used_this_period > 0) {
+        await supabase
+          .from('seller_plans')
+          .update({ listings_used_this_period: planRow.listings_used_this_period - 1 })
+          .eq('id', planRow.id)
+      }
+      setProperties(prev => prev.filter(p => p.id !== selectedProperty.id));
       setShowArchiveModal(false);
       setSelectedProperty(null);
     } catch (error) {
@@ -699,19 +358,108 @@ const PropertiesManagement = () => {
     }
   };
 
+  const handleRestore = async (property) => {
+    try {
+      if (property._source === 'manual') {
+        const { error } = await supabase
+          .from('properties')
+          .update({ status: 'inactive', property_status: 'unavailable' })
+          .eq('id', property.id)
+          .eq('seller_id', effectiveUserId);
+        if (error) throw error;
+      } else {
+        const { data: sellerRow } = await supabase
+          .from('seller_applications')
+          .select('temp_seller_id')
+          .eq('id', effectiveUserId)
+          .maybeSingle();
+        const tempSellerId = sellerRow?.temp_seller_id;
+        if (!tempSellerId) {
+          alert('Unable to verify ownership. Please try again.');
+          return;
+        }
+        const { error } = await supabase
+          .from('wholesale_deals')
+          .update({ status: 'active' })
+          .eq('id', property.id)
+          .eq('temp_seller_id', tempSellerId);
+        if (error) throw error;
+      }
+      // Increment listings_used_this_period when restored from trash
+      const { data: planRow } = await supabase
+        .from('seller_plans')
+        .select('id, listings_used_this_period')
+        .eq('seller_id', effectiveUserId)
+        .maybeSingle()
+      if (planRow) {
+        await supabase
+          .from('seller_plans')
+          .update({ listings_used_this_period: (planRow.listings_used_this_period ?? 0) + 1 })
+          .eq('id', planRow.id)
+      }
+      setProperties(prev => prev.filter(p => p.id !== property.id));
+    } catch (error) {
+      console.error('Error restoring property:', error);
+      alert('Failed to restore property: ' + error.message);
+    }
+  };
+
+  const handleDeleteClick = (property) => {
+    setSelectedProperty(property);
+    setShowDeleteModal(true);
+  };
+
   const handleDeleteConfirm = async () => {
     if (!selectedProperty) return;
     try {
-      // Route hard-deletes the listing (+ its images/photos) and adjusts the
-      // counter if the deleted listing was still counted.
-      const data = await callListingAction('delete', [selectedProperty.id]);
-      const r = (data.results || [])[0];
-      if (r?.ok) {
-        setProperties(prev => prev.filter(p => !(p.id === selectedProperty.id && p._source === selectedProperty._source)));
-      } else if (r) {
-        alert('Failed to delete property: ' + (r.error || 'Unknown error'));
+      if (selectedProperty._source === 'manual') {
+        const { error: imgErr } = await supabase
+          .from('property_images')
+          .delete()
+          .eq('property_id', selectedProperty.id);
+        if (imgErr) console.error('Error deleting property images:', imgErr);
+        const { error } = await supabase
+          .from('properties')
+          .delete()
+          .eq('id', selectedProperty.id)
+          .eq('seller_id', effectiveUserId);
+        if (error) throw error;
+        // Decrement listings_used_this_period
+        const { data: planRow } = await supabase
+          .from('seller_plans')
+          .select('id, listings_used_this_period')
+          .eq('seller_id', effectiveUserId)
+          .maybeSingle()
+        if (planRow && planRow.listings_used_this_period > 0) {
+          await supabase
+            .from('seller_plans')
+            .update({ listings_used_this_period: planRow.listings_used_this_period - 1 })
+            .eq('id', planRow.id)
+        }
+      } else {
+        const { data: sellerRow } = await supabase
+          .from('seller_applications')
+          .select('temp_seller_id')
+          .eq('id', effectiveUserId)
+          .maybeSingle();
+        const tempSellerId = sellerRow?.temp_seller_id;
+        if (!tempSellerId) {
+          alert('Unable to verify ownership. Please try again.');
+          return;
+        }
+        const { error: photosError } = await supabase
+          .from('property_photos')
+          .delete()
+          .eq('deal_id', selectedProperty.id);
+        if (photosError) console.error('Error deleting photos:', photosError);
+        const { error } = await supabase
+          .from('wholesale_deals')
+          .delete()
+          .eq('id', selectedProperty.id)
+          .eq('temp_seller_id', tempSellerId);
+        if (error) throw error;
       }
-      summarizeResults(data);
+      setProperties(prev => prev.filter(p => p.id !== selectedProperty.id));
       setShowDeleteModal(false);
       setSelectedProperty(null);
     } catch (error) {
@@ -727,8 +475,7 @@ const PropertiesManagement = () => {
     const isManual = property._source === 'manual';
     const nextPropertyStatus = nextStatus === 'inactive' ? 'unavailable' : 'available';
 
-    // Block activation if subscription has ended (UX gate; the route also
-    // enforces permissions/transitions, but this gives a clearer message).
+    // Block activation if subscription has ended
     if (nextStatus === 'active') {
       const { data: plan } = await supabase
         .from('seller_plans')
@@ -750,15 +497,32 @@ const PropertiesManagement = () => {
 
     try {
       setStatusUpdatingId(`${property._source}-${property.id}`);
-      // Route owns the write + the counter (activate increments, pause decrements).
-      const action = nextStatus === 'active' ? 'activate' : 'deactivate';
-      const data = await callListingAction(action, [property.id]);
-      const r = (data.results || [])[0];
-      if (!r?.ok) {
-        if (r) alert('Failed to update property status: ' + (r.error || 'Unknown error'));
-        summarizeResults(data);
-        return;
+      if (isManual) {
+        const { error } = await supabase
+          .from('properties')
+          .update({ status: nextStatus, property_status: nextPropertyStatus })
+          .eq('id', property.id)
+          .eq('seller_id', effectiveUserId);
+        if (error) throw error;
+      } else {
+        const { data: sellerRow } = await supabase
+          .from('seller_applications')
+          .select('temp_seller_id')
+          .eq('id', effectiveUserId)
+          .maybeSingle();
+        const tempSellerId = sellerRow?.temp_seller_id;
+        if (!tempSellerId) {
+          alert('Unable to verify ownership. Please try again.');
+          return;
+        }
+        const { error } = await supabase
+          .from('wholesale_deals')
+          .update({ status: nextStatus })
+          .eq('id', property.id)
+          .eq('temp_seller_id', tempSellerId);
+        if (error) throw error;
       }
+
       setProperties((prev) =>
         prev.map((p) =>
           p.id === property.id && p._source === property._source
@@ -766,31 +530,12 @@ const PropertiesManagement = () => {
             : p
         )
       );
-      if (data.counterWarning) summarizeResults(data);
     } catch (error) {
       console.error('Error updating property active status:', error);
       alert('Failed to update property status: ' + (error?.message || 'Unknown error'));
     } finally {
       setStatusUpdatingId(null);
     }
-  };
-
-  // Clickable sortable column header.
-  const SortHeader = ({ label, sortKey, align = 'left' }) => {
-    const active = sort.key === sortKey;
-    const Icon = !active ? ChevronsUpDown : sort.dir === 'asc' ? ChevronUp : ChevronDown;
-    return (
-      <th className={`px-4 py-3 text-${align} text-xs font-semibold text-[#444441] uppercase tracking-wider whitespace-nowrap`}>
-        <button
-          type="button"
-          onClick={() => toggleSort(sortKey)}
-          className={`inline-flex items-center gap-1 hover:text-[#1A1816] transition-colors ${active ? 'text-[#1A1816]' : ''}`}
-        >
-          {label}
-          <Icon className="w-3 h-3" />
-        </button>
-      </th>
-    );
   };
 
   const getStatusColor = (status) => {
@@ -1045,44 +790,6 @@ const PropertiesManagement = () => {
         </div>
       )}
 
-      {/* Action result banner (bulk / single partial-success summaries) */}
-      {actionMsg && (
-        <div className="flex items-center justify-between p-3 bg-[#EBF3FC] border border-[#BBD6F5] rounded text-[13px] text-[#1A5FAE]">
-          <span>{actionMsg}</span>
-          <button onClick={() => setActionMsg('')} className="ml-3 text-[#1A5FAE] hover:opacity-70"><X size={14} /></button>
-        </div>
-      )}
-
-      {/* Sticky bulk-action bar — shows valid actions for the current tab when
-          one or more rows on the page are selected. */}
-      {selectedCount > 0 && (
-        <div className="sticky top-2 z-20 flex flex-wrap items-center gap-2 px-4 py-2.5 bg-white rounded border border-[#D4D4CF] shadow-card">
-          <span className="text-[13px] font-semibold text-[#1A1816]">{selectedCount} selected</span>
-          <div className="flex flex-wrap items-center gap-1.5 ml-1">
-            {bulkActionDefs.map(a => (
-              <button
-                key={a.key}
-                onClick={() => runBulkAction(a.key)}
-                disabled={bulkRunning}
-                className={`h-7 px-3 text-[12px] font-semibold rounded transition-colors disabled:opacity-50 ${
-                  a.destructive
-                    ? 'bg-[#FEF0EF] text-[#D03839] hover:bg-[#FCDEDE]'
-                    : 'bg-[#E8E8E4] text-[#1A1816] hover:bg-[#D4D4CF]'
-                }`}
-              >
-                {a.label}
-              </button>
-            ))}
-          </div>
-          <button
-            onClick={() => setSelectedKeys(new Set())}
-            className="ml-auto text-[12px] font-medium text-[#737370] hover:text-[#1A1816]"
-          >
-            Clear selection
-          </button>
-        </div>
-      )}
-
       {/* Table Card */}
       <div className="bg-white rounded border border-[#E8E8E4] overflow-hidden shadow-card">
         {/* Controls */}
@@ -1145,21 +852,11 @@ const PropertiesManagement = () => {
           <table className="w-full min-w-[800px] table-auto">
             <thead className="bg-[#FAFAF8] border-b border-[#E8E8E4]">
               <tr>
-                <th className="px-4 py-3 text-left w-[36px]">
-                  <input
-                    type="checkbox"
-                    checked={allPageSelected}
-                    onChange={toggleSelectAll}
-                    aria-label="Select all on page"
-                    className="w-3.5 h-3.5 rounded border-[#D4D4CF] text-[#D03839] focus:ring-[#D03839]/20 cursor-pointer"
-                  />
-                </th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-[#444441] uppercase tracking-wider whitespace-nowrap w-[44px]">#</th>
-                <SortHeader label="Property" sortKey="title" />
-                <SortHeader label="Price" sortKey="price" />
+                <th className="px-4 py-3 text-left text-xs font-semibold text-[#444441] uppercase tracking-wider whitespace-nowrap">Property</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-[#444441] uppercase tracking-wider whitespace-nowrap">Price</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-[#444441] uppercase tracking-wider whitespace-nowrap">Type</th>
-                <SortHeader label="Views" sortKey="views" />
-                <SortHeader label="Status" sortKey="status" />
+                <th className="px-4 py-3 text-left text-xs font-semibold text-[#444441] uppercase tracking-wider whitespace-nowrap">Status</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-[#444441] uppercase tracking-wider whitespace-nowrap">Source</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-[#444441] uppercase tracking-wider whitespace-nowrap">Enhancements</th>
                 <th className="px-4 py-3 text-right text-xs font-semibold text-[#444441] uppercase tracking-wider whitespace-nowrap">Actions</th>
@@ -1169,7 +866,6 @@ const PropertiesManagement = () => {
               {loading ? (
                 [...Array(3)].map((_, i) => (
                   <tr key={i} className="animate-pulse">
-                    <td className="px-4 py-3"><div className="h-3.5 w-3.5 bg-[#E8E8E4] rounded" /></td>
                     <td className="px-4 py-3"><div className="h-4 w-5 bg-[#E8E8E4] rounded" /></td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
@@ -1182,7 +878,6 @@ const PropertiesManagement = () => {
                     </td>
                     <td className="px-4 py-3"><div className="h-5 w-16 bg-[#E8E8E4] rounded" /></td>
                     <td className="px-4 py-3"><div className="h-3 w-3/4 bg-[#E8E8E4] rounded" /></td>
-                    <td className="px-4 py-3"><div className="h-3 w-8 bg-[#E8E8E4] rounded" /></td>
                     <td className="px-4 py-3"><div className="h-3 w-3/4 bg-[#E8E8E4] rounded" /></td>
                     <td className="px-4 py-3"><div className="h-3 w-3/4 bg-[#E8E8E4] rounded" /></td>
                     <td className="px-4 py-3"><div className="h-5 w-16 bg-[#E8E8E4] rounded" /></td>
@@ -1210,16 +905,7 @@ const PropertiesManagement = () => {
                 </tr>
               ) : (
                 currentEntries.map((property, index) => (
-                  <tr key={`${property._source}-${property.id}`} className={`transition-colors ${selectedKeys.has(`${property._source}-${property.id}`) ? 'bg-[#FEF7F6]' : 'hover:bg-[#FAFAF8]'}`}>
-                    <td className="px-4 py-3">
-                      <input
-                        type="checkbox"
-                        checked={selectedKeys.has(`${property._source}-${property.id}`)}
-                        onChange={() => toggleSelectRow(`${property._source}-${property.id}`)}
-                        aria-label="Select listing"
-                        className="w-3.5 h-3.5 rounded border-[#D4D4CF] text-[#D03839] focus:ring-[#D03839]/20 cursor-pointer"
-                      />
-                    </td>
+                  <tr key={`${property._source}-${property.id}`} className="hover:bg-[#FAFAF8] transition-colors">
                     <td className="px-4 py-3 whitespace-nowrap">
                       <span className="text-xs font-medium text-[#A8A8A4]">{indexOfFirstEntry + index + 1}</span>
                     </td>
@@ -1242,14 +928,21 @@ const PropertiesManagement = () => {
                     <td className="px-4 py-3 whitespace-nowrap">
                       <span className="text-xs text-[#444441]">{property.property_type || 'N/A'}</span>
                     </td>
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      <span className="inline-flex items-center gap-1 text-xs text-[#444441]">
-                        <Eye className="w-3.5 h-3.5 text-[#A8A8A4]" />
-                        {viewCounts[`${property._source}-${property.id}`] ?? '—'}
-                      </span>
-                    </td>
                     <td className={`px-4 py-3 ${property._source === 'manual' && property.status === 'rejected' ? '' : 'whitespace-nowrap'}`}>
-                      <StatusPill property={property} />
+                      {viewMode === 'active' && ['active', 'inactive'].includes((property.status || '').toLowerCase()) ? (
+                        <ToggleSwitch
+                          value={(property.status || '').toLowerCase() === 'active'}
+                          onChange={(next) => handleToggleActive(property, next ? 'active' : 'inactive')}
+                          disabled={statusUpdatingId === `${property._source}-${property.id}`}
+                          label="Listing visible to buyers"
+                          onLabel="Active"
+                          offLabel="Inactive"
+                        />
+                      ) : (
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium border ${getStatusColor(property.status)}`}>
+                          {property.status === 'under_review' ? 'Under Review' : property.status === 'rejected' ? 'Update Required' : (property.status || 'draft')?.charAt(0).toUpperCase() + (property.status || '').slice(1) || 'Draft'}
+                        </span>
+                      )}
                       {property._source === 'manual' && property.status === 'rejected' && property.rejection_reason && (
                         <p className="text-[10px] text-[#B5620A] mt-1 max-w-[140px] leading-tight line-clamp-2">
                           {property.rejection_reason.length > 70 ? property.rejection_reason.slice(0, 70) + '…' : property.rejection_reason}
@@ -1266,13 +959,17 @@ const PropertiesManagement = () => {
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
                       <div className="flex items-center justify-end gap-2">
-                        {/* Lifecycle actions (activate/pause/sold/archive/restore/delete)
-                            live in the status pill dropdown. These buttons are
-                            navigation/utility only. */}
                         {viewMode === 'trash' ? (
-                          <button onClick={() => router.push(`/properties/preview/${property.id}`)} className="flex items-center justify-center w-8 h-8 rounded text-[#A8A8A4] hover:text-primary hover:bg-[#E8E8E4] transition-colors" title="View">
-                            <Eye className="w-4 h-4" strokeWidth={2} />
-                          </button>
+                          <>
+                            <button onClick={() => handleRestore(property)} className="flex items-center justify-center w-8 h-8 rounded text-[#A8A8A4] hover:text-primary hover:bg-[#E8E8E4] transition-colors" title="Restore">
+                              <RotateCcw className="w-4 h-4" strokeWidth={2} />
+                            </button>
+                            {(workspaceRole === 'admin' || workspacePerms?.listings_delete) && (
+                              <button onClick={() => handleDeleteClick(property)} className="flex items-center justify-center w-8 h-8 rounded text-[#A8A8A4] hover:text-red-600 hover:bg-red-50 transition-colors" title="Delete Permanently">
+                                <Trash2 className="w-4 h-4" strokeWidth={2} />
+                              </button>
+                            )}
+                          </>
                         ) : (
                           <>
                             {(workspaceRole === 'admin' || workspacePerms?.listings_create) && property._source === 'manual' && property.status === 'draft' && (
@@ -1310,9 +1007,19 @@ const PropertiesManagement = () => {
                                 <Edit2 className="w-4 h-4" strokeWidth={2} />
                               </button>
                             )}
+                            {(workspaceRole === 'admin' || workspacePerms?.listings_update) && property._source === 'manual' && ['active','published'].includes((property.status||'').toLowerCase()) && (property.property_status||'').toLowerCase() !== 'sold' && (
+                              <button onClick={() => handleMarkSoldClick(property)} className="flex items-center justify-center w-8 h-8 rounded text-[#A8A8A4] hover:text-[#0F6E56] hover:bg-[#E4F5EC] transition-colors" title="Mark as Sold">
+                                <CheckCircle className="w-4 h-4" strokeWidth={2} />
+                              </button>
+                            )}
                             <button onClick={() => { setPropertyForAnalytics(property); setShowAnalyticsSidebar(true); }} className="flex items-center justify-center w-8 h-8 rounded text-[#A8A8A4] hover:text-primary hover:bg-[#E8E8E4] transition-colors" title="Analytics">
                               <BarChart2 className="w-4 h-4" strokeWidth={2} />
                             </button>
+                            {(workspaceRole === 'admin' || workspacePerms?.listings_delete) && (
+                              <button onClick={() => handleArchiveClick(property)} className="flex items-center justify-center w-8 h-8 rounded text-[#A8A8A4] hover:text-red-600 hover:bg-red-50 transition-colors" title="Move to Trash">
+                                <Trash2 className="w-4 h-4" strokeWidth={2} />
+                              </button>
+                            )}
                           </>
                         )}
                       </div>
@@ -1357,15 +1064,8 @@ const PropertiesManagement = () => {
             </div>
           ) : (
             currentEntries.map((property, index) => (
-              <div key={`${property._source}-${property.id}`} className={`p-4 transition-colors ${selectedKeys.has(`${property._source}-${property.id}`) ? 'bg-[#FEF7F6]' : 'hover:bg-[#FAFAF8]/50'}`}>
+              <div key={`${property._source}-${property.id}`} className="p-4 hover:bg-[#FAFAF8]/50 transition-colors">
                 <div className="flex gap-3">
-                  <input
-                    type="checkbox"
-                    checked={selectedKeys.has(`${property._source}-${property.id}`)}
-                    onChange={() => toggleSelectRow(`${property._source}-${property.id}`)}
-                    aria-label="Select listing"
-                    className="mt-1 w-4 h-4 rounded border-[#D4D4CF] text-[#D03839] focus:ring-[#D03839]/20 cursor-pointer shrink-0"
-                  />
                   {getFeaturedImage(property) ? (
                     <div className="w-20 h-20 rounded bg-[#E8E8E4] overflow-hidden shrink-0">
                       <img src={getFeaturedImage(property)} alt={property.full_address || property.address} className="w-full h-full object-cover" />
@@ -1381,11 +1081,21 @@ const PropertiesManagement = () => {
                       <span className={`inline-flex px-2 py-0.5 rounded text-[10px] font-medium border ${property._source === 'manual' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-amber-50 text-amber-700 border-amber-200'}`}>
                         {property._source === 'manual' ? 'Manual' : 'DeelScout'}
                       </span>
-                      <StatusPill property={property} />
-                      <span className="inline-flex items-center gap-1 text-[10px] text-[#737370]">
-                        <Eye className="w-3 h-3 text-[#A8A8A4]" />
-                        {viewCounts[`${property._source}-${property.id}`] ?? '—'} views
-                      </span>
+                      {viewMode === 'active' && ['active', 'inactive'].includes((property.status || '').toLowerCase()) ? (
+                        <ToggleSwitch
+                          value={(property.status || '').toLowerCase() === 'active'}
+                          onChange={(next) => handleToggleActive(property, next ? 'active' : 'inactive')}
+                          disabled={statusUpdatingId === `${property._source}-${property.id}`}
+                          label="Listing visible to buyers"
+                          onLabel="Active"
+                          offLabel="Inactive"
+                          size="sm"
+                        />
+                      ) : (
+                        <span className={`inline-flex px-2 py-0.5 rounded text-[10px] font-medium border ${getStatusColor(property.status)}`}>
+                          {property.status === 'under_review' ? 'Under Review' : property.status === 'rejected' ? 'Update Required' : (property.status || 'draft')?.charAt(0).toUpperCase() + (property.status || '').slice(1) || 'Draft'}
+                        </span>
+                      )}
                       <AddonTags property={property} />
                     </div>
                     <p className="text-xs text-[#444441] mt-1 flex items-center gap-1">
@@ -1407,11 +1117,17 @@ const PropertiesManagement = () => {
                   </div>
                 )}
                 <div className="flex items-center justify-around mt-3 pt-3 border-t border-[#E8E8E4]">
-                  {/* Lifecycle actions live in the status pill above. */}
                   {viewMode === 'trash' ? (
-                    <button onClick={() => router.push(`/properties/preview/${property.id}`)} className="flex-1 flex items-center justify-center h-9 rounded text-[#737370] hover:text-primary hover:bg-[#E8E8E4] transition-colors" title="View">
-                      <Eye className="w-4 h-4" strokeWidth={2} />
-                    </button>
+                    <>
+                      <button onClick={() => handleRestore(property)} className="flex-1 flex items-center justify-center h-9 rounded text-[#737370] hover:text-primary hover:bg-[#E8E8E4] transition-colors" title="Restore">
+                        <RotateCcw className="w-4 h-4" strokeWidth={2} />
+                      </button>
+                      {(workspaceRole === 'admin' || workspacePerms?.listings_delete) && (
+                        <button onClick={() => handleDeleteClick(property)} className="flex-1 flex items-center justify-center h-9 rounded text-[#737370] hover:text-red-600 hover:bg-red-50 transition-colors" title="Delete Permanently">
+                          <Trash2 className="w-4 h-4" strokeWidth={2} />
+                        </button>
+                      )}
+                    </>
                   ) : (
                     <>
                       {(workspaceRole === 'admin' || workspacePerms?.listings_create) && property._source === 'manual' && property.status === 'draft' && (
@@ -1450,6 +1166,11 @@ const PropertiesManagement = () => {
                       <button onClick={() => { setPropertyForAnalytics(property); setShowAnalyticsSidebar(true); }} className="flex-1 flex items-center justify-center h-9 rounded text-[#737370] hover:text-primary hover:bg-[#E8E8E4] transition-colors" title="Analytics">
                         <BarChart2 className="w-4 h-4" strokeWidth={2} />
                       </button>
+                      {(workspaceRole === 'admin' || workspacePerms?.listings_delete) && (
+                        <button onClick={() => handleArchiveClick(property)} className="flex-1 flex items-center justify-center h-9 rounded text-[#737370] hover:text-red-600 hover:bg-red-50 transition-colors" title="Move to Trash">
+                          <Trash2 className="w-4 h-4" strokeWidth={2} />
+                        </button>
+                      )}
                     </>
                   )}
                 </div>
@@ -1461,9 +1182,9 @@ const PropertiesManagement = () => {
         {/* Footer - Pagination */}
         <div className="px-4 py-3 bg-[#FAFAF8] border-t border-[#E8E8E4] flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div className="text-xs text-[#737370]">
-            Showing <span className="font-medium text-[#444441]">{sortedProperties.length > 0 ? indexOfFirstEntry + 1 : 0}</span> to{' '}
-            <span className="font-medium text-[#444441]">{Math.min(indexOfLastEntry, sortedProperties.length)}</span> of{' '}
-            <span className="font-medium text-[#444441]">{sortedProperties.length}</span> entries
+            Showing <span className="font-medium text-[#444441]">{filteredProperties.length > 0 ? indexOfFirstEntry + 1 : 0}</span> to{' '}
+            <span className="font-medium text-[#444441]">{Math.min(indexOfLastEntry, filteredProperties.length)}</span> of{' '}
+            <span className="font-medium text-[#444441]">{filteredProperties.length}</span> entries
           </div>
 
           {totalPages > 1 && (
@@ -1622,11 +1343,4 @@ const PropertiesManagement = () => {
   );
 };
 
-// useSearchParams() must be inside a Suspense boundary in the App Router.
-export default function PropertiesPage() {
-  return (
-    <Suspense fallback={null}>
-      <PropertiesManagement />
-    </Suspense>
-  );
-}
+export default PropertiesManagement;
