@@ -389,7 +389,7 @@ function MemberPhoneField({ memberId, initialPhone, onChanged }) {
         return
       }
       if (data.phoneSkipped) {
-        setError('Migration pending')
+        setError('Phone number could not be saved. Please try again.')
       } else {
         setSavedValue(next)
         if (onChanged) onChanged()

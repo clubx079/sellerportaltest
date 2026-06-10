@@ -69,7 +69,7 @@ export async function PATCH(request, { params }) {
       if (Object.keys(rest).length > 0) {
         await supabase.from('org_members').update(rest).eq('id', memberId)
       }
-      return NextResponse.json({ success: true, phoneSkipped: true, message: 'Phone column not available — run database/add_phone_to_team_members.sql' })
+      return NextResponse.json({ success: true, phoneSkipped: true, message: 'Phone number could not be saved.' })
     }
 
     if (updateErr) return NextResponse.json({ error: 'Failed to update member' }, { status: 500 })

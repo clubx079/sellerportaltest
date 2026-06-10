@@ -17,6 +17,14 @@ function getClientIP(request) {
   return null
 }
 
+// Invitations are valid for 7 days (matches the invite email copy). A resend
+// refreshes invited_at, restarting the window.
+const INVITE_TTL_DAYS = 7
+function isInviteExpired(member) {
+  if (!member?.invited_at) return false // no timestamp (legacy) → don't expire
+  return Date.now() - new Date(member.invited_at).getTime() > INVITE_TTL_DAYS * 24 * 60 * 60 * 1000
+}
+
 // GET /api/team/accept?token=xxx — validate token, return member info
 export async function GET(request) {
   const { searchParams } = new URL(request.url)
@@ -32,6 +40,7 @@ export async function GET(request) {
 
     if (!member) return NextResponse.json({ error: 'Invalid or expired invitation' }, { status: 404 })
     if (member.status === 'active') return NextResponse.json({ error: 'Invitation already accepted' }, { status: 409 })
+    if (isInviteExpired(member)) return NextResponse.json({ error: 'This invitation has expired. Ask the team owner to resend it.' }, { status: 410 })
 
     const { data: org } = await supabase
       .from('seller_organizations')
@@ -67,6 +76,7 @@ export async function POST(request) {
 
     if (!member) return NextResponse.json({ error: 'Invalid or expired invitation' }, { status: 404 })
     if (member.status === 'active') return NextResponse.json({ error: 'Invitation already accepted' }, { status: 409 })
+    if (isInviteExpired(member)) return NextResponse.json({ error: 'This invitation has expired. Ask the team owner to resend it.' }, { status: 410 })
 
     const { data: org } = await supabase
       .from('seller_organizations')
