@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 import Image from "next/image";
 import { getCurrentCurrencySymbol } from "@/lib/currency";
@@ -9,7 +8,7 @@ import {
   Building2, PlusCircle, ChevronRight, ChevronLeft, MessageCircle,
   Eye, Home, CircleDollarSign, FileText, BarChart3, Megaphone, ScrollText,
   Edit3, Bed, Bath, Square, Bell, TrendingUp, TrendingDown, CheckCircle2,
-  MapPin, Heart
+  MapPin, Heart, MessageSquare
 } from "lucide-react";
 
 // Design system avatar colors
@@ -51,6 +50,7 @@ export default function DashboardPage() {
   });
   const [recentProperties, setRecentProperties] = useState([]);
   const [recentQueries, setRecentQueries] = useState([]);
+  const [perms, setPerms] = useState({ isOwner: true, listings_create: true, listings_update: true, contracts_create: true });
   const [currency, setCurrency] = useState("$");
   const scrollRef = useRef(null);
   const [notifications, setNotifications] = useState([]);
@@ -102,118 +102,51 @@ export default function DashboardPage() {
       const currentUser = JSON.parse(userStr);
       const currentUserId = currentUser.id;
 
-      // Resolve effective seller_id for active workspace
-      let effectiveUserId = currentUserId;
+      // Single server-side aggregation endpoint — stats, listings, permissions, sellerName.
       try {
-        const wsRes = await fetch('/api/team/workspace', { headers: { Authorization: `Bearer ${currentUserId}` } });
-        const wsData = await wsRes.json();
-        if (wsData?.effectiveId) effectiveUserId = wsData.effectiveId;
-      } catch {}
-
-      const { data: sellerData } = await supabase.from("seller_applications").select("temp_seller_id, contact_person_name").eq("id", effectiveUserId).maybeSingle();
-      const tempSellerId = sellerData?.temp_seller_id;
-
-      // Backfill contactPersonName if missing (e.g. users who signed up via onboarding)
-      if (sellerData?.contact_person_name && !currentUser.contactPersonName) {
-        const updated = { ...currentUser, contactPersonName: sellerData.contact_person_name };
-        localStorage.setItem("seller_user", JSON.stringify(updated));
-        setUser(updated);
-      }
-
-      // Manual properties
-      const { data: manualList = [] } = await supabase.from("properties").select("*").eq("seller_id", effectiveUserId).order("created_at", { ascending: false });
-      let manualWithImages = manualList || [];
-      if (manualWithImages.length > 0) {
-        const ids = manualWithImages.map(p => p.id);
-        const { data: imagesData } = await supabase.from("property_images").select("id, image_url, sort_order, property_id").in("property_id", ids).order("sort_order");
-        const imagesByProperty = {};
-        (imagesData || []).forEach(img => { if (!imagesByProperty[img.property_id]) imagesByProperty[img.property_id] = []; imagesByProperty[img.property_id].push(img); });
-        manualWithImages = manualWithImages.map(p => ({ ...p, _source: "manual", property_photos: (imagesByProperty[p.id] || []).map(img => ({ photo_url: img.image_url, display_order: img.sort_order })).sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0)) }));
-      } else {
-        manualWithImages = (manualList || []).map(p => ({ ...p, _source: "manual", property_photos: [] }));
-      }
-
-      // Scraped properties
-      let scrapedList = [];
-      if (tempSellerId) {
-        const { data: wholesaleList, error: wholesaleError } = await supabase.from("wholesale_deals").select(`*, property_photos (id, photo_url, display_order, is_featured)`).eq("temp_seller_id", tempSellerId).order("created_at", { ascending: false });
-        if (!wholesaleError && wholesaleList) scrapedList = wholesaleList.map(p => ({ ...p, _source: "scraped" }));
-      }
-
-      const normalizeStatus = p => { const s = (p.status || "").toLowerCase(); if (s === "archived") return "archived"; if (s === "published" || s === "active") return "active"; return "draft"; };
-      const combined = [
-        ...manualWithImages.map(p => ({ ...p, _normalizedStatus: normalizeStatus(p), property_status: p.property_status || "available" })),
-        ...scrapedList.map(p => ({ ...p, _normalizedStatus: normalizeStatus(p), property_status: p.property_status || "available" })),
-      ].sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
-
-      const sevenDaysAgo = new Date(); sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-      const activeList = combined.filter(p => p._normalizedStatus !== "archived");
-      const soldList = combined.filter(p => (p.property_status || "").toLowerCase() === "sold");
-      const recentCount = combined.filter(p => new Date(p.created_at) >= sevenDaysAgo).length;
-
-      // Views
-      let totalViews = 0, viewsThisWeek = 0;
-      try {
-        const res = await fetch(`/api/seller/dashboard-stats?userId=${encodeURIComponent(effectiveUserId)}`);
+        const res = await fetch('/api/seller/dashboard', { headers: { Authorization: `Bearer ${currentUserId}` } });
         const data = await res.json();
-        totalViews = Number(data.totalViews) || 0;
-        viewsThisWeek = Number(data.viewsLast7Days || data.viewsLast30Days) || 0;
-      } catch {}
 
-      // Conversations
-      let totalInquiries = 0;
+        if (data?.stats) {
+          setStats({
+            activeProperties: data.stats.activeProperties || 0,
+            totalViews: data.stats.totalViews || 0,
+            offersReceived: data.stats.offersReceived || 0,
+            dealsClosed: data.stats.dealsClosed || 0,
+            recentlyAdded: data.stats.recentlyAdded || 0,
+            viewsThisWeek: data.stats.viewsThisWeek || 0,
+            viewsLast30Days: data.stats.viewsLast30Days || 0,
+            hasSevenDayViews: !!data.stats.hasSevenDayViews,
+            offersThisWeek: data.stats.offersThisWeek || 0,
+            closedThisMonth: data.stats.closedThisMonth,
+            trashProperties: data.stats.trashProperties || 0,
+          });
+        }
+
+        if (Array.isArray(data?.listings)) {
+          setRecentProperties(data.listings.map(p => ({
+            ...p,
+            property_photos: p.feature_image ? [{ photo_url: p.feature_image, display_order: 0 }] : [],
+          })));
+        }
+
+        if (data?.permissions) setPerms(data.permissions);
+
+        // Backfill contactPersonName if missing (e.g. users who signed up via onboarding)
+        if (data?.sellerName && !currentUser.contactPersonName) {
+          const updated = { ...currentUser, contactPersonName: data.sellerName };
+          localStorage.setItem("seller_user", JSON.stringify(updated));
+          setUser(updated);
+        }
+      } catch (e) { console.error("Error fetching dashboard data:", e); }
+
+      // Recent messages (separate workspace-scoped API).
       try {
-        const res = await fetch("/api/seller/chat?action=get_conversations", { headers: { Authorization: `Bearer ${effectiveUserId}` } });
+        const res = await fetch("/api/seller/chat?action=get_conversations", { headers: { Authorization: `Bearer ${currentUserId}` } });
         const data = await res.json();
         const conversations = data.conversations || [];
-        totalInquiries = conversations.length;
         setRecentQueries(conversations.slice(0, 5));
       } catch { setRecentQueries([]); }
-
-      // Offers
-      let offersReceived = 0, offersThisWeek = 0;
-      try {
-        const oRes = await fetch('/api/seller/offers', { headers: { Authorization: `Bearer ${effectiveUserId}` } });
-        const oData = await oRes.json();
-        const allOffers = oData.offers || [];
-        offersReceived = allOffers.length;
-        offersThisWeek = allOffers.filter(o => new Date(o.created_at) >= sevenDaysAgo).length;
-      } catch {}
-
-      setStats({
-        activeProperties: activeList.length,
-        totalViews,
-        offersReceived,
-        dealsClosed: soldList.length,
-        recentlyAdded: recentCount,
-        viewsThisWeek,
-        offersThisWeek,
-        closedThisMonth: 0,
-        trashProperties: combined.filter(p => p._normalizedStatus === "archived").length,
-      });
-
-      // Enrich top 8 listings with per-property views, saves, offers
-      const top8 = activeList.slice(0, 8);
-      let enrichedListings = top8;
-      if (top8.length > 0) {
-        const ids = top8.map(p => p.id);
-        const [analyticsRes, favRes, offersRes] = await Promise.all([
-          supabase.from('property_analytics').select('property_id, page_views').in('property_id', ids),
-          supabase.from('user_favorites').select('property_id').in('property_id', ids),
-          supabase.from('offers').select('property_id').in('property_id', ids),
-        ]);
-        const viewsMap = {}, savesMap = {}, offersMap = {};
-        for (const r of analyticsRes.data || []) viewsMap[r.property_id] = (viewsMap[r.property_id] || 0) + (Number(r.page_views) || 0);
-        for (const r of favRes.data || []) savesMap[r.property_id] = (savesMap[r.property_id] || 0) + 1;
-        for (const r of offersRes.data || []) offersMap[r.property_id] = (offersMap[r.property_id] || 0) + 1;
-        enrichedListings = top8.map(p => ({
-          ...p,
-          view_count: viewsMap[p.id] || 0,
-          saves_count: savesMap[p.id] || 0,
-          offers_count: offersMap[p.id] || 0,
-        }));
-      }
-      setRecentProperties(enrichedListings);
     } catch (error) { console.error("Error fetching dashboard data:", error); }
     finally { setLoading(false); }
   };
@@ -255,8 +188,14 @@ export default function DashboardPage() {
       icon: <Home className="w-4 h-4 text-[#D03839]" />, iconBg: "#FEF0EF"
     },
     {
-      label: "Total views", value: stats.totalViews.toLocaleString(),
-      sub: stats.viewsThisWeek > 0 ? `+${stats.viewsThisWeek} this week` : null, subUp: true,
+      label: "Total views",
+      value: stats.totalViews.toLocaleString(),
+      // Use the real 7-day number when available; only fall back to 30-day data
+      // when there's no 7-day signal, and relabel the sub so it's never wrong.
+      sub: stats.viewsThisWeek > 0
+        ? `+${stats.viewsThisWeek} this week`
+        : (!stats.hasSevenDayViews && stats.viewsLast30Days > 0 ? `+${stats.viewsLast30Days} last 30 days` : null),
+      subUp: true,
       icon: <Eye className="w-4 h-4 text-[#B5620A]" />, iconBg: "#FEF3E2"
     },
     {
@@ -266,18 +205,23 @@ export default function DashboardPage() {
     },
     {
       label: "Deals closed", value: stats.dealsClosed,
-      sub: stats.closedThisMonth !== 0 ? `${stats.closedThisMonth > 0 ? '+' : ''}${stats.closedThisMonth} this month` : null,
-      subUp: stats.closedThisMonth >= 0,
+      // closedThisMonth is null when there's no reliable sold-date signal → omit the sub
+      // entirely rather than show a fake 0. Otherwise show the honest count.
+      sub: (stats.closedThisMonth != null && stats.closedThisMonth > 0) ? `+${stats.closedThisMonth} this month` : null,
+      subUp: true,
       icon: <CheckCircle2 className="w-4 h-4 text-[#0F6E56]" />, iconBg: "#E4F5EC"
     },
   ];
 
   const manageItems = [
-    { label: "Post a new deal", desc: "Create a listing", icon: <PlusCircle className="w-5 h-5 text-[#737370]" />, href: "/properties/new" },
-    { label: "Edit Listings", desc: "Update your deals", icon: <Edit3 className="w-5 h-5 text-[#D03839]" />, href: "/properties" },
-    { label: "View Offers", desc: `${stats.offersReceived} pending offers`, icon: <FileText className="w-5 h-5 text-[#B5620A]" />, href: "/offers" },
-    { label: "Create Contract", desc: "Send a deal to a buyer", icon: <ScrollText className="w-5 h-5 text-[#0F6E56]" />, href: "/contracts/new" },
-  ];
+    { label: "Post a new deal", desc: "Create a listing", icon: <PlusCircle className="w-5 h-5 text-[#737370]" />, href: "/properties/new", show: perms.isOwner || perms.listings_create },
+    { label: "Edit Listings", desc: "Update your deals", icon: <Edit3 className="w-5 h-5 text-[#D03839]" />, href: "/properties", show: perms.isOwner || perms.listings_update },
+    { label: "View Offers", desc: `${stats.offersReceived} pending offers`, icon: <FileText className="w-5 h-5 text-[#B5620A]" />, href: "/offers", show: true },
+    // 4th slot: Create Contract when allowed, otherwise swap in Messages so the row stays full.
+    (perms.isOwner || perms.contracts_create)
+      ? { label: "Create Contract", desc: "Send a deal to a buyer", icon: <ScrollText className="w-5 h-5 text-[#0F6E56]" />, href: "/contracts/new", show: true }
+      : { label: "Messages", desc: "Chat with buyers", icon: <MessageSquare className="w-5 h-5 text-[#0F6E56]" />, href: "/messages", show: true },
+  ].filter(item => item.show);
 
   return (
     <div className="min-h-full bg-[#FAFAF8]" style={{ fontFamily: 'var(--font-dm-sans), sans-serif' }}>
@@ -361,10 +305,12 @@ export default function DashboardPage() {
                 </div>
               )}
             </div>
-            <Link href="/properties/new" className="hidden lg:flex items-center gap-2 px-4 py-2.5 bg-[#1A1816] text-white text-[14px] font-semibold rounded hover:bg-[#2a2826] transition-colors duration-200">
-              <PlusCircle className="w-4 h-4" />
-              Post a Deal
-            </Link>
+            {(perms.isOwner || perms.listings_create) && (
+              <Link href="/properties/new" className="hidden lg:flex items-center gap-2 px-4 py-2.5 bg-[#1A1816] text-white text-[14px] font-semibold rounded hover:bg-[#2a2826] transition-colors duration-200">
+                <PlusCircle className="w-4 h-4" />
+                Post a Deal
+              </Link>
+            )}
           </div>
         </div>
       </div>
@@ -418,9 +364,11 @@ export default function DashboardPage() {
               <div className="p-8 text-center min-h-[340px] flex flex-col items-center justify-center">
                 <Building2 className="w-8 h-8 text-[#A8A8A4] mx-auto mb-3" />
                 <p className="text-[14px] font-medium text-[#444441] mb-3">No listings yet</p>
-                <Link href="/properties/new" className="inline-flex items-center gap-2 px-4 py-2 bg-[#D03839] text-white text-[13px] font-semibold rounded hover:bg-[#E0493B] transition-colors duration-200">
-                  <PlusCircle className="w-4 h-4" /> Post a Deal
-                </Link>
+                {(perms.isOwner || perms.listings_create) && (
+                  <Link href="/properties/new" className="inline-flex items-center gap-2 px-4 py-2 bg-[#D03839] text-white text-[13px] font-semibold rounded hover:bg-[#E0493B] transition-colors duration-200">
+                    <PlusCircle className="w-4 h-4" /> Post a Deal
+                  </Link>
+                )}
               </div>
             ) : (
               <div className="flex gap-4 p-4 overflow-x-auto">
@@ -469,9 +417,11 @@ export default function DashboardPage() {
                         </div>
                         {/* Buttons */}
                         <div className="flex gap-2">
-                          <Link href={`/properties/edit/${property.id}`} className="flex-1 py-2.5 text-center border border-[#1A1816] text-[#1A1816] text-[13px] font-semibold rounded hover:bg-[#FAFAF8] transition-colors duration-200">
-                            Edit
-                          </Link>
+                          {(perms.isOwner || perms.listings_update) && (
+                            <Link href={`/properties/edit/${property.id}`} className="flex-1 py-2.5 text-center border border-[#1A1816] text-[#1A1816] text-[13px] font-semibold rounded hover:bg-[#FAFAF8] transition-colors duration-200">
+                              Edit
+                            </Link>
+                          )}
                           <Link href={`/properties/preview/${property.id}`} className="flex-1 py-2.5 text-center bg-[#FEF0EF] text-[#D03839] text-[13px] font-semibold rounded border border-[#D03839] hover:bg-[#fde4e3] transition-colors duration-200">
                             View Deal
                           </Link>
