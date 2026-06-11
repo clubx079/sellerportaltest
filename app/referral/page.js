@@ -140,6 +140,7 @@ export default function ReferralPage() {
 
   const totalPaid = payouts.reduce((s, p) => s + p.amount, 0)
   const totalEarned = referral?.estimated_earnings || 0
+  const heldEarnings = referral?.held_earnings || 0
   const pendingBalance = Math.max(0, totalEarned - totalPaid)
 
   if (loading) {
@@ -190,10 +191,10 @@ export default function ReferralPage() {
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           {[
             { icon: Users, label: 'Times Used', value: referral.times_redeemed ?? 0 },
-            { icon: DollarSign, label: 'Total Earned', value: formatCents(totalEarned) },
+            { icon: DollarSign, label: 'Total Earned', value: formatCents(totalEarned), sub: 'From completed payments' },
             { icon: CheckCircle, label: 'Total Paid Out', value: formatCents(totalPaid) },
-            { icon: Clock, label: 'Pending Balance', value: formatCents(pendingBalance) },
-          ].map(({ icon: Icon, label, value }) => (
+            { icon: Clock, label: 'Pending Balance', value: formatCents(pendingBalance), sub: heldEarnings > 0 ? `${formatCents(heldEarnings)} maturing (30-day hold)` : 'Ready for next payout' },
+          ].map(({ icon: Icon, label, value, sub }) => (
             <div key={label} className="bg-white border border-[#E8E8E4] rounded p-4 lg:p-5">
               <div className="flex items-center gap-2 mb-3">
                 <div className="w-7 h-7 rounded bg-[#FAFAF8] border border-[#E8E8E4] flex items-center justify-center">
@@ -202,6 +203,7 @@ export default function ReferralPage() {
                 <p className="text-[11px] font-semibold text-[#A8A8A4] uppercase tracking-[0.09em]">{label}</p>
               </div>
               <p className="text-[20px] lg:text-[24px] font-bold text-[#1A1816] tracking-tight">{value}</p>
+              {sub && <p className="text-[11px] text-[#A8A8A4] mt-1">{sub}</p>}
             </div>
           ))}
         </div>

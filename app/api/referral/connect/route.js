@@ -66,15 +66,18 @@ export async function GET(request) {
 
     if (!referral?.stripe_account_id) return NextResponse.json({ connected: false })
 
-    if (referral.stripe_onboarding_complete) return NextResponse.json({ connected: true })
-
+    // "Connected" must mean the account can actually RECEIVE PAYOUTS — not just
+    // that onboarding details were submitted. Always re-check against Stripe so a
+    // stale cached flag (set under the old details_submitted-only rule) can't show
+    // "Connected" to someone who will never get paid.
     const account = await stripe.accounts.retrieve(referral.stripe_account_id)
-    if (account.details_submitted) {
-      await supabase.from('referrals').update({ stripe_onboarding_complete: true }).eq('id', referral.id)
-      return NextResponse.json({ connected: true })
+    const connected = !!(account.details_submitted && account.payouts_enabled)
+
+    if (connected !== !!referral.stripe_onboarding_complete) {
+      await supabase.from('referrals').update({ stripe_onboarding_complete: connected }).eq('id', referral.id)
     }
 
-    return NextResponse.json({ connected: false })
+    return NextResponse.json({ connected })
   } catch (err) {
     console.error('[referral connect GET]', err)
     return NextResponse.json({ error: err.message }, { status: 500 })
