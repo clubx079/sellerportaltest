@@ -148,79 +148,11 @@ export default function Sidebar({ isOpen, setIsOpen, activeItem, setActiveItem }
           <Link href="/dashboard">
             <Image src="/assets/logo-seller-portal.svg" alt="DeelMap Seller Portal" width={147} height={70} priority />
           </Link>
-          <div className="flex items-center gap-1">
-            {/* Notification Bell — desktop only (mobile bell lives in DashboardLayout navbar) */}
-            <div className="relative hidden lg:block" ref={notifRef}>
-              <button
-                type="button"
-                onClick={() => setNotifOpen(prev => !prev)}
-                className="relative p-2 rounded hover:bg-[#FAFAF8] transition-colors duration-200"
-                aria-label="Notifications"
-              >
-                <Bell className="w-5 h-5 text-[#444441]" />
-                {notifUnread > 0 && (
-                  <span className="absolute top-1 right-1 min-w-[15px] h-[15px] flex items-center justify-center px-0.5 text-[9px] font-bold text-white bg-[#D03839] rounded-full leading-none">
-                    {notifUnread > 99 ? '99+' : notifUnread}
-                  </span>
-                )}
-              </button>
-              {notifOpen && (
-                <div className="absolute left-0 top-full mt-2 w-[320px] bg-white border border-[#E8E8E4] rounded-lg shadow-xl z-[200] overflow-hidden">
-                  <div className="flex items-center justify-between px-4 py-3 border-b border-[#E8E8E4]">
-                    <span className="text-[13px] font-semibold text-[#1A1816]">Notifications</span>
-                    {notifUnread > 0 && (
-                      <button
-                        onClick={async () => {
-                          const sellerId = sellerUser?.id || sellerUser?.userId
-                          if (!sellerId) return
-                          await fetch('/api/seller/notifications', { method: 'POST', headers: { Authorization: `Bearer ${sellerId}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'mark_all_read' }) })
-                          setNotifUnread(0)
-                          setNotifications(prev => prev.map(n => ({ ...n, is_read: true })))
-                        }}
-                        className="text-[11px] text-[#D03839] font-medium hover:underline"
-                      >
-                        Mark all read
-                      </button>
-                    )}
-                  </div>
-                  <div className="max-h-[320px] overflow-y-auto">
-                    {notifications.length === 0 ? (
-                      <div className="flex items-center justify-center h-16 text-[13px] text-[#737370]">No notifications yet</div>
-                    ) : (
-                      notifications.map(n => (
-                        <Link
-                          key={n.id}
-                          href={n.type === 'listing_approved' || n.type === 'listing_rejected' ? '/properties' : '/messages'}
-                          onClick={async () => {
-                            setNotifOpen(false)
-                            const sellerId = sellerUser?.id || sellerUser?.userId
-                            if (!n.is_read && sellerId) {
-                              await fetch('/api/seller/notifications', { method: 'POST', headers: { Authorization: `Bearer ${sellerId}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'mark_read', notification_id: n.id }) })
-                              setNotifications(prev => prev.map(x => x.id === n.id ? { ...x, is_read: true } : x))
-                              setNotifUnread(prev => Math.max(0, prev - 1))
-                            }
-                          }}
-                          className={`flex items-start gap-3 px-4 py-3 border-l-2 transition-colors hover:bg-[#FAFAF8] ${n.is_read ? 'border-l-transparent bg-white' : 'border-l-[#D03839] bg-[#FAFAF8]'}`}
-                        >
-                          <Bell className="w-4 h-4 text-[#737370] flex-shrink-0 mt-0.5" />
-                          <div className="flex-1 min-w-0">
-                            <p className={`text-[13px] truncate ${n.is_read ? 'text-[#444441]' : 'font-semibold text-[#1A1816]'}`}>{n.title}</p>
-                            <p className="text-[11px] text-[#737370] truncate mt-0.5">{n.body}</p>
-                            <p className="text-[10px] text-[#A8A8A4] mt-1">{n.created_at ? new Date(n.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : ''}</p>
-                          </div>
-                        </Link>
-                      ))
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-            {isOpen && (
-              <button onClick={() => setIsOpen(false)} className="lg:hidden p-2 rounded hover:bg-[#FAFAF8] text-[#737370] transition-colors duration-200" aria-label="Close menu">
-                <X className="w-5 h-5" />
-              </button>
-            )}
-          </div>
+          {isOpen && (
+            <button onClick={() => setIsOpen(false)} className="lg:hidden p-2 rounded hover:bg-[#FAFAF8] text-[#737370] transition-colors duration-200" aria-label="Close menu">
+              <X className="w-5 h-5" />
+            </button>
+          )}
         </div>
 
         {/* Navigation */}
@@ -266,6 +198,76 @@ export default function Sidebar({ isOpen, setIsOpen, activeItem, setActiveItem }
             </div>
           ))}
         </nav>
+
+        {/* Notification Bell — pinned footer (desktop; mobile bell lives in DashboardLayout navbar) */}
+        <div className="hidden lg:block border-t border-[#E8E8E4] px-3 py-2 shrink-0">
+          <div className="relative" ref={notifRef}>
+            <button
+              type="button"
+              onClick={() => setNotifOpen(prev => !prev)}
+              className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded text-[14px] transition-all duration-200 ${notifOpen ? 'bg-[#FAFAF8] text-[#1A1816]' : 'text-[#444441] hover:bg-[#FAFAF8] hover:text-[#1A1816]'}`}
+              aria-label="Notifications"
+            >
+              <Bell className={`w-[18px] h-[18px] flex-shrink-0 ${notifOpen ? 'text-[#1A1816]' : 'text-[#737370]'}`} />
+              <span className="flex-1 text-left">Notifications</span>
+              {notifUnread > 0 && (
+                <span className="inline-flex items-center justify-center min-w-[22px] h-[22px] px-1.5 text-[11px] font-semibold rounded bg-[#D03839] text-white">
+                  {notifUnread > 99 ? '99+' : notifUnread}
+                </span>
+              )}
+            </button>
+            {notifOpen && (
+              <div className="absolute left-0 bottom-full mb-2 w-[300px] bg-white border border-[#E8E8E4] rounded-lg shadow-xl z-[200] overflow-hidden">
+                <div className="flex items-center justify-between px-4 py-3 border-b border-[#E8E8E4]">
+                  <span className="text-[13px] font-semibold text-[#1A1816]">Notifications</span>
+                  {notifUnread > 0 && (
+                    <button
+                      onClick={async () => {
+                        const sellerId = sellerUser?.id || sellerUser?.userId
+                        if (!sellerId) return
+                        await fetch('/api/seller/notifications', { method: 'POST', headers: { Authorization: `Bearer ${sellerId}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'mark_all_read' }) })
+                        setNotifUnread(0)
+                        setNotifications(prev => prev.map(n => ({ ...n, is_read: true })))
+                      }}
+                      className="text-[11px] text-[#D03839] font-medium hover:underline"
+                    >
+                      Mark all read
+                    </button>
+                  )}
+                </div>
+                <div className="max-h-[320px] overflow-y-auto">
+                  {notifications.length === 0 ? (
+                    <div className="flex items-center justify-center h-16 text-[13px] text-[#737370]">No notifications yet</div>
+                  ) : (
+                    notifications.map(n => (
+                      <Link
+                        key={n.id}
+                        href={n.type === 'listing_approved' || n.type === 'listing_rejected' ? '/properties' : '/messages'}
+                        onClick={async () => {
+                          setNotifOpen(false)
+                          const sellerId = sellerUser?.id || sellerUser?.userId
+                          if (!n.is_read && sellerId) {
+                            await fetch('/api/seller/notifications', { method: 'POST', headers: { Authorization: `Bearer ${sellerId}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'mark_read', notification_id: n.id }) })
+                            setNotifications(prev => prev.map(x => x.id === n.id ? { ...x, is_read: true } : x))
+                            setNotifUnread(prev => Math.max(0, prev - 1))
+                          }
+                        }}
+                        className={`flex items-start gap-3 px-4 py-3 border-l-2 transition-colors hover:bg-[#FAFAF8] ${n.is_read ? 'border-l-transparent bg-white' : 'border-l-[#D03839] bg-[#FAFAF8]'}`}
+                      >
+                        <Bell className="w-4 h-4 text-[#737370] flex-shrink-0 mt-0.5" />
+                        <div className="flex-1 min-w-0">
+                          <p className={`text-[13px] truncate ${n.is_read ? 'text-[#444441]' : 'font-semibold text-[#1A1816]'}`}>{n.title}</p>
+                          <p className="text-[11px] text-[#737370] truncate mt-0.5">{n.body}</p>
+                          <p className="text-[10px] text-[#A8A8A4] mt-1">{n.created_at ? new Date(n.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : ''}</p>
+                        </div>
+                      </Link>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
       </aside>
     </>
   )
