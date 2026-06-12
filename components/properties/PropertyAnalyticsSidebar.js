@@ -206,7 +206,7 @@ export default function PropertyAnalyticsSidebar({ propertyId, propertyName, onC
   // UI itself derives from email as a fallback), tier/score and engagement —
   // and omit the dedicated email/phone columns entirely.
   function buildBuyerRows() {
-    const baseCols = ['Buyer', 'Tier', 'Score', 'Views', 'Photos', 'Time', 'Visits', 'Saved', 'Offered', 'Source', 'Last seen'];
+    const baseCols = ['Buyer', 'Tier', 'Score', 'Time', 'Visits', 'Saved', 'Offered', 'Last seen'];
     const columns = isEnterprise
       ? [...baseCols.slice(0, 1), 'Email', 'Phone', ...baseCols.slice(1)]
       : baseCols;
@@ -219,13 +219,10 @@ export default function PropertyAnalyticsSidebar({ propertyId, propertyName, onC
         name,
         tier,
         b._eng ? String(Math.round(b._eng.score * 10) / 10) : '0',
-        String(b.page_views != null ? Number(b.page_views) : 0),
-        String(b.images_viewed != null ? Number(b.images_viewed) : 0),
         formatDuration(duration),
         String(b.visit_count || 1),
         b.saved ? 'Yes' : 'No',
         b.offered ? 'Yes' : 'No',
-        b.utm_source || 'Direct',
         lastSeen ? formatDateShort(lastSeen) : '—',
       ];
       if (isEnterprise) {
