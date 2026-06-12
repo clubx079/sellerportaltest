@@ -54,6 +54,7 @@ export default function ContractsPage() {
   const [effectiveSellerId, setEffectiveSellerId] = useState(null)
   const [canCreateContract, setCanCreateContract] = useState(null)
   const [deletingId, setDeletingId] = useState(null)
+  const [confirmDelete, setConfirmDelete] = useState(null)
   const [deletingDraftId, setDeletingDraftId] = useState(null)
   const [downloadingId, setDownloadingId] = useState(null)
 
@@ -132,6 +133,7 @@ export default function ContractsPage() {
     await fetch('/api/contracts', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) })
     setContracts(prev => prev.filter(c => c.id !== id))
     setDeletingId(null)
+    setConfirmDelete(null)
   }
 
   async function handleDeleteDraft(id) {
@@ -283,7 +285,11 @@ export default function ContractsPage() {
                               : String(d.template_id) === '3706747' || String(d.template_id) === '3759339' ? 'Assignment Contract'
                               : 'Contract'
               const address = d.field_values?.property_address || `Untitled ${tplLabel}`
-              const buyer = d.buyer_name || d.buyer_email || 'Other party not set'
+              // The "other party" is whoever the creator is NOT. If they created
+              // this as the seller, the other party is the buyer, and vice-versa.
+              const counterparty = d.field_values?.__contract_role === 'buyer'
+                ? (d.field_values?.__seller_name || d.field_values?.__seller_email || 'Other party not set')
+                : (d.buyer_name || d.buyer_email || 'Other party not set')
               return (
                 <div key={d.id} className="bg-white border border-dashed border-[#E8E8E4] rounded p-4 flex items-center gap-4">
                   <div className="w-9 h-9 bg-[#FAFAF8] border border-[#E8E8E4] rounded flex items-center justify-center shrink-0">
@@ -300,7 +306,7 @@ export default function ContractsPage() {
                     </div>
                     <div className="flex items-center gap-3 text-[12px] text-[#737370] flex-wrap">
                       <span>Last updated {fmtDate(d.updated_at)}</span>
-                      <span>Buyer: {buyer}</span>
+                      <span>Other party: {counterparty}</span>
                     </div>
                   </div>
                   <div className="shrink-0 flex items-center gap-2">
@@ -409,7 +415,7 @@ export default function ContractsPage() {
                     </span>
                   )}
                   <button
-                    onClick={() => handleDelete(c.id)}
+                    onClick={() => setConfirmDelete({ id: c.id, title: property || c.template?.name || `Contract #${c.id}`, completed: statusKey === 'completed' })}
                     disabled={deletingId === c.id}
                     className="h-8 w-8 flex items-center justify-center border border-[#E8E8E4] hover:border-[#D03839] hover:text-[#D03839] text-[#A8A8A4] rounded transition-colors disabled:opacity-50"
                   >
@@ -421,6 +427,48 @@ export default function ContractsPage() {
               </div>
             )
           })}
+        </div>
+      )}
+
+      {/* Delete confirmation */}
+      {confirmDelete && (
+        <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/40 px-4" onClick={() => deletingId == null && setConfirmDelete(null)}>
+          <div className="w-full max-w-[420px] bg-white border border-[#E8E8E4] rounded-lg shadow-xl overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="px-6 pt-6 pb-2">
+              <div className="w-10 h-10 rounded-full bg-[#FEF0EF] flex items-center justify-center mb-4">
+                <Trash2 className="w-5 h-5 text-[#D03839]" />
+              </div>
+              <h3 className="text-[17px] font-bold text-[#1A1816] tracking-[-0.2px]">Delete this contract?</h3>
+              <p className="text-[13px] text-[#737370] mt-2 leading-relaxed">
+                You're about to delete <span className="font-semibold text-[#444441]">{confirmDelete.title}</span>. This permanently removes it from your contracts and can't be undone.
+              </p>
+              {confirmDelete.completed && (
+                <div className="mt-3 flex items-start gap-2 px-3 py-2.5 bg-[#FEF0EF] border border-[#F5C4C0] rounded">
+                  <span className="text-[13px] text-[#D03839] leading-snug">
+                    This contract is <span className="font-semibold">completed and signed</span>. Deleting it removes the signed PDF — make sure you've downloaded a copy first.
+                  </span>
+                </div>
+              )}
+            </div>
+            <div className="flex items-center justify-end gap-2 px-6 py-4">
+              <button
+                onClick={() => setConfirmDelete(null)}
+                disabled={deletingId != null}
+                className="h-9 px-4 border border-[#E8E8E4] hover:bg-[#FAFAF8] text-[#444441] text-[13px] font-semibold rounded transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleDelete(confirmDelete.id)}
+                disabled={deletingId != null}
+                className="h-9 px-4 bg-[#D03839] hover:bg-[#E0493B] text-white text-[13px] font-semibold rounded transition-colors flex items-center gap-1.5 disabled:opacity-60"
+              >
+                {deletingId != null
+                  ? <><span className="w-3.5 h-3.5 border-2 border-white/60 border-t-transparent rounded-full animate-spin" /> Deleting…</>
+                  : 'Delete contract'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

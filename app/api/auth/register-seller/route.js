@@ -6,6 +6,16 @@ import { emailSellerWelcome, sendSellerEmail } from '@/lib/sellerEmail'
 const getSupabase = () =>
   createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY)
 
+function getClientIP(request) {
+  const cf = request.headers.get('cf-connecting-ip')
+  if (cf) return cf
+  const forwarded = request.headers.get('x-forwarded-for')
+  if (forwarded) return forwarded.split(',')[0].trim()
+  const realIP = request.headers.get('x-real-ip')
+  if (realIP) return realIP
+  return null
+}
+
 export async function POST(request) {
   const supabase = getSupabase()
   try {
@@ -35,23 +45,35 @@ export async function POST(request) {
 
     // Create seller_applications row
     const contact_person_name = `${first_name} ${last_name}`
-    const { data: seller, error } = await supabase
+    const clientIP = getClientIP(request)
+    const baseRow = {
+      contact_person_name,
+      email: email.trim().toLowerCase(),
+      password: await hashPassword(password),
+      phone: '',
+      business_name: contact_person_name,
+      business_type: 'individual',
+      deals_per_month: 'not_specified',
+      primary_markets: '',
+      property_types: [],
+      description: '',
+      status: 'onboarding',
+    }
+
+    let { data: seller, error } = await supabase
       .from('seller_applications')
-      .insert({
-        contact_person_name,
-        email: email.trim().toLowerCase(),
-        password: await hashPassword(password),
-        phone: '',
-        business_name: contact_person_name,
-        business_type: 'individual',
-        deals_per_month: 'not_specified',
-        primary_markets: '',
-        property_types: [],
-        description: '',
-        status: 'onboarding',
-      })
+      .insert({ ...baseRow, ip_address: clientIP || null })
       .select('id')
       .single()
+
+    // Fallback if ip_address column doesn't exist yet (migration not run)
+    if (error && /ip_address/i.test(error.message || '')) {
+      ;({ data: seller, error } = await supabase
+        .from('seller_applications')
+        .insert(baseRow)
+        .select('id')
+        .single())
+    }
 
     if (error) {
       console.error('[register-seller]', error)

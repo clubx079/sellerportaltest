@@ -43,11 +43,19 @@ const ADD_ONS = [
   { id: 'bundle',    label: 'Search Visibility Bundle',  desc: 'Highlight Listing and Boost Listing together at a discount.',                price: 2200, duration: 'Highlight 30d + Boost 7d', strikePrice: 2498, savings: 298, icon: Package },
 ]
 
-function CheckoutForm({ amount, addOns, propertyId, sellerId, onSuccess }) {
+function CheckoutForm({ amount, addOns, propertyId, sellerId, property, onSuccess }) {
   const stripe = useStripe()
   const elements = useElements()
   const [processing, setProcessing] = useState(false)
   const [error, setError] = useState(null)
+
+  // Renewals stack: extend from the current expiry if it's still in the future,
+  // otherwise from now — so renewing early never loses remaining days.
+  const endFrom = (currentEnd, days) => {
+    const now = Date.now()
+    const base = currentEnd && new Date(currentEnd).getTime() > now ? new Date(currentEnd).getTime() : now
+    return new Date(base + days * 24 * 60 * 60 * 1000).toISOString()
+  }
 
   const handlePay = async (e) => {
     e.preventDefault()
@@ -62,20 +70,18 @@ function CheckoutForm({ amount, addOns, propertyId, sellerId, onSuccess }) {
       setProcessing(false)
     } else {
       const now = new Date()
-      const in30Days = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString()
-      const in7Days  = new Date(now.getTime() +  7 * 24 * 60 * 60 * 1000).toISOString()
       const flags = {}
       if (addOns.includes('highlight') || addOns.includes('bundle')) {
         flags.is_highlighted = true
-        flags.highlight_ends_at = in30Days
+        flags.highlight_ends_at = endFrom(property?.highlight_ends_at, 30)
       }
       if (addOns.includes('boost') || addOns.includes('bundle')) {
         flags.is_boosted = true
-        flags.boost_ends_at = in7Days
+        flags.boost_ends_at = endFrom(property?.boost_ends_at, 7)
       }
       if (addOns.includes('homepage')) {
         flags.is_homepage_featured = true
-        flags.homepage_feature_ends_at = in7Days
+        flags.homepage_feature_ends_at = endFrom(property?.homepage_feature_ends_at, 7)
       }
       await supabase.from('properties').update(flags).eq('id', propertyId)
 
@@ -83,6 +89,7 @@ function CheckoutForm({ amount, addOns, propertyId, sellerId, onSuccess }) {
       try {
         const ADDON_DAYS   = { highlight: 30, boost: 7, homepage: 7, bundle: 30 }
         const ADDON_PRICES = { highlight: 999, boost: 1499, homepage: 2900, bundle: 2200 }
+        const ADDON_END_FIELD = { highlight: 'highlight_ends_at', boost: 'boost_ends_at', homepage: 'homepage_feature_ends_at', bundle: 'highlight_ends_at' }
         for (const addonId of addOns) {
           const days = ADDON_DAYS[addonId] || 7
           await supabase.from('listing_addons').insert({
@@ -92,7 +99,7 @@ function CheckoutForm({ amount, addOns, propertyId, sellerId, onSuccess }) {
             amount_paid:  ADDON_PRICES[addonId] || 0,
             days_purchased: days,
             starts_at:    now.toISOString(),
-            ends_at:      new Date(now.getTime() + days * 24 * 60 * 60 * 1000).toISOString(),
+            ends_at:      endFrom(property?.[ADDON_END_FIELD[addonId]], days),
             status:       'active',
           })
         }
@@ -412,8 +419,8 @@ function EnhanceContent() {
               || (ao.id === 'boost' && property?.is_boosted)
               || (ao.id === 'homepage' && property?.is_homepage_featured)
               || (ao.id === 'bundle' && property?.is_highlighted && property?.is_boosted)
-            const isDisabled = alreadyActive
-              || (ao.id === 'bundle' && (selectedAddOns.includes('highlight') || selectedAddOns.includes('boost')))
+            const isDisabled =
+              (ao.id === 'bundle' && (selectedAddOns.includes('highlight') || selectedAddOns.includes('boost')))
               || ((ao.id === 'highlight' || ao.id === 'boost') && selectedAddOns.includes('bundle'))
 
             return (
@@ -423,50 +430,52 @@ function EnhanceContent() {
                 onClick={() => !isDisabled && toggleAddOn(ao.id)}
                 disabled={isDisabled}
                 className={`w-full grid grid-cols-[44px_1fr_auto_22px] gap-4 items-center p-[18px_20px] border rounded-xl text-left transition-all
-                  ${alreadyActive ? 'border-[#9FDBB8] bg-[#E4F5EC] opacity-70 cursor-default'
-                  : selected ? 'border-[#D03839] bg-gradient-to-b from-[#FEF8F9] to-white shadow-[0_0_0_1px_#D03839]'
+                  ${selected ? 'border-[#D03839] bg-gradient-to-b from-[#FEF8F9] to-white shadow-[0_0_0_1px_#D03839]'
                   : isDisabled ? 'border-[#E8E8E4] bg-white opacity-40 cursor-not-allowed'
+                  : alreadyActive ? 'border-[#9FDBB8] bg-[#F3FAF6] hover:border-[#0F6E56] hover:-translate-y-px hover:shadow-sm'
                   : 'border-[#E8E8E4] bg-white hover:border-[#C8C8C4] hover:-translate-y-px hover:shadow-sm'}`}
               >
                 {/* Icon */}
                 <div className={`w-11 h-11 rounded-lg flex items-center justify-center flex-shrink-0
-                  ${alreadyActive ? 'bg-[#E4F5EC] text-[#0F6E56]' : selected ? 'bg-[#FEF0EF] text-[#D03839]' : 'bg-[#F5F3EE] text-[#444441]'}`}>
+                  ${selected ? 'bg-[#FEF0EF] text-[#D03839]' : alreadyActive ? 'bg-[#E4F5EC] text-[#0F6E56]' : 'bg-[#F5F3EE] text-[#444441]'}`}>
                   <Icon className="w-5 h-5" />
                 </div>
                 {/* Text */}
                 <div className="min-w-0">
                   <div className="flex items-center flex-wrap gap-2 mb-0.5">
-                    <span className={`text-[14px] font-semibold ${alreadyActive ? 'text-[#0F6E56]' : selected ? 'text-[#D03839]' : 'text-[#1A1816]'}`}>
+                    <span className={`text-[14px] font-semibold ${selected ? 'text-[#D03839]' : alreadyActive ? 'text-[#0F6E56]' : 'text-[#1A1816]'}`}>
                       {ao.label}
                     </span>
-                    {alreadyActive ? (
+                    {alreadyActive && (
                       <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-[#0F6E56] bg-[#E4F5EC] border border-[#9FDBB8] px-1.5 py-0.5 rounded">Active</span>
-                    ) : (
-                      <span className="font-mono text-[10px] font-medium tracking-[0.08em] uppercase text-[#737370] bg-[#F5F3EE] border border-[#E8E8E4] px-1.5 py-0.5 rounded">
-                        {ao.duration}
-                      </span>
                     )}
-                    {ao.savings && !alreadyActive && (
+                    <span className="font-mono text-[10px] font-medium tracking-[0.08em] uppercase text-[#737370] bg-[#F5F3EE] border border-[#E8E8E4] px-1.5 py-0.5 rounded">
+                      {ao.duration}
+                    </span>
+                    {ao.savings && (
                       <span className="font-mono text-[10px] font-semibold tracking-[0.06em] uppercase text-[#0F6E56] bg-[#E8F1EC] px-1.5 py-0.5 rounded">
                         Save ${(ao.savings / 100).toFixed(2)}
                       </span>
                     )}
                   </div>
                   <p className="text-[13px] text-[#737370]">{ao.desc}</p>
+                  {alreadyActive && (
+                    <p className="text-[12px] font-medium text-[#0F6E56] mt-0.5">Currently active — select to renew (added on top of remaining time).</p>
+                  )}
                 </div>
                 {/* Price */}
                 <div className="text-right flex-shrink-0">
-                  {ao.strikePrice && !alreadyActive && (
+                  {ao.strikePrice && (
                     <p className="text-[12px] text-[#A8A8A4] line-through">${(ao.strikePrice / 100).toFixed(2)}</p>
                   )}
-                  <p className={`text-[16px] font-bold ${alreadyActive ? 'text-[#0F6E56]' : selected ? 'text-[#D03839]' : 'text-[#1A1816]'}`}>
-                    {alreadyActive ? 'Active' : isLifetimeFree ? 'Free' : `+$${(ao.price / 100).toFixed(2)}`}
+                  <p className={`text-[16px] font-bold ${selected ? 'text-[#D03839]' : 'text-[#1A1816]'}`}>
+                    {isLifetimeFree ? 'Free' : `+$${(ao.price / 100).toFixed(2)}`}
                   </p>
                 </div>
                 {/* Checkbox */}
                 <div className={`w-[22px] h-[22px] rounded-full border flex items-center justify-center flex-shrink-0 transition-all
-                  ${alreadyActive ? 'bg-[#0F6E56] border-[#0F6E56]' : selected ? 'bg-[#D03839] border-[#D03839]' : 'border-[#C8C8C4]'}`}>
-                  {(selected || alreadyActive) && <Check className="w-3 h-3 text-white" />}
+                  ${selected ? 'bg-[#D03839] border-[#D03839]' : 'border-[#C8C8C4]'}`}>
+                  {selected && <Check className="w-3 h-3 text-white" />}
                 </div>
               </button>
             )
@@ -593,6 +602,7 @@ function EnhanceContent() {
                     addOns={selectedAddOns}
                     propertyId={propertyId}
                     sellerId={userId}
+                    property={property}
                     onSuccess={() => setSuccess(true)}
                   />
                 </Elements>

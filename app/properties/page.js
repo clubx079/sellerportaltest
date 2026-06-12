@@ -380,7 +380,7 @@ const PropertiesManagement = () => {
         }
         const { error } = await supabase
           .from('wholesale_deals')
-          .update({ status: 'active' })
+          .update({ status: 'inactive' })
           .eq('id', property.id)
           .eq('temp_seller_id', tempSellerId);
         if (error) throw error;

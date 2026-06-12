@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
-import { Users, Eye, Clock, Image as ImageIcon, Smartphone, Monitor, Tablet, X, ChevronDown, ChevronRight, BarChart2, Heart, FileText, MessageSquare, Flame, RefreshCw, Lightbulb } from 'lucide-react';
+import { Users, Eye, Clock, Image as ImageIcon, Smartphone, Monitor, Tablet, X, ChevronDown, ChevronRight, BarChart2, Heart, FileText, MessageSquare, Flame, RefreshCw, Lightbulb, Download } from 'lucide-react';
+import { downloadCSV, downloadPDF } from '@/lib/exportData';
 
 function formatDuration(seconds) {
   if (seconds == null || seconds === 0) return '—';
@@ -43,6 +44,9 @@ function getDeviceIcon(deviceType) {
   if (t === 'tablet') return <Tablet className="w-3 h-3" />;
   return <Monitor className="w-3 h-3" />;
 }
+
+// Viewer list reveals this many rows at a time via "Show more".
+const VIEWER_PAGE = 10;
 
 const PERIOD_OPTIONS = [
   { value: 'last7days', label: '7 Days' },
@@ -118,6 +122,8 @@ export default function PropertyAnalyticsSidebar({ propertyId, propertyName, onC
   const [period, setPeriod] = useState('all');
   const [sortBy, setSortBy] = useState('last_visit');
   const [sortOpen, setSortOpen] = useState(false);
+  // Viewer list is paginated client-side; reveal +VIEWER_PAGE at a time.
+  const [visibleViewers, setVisibleViewers] = useState(VIEWER_PAGE);
 
   useEffect(() => {
     setMounted(true);
@@ -128,6 +134,7 @@ export default function PropertyAnalyticsSidebar({ propertyId, propertyName, onC
     let cancelled = false;
     setLoading(true);
     setError(null);
+    setVisibleViewers(VIEWER_PAGE);
     const userId = (() => {
       try {
         const s = typeof window !== 'undefined' ? localStorage.getItem('seller_user') : null;
@@ -191,6 +198,61 @@ export default function PropertyAnalyticsSidebar({ propertyId, propertyName, onC
     : null;
 
   const sortLabel = SORT_OPTIONS.find(o => o.value === sortBy)?.label || 'Sort';
+
+  // ── Buyer export ──────────────────────────────────────────────────────────
+  // Respect enterprise gating: only enterprise sellers can see buyer contact
+  // info (the "Message buyer" action is enterprise-only). For non-enterprise
+  // sellers we export ONLY what's already visible in the UI — name (which the
+  // UI itself derives from email as a fallback), tier/score and engagement —
+  // and omit the dedicated email/phone columns entirely.
+  function buildBuyerRows() {
+    const baseCols = ['Buyer', 'Tier', 'Score', 'Time', 'Visits', 'Saved', 'Offered', 'Last seen'];
+    const columns = isEnterprise
+      ? [...baseCols.slice(0, 1), 'Email', 'Phone', ...baseCols.slice(1)]
+      : baseCols;
+    const rows = scoredBuyers.map((b) => {
+      const name = displayName(b);
+      const duration = b.duration_seconds ?? b.active_time_seconds;
+      const tier = TEMP_STYLE[b._eng?.temp]?.label || 'Cold';
+      const lastSeen = b.view_end_time || b.view_start_time || b.created_at;
+      const base = [
+        name,
+        tier,
+        b._eng ? String(Math.round(b._eng.score * 10) / 10) : '0',
+        formatDuration(duration),
+        String(b.visit_count || 1),
+        b.saved ? 'Yes' : 'No',
+        b.offered ? 'Yes' : 'No',
+        lastSeen ? formatDateShort(lastSeen) : '—',
+      ];
+      if (isEnterprise) {
+        base.splice(1, 0, b.user_email || '', b.user_phone || '');
+      }
+      return base;
+    });
+    return { columns, rows };
+  }
+
+  const buyerDateStr = new Date().toISOString().slice(0, 10);
+  const buyerSlug = String(propertyName || propertyId || 'property')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 40) || 'property';
+  const buyerFileBase = `deelmap-${buyerSlug}-buyers-${buyerDateStr}`;
+
+  function exportBuyersCSV() {
+    const { columns, rows } = buildBuyerRows();
+    downloadCSV(`${buyerFileBase}.csv`, { columns, data: rows });
+  }
+
+  function exportBuyersPDF() {
+    const { columns, rows } = buildBuyerRows();
+    downloadPDF(`${buyerFileBase}.pdf`, {
+      title: `Interested Buyers — ${propertyName || ''}`.trim(),
+      sections: [{ heading: `${rows.length} buyer${rows.length !== 1 ? 's' : ''}`, columns, rows }],
+    });
+  }
 
   return (
     <>
@@ -333,6 +395,26 @@ export default function PropertyAnalyticsSidebar({ propertyId, propertyName, onC
                       {scoredBuyers.length}
                     </span>
                   </div>
+                  <div className="flex items-center gap-1.5">
+                  {/* Export buyers */}
+                  {scoredBuyers.length > 0 && (
+                    <>
+                      <button
+                        onClick={exportBuyersCSV}
+                        title="Export buyers as CSV"
+                        className="flex items-center gap-1 h-7 px-2 bg-white border border-[#E8E8E4] rounded text-[12px] font-semibold text-[#1A1816] hover:border-[#1A1816] transition-colors"
+                      >
+                        <Download className="w-3 h-3 text-[#737370]" /> CSV
+                      </button>
+                      <button
+                        onClick={exportBuyersPDF}
+                        title="Export buyers as PDF"
+                        className="flex items-center gap-1 h-7 px-2 bg-white border border-[#E8E8E4] rounded text-[12px] font-semibold text-[#1A1816] hover:border-[#1A1816] transition-colors"
+                      >
+                        <Download className="w-3 h-3 text-[#737370]" /> PDF
+                      </button>
+                    </>
+                  )}
                   {/* Sort dropdown */}
                   <div className="relative">
                     <button
@@ -358,6 +440,7 @@ export default function PropertyAnalyticsSidebar({ propertyId, propertyName, onC
                       </div>
                     )}
                   </div>
+                  </div>
                 </div>
 
                 {/* Empty state */}
@@ -373,7 +456,7 @@ export default function PropertyAnalyticsSidebar({ propertyId, propertyName, onC
                   </div>
                 ) : (
                   <div className="space-y-2">
-                    {scoredBuyers.map((row, idx) => {
+                    {scoredBuyers.slice(0, visibleViewers).map((row, idx) => {
                       const name = displayName(row);
                       const initial = (name && name !== 'Guest' ? name.charAt(0) : (row.user_email || 'G').charAt(0)).toUpperCase();
                       const avatarPair = getAvatarPair(name);
@@ -502,6 +585,16 @@ export default function PropertyAnalyticsSidebar({ propertyId, propertyName, onC
                         </div>
                       );
                     })}
+                    {scoredBuyers.length > visibleViewers && (
+                      <button
+                        type="button"
+                        onClick={() => setVisibleViewers(v => v + VIEWER_PAGE)}
+                        className="w-full flex items-center justify-center gap-1 py-2.5 text-[12px] font-semibold text-[#D03839] hover:text-[#E0493B] transition-colors"
+                      >
+                        Show {Math.min(VIEWER_PAGE, scoredBuyers.length - visibleViewers)} more
+                        <ChevronDown className="w-3.5 h-3.5" />
+                      </button>
+                    )}
                   </div>
                 )}
               </div>

@@ -4,8 +4,9 @@ import { useState, useEffect } from 'react';
 import {
   Eye, Users, Clock, TrendingUp, TrendingDown, Smartphone, Monitor,
   BarChart2, Link2, MapPin, ArrowUpRight, Minus, Activity, Image, FileText,
-  ChevronDown, Loader2, Check
+  ChevronDown, Loader2, Check, Download
 } from 'lucide-react';
+import { downloadCSV, downloadPDF } from '@/lib/exportData';
 
 function formatDuration(s) {
   if (!s || s === 0) return '—';
@@ -49,6 +50,9 @@ function getPeriodDateRange(period) {
   }
   return null;
 }
+
+// How many top listings to show before the "Show more" toggle.
+const TOP_VISIBLE = 6;
 
 const PERIOD_OPTIONS = [
   { value: 'last7days', label: 'Last 7 days' },
@@ -141,6 +145,7 @@ export default function SellerAnalyticsPage() {
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState(null);
   const [accessDenied, setAccessDenied] = useState(false);
+  const [showAllTop, setShowAllTop] = useState(false);
 
   useEffect(() => {
     try {
@@ -175,6 +180,7 @@ export default function SellerAnalyticsPage() {
   useEffect(() => {
     if (!userId) return;
     setLoading(true);
+    setShowAllTop(false);
     fetch(`/api/seller/analytics?userId=${encodeURIComponent(userId)}&period=${period}`)
       .then(r => r.json())
       .then(setData)
@@ -190,16 +196,71 @@ export default function SellerAnalyticsPage() {
   const eng = data?.engagement || {};
   const recent = data?.recentViewers || [];
 
+  // Engagement card empty-state: only show bars when at least one metric is > 0.
+  const hasEngagement = (eng.scrolled || 0) > 0 || (eng.viewedPhotos || 0) > 0
+    || (eng.viewedDescription || 0) > 0 || (eng.viewedRepairs || 0) > 0;
+
   const mobileCount = (devices.mobile || 0) + (devices.tablet || 0);
   const totalDevice = mobileCount + (devices.desktop || 0);
   const devicePct = (n) => totalDevice > 0 ? Math.round((n / totalDevice) * 100) : 0;
 
+  // "New": no prior-period views but views this period — show an up-trend "New"
+  // instead of nothing. Falls back to "vs prev period" when there's nothing to compare.
+  const isNewTrend = s.viewTrend == null && s.prevViews === 0 && (s.totalViews || 0) > 0;
   const trendLabel = s.viewTrend != null
     ? `${s.viewTrend >= 0 ? '+' : ''}${s.viewTrend}% vs prev period`
+    : isNewTrend
+    ? 'New vs prev period'
     : 'vs prev period';
-  const trendUp = s.viewTrend != null ? s.viewTrend >= 0 : null;
+  const trendUp = s.viewTrend != null ? s.viewTrend >= 0 : isNewTrend ? true : null;
 
   const maxPropViews = topProps[0]?.views || 1;
+
+  const periodLabel = PERIOD_OPTIONS.find(o => o.value === period)?.label || 'Last 30 days';
+  const dateStr = new Date().toISOString().slice(0, 10);
+  const fileBase = `deelmap-analytics-${dateStr}`;
+
+  // Shared export sections: KPIs, traffic sources, top listings.
+  const kpiRows = [
+    ['Total views', (s.totalViews || 0).toLocaleString()],
+    ['Unique buyers', (s.uniqueViewers || 0).toLocaleString()],
+    ['Total sessions', (s.totalSessions || 0).toLocaleString()],
+    ['Avg. time on page', formatDuration(s.avgDuration)],
+    ['View trend vs prev period', s.viewTrend != null ? `${s.viewTrend >= 0 ? '+' : ''}${s.viewTrend}%` : isNewTrend ? 'New' : '—'],
+    ['Total listings', (data?.totalListings || 0).toLocaleString()],
+  ];
+  const sourceRows = utms.map(u => [u.source, String(u.count)]);
+  const topListingRows = topProps.map((p, i) => [String(i + 1), p.name, String(p.views), String(p.uniqueViewers)]);
+
+  function handleExportCSV() {
+    const lines = [];
+    const push = (cols) => lines.push(cols);
+    push(['DeelMap Analytics', periodLabel]);
+    push([]);
+    push(['KPIs']);
+    push(['Metric', 'Value']);
+    kpiRows.forEach(r => push(r));
+    push([]);
+    push(['Traffic Sources']);
+    push(['Source', 'Sessions']);
+    (sourceRows.length ? sourceRows : [['No UTM traffic tracked', '']]).forEach(r => push(r));
+    push([]);
+    push(['Top Listings']);
+    push(['Rank', 'Listing', 'Views', 'Unique buyers']);
+    (topListingRows.length ? topListingRows : [['', 'No data', '', '']]).forEach(r => push(r));
+    downloadCSV(`${fileBase}.csv`, { columns: lines[0], data: lines.slice(1) });
+  }
+
+  function handleExportPDF() {
+    downloadPDF(`${fileBase}.pdf`, {
+      title: `Analytics — ${periodLabel}`,
+      sections: [
+        { heading: 'KPIs', columns: ['Metric', 'Value'], rows: kpiRows },
+        { heading: 'Traffic Sources', columns: ['Source', 'Sessions'], rows: sourceRows.length ? sourceRows : [['No UTM traffic tracked', '—']] },
+        { heading: 'Top Listings', columns: ['#', 'Listing', 'Views', 'Unique buyers'], rows: topListingRows.length ? topListingRows : [['', 'No data', '', '']] },
+      ],
+    });
+  }
 
   if (accessDenied) {
     return (
@@ -230,6 +291,27 @@ export default function SellerAnalyticsPage() {
         </div>
         <div className="flex items-center gap-2 shrink-0">
           {loading && <Loader2 className="w-4 h-4 text-[#A8A8A4] animate-spin" />}
+          {/* Export controls */}
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={handleExportCSV}
+              disabled={loading || !data}
+              className="flex items-center gap-1.5 px-3 py-2 bg-white border border-[#E8E8E4] rounded text-[13px] font-semibold text-[#1A1816] hover:bg-[#FAFAF8] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Download className="w-3.5 h-3.5 text-[#737370]" />
+              CSV
+            </button>
+            <button
+              type="button"
+              onClick={handleExportPDF}
+              disabled={loading || !data}
+              className="flex items-center gap-1.5 px-3 py-2 bg-white border border-[#E8E8E4] rounded text-[13px] font-semibold text-[#1A1816] hover:bg-[#FAFAF8] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Download className="w-3.5 h-3.5 text-[#737370]" />
+              PDF
+            </button>
+          </div>
           {/* Custom period dropdown */}
           <div className="relative" onClick={e => e.stopPropagation()}>
             <button
@@ -332,12 +414,17 @@ export default function SellerAnalyticsPage() {
             </div>
             <div className="text-right">
               <p className="text-[22px] font-bold text-[#1A1816] leading-none">{(s.totalViews || 0).toLocaleString()}</p>
-              {s.viewTrend != null && (
+              {s.viewTrend != null ? (
                 <p className={`text-[11px] font-medium flex items-center gap-0.5 justify-end mt-0.5 ${trendUp ? 'text-[#0F6E56]' : 'text-[#D03839]'}`}>
                   {trendUp ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
                   {trendUp ? '+' : ''}{s.viewTrend}%
                 </p>
-              )}
+              ) : isNewTrend ? (
+                <p className="text-[11px] font-medium flex items-center gap-0.5 justify-end mt-0.5 text-[#0F6E56]">
+                  <TrendingUp className="w-3 h-3" />
+                  New
+                </p>
+              ) : null}
             </div>
           </div>
           <div className="p-4">
@@ -372,14 +459,20 @@ export default function SellerAnalyticsPage() {
               ))
             ) : topProps.length === 0 ? (
               <p className="text-[13px] text-[#A8A8A4] py-6 text-center">No data yet</p>
-            ) : topProps.map((p, i) => {
+            ) : (showAllTop ? topProps : topProps.slice(0, TOP_VISIBLE)).map((p, i) => {
               const pct = Math.round((p.views / maxPropViews) * 100);
               return (
-                <div key={p.id}>
+                <a
+                  key={p.id}
+                  href={`/properties?analytics=${encodeURIComponent(p.id)}`}
+                  className="block -mx-2 px-2 py-1 rounded group cursor-pointer hover:bg-[#FAFAF8] transition-colors"
+                  title={`View analytics for ${p.name}`}
+                >
                   <div className="flex items-start justify-between gap-2 mb-1">
                     <div className="flex items-center gap-1.5 min-w-0">
                       <span className="text-[11px] font-bold text-[#A8A8A4] w-4 shrink-0">{i + 1}</span>
-                      <p className="text-[12px] font-medium text-[#1A1816] truncate" title={p.name}>{truncate(p.name, 28)}</p>
+                      <p className="text-[12px] font-medium text-[#1A1816] truncate group-hover:text-[#D03839] transition-colors" title={p.name}>{truncate(p.name, 28)}</p>
+                      <ArrowUpRight className="w-3 h-3 text-[#A8A8A4] shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
                     </div>
                     <span className="text-[12px] font-bold text-[#1A1816] shrink-0">{p.views}</span>
                   </div>
@@ -389,9 +482,19 @@ export default function SellerAnalyticsPage() {
                     </div>
                     <span className="text-[10px] text-[#A8A8A4] shrink-0">{p.uniqueViewers} buyers</span>
                   </div>
-                </div>
+                </a>
               );
             })}
+            {!loading && topProps.length > TOP_VISIBLE && (
+              <button
+                type="button"
+                onClick={() => setShowAllTop(v => !v)}
+                className="w-full flex items-center justify-center gap-1 pt-1 text-[12px] font-semibold text-[#D03839] hover:text-[#E0493B] transition-colors"
+              >
+                {showAllTop ? 'Show less' : `Show ${topProps.length - TOP_VISIBLE} more`}
+                <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showAllTop ? 'rotate-180' : ''}`} />
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -477,6 +580,8 @@ export default function SellerAnalyticsPage() {
           <div className="p-4 space-y-4">
             {loading ? (
               <div className="h-24 bg-[#F0F0EE] rounded animate-pulse" />
+            ) : !hasEngagement ? (
+              <p className="text-[13px] text-[#A8A8A4] text-center py-4">No engagement yet</p>
             ) : (
               <>
                 <EngagementBar label="Scrolled" pct={eng.scrolled || 0} icon={<ChevronDown className="w-3.5 h-3.5 text-[#A8A8A4]" />} />

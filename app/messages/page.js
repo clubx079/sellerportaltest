@@ -106,6 +106,14 @@ function formatCurrency(amount) {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(amount);
 }
 
+const EMOJI_LIST = [
+  '😀', '😁', '😂', '🤣', '😊', '😍', '😘', '😎', '🤩', '🥳',
+  '🙂', '😉', '😇', '🤔', '🙃', '😴', '😅', '😢', '😭', '😡',
+  '👍', '👎', '👏', '🙌', '🙏', '👌', '🤝', '💪', '✌️', '🤞',
+  '❤️', '🔥', '⭐', '✨', '🎉', '💯', '✅', '❌', '⚡', '💰',
+  '🏠', '🏡', '🏢', '🔑', '📍', '📈', '📉', '💵', '📅', '⏰',
+];
+
 export default function MessagesPage() {
   const searchParams = useSearchParams();
   const buyerIdFromUrl = searchParams.get('buyer_id');
@@ -142,7 +150,31 @@ export default function MessagesPage() {
   const messagesEndRef = useRef(null);
   const messageInputRef = useRef(null);
   const fileInputRef = useRef(null);
+  const emojiPickerRef = useRef(null);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [uploadingAttachment, setUploadingAttachment] = useState(false);
+
+  const insertEmoji = (emoji) => {
+    const el = messageInputRef.current;
+    if (el && typeof el.selectionStart === 'number') {
+      const start = el.selectionStart, end = el.selectionEnd;
+      setMessageText(prev => prev.slice(0, start) + emoji + prev.slice(end));
+      requestAnimationFrame(() => {
+        el.focus();
+        const pos = start + emoji.length;
+        el.setSelectionRange(pos, pos);
+      });
+    } else {
+      setMessageText(prev => prev + emoji);
+    }
+  };
+
+  useEffect(() => {
+    if (!showEmojiPicker) return;
+    const handler = (e) => { if (emojiPickerRef.current && !emojiPickerRef.current.contains(e.target)) setShowEmojiPicker(false); };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [showEmojiPicker]);
 
   // Offer state
   const [offer, setOffer] = useState(null);
@@ -1003,6 +1035,25 @@ export default function MessagesPage() {
                     className="p-2.5 rounded hover:bg-[#FAFAF8] transition-colors duration-200 flex-shrink-0 disabled:opacity-50">
                     {uploadingAttachment ? <Loader2 className="w-5 h-5 text-[#737370] animate-spin" /> : <Paperclip className="w-5 h-5 text-[#737370]" />}
                   </button>
+                  <div className="relative flex-shrink-0" ref={emojiPickerRef}>
+                    <button type="button" onClick={() => setShowEmojiPicker(prev => !prev)} disabled={!openConversationId}
+                      title="Add emoji"
+                      className="p-2.5 rounded hover:bg-[#FAFAF8] transition-colors duration-200 disabled:opacity-50">
+                      <Smile className="w-5 h-5 text-[#737370]" />
+                    </button>
+                    {showEmojiPicker && (
+                      <div className="absolute bottom-full left-0 mb-2 w-[280px] bg-white border border-[#E8E8E4] rounded-lg shadow-xl z-[60] p-3">
+                        <div className="grid grid-cols-10 gap-0.5">
+                          {EMOJI_LIST.map(emoji => (
+                            <button key={emoji} type="button" onClick={() => insertEmoji(emoji)}
+                              className="w-6 h-6 flex items-center justify-center text-[17px] leading-none rounded hover:bg-[#FAFAF8] transition-colors duration-150">
+                              {emoji}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                   <textarea
                     ref={messageInputRef} value={messageText}
                     onChange={e => setMessageText(e.target.value)}

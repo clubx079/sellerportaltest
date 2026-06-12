@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Loader2, AlertCircle, Check, Calendar, Zap, Building2, ArrowRight, X } from 'lucide-react'
+import { Loader2, AlertCircle, Check, Calendar, Zap, Building2, ArrowRight, X, CreditCard } from 'lucide-react'
 
 const CheckIcon = ({ filled }) => (
   <span
@@ -241,6 +241,27 @@ export default function PlansPage() {
 
         {plan ? (
           <>
+            {/* ── Past-due recovery banner ── */}
+            {plan.status === 'past_due' && (
+              <div className="bg-[#FEF0EF] border border-[#F5C4C0] rounded p-4 mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div className="flex items-start gap-3">
+                  <div className="w-9 h-9 rounded-full bg-white border border-[#F5C4C0] flex items-center justify-center flex-shrink-0">
+                    <CreditCard className="w-4 h-4 text-[#D03839]" />
+                  </div>
+                  <div>
+                    <p className="text-[14px] font-semibold text-[#1A1816]">Your last payment failed</p>
+                    <p className="text-[12px] text-[#737370] mt-0.5">Update your card to keep your plan active and retry the charge.</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => router.push('/billing')}
+                  className="flex-shrink-0 h-9 px-4 bg-[#D03839] hover:bg-[#E0493B] text-white text-[13px] font-semibold rounded transition-colors"
+                >
+                  Update card &amp; retry
+                </button>
+              </div>
+            )}
+
             {/* ── Current plan summary card ── */}
             <div className="bg-white border border-[#E8E8E4] rounded overflow-hidden">
               <div className="flex items-center justify-between px-5 py-4 border-b border-[#E8E8E4]">

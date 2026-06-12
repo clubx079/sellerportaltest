@@ -140,6 +140,7 @@ export default function ReferralPage() {
 
   const totalPaid = payouts.reduce((s, p) => s + p.amount, 0)
   const totalEarned = referral?.estimated_earnings || 0
+  const heldEarnings = referral?.held_earnings || 0
   const pendingBalance = Math.max(0, totalEarned - totalPaid)
 
   if (loading) {
@@ -170,7 +171,7 @@ export default function ReferralPage() {
             Share DeelMap.<br />Earn real money.
           </h1>
           <p className="text-[14px] text-white/60 mt-2 max-w-md">
-            Give your network 20% off their first listing — and earn 20% of every fee they pay. Paid out automatically every month.
+            Give your network 20% off their first listing — and earn 20% of every fee they pay. Paid out automatically after a 30-day hold.
           </p>
         </div>
         <div className="flex flex-col sm:flex-row lg:flex-col gap-3 lg:items-end">
@@ -190,10 +191,10 @@ export default function ReferralPage() {
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           {[
             { icon: Users, label: 'Times Used', value: referral.times_redeemed ?? 0 },
-            { icon: DollarSign, label: 'Total Earned', value: formatCents(totalEarned) },
+            { icon: DollarSign, label: 'Total Earned', value: formatCents(totalEarned), sub: 'From completed payments' },
             { icon: CheckCircle, label: 'Total Paid Out', value: formatCents(totalPaid) },
-            { icon: Clock, label: 'Pending Balance', value: formatCents(pendingBalance) },
-          ].map(({ icon: Icon, label, value }) => (
+            { icon: Clock, label: 'Pending Balance', value: formatCents(pendingBalance), sub: heldEarnings > 0 ? `${formatCents(heldEarnings)} maturing (30-day hold)` : 'Ready for next payout' },
+          ].map(({ icon: Icon, label, value, sub }) => (
             <div key={label} className="bg-white border border-[#E8E8E4] rounded p-4 lg:p-5">
               <div className="flex items-center gap-2 mb-3">
                 <div className="w-7 h-7 rounded bg-[#FAFAF8] border border-[#E8E8E4] flex items-center justify-center">
@@ -202,6 +203,7 @@ export default function ReferralPage() {
                 <p className="text-[11px] font-semibold text-[#A8A8A4] uppercase tracking-[0.09em]">{label}</p>
               </div>
               <p className="text-[20px] lg:text-[24px] font-bold text-[#1A1816] tracking-tight">{value}</p>
+              {sub && <p className="text-[11px] text-[#A8A8A4] mt-1">{sub}</p>}
             </div>
           ))}
         </div>
@@ -308,8 +310,8 @@ export default function ReferralPage() {
                     </p>
                     <p className="text-[12px] text-[#737370] mt-0.5">
                       {connected
-                        ? 'Your earnings will be sent here automatically every month.'
-                        : 'Required to receive your monthly payouts automatically.'}
+                        ? 'Your earnings will be sent here automatically once they clear a 30-day hold.'
+                        : 'Required to receive your payouts automatically.'}
                     </p>
                   </div>
                 </div>
@@ -340,7 +342,7 @@ export default function ReferralPage() {
               { step: '1', title: 'Get your code', desc: 'Generate your personal referral code — it\'s unique to you.' },
               { step: '2', title: 'Share with anyone', desc: 'Send it to agents, wholesalers, or investors in your network.' },
               { step: '3', title: 'They save 20%', desc: 'They use your code at checkout and get 20% off their listing fee.' },
-              { step: '4', title: 'You earn 20%', desc: '20% of every listing fee paid through your code goes directly to you — automatically, every month.' },
+              { step: '4', title: 'You earn 20%', desc: '20% of every listing fee paid through your code goes directly to you — automatically, after a 30-day hold.' },
             ].map(({ step, title, desc }, i, arr) => (
               <div key={step} className="flex gap-4">
                 <div className="flex flex-col items-center">
@@ -358,7 +360,7 @@ export default function ReferralPage() {
           </div>
           <div className="mt-5 pt-4 border-t border-[#F3F3F0]">
             <p className="text-[11px] text-[#A8A8A4] leading-relaxed">
-              Payouts processed monthly. Earnings based on 20% of the original listing fee before discount.
+              Payouts are released automatically once earnings clear a 30-day hold. Earnings based on 20% of the original listing fee before discount.
             </p>
           </div>
         </div>

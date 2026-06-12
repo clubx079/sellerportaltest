@@ -35,30 +35,50 @@ export async function GET(request) {
 
     const timesRedeemed = usages?.length || 0
 
-    let estimatedEarnings = 0
+    // Mirror the payout cron exactly so what we DISPLAY matches what gets PAID:
+    // only succeeded payments count, and earnings mature after a 30-day hold
+    // (the window that catches refunds/chargebacks). 20% of the original fee.
+    const HOLD_DAYS = 30
+    const now = Date.now()
+    const earnFor = (p) => {
+      let originalAmount = p.amount
+      try {
+        const desc = JSON.parse(p.description)
+        const base = desc.base?.amount || 0
+        const addons = (desc.addons || []).reduce((s, a) => s + (a.amount || 0), 0)
+        if (base + addons > 0) originalAmount = base + addons
+      } catch {}
+      return Math.round(originalAmount * 0.20)
+    }
+
+    let totalEarnings = 0   // lifetime, succeeded only
+    let maturedEarnings = 0 // succeeded AND past the 30-day hold (what the cron pays from)
     if (usages && usages.length > 0) {
       const piIds = usages.map(u => u.stripe_payment_intent_id).filter(Boolean)
       if (piIds.length > 0) {
         const { data: payments } = await supabase
           .from('payments')
-          .select('amount, description, stripe_payment_intent_id')
+          .select('amount, description, stripe_payment_intent_id, status, created_at')
           .in('stripe_payment_intent_id', piIds)
 
         for (const p of (payments || [])) {
-          let originalAmount = p.amount
-          try {
-            const desc = JSON.parse(p.description)
-            const base = desc.base?.amount || 0
-            const addons = (desc.addons || []).reduce((s, a) => s + (a.amount || 0), 0)
-            if (base + addons > 0) originalAmount = base + addons
-          } catch {}
-          estimatedEarnings += Math.round(originalAmount * 0.20)
+          if (p.status && p.status !== 'succeeded') continue
+          const e = earnFor(p)
+          totalEarnings += e
+          const aged = p.created_at && (now - new Date(p.created_at).getTime()) / 86400000 >= HOLD_DAYS
+          if (aged) maturedEarnings += e
         }
       }
     }
 
     return NextResponse.json({
-      referral: { ...referral, times_redeemed: timesRedeemed, estimated_earnings: estimatedEarnings }
+      referral: {
+        ...referral,
+        times_redeemed: timesRedeemed,
+        estimated_earnings: totalEarnings,
+        matured_earnings: maturedEarnings,
+        held_earnings: totalEarnings - maturedEarnings,
+      }
     })
   } catch (err) {
     console.error('[referral GET]', err)

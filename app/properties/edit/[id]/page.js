@@ -123,7 +123,7 @@ export default function EditPropertyPage() {
   const [formData, setFormData] = useState({
     status: 'draft',
     property_status: 'available',
-    property_type: 'Hotel'
+    property_type: ''
   });
 
   const [imageUploadStatus, setImageUploadStatus] = useState({
@@ -258,7 +258,7 @@ export default function EditPropertyPage() {
           bedrooms: data.bedrooms ?? '',
           bathrooms: data.bathrooms ?? '',
           floor_area: data.floor_area ?? '',
-          property_type: data.property_type || 'Hotel',
+          property_type: data.property_type || '',
           property_status: data.property_status || 'available',
           status: data.status || 'draft',
           latitude: data.latitude ?? '',
@@ -377,7 +377,7 @@ export default function EditPropertyPage() {
         bedrooms: d.bedrooms ?? d.rooms ?? '',
         bathrooms: d.bathrooms ?? '',
         floor_area: d.sqft ?? '',
-        property_type: d.property_type || 'Hotel',
+        property_type: d.property_type || '',
         property_status: 'available',
         status: d.status || 'draft',
         latitude: d.latitude ?? '',
@@ -489,6 +489,36 @@ export default function EditPropertyPage() {
       return false;
     }
 
+    // On a real publish (not silent autosave, not draft saves), require the same
+    // fields the create page validates: price, type, beds, baths, floor area, image.
+    if (!silent && publishStatus === 'active') {
+      if (!formData.price) {
+        setError('Please enter the asking price.');
+        return false;
+      }
+      if (!formData.property_type) {
+        setError('Please select a property type.');
+        return false;
+      }
+      if (!formData.bedrooms) {
+        setError('Please enter the number of beds.');
+        return false;
+      }
+      if (!formData.bathrooms) {
+        setError('Please enter the number of baths.');
+        return false;
+      }
+      if (!formData.floor_area) {
+        setError('Please enter the floor area.');
+        return false;
+      }
+      const hasCompletedImage = imageUploadStatus.images.filter(i => i.status === 'completed' && i.imageUrl).length > 0;
+      if (!hasCompletedImage) {
+        setError('Please upload at least one image.');
+        return false;
+      }
+    }
+
     // Save editor content before submitting
     if (descRef.current) {
       const cleanDescription = descRef.current.getCleanHTML?.() || descRef.current.getHTML?.() || '';
@@ -560,7 +590,7 @@ export default function EditPropertyPage() {
       slug: slugToSave,
       address: formData.location || '',
       property_status: formData.property_status || 'available',
-      property_type: formData.property_type || 'Hotel',
+      property_type: formData.property_type || null,
       description: formData.description || '',
       repairs: formData.repairs || ''
     };
@@ -579,6 +609,8 @@ export default function EditPropertyPage() {
     // Add SEO fields (using correct column names from schema)
     if (formData.seo_title) saveData.seo_title = formData.seo_title;
     if (formData.seo_description) saveData.seo_description = formData.seo_description;
+    saveData.social_title = formData.social_title || null;
+    saveData.social_description = formData.social_description || null;
     if (formData.social_image_url) saveData.social_image_url = formData.social_image_url;
 
     // Add inspection report if provided
@@ -635,6 +667,12 @@ export default function EditPropertyPage() {
 
         if (updateError) throw updateError;
 
+        // Capture existing photo rows so we can restore them if the insert fails.
+        const { data: oldPhotoRows } = await supabase
+          .from('property_photos')
+          .select('deal_id, photo_url, display_order, is_featured')
+          .eq('deal_id', id);
+
         const { error: deletePhotosError } = await supabase
           .from('property_photos')
           .delete()
@@ -659,6 +697,10 @@ export default function EditPropertyPage() {
             .insert(photoRows);
           if (photosError) {
             console.error('Property photos insert error:', photosError);
+            // Best-effort rollback: restore the photos we deleted.
+            if (oldPhotoRows && oldPhotoRows.length > 0) {
+              await supabase.from('property_photos').insert(oldPhotoRows);
+            }
             throw new Error(photosError.message || 'Failed to save photos. Please try again.');
           }
         }
@@ -703,6 +745,12 @@ export default function EditPropertyPage() {
 
       if (updateError) throw updateError;
 
+      // Capture existing image rows so we can restore them if the insert fails.
+      const { data: oldImageRows } = await supabase
+        .from('property_images')
+        .select('property_id, image_url, image_key, sort_order')
+        .eq('property_id', data.id);
+
       const { error: deleteImagesError } = await supabase
         .from('property_images')
         .delete()
@@ -731,6 +779,11 @@ export default function EditPropertyPage() {
 
           if (imagesError) {
             console.error('Images save error:', imagesError);
+            // Best-effort rollback: restore the images we deleted.
+            if (oldImageRows && oldImageRows.length > 0) {
+              await supabase.from('property_images').insert(oldImageRows);
+            }
+            throw new Error(imagesError.message || 'Failed to save photos. Please try again.');
           }
         }
       }
@@ -962,15 +1015,17 @@ export default function EditPropertyPage() {
             <h1 className="text-lg md:text-xl font-semibold tracking-tight text-[#1A1816] truncate">
               {formData.location || formData.title || 'Edit Property'}
             </h1>
-            <div className="mt-0.5">
-              <SaveStatus
-                autoSaving={autoSaving}
-                lastSavedAt={lastSavedAt}
-                dirty={dirty}
-                error={autoSaveError}
-                status={formData.status}
-              />
-            </div>
+            {formData.status === 'draft' && (
+              <div className="mt-0.5">
+                <SaveStatus
+                  autoSaving={autoSaving}
+                  lastSavedAt={lastSavedAt}
+                  dirty={dirty}
+                  error={autoSaveError}
+                  status={formData.status}
+                />
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -1150,7 +1205,7 @@ export default function EditPropertyPage() {
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-[13px] font-semibold text-[#1A1816] mb-2">Rooms/Units</label>
+                  <label className="block text-[13px] font-semibold text-[#1A1816] mb-2">Beds</label>
                   <PropertySelect
                     value={formData.bedrooms || ''}
                     onChange={(v) => handleInputChange('bedrooms', v)}
@@ -1158,7 +1213,7 @@ export default function EditPropertyPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-[13px] font-semibold text-[#1A1816] mb-2">Bathrooms</label>
+                  <label className="block text-[13px] font-semibold text-[#1A1816] mb-2">Baths</label>
                   <PropertySelect
                     value={formData.bathrooms || ''}
                     onChange={(v) => handleInputChange('bathrooms', v)}
@@ -1576,15 +1631,17 @@ export default function EditPropertyPage() {
       {/* Sticky action footer — Previous / Continue navigate between tabs,
           Publish commits the listing (drafts auto-save in the background). */}
       <StickyActionBar>
-        <div className="min-w-0">
-          <SaveStatus
-            autoSaving={autoSaving}
-            lastSavedAt={lastSavedAt}
-            dirty={dirty}
-            error={autoSaveError}
-            status={formData.status}
-          />
-        </div>
+        {formData.status === 'draft' && (
+          <div className="min-w-0">
+            <SaveStatus
+              autoSaving={autoSaving}
+              lastSavedAt={lastSavedAt}
+              dirty={dirty}
+              error={autoSaveError}
+              status={formData.status}
+            />
+          </div>
+        )}
         {(() => {
           const currentIdx = TAB_ORDER.indexOf(activeTab);
           const hasPrev = currentIdx > 0;

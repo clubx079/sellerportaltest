@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import Stripe from 'stripe'
+import { getCallerAccess, requirePermission } from '@/lib/workspace'
 
 const getClients = () => ({
   supabase: createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY),
@@ -22,6 +23,13 @@ export async function POST(request) {
     const { seller_id, add_ons = [], property_id, promo_code_id } = await request.json()
 
     if (!seller_id) return NextResponse.json({ error: 'seller_id required' }, { status: 400 })
+
+    // Permission gate (addons_buy) — seller_id here is the caller's own id, so a
+    // team member is judged on their own permission; owner/personal always pass.
+    const access = await getCallerAccess(seller_id)
+    if (!requirePermission(access, 'addons_buy')) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
 
     const validAddOns = add_ons.filter(id => ADD_ON_PRICES[id])
     if (validAddOns.length === 0) return NextResponse.json({ error: 'No valid add-ons provided' }, { status: 400 })
