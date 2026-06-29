@@ -408,15 +408,18 @@ export async function PATCH(request) {
     }
 
     if (action === 'counter') {
-      if (!counter_data?.amount) return NextResponse.json({ error: 'counter_data.amount required' }, { status: 400 });
+      // Counter amount must be a real, positive number (blocks 0, negatives, NaN, and absurd values).
+      const counterAmount = Number(counter_data?.amount);
+      if (!Number.isFinite(counterAmount) || counterAmount <= 0) {
+        return NextResponse.json({ error: 'A valid positive counter amount is required' }, { status: 400 });
+      }
+      if (counterAmount > 1_000_000_000) {
+        return NextResponse.json({ error: 'Counter amount is too large' }, { status: 400 });
+      }
 
-      // Mark original offer as countered
-      await supabase
-        .from('offers')
-        .update({ status: 'countered', updated_at: new Date().toISOString() })
-        .eq('id', offer_id);
-
-      // Insert counter offer row (seller sends, so swap buyer_id/seller_id roles but keep same structure)
+      // Atomicity: create the counter offer FIRST, then mark the original as countered.
+      // If the insert fails, the original offer is left untouched (still pending) rather
+      // than orphaned in a "countered" state with no counter behind it.
       const { data: counterOffer, error: counterErr } = await supabase
         .from('offers')
         .insert({
@@ -437,6 +440,14 @@ export async function PATCH(request) {
         .single();
 
       if (counterErr) return NextResponse.json({ error: 'Failed to create counter offer' }, { status: 500 });
+
+      // Counter created successfully — now mark the original offer as countered.
+      // If this update fails, we have a valid counter (recoverable) rather than an orphan.
+      const { error: markErr } = await supabase
+        .from('offers')
+        .update({ status: 'countered', updated_at: new Date().toISOString() })
+        .eq('id', offer_id);
+      if (markErr) console.error('[seller/offers] counter: failed to mark original countered:', markErr.message);
 
       const counterAmountStr = formatCurrency(counter_data.amount);
 

@@ -311,11 +311,26 @@ export default function MessagesPage() {
   useEffect(() => {
     const headers = getAuthHeaders();
     if (!headers.Authorization) return;
-    // 60s fallback poll to catch NEW conversations from buyers not currently open.
-    // The currently-open conversation updates instantly via the Supabase realtime
-    // subscription below, so this only needs to be a slow safety net.
+    // Slow safety-net poll; realtime (below) drives instant list/preview + unread updates.
     const interval = setInterval(() => fetchConversations(headers), 60000);
     return () => clearInterval(interval);
+  }, [buyerIdFromUrl, propertyIdFromUrl]);
+
+  // Realtime: refresh the conversation list (last-message preview + unread) the instant
+  // any of this seller's conversations changes. One table per channel.
+  useEffect(() => {
+    let sellerId = null;
+    try { sellerId = JSON.parse(localStorage.getItem('seller_user') || 'null')?.id || null; } catch {}
+    if (!sellerId) return;
+    const supabase = getSupabase();
+    if (!supabase) return;
+    const refresh = () => fetchConversations(getAuthHeaders());
+    const channel = supabase
+      .channel(`seller-inbox-${sellerId}`)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'conversations', filter: `seller_id=eq.${sellerId}` }, refresh)
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'conversations', filter: `seller_id=eq.${sellerId}` }, refresh)
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
   }, [buyerIdFromUrl, propertyIdFromUrl]);
 
   async function createConversation(buyerId, headers) {
@@ -344,8 +359,13 @@ export default function MessagesPage() {
     if (!openConversationId) return () => {};
     const supabase = getSupabase();
     if (!supabase) return () => {};
-    const channel = supabase
-      .channel(`seller-conversation-${openConversationId}`, { config: { broadcast: { self: true } } })
+
+    // IMPORTANT: one table per channel. Supabase Realtime does NOT reliably deliver
+    // postgres_changes when a single channel subscribes to multiple tables — it
+    // reports SUBSCRIBED but never delivers. So messages and offers each get their
+    // own channel. (See UXissues/messaging-not-realtime.md.)
+    const messagesChannel = supabase
+      .channel(`seller-conv-${openConversationId}-messages`, { config: { broadcast: { self: true } } })
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'messages', filter: `conversation_id=eq.${openConversationId}` }, (payload) => {
         const updated = payload.new;
         if (updated?.id != null && updated.is_read) setMessages(prev => prev.map(msg => String(msg.id) === String(updated.id) ? { ...msg, is_read: true } : msg));
@@ -362,20 +382,32 @@ export default function MessagesPage() {
         setFilteredConversations(prev => prev.map(c => c.id === openConversationId ? { ...c, unread_count: 0, last_message_preview: (newMsg.message_text || '').slice(0, 200), last_message_at: newMsg.created_at || c.last_message_at } : c));
         scrollToBottom();
       })
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'offers', filter: `conversation_id=eq.${openConversationId}` }, (payload) => {
+      .subscribe();
+
+    // offers.conversation_id is stored as a UUID (toUuid of the numeric conversation id),
+    // so the realtime filter must use that UUID form — not the numeric id (messages uses
+    // the numeric id). Without this, the offers/Deal-Overview events never match.
+    const offerConvUuid = `00000000-0000-0000-0000-${Number(openConversationId).toString(16).padStart(12, '0')}`;
+    const offersChannel = supabase
+      .channel(`seller-conv-${openConversationId}-offers`, { config: { broadcast: { self: true } } })
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'offers', filter: `conversation_id=eq.${offerConvUuid}` }, (payload) => {
         const newOffer = payload.new;
         if (!newOffer?.id) return;
         setOffer(newOffer);
         if (newOffer.offer_price) setCounterAmount(String(Math.round(newOffer.offer_price)));
         scrollToBottom();
       })
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'offers', filter: `conversation_id=eq.${openConversationId}` }, (payload) => {
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'offers', filter: `conversation_id=eq.${offerConvUuid}` }, (payload) => {
         const updated = payload.new;
         if (!updated?.id) return;
         setOffer(prev => prev && String(prev.id) === String(updated.id) ? { ...prev, ...updated } : prev);
       })
       .subscribe();
-    return () => supabase.removeChannel(channel);
+
+    return () => {
+      supabase.removeChannel(messagesChannel);
+      supabase.removeChannel(offersChannel);
+    };
   }, [openConversationId]);
 
   useEffect(() => {
