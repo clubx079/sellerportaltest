@@ -84,6 +84,35 @@ export default function Sidebar({ isOpen, setIsOpen, activeItem, setActiveItem }
     return () => { mounted = false; if (timer) clearInterval(timer) }
   }, [sellerUser?.id, sellerUser?.userId, workspaces?.current?.effectiveSellerId])
 
+  // Realtime: refresh the unread messages badge the instant any of this seller's
+  // conversations changes (a new message updates the conversation row).
+  useEffect(() => {
+    const sellerId = sellerUser?.id || sellerUser?.userId
+    if (!sellerId) return
+    const effectiveId = workspaces?.current?.effectiveSellerId || sellerId
+    let cancelled = false, sb = null, channel = null
+    ;(async () => {
+      const { createClient } = await import('@supabase/supabase-js')
+      if (cancelled) return
+      sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
+      const refreshUnread = async () => {
+        try {
+          const res = await fetch('/api/seller/chat?action=get_conversations', { headers: { Authorization: `Bearer ${effectiveId}` } })
+          const data = await res.json()
+          if (!cancelled && data?.success && Array.isArray(data.conversations)) {
+            setMessagesUnreadCount(data.conversations.reduce((sum, c) => sum + Number(c.unread_count || 0), 0))
+          }
+        } catch {}
+      }
+      channel = sb
+        .channel(`seller-unread-${effectiveId}`)
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'conversations', filter: `seller_id=eq.${effectiveId}` }, refreshUnread)
+        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'conversations', filter: `seller_id=eq.${effectiveId}` }, refreshUnread)
+        .subscribe()
+    })()
+    return () => { cancelled = true; if (sb && channel) sb.removeChannel(channel) }
+  }, [sellerUser?.id, sellerUser?.userId, workspaces?.current?.effectiveSellerId])
+
   const handleItemClick = (item) => {
     setActiveItem(item.id)
     if (typeof window !== 'undefined' && window.innerWidth < DESKTOP_BREAKPOINT) setIsOpen(false)
