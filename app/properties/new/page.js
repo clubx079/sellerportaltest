@@ -267,12 +267,29 @@ export default function NewPropertyPage() {
       });
   }, [draftId]);
 
+  // Plain-English messages for negative numeric fields (shown instantly as the user types).
+  const NEG_VALUE_MSGS = {
+    price: "Price can't be negative. Please enter a positive amount.",
+    floor_area: "Floor area can't be negative. Please enter a positive number.",
+  };
+
   const handleInputChange = (field, value) => {
     setFormData(prev => ({
       ...prev,
       [field]: value
     }));
     setDirty(true);
+
+    // Instant feedback: flag a negative Price or Floor Area the moment it's entered,
+    // and clear our own message as soon as the value becomes valid again.
+    if (field === 'price' || field === 'floor_area') {
+      const num = parseFloat(value);
+      if (Number.isFinite(num) && num < 0) {
+        setError(NEG_VALUE_MSGS[field]);
+      } else if (Object.values(NEG_VALUE_MSGS).includes(error)) {
+        setError(null);
+      }
+    }
   };
 
   const handleAddressSelect = (addressData) => {
@@ -364,6 +381,15 @@ export default function NewPropertyPage() {
     return true;
   };
 
+  // Plain-English reason a step is still locked (used to explain blocked tab clicks).
+  const lockedReason = (tabId) => {
+    const idx = TAB_ORDER.indexOf(tabId);
+    if (idx >= 1 && !isBasicComplete)     return 'Complete the Basic Info step first.';
+    if (idx >= 2 && !isImagesComplete)    return 'Add at least one image in the Images step first.';
+    if (idx >= 3 && !isOwnershipComplete) return 'Confirm ownership in the Ownership step first.';
+    return null;
+  };
+
   const isTabComplete = (tabId) => {
     if (tabId === 'basic') return isBasicComplete;
     if (tabId === 'images') return isImagesComplete;
@@ -410,6 +436,23 @@ export default function NewPropertyPage() {
       if (!formData.bedrooms)      { setError('Please enter the number of bedrooms.'); return; }
       if (!formData.bathrooms)     { setError('Please enter the number of bathrooms.'); return; }
       if (!formData.floor_area)    { setError('Please enter the floor area.'); return; }
+      if (parseFloat(formData.price) < 0)      { setError(NEG_VALUE_MSGS.price); return; }
+      if (parseFloat(formData.floor_area) < 0) { setError(NEG_VALUE_MSGS.floor_area); return; }
+    }
+    // Images step: require at least one finished upload before advancing.
+    if (activeTab === 'images') {
+      if (imageUploadStatus.isUploading) { setError('Please wait for the images to finish uploading.'); return; }
+      if (!isImagesComplete)             { setError('Please upload at least one image to continue.'); return; }
+    }
+    // Ownership step: require a confirmed owner (or an uploaded contract for wholesalers).
+    if (activeTab === 'ownership') {
+      if (!sellerType) { setError('Please select whether you are the owner or a wholesaler.'); return; }
+      if (sellerType === 'wholesaler' ? !contractUpload.url : !ownershipConfirmed) {
+        setError(sellerType === 'wholesaler'
+          ? 'Please upload a signed contract to continue.'
+          : 'Please confirm ownership by checking the box to continue.');
+        return;
+      }
     }
     setError(null);
     setContinuedTabs(prev => new Set([...prev, activeTab]));
@@ -691,6 +734,9 @@ export default function NewPropertyPage() {
           .update({ listings_used_this_period: (trialPlan.listings_used_this_period ?? 0) + 1 })
           .eq('seller_id', sellerId);
         setTrialPlan(prev => prev ? { ...prev, listings_used_this_period: (prev.listings_used_this_period ?? 0) + 1 } : prev);
+        // #5 Pro-plan usage nudge fires server-side after AI moderation approves the
+        // listing to 'active' (see lib/moderateSellerProperty.js) — not here, because
+        // the listing is still 'under_review' at this point and wouldn't count yet.
       }
 
       // Apply add-on flags if paid — use addOnFlags from options directly (not state,
@@ -1080,8 +1126,14 @@ export default function NewPropertyPage() {
             return (
               <button
                 key={tab.id}
-                onClick={() => accessible && handleTabChange(tab.id)}
-                disabled={!accessible}
+                onClick={() => {
+                  if (accessible) { handleTabChange(tab.id); return; }
+                  // Locked: explain what to finish first instead of doing nothing.
+                  const reason = lockedReason(tab.id);
+                  if (reason) setError(reason);
+                }}
+                title={!accessible ? (lockedReason(tab.id) || undefined) : undefined}
+                aria-disabled={!accessible}
                 className={`flex-1 flex items-center justify-center gap-1.5 px-1 md:px-5 py-3.5 text-[12px] font-medium transition-colors border-b-2
                   ${active    ? 'border-[#D03839] text-[#D03839] bg-[#FEF0EF]/30'
                   : complete  ? 'border-transparent text-[#0F6E56] hover:bg-[#FAFAF8]'
@@ -1275,9 +1327,11 @@ export default function NewPropertyPage() {
 
           {/* Images Tab */}
           <div className={activeTab === 'images' ? '' : 'hidden'}>
-            <h3 className="text-[15px] font-semibold text-[#1A1816] mb-2">Property Images</h3>
+            <h3 className="text-[15px] font-semibold text-[#1A1816] mb-2">
+              Property Images <span className="text-[#D03839]">*</span>
+            </h3>
             <p className="text-[13px] text-[#737370] mb-6">
-              Upload property images. They will be automatically compressed and uploaded immediately. The first image will be set as the featured image.
+              Upload property images. They will be automatically compressed and uploaded immediately. The first image will be set as the featured image. <span className="font-medium text-[#1A1816]">At least one image is required to continue.</span>
             </p>
             <ImageGalleryManager
               images={imageUploadStatus.images}
@@ -1329,7 +1383,12 @@ export default function NewPropertyPage() {
               </div>
 
               {sellerType === 'owner' && (
-                <div className="rounded border border-[#E8E8E4] bg-[#FAFAF8] p-4">
+                <div>
+                  <p className="text-[13px] font-semibold text-[#1A1816] mb-1.5">
+                    Ownership confirmation <span className="text-[#D03839]">*</span>
+                    <span className="ml-2 font-normal text-[12px] text-[#737370]">Required to continue</span>
+                  </p>
+                  <div className="rounded border border-[#E8E8E4] bg-[#FAFAF8] p-4">
                   <label className="flex items-start gap-3 cursor-pointer">
                     <input
                       type="checkbox"
@@ -1341,6 +1400,7 @@ export default function NewPropertyPage() {
                       I confirm that I am the legal owner of this property and have the authority to list it for sale. I understand that providing false ownership information may result in listing removal and account suspension.
                     </span>
                   </label>
+                  </div>
                 </div>
               )}
 
@@ -1685,6 +1745,7 @@ function AddOnsTab({
   const [promoError, setPromoError] = React.useState(null)
   const [appliedPromo, setAppliedPromo] = React.useState(null)
   const [finalAmount, setFinalAmount] = React.useState(null)
+  const [paymentSuccess, setPaymentSuccess] = React.useState(null)
 
   const toggleAddOn = (id) => {
     setSelectedAddOns(prev => {
@@ -1698,6 +1759,7 @@ function AddOnsTab({
     setAddOnError(null)
     setAppliedPromo(null)
     setFinalAmount(null)
+    setPaymentSuccess(null)
   }
 
   const total = selectedAddOns.reduce((sum, id) => {
@@ -1743,6 +1805,7 @@ function AddOnsTab({
 
     setAddOnLoading(true)
     setAddOnError(null)
+    setPaymentSuccess(null)
     try {
       const res = await fetch('/api/seller/listing-addons', {
         method: 'POST',
@@ -1754,15 +1817,32 @@ function AddOnsTab({
         }),
       })
       const d = await res.json()
-      if (!res.ok) throw new Error(d.error || 'Failed to initialize payment')
+      if (!res.ok) throw new Error(d.error || 'Payment could not be completed')
+
+      // Lifetime-free account — nothing to charge.
       if (d.free) {
         onPublish('active', { skipFeaturedPrompt: true, forceAutoSelectFeatured: true, addOnFlags })
         return
       }
-      setAddOnClientSecret(d.clientSecret)
-      setFinalAmount(d.amount)
+
+      // Saved card charged successfully — show a success message, then publish.
+      if (d.paid) {
+        setPaymentSuccess(`Payment successful — $${(d.amount / 100).toFixed(2)} was charged to your card on file. Publishing your listing…`)
+        onPublish('active', { skipFeaturedPrompt: true, forceAutoSelectFeatured: true, addOnFlags, addonPaymentIntentId: d.paymentIntentId })
+        return
+      }
+
+      // Rare: the card needs extra authentication (e.g. 3-D Secure) — fall back to the
+      // on-session confirmation form just for this case.
+      if (d.requiresAction && d.clientSecret) {
+        setAddOnClientSecret(d.clientSecret)
+        setFinalAmount(d.amount)
+        return
+      }
+
+      throw new Error('Unexpected response from the payment service')
     } catch (err) {
-      setAddOnError(err.message)
+      setAddOnError(err.message || 'Payment failed. Please try again.')
     } finally {
       setAddOnLoading(false)
     }
@@ -2013,8 +2093,8 @@ function AddOnsTab({
                   className={`w-full h-[48px] text-white text-[14px] font-semibold rounded transition-all disabled:opacity-50 flex items-center justify-center gap-2 ${isLifetimeFree ? 'bg-[#0F6E56] hover:bg-[#0D5E49]' : 'bg-[#D03839] hover:bg-[#E0493B]'}`}
                 >
                   {addOnLoading
-                    ? <><span className="animate-spin w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full" />Preparing…</>
-                    : isLifetimeFree ? 'Publish Listing' : 'Proceed to Payment'}
+                    ? <><span className="animate-spin w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full" />Processing payment…</>
+                    : isLifetimeFree ? 'Publish Listing' : `Pay $${(displayTotal / 100).toFixed(2)} with saved card`}
                 </button>
               ) : (
                 <button
@@ -2028,6 +2108,20 @@ function AddOnsTab({
                     : <>Publish for Free <Eye className="w-4 h-4" /></>}
                 </button>
               )}
+            </div>
+          )}
+
+          {/* Payment result messages */}
+          {paymentSuccess && (
+            <div className="px-5 pb-4">
+              <div className="p-3 bg-[#E4F5EC] border border-[#A8DFBA] rounded text-[13px] text-[#0F6E56] font-medium flex items-center gap-2">
+                <Check className="w-4 h-4 flex-shrink-0" />{paymentSuccess}
+              </div>
+            </div>
+          )}
+          {addOnError && !addOnClientSecret && (
+            <div className="px-5 pb-4">
+              <div className="p-3 bg-[#FEF0EF] border border-[#F5C4C0] rounded text-[13px] text-[#D03839]">{addOnError}</div>
             </div>
           )}
 
@@ -2067,10 +2161,6 @@ function AddOnsTab({
             />
           </Elements>
         </div>
-      )}
-
-      {addOnError && !addOnClientSecret && (
-        <div className="p-3 bg-[#FEF0EF] border border-[#F5C4C0] rounded text-[13px] text-[#D03839]">{addOnError}</div>
       )}
 
     </div>

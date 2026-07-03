@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { Resend } from 'resend';
 import { getCallerAccess, requirePermission } from '@/lib/workspace';
+import { maybeProUsageNudge } from '@/lib/proUsageNudge';
 
 // Single shared DB. Service role so we can mutate listings + counter + notify buyers
 // across users (RLS would block these cross-user reads/writes).
@@ -440,6 +441,12 @@ export async function POST(request) {
     if (!counterRes.ok) {
       counterWarning = `Listing counter not updated: ${counterRes.error}`;
       console.error('[listings/actions]', counterWarning);
+    }
+
+    // #5 — Pro plan usage nudge: a slot was just consumed (netDelta > 0). If the
+    // seller is on Pro and at/near their cap, prompt an Enterprise upgrade.
+    if (netDelta > 0 && counterRes.ok && typeof counterRes.to === 'number') {
+      await maybeProUsageNudge(supabase, effectiveSellerId, counterRes.to);
     }
 
     // Notify buyers for each sold property (best-effort, after state is committed).
