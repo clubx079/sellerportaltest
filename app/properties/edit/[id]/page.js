@@ -99,6 +99,9 @@ export default function EditPropertyPage() {
   const TAB_ORDER = ['basic', 'images', 'ownership', 'content', 'seo'];
   const [rejectionReason, setRejectionReason] = useState(null);
   const [userId, setUserId] = useState(null);
+  // Workspace owner id (the property owner) — resolved from /api/team/workspaces.
+  // Team members act under the owner's id, so ownership lookups must use this.
+  const [effectiveSellerId, setEffectiveSellerId] = useState(null);
   const [accessDenied, setAccessDenied] = useState(false);
   const [sourceType, setSourceType] = useState(null); // 'manual' | 'scraped'
   const [tempSellerId, setTempSellerId] = useState(null); // for scraped fetch/save
@@ -170,17 +173,20 @@ export default function EditPropertyPage() {
         .then(ws => {
           const isOwner = !ws?.current?.id || ws?.current?.role === 'admin';
           if (!isOwner && !ws?.current?.permissions?.listings_update) setAccessDenied(true);
+          // The listing is owned by the workspace owner — every ownership query below
+          // keys off this, not the raw logged-in user id (which breaks for members).
+          setEffectiveSellerId(ws?.current?.effectiveSellerId || user.id);
         })
-        .catch(() => {});
+        .catch(() => setEffectiveSellerId(user.id));
     }
   }, []);
 
   useEffect(() => {
-    if (userId && id) {
+    if (effectiveSellerId && id) {
       fetchProperty();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId, id]);
+  }, [effectiveSellerId, id]);
 
   // Load seller plan + team members for the enterprise contact-picker.
   // One round-trip via /api/team (it already returns isEnterprise + members),
@@ -229,7 +235,7 @@ export default function EditPropertyPage() {
           )
         `)
         .eq('id', id)
-        .eq('seller_id', userId)
+        .eq('seller_id', effectiveSellerId)
         .maybeSingle();
 
       if (manualError) throw manualError;
@@ -322,7 +328,7 @@ export default function EditPropertyPage() {
       const { data: sellerRow } = await supabase
         .from('seller_applications')
         .select('temp_seller_id')
-        .eq('id', userId)
+        .eq('id', effectiveSellerId)
         .maybeSingle();
 
       const tsid = sellerRow?.temp_seller_id;
@@ -739,7 +745,7 @@ export default function EditPropertyPage() {
         .from('properties')
         .update(saveData)
         .eq('id', id)
-        .eq('seller_id', userId)
+        .eq('seller_id', effectiveSellerId)
         .select()
         .single();
 
