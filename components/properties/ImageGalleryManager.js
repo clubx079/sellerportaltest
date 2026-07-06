@@ -69,15 +69,16 @@ export default function ImageGalleryManager({ images = [], onImagesChange, selle
       // Wait a frame for state to update
       await new Promise(resolve => setTimeout(resolve, 10));
 
-      // Convert HEIC if needed
+      // Convert HEIC → JPEG in the BROWSER (heic2any). This previously POSTed each HEIC
+      // to /api/convert-heic; under many concurrent large uploads those requests arrived
+      // truncated and the server threw "input buffer is not a HEIC image", failing every
+      // photo. Converting client-side removes the server round-trip (and its load) entirely.
       let uploadFile = image.file
       if (checkHeic(image.file)) {
-        const fd = new FormData()
-        fd.append('file', image.file)
-        const heicRes = await fetch('/api/convert-heic', { method: 'POST', body: fd })
-        if (!heicRes.ok) throw new Error('HEIC conversion failed')
-        const blob = await heicRes.blob()
-        uploadFile = new File([blob], image.file.name.replace(/\.(heic|heif)$/i, '.jpg'), { type: 'image/jpeg' })
+        const heic2any = (await import('heic2any')).default
+        const converted = await heic2any({ blob: image.file, toType: 'image/jpeg', quality: 0.85 })
+        const jpegBlob = Array.isArray(converted) ? converted[0] : converted
+        uploadFile = new File([jpegBlob], image.file.name.replace(/\.(heic|heif)$/i, '.jpg'), { type: 'image/jpeg' })
       }
 
       // Compress image
