@@ -271,7 +271,11 @@ export default function NewPropertyPage() {
   const NEG_VALUE_MSGS = {
     price: "Price can't be negative. Please enter a positive amount.",
     floor_area: "Floor area can't be negative. Please enter a positive number.",
+    bedrooms: "Beds can't be negative. Please enter a positive number.",
+    bathrooms: "Baths can't be negative. Please enter a positive number.",
   };
+  // Beds are whole-number only; flag a decimal the same way we flag negatives.
+  const BEDS_WHOLE_MSG = "Beds must be a whole number (e.g. 2 or 3, not 2.5).";
 
   const handleInputChange = (field, value) => {
     setFormData(prev => ({
@@ -282,11 +286,13 @@ export default function NewPropertyPage() {
 
     // Instant feedback: flag a negative Price or Floor Area the moment it's entered,
     // and clear our own message as soon as the value becomes valid again.
-    if (field === 'price' || field === 'floor_area') {
+    if (field === 'price' || field === 'floor_area' || field === 'bedrooms' || field === 'bathrooms') {
       const num = parseFloat(value);
       if (Number.isFinite(num) && num < 0) {
         setError(NEG_VALUE_MSGS[field]);
-      } else if (Object.values(NEG_VALUE_MSGS).includes(error)) {
+      } else if (field === 'bedrooms' && Number.isFinite(num) && !Number.isInteger(num)) {
+        setError(BEDS_WHOLE_MSG);
+      } else if (Object.values(NEG_VALUE_MSGS).includes(error) || error === BEDS_WHOLE_MSG) {
         setError(null);
       }
     }
@@ -435,6 +441,9 @@ export default function NewPropertyPage() {
       if (!formData.property_type) { setError('Please select a property type.'); return; }
       if (!formData.bedrooms)      { setError('Please enter the number of bedrooms.'); return; }
       if (!formData.bathrooms)     { setError('Please enter the number of bathrooms.'); return; }
+      if (parseFloat(formData.bedrooms) < 0)  { setError(NEG_VALUE_MSGS.bedrooms); return; }
+      if (formData.bedrooms && !Number.isInteger(parseFloat(formData.bedrooms))) { setError(BEDS_WHOLE_MSG); return; }
+      if (parseFloat(formData.bathrooms) < 0) { setError(NEG_VALUE_MSGS.bathrooms); return; }
       if (!formData.floor_area)    { setError('Please enter the floor area.'); return; }
       if (parseFloat(formData.price) < 0)      { setError(NEG_VALUE_MSGS.price); return; }
       if (parseFloat(formData.floor_area) < 0) { setError(NEG_VALUE_MSGS.floor_area); return; }
@@ -1196,18 +1205,26 @@ export default function NewPropertyPage() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-[13px] font-semibold text-[#1A1816] mb-2">Beds <span className="text-[#D03839]">*</span></label>
-                  <PropertySelect
+                  <input
+                    type="number"
+                    min="0"
+                    step="1"
                     value={formData.bedrooms || ''}
-                    onChange={(v) => handleInputChange('bedrooms', v)}
-                    options={[{ value: '', label: 'Select' }, ...[1,2,3,4].map(n => ({ value: n, label: String(n) })), { value: '5', label: '5+' }]}
+                    onChange={(e) => handleInputChange('bedrooms', e.target.value)}
+                    className="w-full px-4 py-3 border border-[#E8E8E4] rounded focus:border-[#D03839] focus:outline-none transition-colors text-[13px] text-[#1A1816] placeholder:text-[#A8A8A4]"
+                    placeholder="e.g. 3"
                   />
                 </div>
                 <div>
                   <label className="block text-[13px] font-semibold text-[#1A1816] mb-2">Baths <span className="text-[#D03839]">*</span></label>
-                  <PropertySelect
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.5"
                     value={formData.bathrooms || ''}
-                    onChange={(v) => handleInputChange('bathrooms', v)}
-                    options={[{ value: '', label: 'Select' }, ...[1,1.5,2,2.5,3,3.5,4,4.5].map(n => ({ value: n, label: String(n) })), { value: '5', label: '5+' }]}
+                    onChange={(e) => handleInputChange('bathrooms', e.target.value)}
+                    className="w-full px-4 py-3 border border-[#E8E8E4] rounded focus:border-[#D03839] focus:outline-none transition-colors text-[13px] text-[#1A1816] placeholder:text-[#A8A8A4]"
+                    placeholder="e.g. 2 or 2.5"
                   />
                 </div>
                 <div>
