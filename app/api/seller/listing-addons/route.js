@@ -102,28 +102,80 @@ export async function POST(request) {
 
     if (!customerId) return NextResponse.json({ error: 'No Stripe customer found for this seller' }, { status: 404 })
 
-    const paymentIntent = await stripe.paymentIntents.create({
-      amount,
-      currency: 'usd',
-      customer: customerId,
-      automatic_payment_methods: { enabled: true },
-      metadata: {
-        seller_id,
-        property_id: property_id || '',
-        add_ons: validAddOns.join(','),
-        original_amount: String(baseAmount),
-        discount_amount: String(baseAmount - amount),
-        ...(promo_code_id ? { promo_code_id } : {}),
-      },
-    })
+    // Use the card already on file (saved during the subscription purchase) so the
+    // seller is never asked to re-enter card details. Resolve the default payment method.
+    let paymentMethodId = null
+    try {
+      const customer = await stripe.customers.retrieve(customerId)
+      if (customer && !customer.deleted) {
+        paymentMethodId = customer.invoice_settings?.default_payment_method || null
+      }
+    } catch (e) {
+      console.error('[listing-addons] customer retrieve failed:', e?.message)
+    }
+    if (!paymentMethodId) {
+      const pms = await stripe.paymentMethods.list({ customer: customerId, type: 'card', limit: 1 })
+      paymentMethodId = pms.data[0]?.id || null
+    }
+    if (!paymentMethodId) {
+      return NextResponse.json(
+        { error: 'No saved card on file. Please add a payment method on the Billing page, then try again.' },
+        { status: 409 }
+      )
+    }
 
-    return NextResponse.json({
-      clientSecret: paymentIntent.client_secret,
-      amount,
-      baseAmount,
-      discountInfo,
-      add_ons: validAddOns,
-    })
+    const metadata = {
+      seller_id,
+      property_id: property_id || '',
+      add_ons: validAddOns.join(','),
+      original_amount: String(baseAmount),
+      discount_amount: String(baseAmount - amount),
+      ...(promo_code_id ? { promo_code_id } : {}),
+    }
+
+    // Charge the saved card immediately (off-session, confirmed in one step).
+    // This avoids the old flow that created an unconfirmed PaymentIntent and showed
+    // a blank card form, which left "Incomplete" PaymentIntents piling up in Stripe.
+    try {
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount,
+        currency: 'usd',
+        customer: customerId,
+        payment_method: paymentMethodId,
+        off_session: true,
+        confirm: true,
+        metadata,
+      })
+
+      if (paymentIntent.status === 'succeeded') {
+        return NextResponse.json({
+          paid: true,
+          paymentIntentId: paymentIntent.id,
+          amount, baseAmount, discountInfo, add_ons: validAddOns,
+        })
+      }
+
+      // Needs extra authentication (e.g. 3-D Secure) — hand the client a secret to finish on-session.
+      return NextResponse.json({
+        requiresAction: true,
+        clientSecret: paymentIntent.client_secret,
+        paymentIntentId: paymentIntent.id,
+        amount, baseAmount, discountInfo, add_ons: validAddOns,
+      })
+    } catch (err) {
+      // off-session charge needs interactive authentication → fall back to on-session confirm.
+      const pi = err?.raw?.payment_intent
+      if (err?.code === 'authentication_required' && pi?.client_secret) {
+        return NextResponse.json({
+          requiresAction: true,
+          clientSecret: pi.client_secret,
+          paymentIntentId: pi.id,
+          amount, baseAmount, discountInfo, add_ons: validAddOns,
+        })
+      }
+      const msg = err?.raw?.message || err?.message || 'Your card was declined.'
+      return NextResponse.json({ error: `Payment failed: ${msg}` }, { status: 402 })
+    }
   } catch (err) {
     console.error('[listing-addons]', err)
     return NextResponse.json({ error: err.message || 'Internal server error' }, { status: 500 })

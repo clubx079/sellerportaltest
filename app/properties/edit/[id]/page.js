@@ -99,6 +99,9 @@ export default function EditPropertyPage() {
   const TAB_ORDER = ['basic', 'images', 'ownership', 'content', 'seo'];
   const [rejectionReason, setRejectionReason] = useState(null);
   const [userId, setUserId] = useState(null);
+  // Workspace owner id (the property owner) — resolved from /api/team/workspaces.
+  // Team members act under the owner's id, so ownership lookups must use this.
+  const [effectiveSellerId, setEffectiveSellerId] = useState(null);
   const [accessDenied, setAccessDenied] = useState(false);
   const [sourceType, setSourceType] = useState(null); // 'manual' | 'scraped'
   const [tempSellerId, setTempSellerId] = useState(null); // for scraped fetch/save
@@ -170,17 +173,20 @@ export default function EditPropertyPage() {
         .then(ws => {
           const isOwner = !ws?.current?.id || ws?.current?.role === 'admin';
           if (!isOwner && !ws?.current?.permissions?.listings_update) setAccessDenied(true);
+          // The listing is owned by the workspace owner — every ownership query below
+          // keys off this, not the raw logged-in user id (which breaks for members).
+          setEffectiveSellerId(ws?.current?.effectiveSellerId || user.id);
         })
-        .catch(() => {});
+        .catch(() => setEffectiveSellerId(user.id));
     }
   }, []);
 
   useEffect(() => {
-    if (userId && id) {
+    if (effectiveSellerId && id) {
       fetchProperty();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId, id]);
+  }, [effectiveSellerId, id]);
 
   // Load seller plan + team members for the enterprise contact-picker.
   // One round-trip via /api/team (it already returns isEnterprise + members),
@@ -229,7 +235,7 @@ export default function EditPropertyPage() {
           )
         `)
         .eq('id', id)
-        .eq('seller_id', userId)
+        .eq('seller_id', effectiveSellerId)
         .maybeSingle();
 
       if (manualError) throw manualError;
@@ -322,7 +328,7 @@ export default function EditPropertyPage() {
       const { data: sellerRow } = await supabase
         .from('seller_applications')
         .select('temp_seller_id')
-        .eq('id', userId)
+        .eq('id', effectiveSellerId)
         .maybeSingle();
 
       const tsid = sellerRow?.temp_seller_id;
@@ -441,12 +447,30 @@ export default function EditPropertyPage() {
     });
   }, [sellerProfileContact.name, sellerProfileContact.phone]);
 
+  // Plain-English messages for negative numeric fields (shown instantly as the user types).
+  const NEG_VALUE_MSGS = {
+    price: "Price can't be negative. Please enter a positive amount.",
+    floor_area: "Floor area can't be negative. Please enter a positive number.",
+    bedrooms: "Beds can't be negative. Please enter a positive number.",
+    bathrooms: "Baths can't be negative. Please enter a positive number.",
+  };
+  // Beds are whole-number only; flag a decimal the same way we flag negatives.
+  const BEDS_WHOLE_MSG = "Beds must be a whole number (e.g. 2 or 3, not 2.5).";
+
   const handleInputChange = (field, value) => {
     setFormData(prev => ({
       ...prev,
       [field]: value
     }));
     setDirty(true);
+    // Instant feedback: flag a negative Price / Floor Area / Beds / Baths the moment
+    // it's entered, and clear our own message once the value is valid again.
+    if (field === 'price' || field === 'floor_area' || field === 'bedrooms' || field === 'bathrooms') {
+      const num = parseFloat(value);
+      if (Number.isFinite(num) && num < 0) setError(NEG_VALUE_MSGS[field]);
+      else if (field === 'bedrooms' && Number.isFinite(num) && !Number.isInteger(num)) setError(BEDS_WHOLE_MSG);
+      else if (Object.values(NEG_VALUE_MSGS).includes(error) || error === BEDS_WHOLE_MSG) setError(null);
+    }
   };
 
   const handleAddressSelect = (addressData) => {
@@ -508,6 +532,11 @@ export default function EditPropertyPage() {
         setError('Please enter the number of baths.');
         return false;
       }
+      if (parseFloat(formData.price) < 0)      { setError(NEG_VALUE_MSGS.price); return false; }
+      if (parseFloat(formData.floor_area) < 0) { setError(NEG_VALUE_MSGS.floor_area); return false; }
+      if (parseFloat(formData.bedrooms) < 0)  { setError(NEG_VALUE_MSGS.bedrooms); return false; }
+      if (formData.bedrooms && !Number.isInteger(parseFloat(formData.bedrooms))) { setError(BEDS_WHOLE_MSG); return false; }
+      if (parseFloat(formData.bathrooms) < 0) { setError(NEG_VALUE_MSGS.bathrooms); return false; }
       if (!formData.floor_area) {
         setError('Please enter the floor area.');
         return false;
@@ -739,7 +768,7 @@ export default function EditPropertyPage() {
         .from('properties')
         .update(saveData)
         .eq('id', id)
-        .eq('seller_id', userId)
+        .eq('seller_id', effectiveSellerId)
         .select()
         .single();
 
@@ -1182,6 +1211,7 @@ export default function EditPropertyPage() {
                   <label className="block text-sm font-semibold text-neutral-700 mb-2">Price ($)</label>
                   <input
                     type="number"
+                    min="0"
                     value={formData.price || ''}
                     onChange={(e) => handleInputChange('price', e.target.value)}
                     className="w-full px-4 py-3 border-2 border-neutral-200 rounded focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all text-sm"
@@ -1205,19 +1235,27 @@ export default function EditPropertyPage() {
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-[13px] font-semibold text-[#1A1816] mb-2">Beds</label>
-                  <PropertySelect
+                  <label className="block text-sm font-semibold text-neutral-700 mb-2">Beds</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="1"
                     value={formData.bedrooms || ''}
-                    onChange={(v) => handleInputChange('bedrooms', v)}
-                    options={[{ value: '', label: 'Select' }, ...[1,2,3,4].map(n => ({ value: n, label: String(n) })), { value: '5', label: '5+' }]}
+                    onChange={(e) => handleInputChange('bedrooms', e.target.value)}
+                    className="w-full px-4 py-3 border-2 border-neutral-200 rounded focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all text-sm"
+                    placeholder="e.g. 3"
                   />
                 </div>
                 <div>
-                  <label className="block text-[13px] font-semibold text-[#1A1816] mb-2">Baths</label>
-                  <PropertySelect
+                  <label className="block text-sm font-semibold text-neutral-700 mb-2">Baths</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.5"
                     value={formData.bathrooms || ''}
-                    onChange={(v) => handleInputChange('bathrooms', v)}
-                    options={[{ value: '', label: 'Select' }, ...[1,1.5,2,2.5,3,3.5,4,4.5].map(n => ({ value: n, label: String(n) })), { value: '5', label: '5+' }]}
+                    onChange={(e) => handleInputChange('bathrooms', e.target.value)}
+                    className="w-full px-4 py-3 border-2 border-neutral-200 rounded focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all text-sm"
+                    placeholder="e.g. 2 or 2.5"
                   />
                 </div>
                 <div>
