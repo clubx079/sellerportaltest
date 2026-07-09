@@ -3,6 +3,7 @@ import Stripe from 'stripe'
 import { createClient } from '@supabase/supabase-js'
 import { Resend } from 'resend'
 import crypto from 'crypto'
+import { enrollAutomation } from '@/lib/enrollAutomation'
 
 const FROM = process.env.RESEND_FROM_EMAIL || 'DeelMap <notifications@deelmap.com>'
 const SELLER_URL = (process.env.NEXT_PUBLIC_SELLER_PORTAL_URL || 'https://sell.deelmap.com').replace(/\/$/, '')
@@ -135,6 +136,22 @@ export async function POST(request) {
 
     // #6 — one-time cancellation follow-up email (best-effort; never blocks the cancel)
     await sendCancellationFollowup(supabase, seller_id, plan)
+
+    // Also enroll into the admin dynamic follow-up engine (#5 subscription_canceled).
+    // No-op until ADMIN_AUTOMATIONS_URL is configured — safe to ship pre-cutover.
+    try {
+      const { data: sa } = await supabase.from('seller_applications').select('email').eq('id', seller_id).maybeSingle()
+      if (sa?.email) await enrollAutomation('subscription_canceled', seller_id, {
+        seller_id, email: sa.email, subscription_id: plan.stripe_subscription_id,
+        period_end: plan.current_period_end
+          ? new Date(plan.current_period_end).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+          : '',
+        manage_url: `${SELLER_URL}/billing`,
+        feedback_url: feedbackUrl({ uid: seller_id, type: 'seller', source: 'cancellation' }),
+      })
+    } catch (e) {
+      console.error('[plan/cancel] enroll error:', e?.message)
+    }
 
     return NextResponse.json({
       success: true,
