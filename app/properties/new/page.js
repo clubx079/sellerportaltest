@@ -743,6 +743,9 @@ export default function NewPropertyPage() {
           .update({ listings_used_this_period: (trialPlan.listings_used_this_period ?? 0) + 1 })
           .eq('seller_id', sellerId);
         setTrialPlan(prev => prev ? { ...prev, listings_used_this_period: (prev.listings_used_this_period ?? 0) + 1 } : prev);
+        // #5 Pro-plan usage nudge fires server-side after AI moderation approves the
+        // listing to 'active' (see lib/moderateSellerProperty.js) — not here, because
+        // the listing is still 'under_review' at this point and wouldn't count yet.
       }
 
       // Apply add-on flags if paid — use addOnFlags from options directly (not state,
