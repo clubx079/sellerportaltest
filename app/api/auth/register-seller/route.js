@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { hashPassword } from '@/lib/password'
 import { createClient } from '@supabase/supabase-js'
 import { emailSellerWelcome, sendSellerEmail } from '@/lib/sellerEmail'
+import { enrollAutomation } from '@/lib/enrollAutomation'
 
 const getSupabase = () =>
   createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY)
@@ -98,13 +99,18 @@ export async function POST(request) {
       }
     }
 
-    // Welcome email — fire and forget so a Resend hiccup never blocks signup
+    // Welcome — instant + tracked via the automation engine; falls back to a
+    // direct send if the engine is unreachable, so a welcome always goes out.
     ;(async () => {
+      const to = email.trim().toLowerCase()
       try {
-        const { subject, html } = emailSellerWelcome({ name: contact_person_name, email: email.trim().toLowerCase() })
-        await sendSellerEmail({ to: email.trim().toLowerCase(), subject, html })
+        const r = await enrollAutomation('seller_welcome', seller.id,
+          { seller_id: seller.id, name: contact_person_name, email: to }, { immediate: true })
+        if (r && r.sent > 0) return   // engine sent it (and recorded analytics)
+        const { subject, html } = emailSellerWelcome({ name: contact_person_name, email: to })
+        await sendSellerEmail({ to, subject, html })
       } catch (e) {
-        console.error('[register-seller] welcome email failed:', e?.message || e)
+        console.error('[register-seller] welcome failed:', e?.message || e)
       }
     })()
 
