@@ -41,7 +41,7 @@ export async function POST(request) {
         )
         await supabase
           .from('seller_applications')
-          .update({ phone })
+          .update({ phone, phone_verified: true })
           .eq('id', seller_id)
       } catch (dbErr) {
         console.error('[seller verify-otp] failed to save phone:', dbErr)
