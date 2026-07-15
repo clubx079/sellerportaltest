@@ -16,6 +16,10 @@ test('register-seller does not trigger the welcome at signup', () => {
   assert.ok(!/emailSellerWelcome/.test(src), 'must not send the welcome directly')
 })
 
-test('register-seller accepts a phone field', () => {
-  assert.match(src, /phone/, 'handler should destructure/accept phone from the body')
+test('register-seller destructures phone from the request body', () => {
+  assert.match(
+    src,
+    /const\s*\{[^}]*\bphone\b[^}]*\}\s*=\s*await\s+request\.json\(\)/,
+    'handler should destructure phone from the JSON request body',
+  )
 })
