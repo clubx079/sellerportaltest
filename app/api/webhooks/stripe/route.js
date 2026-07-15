@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { createClient } from '@supabase/supabase-js'
+import { enrollAutomation } from '@/lib/enrollAutomation'
 import {
   emailPaymentReceipt,
   emailPaymentFailed,
@@ -230,6 +231,20 @@ export async function POST(request) {
           .from('seller_applications')
           .update({ status: 'approved' })
           .eq('id', seller_id)
+
+        // Welcome backstop — covers the case where the client-side activate call
+        // didn't run (e.g. the tab was closed after payment). Engine-only; the
+        // welcome:{{seller_id}} dedup key makes this a no-op if activate already sent it.
+        try {
+          const s = await getSeller(supabase, seller_id)
+          await enrollAutomation('seller_welcome', seller_id, {
+            seller_id,
+            name: s?.contact_person_name || '',
+            email: s?.email || '',
+          }, { immediate: true })
+        } catch (e) {
+          console.error('[stripe.subscription.created] welcome enroll failed:', e?.message || e)
+        }
 
         // ── Subscription confirmation email ──
         try {
