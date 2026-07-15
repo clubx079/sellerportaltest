@@ -250,6 +250,10 @@ function StepVerify({ onNext }) {
             className="w-full h-[46px] bg-[#D03839] hover:bg-[#E0493B] text-white text-[14px] font-semibold rounded transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
             {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <>Verify <ChevronRight className="w-4 h-4" /></>}
           </button>
+          <button onClick={sendOtp} disabled={loading}
+            className="w-full text-center text-[13px] text-[#D03839] font-medium hover:underline transition-colors disabled:opacity-50">
+            Resend code
+          </button>
           <button onClick={() => { setSent(false); setOtp(''); setError('') }}
             className="w-full text-center text-[13px] text-[#737370] hover:text-[#1A1816] transition-colors">
             Use a different method

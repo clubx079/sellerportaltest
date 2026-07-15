@@ -232,18 +232,19 @@ export async function POST(request) {
           .update({ status: 'approved' })
           .eq('id', seller_id)
 
-        // Welcome backstop — covers the case where the client-side activate call
-        // didn't run (e.g. the tab was closed after payment). Engine-only; the
-        // welcome:{{seller_id}} dedup key makes this a no-op if activate already sent it.
-        try {
-          const s = await getSeller(supabase, seller_id)
-          await enrollAutomation('seller_welcome', seller_id, {
-            seller_id,
-            name: s?.contact_person_name || '',
-            email: s?.email || '',
-          }, { immediate: true })
-        } catch (e) {
-          console.error('[stripe.subscription.created] welcome enroll failed:', e?.message || e)
+        // Welcome backstop — only once the plan is genuinely active (trial counts).
+        // Skip 'incomplete' (no-trial subs arrive here pre-payment). Deduped by welcome:{seller_id}.
+        if (sub.status === 'trialing' || sub.status === 'active') {
+          try {
+            const s = await getSeller(supabase, seller_id)
+            await enrollAutomation('seller_welcome', seller_id, {
+              seller_id,
+              name: s?.contact_person_name || '',
+              email: s?.email || '',
+            }, { immediate: true })
+          } catch (e) {
+            console.error('[stripe.subscription.created] welcome enroll failed:', e?.message || e)
+          }
         }
 
         // ── Subscription confirmation email ──
@@ -335,6 +336,22 @@ export async function POST(request) {
               await sendSellerEmail({ to: seller.email, subject: t.subject, html: t.html })
             }
           } catch (e) { console.error('[stripe.subscription.updated] trial-converted email failed:', e?.message || e) }
+        }
+
+        // Welcome backstop for the no-trial path: subscription just went
+        // incomplete -> active (payment confirmed) and the client-side activate
+        // call may not have run. Deduped by welcome:{seller_id}.
+        if (newStatus === 'active' && existingPlan?.status === 'incomplete' && existingPlan?.seller_id) {
+          try {
+            const s = await getSeller(supabase, existingPlan.seller_id)
+            await enrollAutomation('seller_welcome', existingPlan.seller_id, {
+              seller_id: existingPlan.seller_id,
+              name: s?.contact_person_name || '',
+              email: s?.email || '',
+            }, { immediate: true })
+          } catch (e) {
+            console.error('[stripe.subscription.updated] welcome enroll failed:', e?.message || e)
+          }
         }
 
         break
