@@ -196,7 +196,7 @@ function StepVerify({ onNext }) {
       const res = await fetch('/api/auth/verify-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: session.email, otp, phone: session.phone }),
+        body: JSON.stringify({ email: session.email, otp }),
       })
       const data = await res.json()
       if (!res.ok) { setError(data.error || 'Invalid code'); setLoading(false); return }
