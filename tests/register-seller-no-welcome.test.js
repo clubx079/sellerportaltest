@@ -23,3 +23,8 @@ test('register-seller destructures phone from the request body', () => {
     'handler should destructure phone from the JSON request body',
   )
 })
+
+test('register-seller writes nothing to the DB — it only stashes the pending signup', () => {
+  assert.ok(!/\.insert\(/.test(src), 'must not insert any row before verification')
+  assert.ok(/setPendingSignup/.test(src), 'must stash the pending signup instead of persisting it')
+})

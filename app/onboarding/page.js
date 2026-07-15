@@ -92,7 +92,8 @@ function StepAccount({ onNext }) {
       })
       const data = await res.json()
       if (!res.ok) { setError(data.error || 'Something went wrong'); setLoading(false); return }
-      sessionStorage.setItem('onboarding', JSON.stringify({ seller_id: data.seller_id, email: form.email, phone: form.phone }))
+      // No account is created yet — the seller_id comes back after verification.
+      sessionStorage.setItem('onboarding', JSON.stringify({ email: form.email, phone: form.phone }))
       onNext()
     } catch { setError('Something went wrong. Please try again.') }
     setLoading(false)
@@ -195,10 +196,12 @@ function StepVerify({ onNext }) {
       const res = await fetch('/api/auth/verify-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: session.email, otp, seller_id: session.seller_id, phone: session.phone }),
+        body: JSON.stringify({ email: session.email, otp, phone: session.phone }),
       })
       const data = await res.json()
       if (!res.ok) { setError(data.error || 'Invalid code'); setLoading(false); return }
+      // Verification created the account — persist the seller_id for steps 3–4.
+      sessionStorage.setItem('onboarding', JSON.stringify({ ...session, seller_id: data.seller_id }))
       onNext()
     } catch { setError('Something went wrong') }
     setLoading(false)
