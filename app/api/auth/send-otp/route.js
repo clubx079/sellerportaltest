@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { sendSellerEmail, emailVerificationCodeOnboarding } from '@/lib/sellerEmail'
 
 let otpStore = new Map()
 if (typeof global !== 'undefined') {
@@ -17,10 +18,28 @@ if (typeof global !== 'undefined' && !global.sellerOtpCleanupInterval) {
 
 export async function POST(request) {
   try {
-    const { phone, email } = await request.json()
+    const { phone, email, channel = 'sms' } = await request.json()
 
-    if (!phone || !email) {
-      return NextResponse.json({ error: 'Phone and email are required' }, { status: 400 })
+    if (!email) {
+      return NextResponse.json({ error: 'Email is required' }, { status: 400 })
+    }
+
+    const otp = Math.floor(100000 + Math.random() * 900000).toString()
+
+    // ── Email channel ──────────────────────────────────────────────
+    if (channel === 'email') {
+      otpStore.set(email, { otp, expires: Date.now() + 10 * 60 * 1000 })
+      const { subject, html } = emailVerificationCodeOnboarding({ code: otp })
+      const ok = await sendSellerEmail({ to: email, subject, html })
+      if (!ok) {
+        return NextResponse.json({ error: 'Failed to send verification code' }, { status: 500 })
+      }
+      return NextResponse.json({ success: true })
+    }
+
+    // ── SMS channel (default) ──────────────────────────────────────
+    if (!phone) {
+      return NextResponse.json({ error: 'Phone is required' }, { status: 400 })
     }
 
     const digits = phone.replace(/\D/g, '')
@@ -32,7 +51,6 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Invalid phone number format' }, { status: 400 })
     }
 
-    const otp = Math.floor(100000 + Math.random() * 900000).toString()
     otpStore.set(email, { otp, expires: Date.now() + 10 * 60 * 1000 })
 
     const smsResponse = await fetch('https://app.airophone.com/api/external/sms/send', {
