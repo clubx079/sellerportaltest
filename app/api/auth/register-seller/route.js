@@ -1,8 +1,6 @@
 import { NextResponse } from 'next/server'
 import { hashPassword } from '@/lib/password'
 import { createClient } from '@supabase/supabase-js'
-import { emailSellerWelcome, sendSellerEmail } from '@/lib/sellerEmail'
-import { enrollAutomation } from '@/lib/enrollAutomation'
 
 const getSupabase = () =>
   createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY)
@@ -20,7 +18,10 @@ function getClientIP(request) {
 export async function POST(request) {
   const supabase = getSupabase()
   try {
-    const { first_name, last_name, email, password } = await request.json()
+    // phone is accepted from step 1 but intentionally NOT persisted here — it is
+    // written only on successful verification (see verify-otp), which is what makes
+    // the seller_no_plan cron target "verified, no plan".
+    const { first_name, last_name, email, password, phone } = await request.json()
 
     if (!first_name || !last_name || !email || !password) {
       return NextResponse.json({ error: 'All fields are required' }, { status: 400 })
@@ -98,21 +99,6 @@ export async function POST(request) {
         }).catch(() => {})
       }
     }
-
-    // Welcome — instant + tracked via the automation engine; falls back to a
-    // direct send if the engine is unreachable, so a welcome always goes out.
-    ;(async () => {
-      const to = email.trim().toLowerCase()
-      try {
-        const r = await enrollAutomation('seller_welcome', seller.id,
-          { seller_id: seller.id, name: contact_person_name, email: to }, { immediate: true })
-        if (r && r.sent > 0) return   // engine sent it (and recorded analytics)
-        const { subject, html } = emailSellerWelcome({ name: contact_person_name, email: to })
-        await sendSellerEmail({ to, subject, html })
-      } catch (e) {
-        console.error('[register-seller] welcome failed:', e?.message || e)
-      }
-    })()
 
     return NextResponse.json({ seller_id: seller.id })
   } catch (err) {
