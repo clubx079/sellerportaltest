@@ -67,8 +67,10 @@ export async function POST(request) {
     })
 
     if (!smsResponse.ok) {
-      const err = await smsResponse.json()
-      console.error('[seller send-otp] SMS error:', err)
+      // airophone/Telnyx can return a non-JSON error body; read as text so a parse
+      // failure can't turn a delivery error into an opaque "Internal server error".
+      const errText = await smsResponse.text().catch(() => '')
+      console.error('[seller send-otp] SMS error:', smsResponse.status, errText)
       return NextResponse.json({ error: 'Failed to send verification code' }, { status: 500 })
     }
 
