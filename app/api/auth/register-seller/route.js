@@ -1,8 +1,7 @@
 import { NextResponse } from 'next/server'
 import { hashPassword } from '@/lib/password'
 import { createClient } from '@supabase/supabase-js'
-import { emailSellerWelcome, sendSellerEmail } from '@/lib/sellerEmail'
-import { enrollAutomation } from '@/lib/enrollAutomation'
+import { setPendingSignup } from '@/lib/pendingSignupStore'
 
 const getSupabase = () =>
   createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY)
@@ -20,7 +19,11 @@ function getClientIP(request) {
 export async function POST(request) {
   const supabase = getSupabase()
   try {
-    const { first_name, last_name, email, password } = await request.json()
+    // phone is accepted from step 1 but NOTHING is written to the database here.
+    // register-seller only validates + stashes the pending signup; the
+    // seller_applications row is created only after the OTP is verified (see
+    // verify-otp). That is what keeps unverified people out of the DB entirely.
+    const { first_name, last_name, email, password, phone } = await request.json()
 
     if (!first_name || !last_name || !email || !password) {
       return NextResponse.json({ error: 'All fields are required' }, { status: 400 })
@@ -30,91 +33,33 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Password must be at least 8 characters' }, { status: 400 })
     }
 
-    // Check if email already exists
+    const normalizedEmail = email.trim().toLowerCase()
+
+    // Reject only if a REAL (already-created) account exists. A leftover
+    // 'onboarding' row — a prior verified-but-unfinished signup — is allowed to
+    // continue; verify-otp will update it rather than duplicate it.
     const { data: existing } = await supabase
       .from('seller_applications')
       .select('id, status')
-      .eq('email', email.trim().toLowerCase())
+      .eq('email', normalizedEmail)
       .maybeSingle()
 
-    if (existing) {
-      if (existing.status === 'onboarding') {
-        return NextResponse.json({ seller_id: existing.id, resumed: true })
-      }
+    if (existing && existing.status !== 'onboarding') {
       return NextResponse.json({ error: 'An account with this email already exists.' }, { status: 409 })
     }
 
-    // Create seller_applications row
-    const contact_person_name = `${first_name} ${last_name}`
-    const clientIP = getClientIP(request)
-    const baseRow = {
-      contact_person_name,
-      email: email.trim().toLowerCase(),
-      password: await hashPassword(password),
-      phone: '',
-      business_name: contact_person_name,
-      business_type: 'individual',
-      deals_per_month: 'not_specified',
-      primary_markets: '',
-      property_types: [],
-      description: '',
-      status: 'onboarding',
-    }
+    // Stash the pending signup server-side (password hashed) until verification.
+    // No DB write yet.
+    setPendingSignup(normalizedEmail, {
+      contact_person_name: `${first_name} ${last_name}`,
+      email: normalizedEmail,
+      password_hash: await hashPassword(password),
+      phone: typeof phone === 'string' ? phone : '',
+      ref_code: request.cookies.get('deelmap_ref')?.value || null,
+      ip_address: getClientIP(request),
+    })
 
-    let { data: seller, error } = await supabase
-      .from('seller_applications')
-      .insert({ ...baseRow, ip_address: clientIP || null })
-      .select('id')
-      .single()
-
-    // Fallback if ip_address column doesn't exist yet (migration not run)
-    if (error && /ip_address/i.test(error.message || '')) {
-      ;({ data: seller, error } = await supabase
-        .from('seller_applications')
-        .insert(baseRow)
-        .select('id')
-        .single())
-    }
-
-    if (error) {
-      console.error('[register-seller]', error)
-      return NextResponse.json({ error: 'Failed to create account' }, { status: 500 })
-    }
-
-    // Link referral attribution — check for ref cookie set by middleware
-    const refCookie = request.cookies.get('deelmap_ref')?.value
-    if (refCookie) {
-      const { data: linkRef } = await supabase
-        .from('link_referrals')
-        .select('referrer_id')
-        .eq('ref_code', refCookie.toUpperCase())
-        .maybeSingle()
-
-      if (linkRef && linkRef.referrer_id !== seller.id) {
-        await supabase.from('link_referral_signups').insert({
-          ref_code: refCookie.toUpperCase(),
-          referrer_id: linkRef.referrer_id,
-          referred_id: seller.id,
-        }).catch(() => {})
-      }
-    }
-
-    // Welcome — instant + tracked via the automation engine; falls back to a
-    // direct send if the engine is unreachable, so a welcome always goes out.
-    ;(async () => {
-      const to = email.trim().toLowerCase()
-      try {
-        const r = await enrollAutomation('seller_welcome', seller.id,
-          { seller_id: seller.id, name: contact_person_name, email: to }, { immediate: true })
-        if (r && r.sent > 0) return   // engine sent it (and recorded analytics)
-        const { subject, html } = emailSellerWelcome({ name: contact_person_name, email: to })
-        await sendSellerEmail({ to, subject, html })
-      } catch (e) {
-        console.error('[register-seller] welcome failed:', e?.message || e)
-      }
-    })()
-
-    return NextResponse.json({ seller_id: seller.id })
+    return NextResponse.json({ pending: true })
   } catch (err) {
     console.error('[register-seller]', err)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

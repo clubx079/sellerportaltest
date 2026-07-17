@@ -4,7 +4,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import Image from 'next/image'
 import { loadStripe } from '@stripe/stripe-js'
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js'
-import { Check, Eye, EyeOff, ChevronRight, Loader2 } from 'lucide-react'
+import { Check, Eye, EyeOff, ChevronRight, Loader2, Phone, Mail } from 'lucide-react'
 
 const stripePromise = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
   ? loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY)
@@ -15,8 +15,27 @@ const inputCls = 'w-full h-[46px] px-4 border border-[#E8E8E4] rounded text-[14p
 const labelCls = 'block text-[13px] font-semibold text-[#1A1816] mb-1.5'
 const errorCls = 'text-[13px] text-[#D03839] mt-1'
 
+// ─── Shared helpers ─────────────────────────────────────────────────────────────
+const formatPhone = (v) => {
+  const d = String(v || '').replace(/\D/g, '').slice(0, 10)
+  if (d.length <= 3) return d
+  if (d.length <= 6) return `(${d.slice(0, 3)}) ${d.slice(3)}`
+  return `(${d.slice(0, 3)}) ${d.slice(3, 6)}-${d.slice(6)}`
+}
+const maskPhone = (v) => {
+  const d = String(v || '').replace(/\D/g, '')
+  if (d.length < 4) return v || ''
+  return `(•••) •••-${d.slice(-4)}`
+}
+const maskEmail = (e) => {
+  const s = String(e || '')
+  const at = s.indexOf('@')
+  if (at < 1) return s
+  return `${s[0]}${'•'.repeat(Math.max(1, at - 1))}${s.slice(at)}`
+}
+
 // ─── Step indicator ───────────────────────────────────────────────────────────
-const STEPS = ['Account', 'Verify Phone', 'Choose Plan', 'Payment']
+const STEPS = ['Account', 'Verify', 'Choose Plan', 'Payment']
 
 function StepDots({ current }) {
   return (
@@ -48,8 +67,9 @@ function StepDots({ current }) {
 
 // ─── Step 0: Create Account ───────────────────────────────────────────────────
 function StepAccount({ onNext }) {
-  const [form, setForm] = useState({ first_name: '', last_name: '', email: '', password: '' })
+  const [form, setForm] = useState({ first_name: '', last_name: '', email: '', phone: '', password: '', confirm: '' })
   const [showPw, setShowPw] = useState(false)
+  const [showConfirm, setShowConfirm] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -58,16 +78,22 @@ function StepAccount({ onNext }) {
   const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
+    if (form.password !== form.confirm) { setError('Passwords do not match'); return }
+    if (form.phone.replace(/\D/g, '').length < 10) { setError('Enter a valid US phone number'); return }
     setLoading(true)
     try {
       const res = await fetch('/api/auth/register-seller', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
+        body: JSON.stringify({
+          first_name: form.first_name, last_name: form.last_name,
+          email: form.email, password: form.password, phone: form.phone,
+        }),
       })
       const data = await res.json()
       if (!res.ok) { setError(data.error || 'Something went wrong'); setLoading(false); return }
-      sessionStorage.setItem('onboarding', JSON.stringify({ seller_id: data.seller_id, email: form.email }))
+      // No account is created yet — the seller_id comes back after verification.
+      sessionStorage.setItem('onboarding', JSON.stringify({ email: form.email, phone: form.phone }))
       onNext()
     } catch { setError('Something went wrong. Please try again.') }
     setLoading(false)
@@ -90,6 +116,11 @@ function StepAccount({ onNext }) {
         <input type="email" className={inputCls} value={form.email} onChange={e => set('email', e.target.value)} placeholder="you@email.com" required />
       </div>
       <div>
+        <label className={labelCls}>Phone number</label>
+        <input type="tel" className={inputCls} value={form.phone} onChange={e => set('phone', formatPhone(e.target.value))} placeholder="(555) 000-0000" required />
+        <p className="text-[12px] text-[#A8A8A4] mt-1.5">US number only. Used to verify your account.</p>
+      </div>
+      <div>
         <label className={labelCls}>Password</label>
         <div className="relative">
           <input
@@ -106,6 +137,23 @@ function StepAccount({ onNext }) {
           </button>
         </div>
       </div>
+      <div>
+        <label className={labelCls}>Confirm password</label>
+        <div className="relative">
+          <input
+            type={showConfirm ? 'text' : 'password'}
+            className={`${inputCls} pr-11`}
+            value={form.confirm}
+            onChange={e => set('confirm', e.target.value)}
+            placeholder="Re-enter your password"
+            minLength={8}
+            required
+          />
+          <button type="button" onClick={() => setShowConfirm(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#A8A8A4] hover:text-[#737370]">
+            {showConfirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+          </button>
+        </div>
+      </div>
       {error && <p className={errorCls}>{error}</p>}
       <button type="submit" disabled={loading} className="w-full h-[46px] bg-[#D03839] hover:bg-[#E0493B] text-white text-[14px] font-semibold rounded transition-colors disabled:opacity-50 flex items-center justify-center gap-2 mt-2">
         {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <>Continue <ChevronRight className="w-4 h-4" /></>}
@@ -118,33 +166,22 @@ function StepAccount({ onNext }) {
   )
 }
 
-// ─── Step 1: Phone Verification ───────────────────────────────────────────────
-function StepPhone({ onNext }) {
-  const [phone, setPhone] = useState('')
+// ─── Step 1: Verify ────────────────────────────────────────────────────────────
+function StepVerify({ onNext }) {
+  const session = typeof window !== 'undefined' ? JSON.parse(sessionStorage.getItem('onboarding') || '{}') : {}
+  const [channel, setChannel] = useState('sms')   // 'sms' | 'email'
   const [otp, setOtp] = useState('')
   const [sent, setSent] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [changingPhone, setChangingPhone] = useState(false)
-  const [newPhone, setNewPhone] = useState('')
-
-  const session = typeof window !== 'undefined' ? JSON.parse(sessionStorage.getItem('onboarding') || '{}') : {}
-
-  const formatPhone = (v) => {
-    const d = v.replace(/\D/g, '').slice(0, 10)
-    if (d.length <= 3) return d
-    if (d.length <= 6) return `(${d.slice(0, 3)}) ${d.slice(3)}`
-    return `(${d.slice(0, 3)}) ${d.slice(3, 6)}-${d.slice(6)}`
-  }
 
   const sendOtp = async () => {
-    setError('')
-    setLoading(true)
+    setError(''); setLoading(true)
     try {
       const res = await fetch('/api/auth/send-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone, email: session.email }),
+        body: JSON.stringify({ email: session.email, phone: session.phone, channel }),
       })
       const data = await res.json()
       if (!res.ok) { setError(data.error || 'Failed to send code'); setLoading(false); return }
@@ -154,41 +191,46 @@ function StepPhone({ onNext }) {
   }
 
   const verifyOtp = async () => {
-    setError('')
-    setLoading(true)
+    setError(''); setLoading(true)
     try {
       const res = await fetch('/api/auth/verify-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: session.email, otp, seller_id: session.seller_id, phone }),
+        body: JSON.stringify({ email: session.email, otp }),
       })
       const data = await res.json()
       if (!res.ok) { setError(data.error || 'Invalid code'); setLoading(false); return }
-      // Store phone in session
-      const updated = { ...session, phone }
-      sessionStorage.setItem('onboarding', JSON.stringify(updated))
+      // Verification created the account — persist the seller_id for steps 3–4.
+      sessionStorage.setItem('onboarding', JSON.stringify({ ...session, seller_id: data.seller_id }))
       onNext()
     } catch { setError('Something went wrong') }
     setLoading(false)
   }
 
+  const destination = channel === 'sms' ? maskPhone(session.phone) : maskEmail(session.email)
+
+  const OptionButton = ({ value, icon: Icon, label, sub }) => (
+    <button type="button" onClick={() => setChannel(value)}
+      className={`w-full flex items-center gap-3 rounded border-2 p-3.5 text-left transition-all ${channel === value ? 'border-[#D03839] bg-[#FEF0EF]' : 'border-[#E8E8E4] hover:border-[#D4D4CF]'}`}>
+      <Icon className={`w-4 h-4 ${channel === value ? 'text-[#D03839]' : 'text-[#A8A8A4]'}`} />
+      <div>
+        <p className="text-[14px] font-semibold text-[#1A1816]">{label}</p>
+        <p className="text-[12px] text-[#737370]">{sub}</p>
+      </div>
+    </button>
+  )
+
   return (
     <div className="space-y-5">
       {!sent ? (
         <>
-          <div>
-            <label className={labelCls}>Phone number</label>
-            <input
-              className={inputCls}
-              value={phone}
-              onChange={e => setPhone(formatPhone(e.target.value))}
-              placeholder="(555) 000-0000"
-              type="tel"
-            />
-            <p className="text-[12px] text-[#A8A8A4] mt-1.5">US number only. We'll send a 6-digit verification code.</p>
+          <p className="text-[13px] text-[#737370]">How would you like to receive your 6-digit verification code?</p>
+          <div className="space-y-2.5">
+            <OptionButton value="sms" icon={Phone} label="Text message" sub={maskPhone(session.phone)} />
+            <OptionButton value="email" icon={Mail} label="Email" sub={maskEmail(session.email)} />
           </div>
           {error && <p className={errorCls}>{error}</p>}
-          <button onClick={sendOtp} disabled={loading || phone.replace(/\D/g, '').length < 10}
+          <button onClick={sendOtp} disabled={loading}
             className="w-full h-[46px] bg-[#D03839] hover:bg-[#E0493B] text-white text-[14px] font-semibold rounded transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
             {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Send verification code'}
           </button>
@@ -197,7 +239,7 @@ function StepPhone({ onNext }) {
         <>
           <div>
             <label className={labelCls}>Verification code</label>
-            <p className="text-[13px] text-[#737370] mb-3">Enter the 6-digit code sent to {phone}</p>
+            <p className="text-[13px] text-[#737370] mb-3">Enter the 6-digit code sent to {destination}</p>
             <input
               className={`${inputCls} text-center text-[20px] font-bold tracking-[0.3em]`}
               value={otp}
@@ -211,58 +253,14 @@ function StepPhone({ onNext }) {
             className="w-full h-[46px] bg-[#D03839] hover:bg-[#E0493B] text-white text-[14px] font-semibold rounded transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
             {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <>Verify <ChevronRight className="w-4 h-4" /></>}
           </button>
-
-          {!changingPhone ? (
-            <button
-              onClick={() => { setChangingPhone(true); setNewPhone(phone); setError('') }}
-              className="w-full text-center text-[13px] text-[#737370] hover:text-[#1A1816] transition-colors"
-            >
-              Wrong number? Change it
-            </button>
-          ) : (
-            <div className="border border-[#E8E8E4] rounded p-3.5 space-y-3">
-              <p className="text-[13px] font-medium text-[#1A1816]">Change phone number</p>
-              <input
-                className={inputCls}
-                value={newPhone}
-                onChange={e => setNewPhone(formatPhone(e.target.value))}
-                placeholder="(555) 000-0000"
-                type="tel"
-              />
-              <div className="flex gap-2">
-                <button
-                  onClick={() => { setChangingPhone(false); setNewPhone('') }}
-                  className="flex-1 h-[38px] border border-[#E8E8E4] text-[13px] font-medium text-[#737370] rounded hover:bg-[#F3F3F0] transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  disabled={loading || newPhone.replace(/\D/g, '').length < 10}
-                  onClick={async () => {
-                    setError('')
-                    setLoading(true)
-                    try {
-                      const res = await fetch('/api/auth/send-otp', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ phone: newPhone, email: session.email }),
-                      })
-                      const data = await res.json()
-                      if (!res.ok) { setError(data.error || 'Failed to send code'); setLoading(false); return }
-                      setPhone(newPhone)
-                      setOtp('')
-                      setChangingPhone(false)
-                      setNewPhone('')
-                    } catch { setError('Failed to send code') }
-                    setLoading(false)
-                  }}
-                  className="flex-1 h-[38px] bg-[#D03839] hover:bg-[#E0493B] text-white text-[13px] font-semibold rounded transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5"
-                >
-                  {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Send new code'}
-                </button>
-              </div>
-            </div>
-          )}
+          <button onClick={sendOtp} disabled={loading}
+            className="w-full text-center text-[13px] text-[#D03839] font-medium hover:underline transition-colors disabled:opacity-50">
+            Resend code
+          </button>
+          <button onClick={() => { setSent(false); setOtp(''); setError('') }}
+            className="w-full text-center text-[13px] text-[#737370] hover:text-[#1A1816] transition-colors">
+            Use a different method
+          </button>
         </>
       )}
     </div>
@@ -834,7 +832,7 @@ function StepSuccess() {
 // ─── Main page ────────────────────────────────────────────────────────────────
 const STEP_TITLES = [
   { title: 'Create your account', sub: 'Start selling on DeelMap' },
-  { title: 'Verify your phone', sub: "We'll send a quick code" },
+  { title: 'Verify your account', sub: "We'll send a quick code" },
   { title: 'Choose your plan', sub: 'Pick what fits your pipeline' },
   { title: 'Complete payment', sub: 'Secure checkout via Stripe' },
 ]
@@ -894,7 +892,7 @@ function OnboardingContent() {
               {step === 2 && (
                 <button onClick={back} className="flex items-center gap-1.5 text-[13px] text-[#737370] hover:text-[#1A1816] transition-colors mb-4">
                   <ChevronRight className="w-3.5 h-3.5 rotate-180" />
-                  Back to phone verification
+                  Back to verification
                 </button>
               )}
               {step === 3 && (
@@ -909,7 +907,7 @@ function OnboardingContent() {
           )}
 
           {step === 0 && <StepAccount onNext={next} />}
-          {step === 1 && <StepPhone onNext={next} />}
+          {step === 1 && <StepVerify onNext={next} />}
           {step === 2 && <StepPlan onNext={next} />}
           {step === 3 && <StepPayment onSuccess={next} />}
           {step === 4 && <StepSuccess />}

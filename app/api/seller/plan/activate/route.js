@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { createClient } from '@supabase/supabase-js'
+import { enrollAutomation } from '@/lib/enrollAutomation'
 
 export async function POST(request) {
   const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
@@ -25,7 +26,7 @@ export async function POST(request) {
     // Block activation for lifetime-free accounts
     const { data: appCheck } = await supabase
       .from('seller_applications')
-      .select('admin_notes')
+      .select('admin_notes, email, contact_person_name')
       .eq('id', seller_id)
       .maybeSingle()
 
@@ -91,6 +92,16 @@ export async function POST(request) {
       .from('seller_applications')
       .update({ status: 'approved', stripe_customer_id: customerId, phone_verified: true })
       .eq('id', seller_id)
+
+    // Welcome — fires only now that the seller has an active plan. Instant + tracked
+    // via the follow-up engine; the welcome:{{seller_id}} dedup key makes the Stripe
+    // webhook backstop a no-op, so exactly one email is ever sent. Engine-only —
+    // no direct send (delivery therefore requires ADMIN_AUTOMATIONS_URL + CRON_SECRET).
+    await enrollAutomation('seller_welcome', seller_id, {
+      seller_id,
+      name: appCheck?.contact_person_name || '',
+      email: appCheck?.email || '',
+    }, { immediate: true }).catch(() => {})
 
     return NextResponse.json({ success: true })
   } catch (err) {
