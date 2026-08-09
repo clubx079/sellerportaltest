@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import Stripe from 'stripe'
-import { createClient } from '@supabase/supabase-js'
+import { createClient } from '@airostack/client'
 import { Resend } from 'resend'
 import crypto from 'crypto'
 import { enrollAutomation } from '@/lib/enrollAutomation'

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import Stripe from 'stripe'
-import { createClient } from '@supabase/supabase-js'
+import { createClient } from '@airostack/client'
 
 export async function POST(request) {
   const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)

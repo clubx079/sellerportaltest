@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { hashPassword, verifyPassword } from '@/lib/password'
-import { createClient } from '@supabase/supabase-js'
+import { createClient } from '@airostack/client'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,

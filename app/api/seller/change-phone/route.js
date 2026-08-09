@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { createClient } from '@airostack/client';
 import { setPhoneChange } from '@/lib/phone-change-store';
 import { verifyPassword } from '@/lib/password';
 

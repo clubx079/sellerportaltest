@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { createClient } from '@airostack/client';
 import { getEmailChange, clearEmailChange } from '@/lib/email-change-store';
 import { sendSellerEmail, emailChanged } from '@/lib/sellerEmail';
 

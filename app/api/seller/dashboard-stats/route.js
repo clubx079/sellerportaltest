@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { createClient } from '@airostack/client';
 import { getWorkspaceSellerId } from '@/lib/workspace';
 
 const supabase = createClient(

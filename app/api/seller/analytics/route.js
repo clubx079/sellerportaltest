@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { createClient } from '@airostack/client';
 import { getWorkspaceSellerId, getCallerAccess, requirePermission } from '@/lib/workspace';
 
 const supabase = createClient(

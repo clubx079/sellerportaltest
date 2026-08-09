@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { createClient } from '@airostack/client';
 import { verifyPassword, hashPassword, isHashed } from '@/lib/password';
 
 function getSupabase() {
