@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import Stripe from 'stripe'
-import { createClient } from '@supabase/supabase-js'
+import { createClient } from '@airostack/client'
 
 const REFERRAL_COUPON_ID = 'huzBZPT2'
 

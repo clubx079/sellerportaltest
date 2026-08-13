@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { createClient } from '@airostack/client'
 
 const ADDON_DAYS   = { highlight: 30, boost: 7, homepage: 7, bundle: 30 }
 const ADDON_PRICES = { highlight: 999, boost: 1499, homepage: 2900, bundle: 2200 }

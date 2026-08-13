@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { createClient } from '@airostack/client'
 import { maybeProUsageNudge } from '@/lib/proUsageNudge'
 
 // Manual / recompute trigger for the #5 Pro-plan usage nudge. The normal publish

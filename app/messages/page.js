@@ -6,7 +6,7 @@ import {
   MessageCircle, Send, Search, ArrowLeft, Loader2, Check, CheckCheck,
   Pin, Paperclip, Smile, MapPin, Mail, Phone, Shield, AlertCircle, X, MoreVertical, Ban, FileText,
   CornerUpLeft, Copy, Trash2, Flag } from 'lucide-react';
-import { createClient } from '@supabase/supabase-js';
+import { createClient } from '@airostack/client';
 
 const API = '/api/seller/chat';
 const FONT = 'var(--font-dm-sans), sans-serif';
