@@ -13,7 +13,7 @@
     "@docuseal/react": "^1.0.75",
     "@stripe/react-stripe-js": "^6.1.0",
     "@stripe/stripe-js": "^9.1.0",
-    "@supabase/supabase-js": "^2.39.0",
+    "@airostack/client": "^0.6.0",
     "bcryptjs": "^3.0.3",
     "browser-image-compression": "^2.0.2",
     "framer-motion": "^12.23.24",

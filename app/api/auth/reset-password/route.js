@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { hashPassword } from '@/lib/password';
-import { createClient } from '@supabase/supabase-js';
+import { createClient } from '@airostack/client';
 import { clearResetOtp, getResetOtp } from '@/lib/password-reset-store';
 
 const supabase = createClient(

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { createClient } from '@airostack/client'
 
 export async function GET(request) {
   const { searchParams } = new URL(request.url)

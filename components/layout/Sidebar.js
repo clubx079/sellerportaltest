@@ -57,7 +57,7 @@ export default function Sidebar({ isOpen, setIsOpen, activeItem, setActiveItem }
         if (data?.success && Array.isArray(data.conversations)) setMessagesUnreadCount(data.conversations.reduce((sum, c) => sum + Number(c.unread_count || 0), 0))
       } catch {}
       try {
-        const { createClient } = await import('@supabase/supabase-js')
+        const { createClient } = await import('@airostack/client')
         const sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
         const { count: lCount } = await sb.from('properties').select('*', { count: 'exact', head: true }).eq('seller_id', effectiveId).neq('status', 'archived')
         if (mounted && lCount != null) setListingsCount(lCount)
@@ -92,7 +92,7 @@ export default function Sidebar({ isOpen, setIsOpen, activeItem, setActiveItem }
     const effectiveId = workspaces?.current?.effectiveSellerId || sellerId
     let cancelled = false, sb = null, channel = null
     ;(async () => {
-      const { createClient } = await import('@supabase/supabase-js')
+      const { createClient } = await import('@airostack/client')
       if (cancelled) return
       sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
       const refreshUnread = async () => {

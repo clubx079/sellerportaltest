@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { createClient } from '@airostack/client'
 import Stripe from 'stripe'
 
 const toISO = (ts) => (ts && ts > 0) ? new Date(ts * 1000).toISOString() : null

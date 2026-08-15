@@ -4,7 +4,7 @@
  * Run from seller dashboard root with: node scripts/backfill-slugs.js
  * Loads .env.local from project root (no dotenv required).
  */
-const { createClient } = require('@supabase/supabase-js');
+const { createClient } = require('@airostack/client');
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
