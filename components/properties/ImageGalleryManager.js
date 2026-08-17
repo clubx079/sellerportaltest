@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useRef } from 'react';
-import { supabase } from '@/lib/supabase';
 import { Upload, X, Image as ImageIcon, Star, Loader } from 'lucide-react';
 import imageCompression from 'browser-image-compression';
 
@@ -92,22 +91,18 @@ export default function ImageGalleryManager({ images = [], onImagesChange, selle
       const pathSegment = uploadPathPrefix ? `${uploadPathPrefix}/${uploadDir}` : uploadDir;
       const fileName = `${pathSegment}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
 
-      // Upload to Supabase (sellerpropertyimages for manual, scraperpropertyphotos for scraped deals)
-      console.log('Uploading to Supabase:', storageBucket, fileName);
-      const { data, error } = await supabase.storage
-        .from(storageBucket)
-        .upload(fileName, compressedFile ?? uploadFile, {
-          cacheControl: '3600',
-          upsert: false
-        });
-
-      if (error) throw error;
+      // Upload to Backblaze B2 via the seller-portal server route. Returns the stable
+      // /api/img URL (served by the Cloudflare signing endpoint) that the buyer + seller
+      // portals use to display the image. Replaces the old broken Supabase-Storage upload.
+      console.log('Uploading to B2:', fileName);
+      const fd = new FormData();
+      fd.append('file', compressedFile ?? uploadFile, fileName.split('/').pop());
+      fd.append('key', fileName);
+      const res = await fetch('/api/seller/upload', { method: 'POST', body: fd });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || !json.success) throw new Error(json.error || 'Upload failed');
       console.log('Upload successful');
-
-      // Get public URL
-      const { data: { publicUrl } } = supabase.storage
-        .from(storageBucket)
-        .getPublicUrl(fileName);
+      const publicUrl = json.url;
 
       // Update local images with completed status
       setLocalImages(prev => prev.map(img =>
@@ -225,12 +220,14 @@ export default function ImageGalleryManager({ images = [], onImagesChange, selle
   };
 
   const handleRemove = async (imageId, imageKey) => {
-    // If image is uploaded to Supabase, delete it
+    // If image was uploaded to B2, delete it via the server route.
     if (imageKey) {
       try {
-        await supabase.storage
-          .from(storageBucket)
-          .remove([imageKey]);
+        await fetch('/api/seller/upload', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ key: imageKey }),
+        });
       } catch (error) {
         console.error('Failed to delete image from storage:', error);
       }

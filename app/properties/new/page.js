@@ -794,7 +794,7 @@ export default function NewPropertyPage() {
       router.push('/properties');
 
     } catch (err) {
-      console.error('Save failed:', err);
+      console.error('Save failed:', err?.message || err, '| code:', err?.code, '| details:', err?.details, '| hint:', err?.hint, '| raw:', JSON.stringify(err, Object.getOwnPropertyNames(err || {})));
       if (silent) throw err;
       setError(err?.message || 'Failed to save property. Please try again.');
       setSaving(false);
@@ -839,18 +839,13 @@ export default function NewPropertyPage() {
     try {
       const fileName = `inspection-reports/${userId}/${Date.now()}-${file.name}`;
 
-      const { data, error: uploadError } = await supabase.storage
-        .from('scraperpropertyphotos')
-        .upload(fileName, file, {
-          cacheControl: '3600',
-          upsert: false
-        });
-
-      if (uploadError) throw uploadError;
-
-      const { data: { publicUrl } } = supabase.storage
-        .from('scraperpropertyphotos')
-        .getPublicUrl(fileName);
+      const fd = new FormData();
+      fd.append('file', file, fileName.split('/').pop());
+      fd.append('key', fileName);
+      const res = await fetch('/api/seller/upload', { method: 'POST', body: fd });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || !json.success) throw new Error(json.error || 'Upload failed');
+      const publicUrl = json.url;
 
       setInspectionReport({
         url: publicUrl,
@@ -868,9 +863,7 @@ export default function NewPropertyPage() {
   const handleRemoveInspection = async () => {
     if (inspectionReport.key) {
       try {
-        await supabase.storage
-          .from('scraperpropertyphotos')
-          .remove([inspectionReport.key]);
+        await fetch('/api/seller/upload', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ key: inspectionReport.key }) });
       } catch (err) {
         console.error('Failed to delete file:', err);
       }
@@ -894,15 +887,13 @@ export default function NewPropertyPage() {
     try {
       const fileName = `contracts/${Date.now()}-${file.name}`;
 
-      const { error: uploadError } = await supabase.storage
-        .from('scraperpropertyphotos')
-        .upload(fileName, file, { cacheControl: '3600', upsert: false });
-
-      if (uploadError) throw uploadError;
-
-      const { data: { publicUrl } } = supabase.storage
-        .from('scraperpropertyphotos')
-        .getPublicUrl(fileName);
+      const fd = new FormData();
+      fd.append('file', file, fileName.split('/').pop());
+      fd.append('key', fileName);
+      const res = await fetch('/api/seller/upload', { method: 'POST', body: fd });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || !json.success) throw new Error(json.error || 'Upload failed');
+      const publicUrl = json.url;
 
       setContractUpload({ url: publicUrl, key: fileName, filename: file.name, uploading: false });
     } catch (err) {
@@ -915,7 +906,7 @@ export default function NewPropertyPage() {
   const handleRemoveContract = async () => {
     if (contractUpload.key) {
       try {
-        await supabase.storage.from('scraperpropertyphotos').remove([contractUpload.key]);
+        await fetch('/api/seller/upload', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ key: contractUpload.key }) });
       } catch (err) {
         console.error('Failed to delete contract:', err);
       }
