@@ -540,16 +540,15 @@ export default function MessagesPage() {
     if (file.size > MAX) { alert('File too large (max 10MB).'); return; }
     setUploadingAttachment(true);
     try {
-      const supabase = getSupabase();
-      if (!supabase) throw new Error('Storage unavailable');
       const ext = (file.name.split('.').pop() || 'bin').toLowerCase();
       const path = `chat/${openConversationId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
-      const { error: upErr } = await supabase.storage
-        .from('scraperpropertyphotos')
-        .upload(path, file, { cacheControl: '3600', upsert: false });
-      if (upErr) throw upErr;
-      const { data: pub } = supabase.storage.from('scraperpropertyphotos').getPublicUrl(path);
-      const attachmentUrl = pub?.publicUrl;
+      const fd = new FormData();
+      fd.append('file', file, path.split('/').pop());
+      fd.append('key', path);
+      const upRes = await fetch('/api/seller/upload', { method: 'POST', body: fd });
+      const upJson = await upRes.json().catch(() => ({}));
+      if (!upRes.ok || !upJson.success) throw new Error(upJson.error || 'Upload failed');
+      const attachmentUrl = upJson.url;
       if (!attachmentUrl) throw new Error('Could not get file URL');
 
       const res = await fetch(API, {

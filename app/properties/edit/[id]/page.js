@@ -931,18 +931,13 @@ export default function EditPropertyPage() {
     try {
       const fileName = `inspection-reports/${userId}/${Date.now()}-${file.name}`;
 
-      const { error: uploadError } = await supabase.storage
-        .from(storageBucket)
-        .upload(fileName, file, {
-          cacheControl: '3600',
-          upsert: false
-        });
-
-      if (uploadError) throw uploadError;
-
-      const { data: { publicUrl } } = supabase.storage
-        .from(storageBucket)
-        .getPublicUrl(fileName);
+      const fd = new FormData();
+      fd.append('file', file, fileName.split('/').pop());
+      fd.append('key', fileName);
+      const res = await fetch('/api/seller/upload', { method: 'POST', body: fd });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || !json.success) throw new Error(json.error || 'Upload failed');
+      const publicUrl = json.url;
 
       setInspectionReport({
         url: publicUrl,
@@ -960,9 +955,7 @@ export default function EditPropertyPage() {
   const handleRemoveInspection = async () => {
     if (inspectionReport.key) {
       try {
-        await supabase.storage
-          .from(storageBucket)
-          .remove([inspectionReport.key]);
+        await fetch('/api/seller/upload', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ key: inspectionReport.key }) });
       } catch (err) {
         console.error('Failed to delete file:', err);
       }
@@ -982,11 +975,13 @@ export default function EditPropertyPage() {
     setError(null);
     try {
       const fileName = `contracts/${userId}/${Date.now()}-${file.name}`;
-      const { error: uploadError } = await supabase.storage
-        .from(storageBucket)
-        .upload(fileName, file, { cacheControl: '3600', upsert: false });
-      if (uploadError) throw uploadError;
-      const { data: { publicUrl } } = supabase.storage.from(storageBucket).getPublicUrl(fileName);
+      const fd = new FormData();
+      fd.append('file', file, fileName.split('/').pop());
+      fd.append('key', fileName);
+      const res = await fetch('/api/seller/upload', { method: 'POST', body: fd });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || !json.success) throw new Error(json.error || 'Upload failed');
+      const publicUrl = json.url;
       setContractUpload({ url: publicUrl, key: fileName, filename: file.name, uploading: false });
     } catch (err) {
       console.error('Contract upload failed:', err);
@@ -998,7 +993,7 @@ export default function EditPropertyPage() {
   const handleRemoveContract = async () => {
     if (contractUpload.key) {
       try {
-        await supabase.storage.from(storageBucket).remove([contractUpload.key]);
+        await fetch('/api/seller/upload', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ key: contractUpload.key }) });
       } catch (err) {
         console.error('Failed to delete contract:', err);
       }
