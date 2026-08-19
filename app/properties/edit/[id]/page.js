@@ -649,7 +649,9 @@ export default function EditPropertyPage() {
     // Ownership
     if (sellerType) saveData.seller_type = sellerType;
     if (contractUpload.url) saveData.contract_url = contractUpload.url;
-    if (contractUpload.key) saveData.contract_key = contractUpload.key;
+    // Note: the contract's B2 object key is already embedded in contract_url
+    // (/api/img/<key>), and the `properties` table has no contract_key column,
+    // so we don't persist it separately (doing so throws "unknown column").
 
     // Contact info
     saveData.contact_name = formData.contact_name || null;
