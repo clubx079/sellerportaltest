@@ -649,7 +649,9 @@ export default function EditPropertyPage() {
     // Ownership
     if (sellerType) saveData.seller_type = sellerType;
     if (contractUpload.url) saveData.contract_url = contractUpload.url;
-    if (contractUpload.key) saveData.contract_key = contractUpload.key;
+    // Note: the contract's B2 object key is already embedded in contract_url
+    // (/api/img/<key>), and the `properties` table has no contract_key column,
+    // so we don't persist it separately (doing so throws "unknown column").
 
     // Contact info
     saveData.contact_name = formData.contact_name || null;
@@ -676,7 +678,9 @@ export default function EditPropertyPage() {
           sqft: formData.floor_area ? parseInt(formData.floor_area) : null,
           property_type: formData.property_type || null,
           status: effectiveStatus,
-          ...(effectiveStatus === 'under_review' ? { rejection_reason: null } : {}),
+          // Note: wholesale_deals has no rejection_reason column (unlike the
+          // properties table), so we can't clear it here — including it throws
+          // "unknown column rejection_reason" and aborts the whole save.
           description: formData.description || null,
           features: formData.repairs ? formData.repairs.split(/\n/).filter(Boolean) : null,
           inspection_report_url: inspectionReport.url || null,
