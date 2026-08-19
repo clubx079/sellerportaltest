@@ -678,7 +678,9 @@ export default function EditPropertyPage() {
           sqft: formData.floor_area ? parseInt(formData.floor_area) : null,
           property_type: formData.property_type || null,
           status: effectiveStatus,
-          ...(effectiveStatus === 'under_review' ? { rejection_reason: null } : {}),
+          // Note: wholesale_deals has no rejection_reason column (unlike the
+          // properties table), so we can't clear it here — including it throws
+          // "unknown column rejection_reason" and aborts the whole save.
           description: formData.description || null,
           features: formData.repairs ? formData.repairs.split(/\n/).filter(Boolean) : null,
           inspection_report_url: inspectionReport.url || null,
