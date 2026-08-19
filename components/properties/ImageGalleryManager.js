@@ -9,6 +9,11 @@ const MAX_CONCURRENT_UPLOADS = 15;
 const ALLOWED_PHOTO_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
 const checkHeic = f => f.type === 'image/heic' || f.type === 'image/heif' || /\.(heic|heif)$/i.test(f.name)
 const isPhoto = f => ALLOWED_PHOTO_TYPES.includes(f.type) || checkHeic(f)
+// A file genuinely needs HEIC→JPEG conversion only when its CONTENT is HEIC. Browsers
+// that pre-transcode iPhone photos hand us a readable JPEG (sometimes still named .heic) —
+// those must NOT go through heic2any (it throws "already browser readable").
+const isReadableImageType = f => /^image\/(jpe?g|png|webp|gif)$/i.test(f.type)
+const needsHeicConvert = f => f.type === 'image/heic' || f.type === 'image/heif' || (/\.(heic|heif)$/i.test(f.name) && !isReadableImageType(f))
 
 export default function ImageGalleryManager({ images = [], onImagesChange, sellerId, storageBucket = 'sellerpropertyimages', uploadPathPrefix = null }) {
   const [localImages, setLocalImages] = useState(images);
@@ -68,16 +73,34 @@ export default function ImageGalleryManager({ images = [], onImagesChange, selle
       // Wait a frame for state to update
       await new Promise(resolve => setTimeout(resolve, 10));
 
-      // Convert HEIC → JPEG in the BROWSER (heic2any). This previously POSTed each HEIC
-      // to /api/convert-heic; under many concurrent large uploads those requests arrived
-      // truncated and the server threw "input buffer is not a HEIC image", failing every
-      // photo. Converting client-side removes the server round-trip (and its load) entirely.
+      // Convert HEIC → JPEG in the BROWSER (heic2any), but ONLY when the file is truly
+      // HEIC. iOS Safari (and some Chrome builds) already transcode an iPhone photo to
+      // JPEG at selection time while keeping the original `IMG_1234.HEIC` name — so the
+      // File is image/jpeg but named .heic. Feeding that to heic2any throws
+      // "ERR_USER Image is already browser readable", which failed uploads for those
+      // users. We now detect real HEIC by content-type first (falling back to the name
+      // only when the type is missing/unreadable), and wrap the conversion so that any
+      // "already readable" file just uploads as-is with a normalized .jpg name.
       let uploadFile = image.file
-      if (checkHeic(image.file)) {
-        const heic2any = (await import('heic2any')).default
-        const converted = await heic2any({ blob: image.file, toType: 'image/jpeg', quality: 0.85 })
-        const jpegBlob = Array.isArray(converted) ? converted[0] : converted
-        uploadFile = new File([jpegBlob], image.file.name.replace(/\.(heic|heif)$/i, '.jpg'), { type: 'image/jpeg' })
+      const nameIsHeic = /\.(heic|heif)$/i.test(image.file.name)
+      const typeIsHeic = image.file.type === 'image/heic' || image.file.type === 'image/heif'
+      const typeIsReadable = /^image\/(jpe?g|png|webp|gif)$/i.test(image.file.type)
+      const renameToJpg = () => new File([image.file], image.file.name.replace(/\.(heic|heif)$/i, '.jpg'), { type: image.file.type || 'image/jpeg' })
+
+      if (typeIsHeic || (nameIsHeic && !typeIsReadable)) {
+        try {
+          const heic2any = (await import('heic2any')).default
+          const converted = await heic2any({ blob: image.file, toType: 'image/jpeg', quality: 0.85 })
+          const jpegBlob = Array.isArray(converted) ? converted[0] : converted
+          uploadFile = new File([jpegBlob], image.file.name.replace(/\.(heic|heif)$/i, '.jpg'), { type: 'image/jpeg' })
+        } catch (err) {
+          // Already browser-readable (or conversion unavailable) — upload the original bytes.
+          console.warn('HEIC conversion skipped, using original file:', err?.message || err)
+          uploadFile = nameIsHeic ? renameToJpg() : image.file
+        }
+      } else if (nameIsHeic && typeIsReadable) {
+        // Browser already gave us a readable JPEG that just carries a .HEIC name.
+        uploadFile = renameToJpg()
       }
 
       // Compress image
@@ -189,11 +212,11 @@ export default function ImageGalleryManager({ images = [], onImagesChange, selle
     const newImages = imageFiles.map((file, index) => ({
       id: `temp-${Date.now()}-${Math.random()}-${index}`,
       file,
-      preview: checkHeic(file) ? null : URL.createObjectURL(file),
+      preview: needsHeicConvert(file) ? null : URL.createObjectURL(file),
       status: 'queued',
       progress: 0,
       originalSize: file.size,
-      converting: checkHeic(file)
+      converting: needsHeicConvert(file)
     }));
 
     setLocalImages(prev => [...prev, ...newImages]);
