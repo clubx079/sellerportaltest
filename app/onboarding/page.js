@@ -5,6 +5,7 @@ import Image from 'next/image'
 import { loadStripe } from '@stripe/stripe-js'
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js'
 import { Check, Eye, EyeOff, ChevronRight, Loader2, Phone, Mail } from 'lucide-react'
+import { pushEvent } from '@/lib/gtm'
 
 const stripePromise = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
   ? loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY)
@@ -92,6 +93,7 @@ function StepAccount({ onNext }) {
       })
       const data = await res.json()
       if (!res.ok) { setError(data.error || 'Something went wrong'); setLoading(false); return }
+      pushEvent('seller_signup_started', { signup_flow: 'onboarding' })
       // No account is created yet — the seller_id comes back after verification.
       sessionStorage.setItem('onboarding', JSON.stringify({ email: form.email, phone: form.phone }))
       onNext()
@@ -200,6 +202,7 @@ function StepVerify({ onNext }) {
       })
       const data = await res.json()
       if (!res.ok) { setError(data.error || 'Invalid code'); setLoading(false); return }
+      pushEvent('seller_signup_complete', { signup_flow: 'onboarding' })
       // Verification created the account — persist the seller_id for steps 3–4.
       sessionStorage.setItem('onboarding', JSON.stringify({ ...session, seller_id: data.seller_id }))
       onNext()
@@ -465,7 +468,7 @@ function CheckoutForm({ session, intentType, appliedPromo, noTrial, onSuccess, p
     } else {
       const intent = result.setupIntent || result.paymentIntent
       const pmId = typeof intent?.payment_method === 'string' ? intent.payment_method : intent?.payment_method?.id
-      onSuccess(pmId || null)
+      onSuccess(pmId || null, discountedPrice, planName)
     }
     setProcessing(false)
   }
@@ -718,11 +721,14 @@ function StepPayment({ onSuccess }) {
           intentType={intentType}
           appliedPromo={appliedPromo}
           noTrial={session.no_trial || false}
-          onSuccess={(pmId) => {
-            if (pmId) {
-              const s2 = JSON.parse(sessionStorage.getItem('onboarding') || '{}')
-              sessionStorage.setItem('onboarding', JSON.stringify({ ...s2, pm_id: pmId }))
-            }
+          onSuccess={(pmId, finalAmount, planName) => {
+            const s2 = JSON.parse(sessionStorage.getItem('onboarding') || '{}')
+            sessionStorage.setItem('onboarding', JSON.stringify({
+              ...s2,
+              ...(pmId ? { pm_id: pmId } : {}),
+              final_amount: finalAmount,
+              plan_name: planName,
+            }))
             onSuccess()
           }}
           promoSection={
@@ -793,6 +799,22 @@ function StepSuccess() {
           subscription_id: session.subscription_id,
           pm_id: session.pm_id || null,
         }),
+      }).then((res) => {
+        // Only fire the revenue event on a real charge — never on the $0 free trial.
+        if (res.ok && session.no_trial === true) {
+          const transactionId = session.subscription_id
+          const key = 'dl_purchase_' + transactionId
+          if (!sessionStorage.getItem(key)) {
+            sessionStorage.setItem(key, '1')
+            pushEvent('seller_purchase', {
+              transaction_id: transactionId,
+              value: session.final_amount,
+              currency: 'USD',
+              plan_name: session.plan_name || (session.plan_type === 'pro' ? 'Pro Seller' : 'Enterprise'),
+              signup_flow: 'onboarding',
+            })
+          }
+        }
       }).catch(() => {}) // best-effort; webhook will also fire
     }
   }, [])

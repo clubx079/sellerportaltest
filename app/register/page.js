@@ -7,6 +7,7 @@ import { loadStripe } from '@stripe/stripe-js'
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js'
 import { User, Mail, Lock, Phone, CheckCircle, AlertCircle, Loader2, Building, FileText, Eye, EyeOff, MapPin, TrendingUp, Check, ChevronRight, ArrowLeft } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
+import { pushEvent } from '@/lib/gtm'
 
 const stripePromise = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
   ? loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY)
@@ -187,7 +188,7 @@ function CheckoutForm({ planType, billingCycle, intentType, discount, onSuccess 
     } else {
       const intent = result.setupIntent || result.paymentIntent
       const pmId = typeof intent?.payment_method === 'string' ? intent.payment_method : intent?.payment_method?.id
-      onSuccess(pmId || null)
+      onSuccess(pmId || null, finalAmount)
     }
     setProcessing(false)
   }
@@ -385,7 +386,7 @@ function PaymentStep({ sellerId, planType, billingCycle, onSuccess, onBack }) {
             billingCycle={billingCycle}
             intentType={intentType}
             discount={appliedPromo?.discount ? { ...appliedPromo.discount, name: appliedPromo.name } : null}
-            onSuccess={(pmId) => onSuccess(subscriptionId, pmId)}
+            onSuccess={(pmId, finalAmount) => onSuccess(subscriptionId, pmId, finalAmount)}
           />
         </Elements>
       ) : (
@@ -505,6 +506,7 @@ function MagicLinkRegisterContent() {
       })
       const data = await res.json()
       if (data.success) {
+        pushEvent('seller_signup_complete', { signup_flow: 'magic_link' })
         setSellerId(data.user.id)
         setSellerEmail(data.user.email)
         setStep(1)
@@ -516,13 +518,27 @@ function MagicLinkRegisterContent() {
   }
 
   // Step 2→3: Activate plan + mark token used
-  const handlePaymentSuccess = async (subscriptionId, pmId) => {
+  const handlePaymentSuccess = async (subscriptionId, pmId, finalAmount) => {
     try {
-      await fetch('/api/seller/plan/activate', {
+      const activateRes = await fetch('/api/seller/plan/activate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ seller_id: sellerId, subscription_id: subscriptionId, pm_id: pmId }),
       })
+      if (activateRes.ok) {
+        // This flow always charges (no trial) — push once per subscription.
+        const key = 'dl_purchase_' + subscriptionId
+        if (!sessionStorage.getItem(key)) {
+          sessionStorage.setItem(key, '1')
+          pushEvent('seller_purchase', {
+            transaction_id: subscriptionId,
+            value: finalAmount,
+            currency: 'USD',
+            plan_name: planType === 'pro' ? 'Pro Seller' : 'Enterprise',
+            signup_flow: 'magic_link',
+          })
+        }
+      }
       // Mark token as used now that payment is complete
       await supabase
         .from('magic_link_tokens')
