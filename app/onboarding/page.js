@@ -800,8 +800,8 @@ function StepSuccess() {
           pm_id: session.pm_id || null,
         }),
       }).then((res) => {
-        // Only fire the revenue event on a real charge — never on the $0 free trial.
         if (res.ok && session.no_trial === true) {
+          // Real paid transaction — fire the revenue event (never on the $0 free trial).
           const transactionId = session.subscription_id
           const key = 'dl_purchase_' + transactionId
           if (!sessionStorage.getItem(key)) {
@@ -811,6 +811,17 @@ function StepSuccess() {
               value: session.final_amount,
               currency: 'USD',
               plan_name: session.plan_name || (session.plan_type === 'pro' ? 'Pro Seller' : 'Enterprise'),
+              signup_flow: 'onboarding',
+            })
+          }
+        } else if (res.ok) {
+          // 7-day free trial ($0) started successfully — separate, non-revenue event.
+          const key = 'dl_trial_' + session.subscription_id
+          if (!sessionStorage.getItem(key)) {
+            sessionStorage.setItem(key, '1')
+            pushEvent('seller_trial_started', {
+              plan_name: session.plan_name || (session.plan_type === 'pro' ? 'Pro Seller' : 'Enterprise'),
+              trial_days: 7,
               signup_flow: 'onboarding',
             })
           }
