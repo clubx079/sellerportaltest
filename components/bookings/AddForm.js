@@ -549,7 +549,7 @@ const AddForm = ({ isOpen, onClose, onSuccess, userId, currency = '$' }) => {
             className="fixed right-0 top-0 h-screen w-full md:w-[600px] lg:w-[700px] bg-white shadow-2xl z-[60] flex flex-col"
           >
             {/* Header */}
-            <div className="bg-[#472F97] px-4 sm:px-6 py-4 flex items-center justify-between">
+            <div className="bg-[#111111] px-4 sm:px-6 py-4 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-white/10 flex items-center justify-center">
                   <Calendar className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
@@ -579,16 +579,16 @@ const AddForm = ({ isOpen, onClose, onSuccess, userId, currency = '$' }) => {
             >
               <div className="p-4 sm:p-6 space-y-4 sm:space-y-5">
                 {/* Head Guest Selection */}
-                <div className="bg-gradient-to-br from-[#F5F3FF] to-white rounded-xl p-4 border-2 border-[#472F97]/20">
+                <div className="bg-gradient-to-br from-[#f7f7f7] to-white rounded-xl p-4 border-2 border-[#111111]/20">
                   <div className="flex items-center justify-between mb-3">
                     <h3 className="text-sm font-semibold text-neutral-900 flex items-center gap-2">
-                      <User className="w-4 h-4 text-[#472F97]" />
-                      Head Guest <span className="text-red-500">*</span>
+                      <User className="w-4 h-4 text-[#111111]" />
+                      Head Guest <span className="text-neutral-500">*</span>
                     </h3>
                     <button
                       type="button"
                       onClick={() => setShowAddGuest(!showAddGuest)}
-                      className="text-xs font-medium text-[#472F97] hover:text-[#3a2578] flex items-center gap-1"
+                      className="text-xs font-medium text-[#111111] hover:text-[#444444] flex items-center gap-1"
                     >
                       <Plus className="w-3 h-3" />
                       {showAddGuest ? 'Cancel' : 'Add New'}
@@ -604,7 +604,7 @@ const AddForm = ({ isOpen, onClose, onSuccess, userId, currency = '$' }) => {
                             type="text"
                             value={newGuest.full_name}
                             onChange={(e) => setNewGuest(prev => ({ ...prev, full_name: e.target.value }))}
-                            className="w-full border border-neutral-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#472F97] focus:border-transparent"
+                            className="w-full border border-neutral-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#111111] focus:border-transparent"
                             placeholder="Full name"
                           />
                         </div>
@@ -614,7 +614,7 @@ const AddForm = ({ isOpen, onClose, onSuccess, userId, currency = '$' }) => {
                             type="tel"
                             value={newGuest.phone}
                             onChange={(e) => setNewGuest(prev => ({ ...prev, phone: e.target.value }))}
-                            className="w-full border border-neutral-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#472F97] focus:border-transparent"
+                            className="w-full border border-neutral-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#111111] focus:border-transparent"
                             placeholder="Phone number"
                           />
                         </div>
@@ -624,7 +624,7 @@ const AddForm = ({ isOpen, onClose, onSuccess, userId, currency = '$' }) => {
                             type="text"
                             value={newGuest.cnic}
                             onChange={(e) => setNewGuest(prev => ({ ...prev, cnic: e.target.value }))}
-                            className="w-full border border-neutral-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#472F97] focus:border-transparent"
+                            className="w-full border border-neutral-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#111111] focus:border-transparent"
                             placeholder="CNIC number"
                           />
                         </div>
@@ -635,14 +635,14 @@ const AddForm = ({ isOpen, onClose, onSuccess, userId, currency = '$' }) => {
                             type="checkbox"
                             checked={newGuest.is_vip}
                             onChange={(e) => setNewGuest(prev => ({ ...prev, is_vip: e.target.checked }))}
-                            className="w-4 h-4 text-[#472F97] rounded focus:ring-[#472F97] border-neutral-300"
+                            className="w-4 h-4 text-[#111111] rounded focus:ring-[#111111] border-neutral-300"
                           />
                           <span className="text-xs text-neutral-700">VIP Guest</span>
                         </label>
                         <button
                           type="button"
                           onClick={handleAddGuest}
-                          className="px-4 py-2 bg-[#472F97] hover:bg-[#3a2578] text-white text-xs font-medium rounded-lg transition-colors"
+                          className="px-4 py-2 bg-[#111111] hover:bg-[#444444] text-white text-xs font-medium rounded-lg transition-colors"
                         >
                           Save Guest
                         </button>
@@ -674,7 +674,7 @@ const AddForm = ({ isOpen, onClose, onSuccess, userId, currency = '$' }) => {
                       <button
                         type="button"
                         onClick={() => setShowAddAdditionalGuest(!showAddAdditionalGuest)}
-                        className="text-xs font-medium text-[#472F97] hover:text-[#3a2578] flex items-center gap-1"
+                        className="text-xs font-medium text-[#111111] hover:text-[#444444] flex items-center gap-1"
                       >
                         <Plus className="w-3 h-3" />
                         {showAddAdditionalGuest ? 'Cancel' : 'Add New'}
@@ -691,7 +691,7 @@ const AddForm = ({ isOpen, onClose, onSuccess, userId, currency = '$' }) => {
                             type="text"
                             value={newAdditionalGuest.full_name}
                             onChange={(e) => setNewAdditionalGuest(prev => ({ ...prev, full_name: e.target.value }))}
-                            className="w-full border border-neutral-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#472F97] focus:border-transparent"
+                            className="w-full border border-neutral-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#111111] focus:border-transparent"
                             placeholder="Full name"
                           />
                         </div>
@@ -701,7 +701,7 @@ const AddForm = ({ isOpen, onClose, onSuccess, userId, currency = '$' }) => {
                             type="tel"
                             value={newAdditionalGuest.phone}
                             onChange={(e) => setNewAdditionalGuest(prev => ({ ...prev, phone: e.target.value }))}
-                            className="w-full border border-neutral-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#472F97] focus:border-transparent"
+                            className="w-full border border-neutral-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#111111] focus:border-transparent"
                             placeholder="Phone number"
                           />
                         </div>
@@ -711,7 +711,7 @@ const AddForm = ({ isOpen, onClose, onSuccess, userId, currency = '$' }) => {
                             type="text"
                             value={newAdditionalGuest.cnic}
                             onChange={(e) => setNewAdditionalGuest(prev => ({ ...prev, cnic: e.target.value }))}
-                            className="w-full border border-neutral-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#472F97] focus:border-transparent"
+                            className="w-full border border-neutral-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#111111] focus:border-transparent"
                             placeholder="CNIC number"
                           />
                         </div>
@@ -722,14 +722,14 @@ const AddForm = ({ isOpen, onClose, onSuccess, userId, currency = '$' }) => {
                             type="checkbox"
                             checked={newAdditionalGuest.is_vip}
                             onChange={(e) => setNewAdditionalGuest(prev => ({ ...prev, is_vip: e.target.checked }))}
-                            className="w-4 h-4 text-[#472F97] rounded focus:ring-[#472F97] border-neutral-300"
+                            className="w-4 h-4 text-[#111111] rounded focus:ring-[#111111] border-neutral-300"
                           />
                           <span className="text-xs text-neutral-700">VIP Guest</span>
                         </label>
                         <button
                           type="button"
                           onClick={handleAddAdditionalGuest}
-                          className="px-4 py-2 bg-[#472F97] hover:bg-[#3a2578] text-white text-xs font-medium rounded-lg transition-colors"
+                          className="px-4 py-2 bg-[#111111] hover:bg-[#444444] text-white text-xs font-medium rounded-lg transition-colors"
                         >
                           Save Guest
                         </button>
@@ -782,7 +782,7 @@ const AddForm = ({ isOpen, onClose, onSuccess, userId, currency = '$' }) => {
                                   additional_guests: prev.additional_guests.filter(id => id !== guestId)
                                 }));
                               }}
-                              className="p-1 text-red-500 hover:bg-red-50 rounded transition-colors"
+                              className="p-1 text-neutral-500 hover:bg-neutral-50 rounded transition-colors"
                             >
                               <X className="w-3.5 h-3.5" />
                             </button>
@@ -797,7 +797,7 @@ const AddForm = ({ isOpen, onClose, onSuccess, userId, currency = '$' }) => {
                 <div className="bg-neutral-50 rounded-xl p-4 border border-neutral-200">
                   <h3 className="text-sm font-semibold text-neutral-900 mb-3 flex items-center gap-2">
                     <BedDouble className="w-4 h-4" />
-                    Booking Type <span className="text-red-500">*</span>
+                    Booking Type <span className="text-neutral-500">*</span>
                   </h3>
                   <div className="grid grid-cols-2 gap-2">
                     <button
@@ -805,7 +805,7 @@ const AddForm = ({ isOpen, onClose, onSuccess, userId, currency = '$' }) => {
                       onClick={() => setFormData(prev => ({ ...prev, booking_type: 'room', room_type_id: '', hall_type_id: '', room_id: '', hall_id: '' }))}
                       className={`p-3 rounded-lg border-2 text-sm font-medium transition-all ${
                         formData.booking_type === 'room'
-                          ? 'border-[#472F97] bg-[#472F97] text-white'
+                          ? 'border-[#111111] bg-[#111111] text-white'
                           : 'border-neutral-200 bg-white text-neutral-700 hover:border-neutral-300'
                       }`}
                     >
@@ -817,7 +817,7 @@ const AddForm = ({ isOpen, onClose, onSuccess, userId, currency = '$' }) => {
                       onClick={() => setFormData(prev => ({ ...prev, booking_type: 'hall', room_type_id: '', hall_type_id: '', room_id: '', hall_id: '' }))}
                       className={`p-3 rounded-lg border-2 text-sm font-medium transition-all ${
                         formData.booking_type === 'hall'
-                          ? 'border-[#472F97] bg-[#472F97] text-white'
+                          ? 'border-[#111111] bg-[#111111] text-white'
                           : 'border-neutral-200 bg-white text-neutral-700 hover:border-neutral-300'
                       }`}
                     >
@@ -833,7 +833,7 @@ const AddForm = ({ isOpen, onClose, onSuccess, userId, currency = '$' }) => {
                     <div className="bg-neutral-50 rounded-xl p-4 border border-neutral-200">
                       <h3 className="text-sm font-semibold text-neutral-900 mb-3 flex items-center gap-2">
                         <BedDouble className="w-4 h-4" />
-                        Room Type <span className="text-red-500">*</span>
+                        Room Type <span className="text-neutral-500">*</span>
                       </h3>
                       <SearchableSelect
                         options={roomTypes.map(rt => ({
@@ -850,7 +850,7 @@ const AddForm = ({ isOpen, onClose, onSuccess, userId, currency = '$' }) => {
                     <div className="bg-neutral-50 rounded-xl p-4 border border-neutral-200">
                       <h3 className="text-sm font-semibold text-neutral-900 mb-3 flex items-center gap-2">
                         <BedDouble className="w-4 h-4" />
-                        Room Number <span className="text-red-500">*</span>
+                        Room Number <span className="text-neutral-500">*</span>
                       </h3>
                       <SearchableSelect
                         options={rooms
@@ -871,7 +871,7 @@ const AddForm = ({ isOpen, onClose, onSuccess, userId, currency = '$' }) => {
                     <div className="bg-neutral-50 rounded-xl p-4 border border-neutral-200">
                       <h3 className="text-sm font-semibold text-neutral-900 mb-3 flex items-center gap-2">
                         <Building2 className="w-4 h-4" />
-                        Hall Type <span className="text-red-500">*</span>
+                        Hall Type <span className="text-neutral-500">*</span>
                       </h3>
                       <SearchableSelect
                         options={hallTypes.map(ht => ({
@@ -888,7 +888,7 @@ const AddForm = ({ isOpen, onClose, onSuccess, userId, currency = '$' }) => {
                     <div className="bg-neutral-50 rounded-xl p-4 border border-neutral-200">
                       <h3 className="text-sm font-semibold text-neutral-900 mb-3 flex items-center gap-2">
                         <Building2 className="w-4 h-4" />
-                        Hall Number <span className="text-red-500">*</span>
+                        Hall Number <span className="text-neutral-500">*</span>
                       </h3>
                       <SearchableSelect
                         options={halls
@@ -919,7 +919,7 @@ const AddForm = ({ isOpen, onClose, onSuccess, userId, currency = '$' }) => {
                         type="datetime-local"
                         value={formData.check_in}
                         onChange={(e) => setFormData(prev => ({ ...prev, check_in: e.target.value }))}
-                        className="w-full border border-neutral-200 rounded-lg px-2 sm:px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#472F97] focus:border-transparent"
+                        className="w-full border border-neutral-200 rounded-lg px-2 sm:px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#111111] focus:border-transparent"
                       />
                     </div>
                     <div>
@@ -928,7 +928,7 @@ const AddForm = ({ isOpen, onClose, onSuccess, userId, currency = '$' }) => {
                         type="datetime-local"
                         value={formData.check_out}
                         onChange={(e) => setFormData(prev => ({ ...prev, check_out: e.target.value }))}
-                        className="w-full border border-neutral-200 rounded-lg px-2 sm:px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#472F97] focus:border-transparent"
+                        className="w-full border border-neutral-200 rounded-lg px-2 sm:px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#111111] focus:border-transparent"
                       />
                     </div>
                     <div>
@@ -938,7 +938,7 @@ const AddForm = ({ isOpen, onClose, onSuccess, userId, currency = '$' }) => {
                         min="1"
                         value={formData.adults}
                         onChange={(e) => setFormData(prev => ({ ...prev, adults: parseInt(e.target.value) || 1 }))}
-                        className="w-full border border-neutral-200 rounded-lg px-2 sm:px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#472F97] focus:border-transparent"
+                        className="w-full border border-neutral-200 rounded-lg px-2 sm:px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#111111] focus:border-transparent"
                       />
                     </div>
                     <div>
@@ -948,7 +948,7 @@ const AddForm = ({ isOpen, onClose, onSuccess, userId, currency = '$' }) => {
                         min="0"
                         value={formData.kids}
                         onChange={(e) => setFormData(prev => ({ ...prev, kids: parseInt(e.target.value) || 0 }))}
-                        className="w-full border border-neutral-200 rounded-lg px-2 sm:px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#472F97] focus:border-transparent"
+                        className="w-full border border-neutral-200 rounded-lg px-2 sm:px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#111111] focus:border-transparent"
                       />
                     </div>
                   </div>
@@ -966,7 +966,7 @@ const AddForm = ({ isOpen, onClose, onSuccess, userId, currency = '$' }) => {
                       <select
                         value={formData.booking_status}
                         onChange={(e) => setFormData(prev => ({ ...prev, booking_status: e.target.value }))}
-                        className="w-full border border-neutral-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#472F97] focus:border-transparent"
+                        className="w-full border border-neutral-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#111111] focus:border-transparent"
                       >
                         <option value="pending">Pending</option>
                         <option value="confirmed">Confirmed</option>
@@ -978,7 +978,7 @@ const AddForm = ({ isOpen, onClose, onSuccess, userId, currency = '$' }) => {
                       <select
                         value={formData.payment_status}
                         onChange={(e) => setFormData(prev => ({ ...prev, payment_status: e.target.value }))}
-                        className="w-full border border-neutral-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#472F97] focus:border-transparent"
+                        className="w-full border border-neutral-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#111111] focus:border-transparent"
                       >
                         <option value="pending">Pending</option>
                         <option value="partial">Partial</option>
@@ -994,7 +994,7 @@ const AddForm = ({ isOpen, onClose, onSuccess, userId, currency = '$' }) => {
                         step="0.01"
                         value={formData.paid_amount}
                         onChange={(e) => setFormData(prev => ({ ...prev, paid_amount: e.target.value }))}
-                        className="w-full border border-neutral-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#472F97] focus:border-transparent"
+                        className="w-full border border-neutral-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#111111] focus:border-transparent"
                         placeholder="0.00"
                       />
                     </div>
@@ -1014,7 +1014,7 @@ const AddForm = ({ isOpen, onClose, onSuccess, userId, currency = '$' }) => {
                             type="checkbox"
                             checked={formData.selected_services.includes(service.id)}
                             onChange={() => handleServiceToggle(service.id)}
-                            className="w-4 h-4 text-[#472F97] rounded focus:ring-[#472F97] border-neutral-300"
+                            className="w-4 h-4 text-[#111111] rounded focus:ring-[#111111] border-neutral-300"
                           />
                           <span className="text-xs text-neutral-700 flex-1">{service.title}</span>
                           <span className="text-xs font-medium text-neutral-900">{currency}{service.price}</span>
@@ -1025,7 +1025,7 @@ const AddForm = ({ isOpen, onClose, onSuccess, userId, currency = '$' }) => {
                 )}
 
                 {/* Total */}
-                <div className="bg-[#472F97] rounded-xl p-4 text-white">
+                <div className="bg-[#111111] rounded-xl p-4 text-white">
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium">Estimated Total</span>
                     <span className="text-xl font-bold">{currency}{calculateTotal().toFixed(2)}</span>
@@ -1045,7 +1045,7 @@ const AddForm = ({ isOpen, onClose, onSuccess, userId, currency = '$' }) => {
                 <button
                   type="submit"
                   disabled={saving}
-                  className="flex-1 px-3 sm:px-4 py-2.5 bg-[#472F97] hover:bg-[#3a2578] text-white text-sm font-medium rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  className="flex-1 px-3 sm:px-4 py-2.5 bg-[#111111] hover:bg-[#444444] text-white text-sm font-medium rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
                   <Save className="w-4 h-4" />
                   <span className="hidden sm:inline">{saving ? 'Saving...' : 'Save Booking'}</span>
@@ -1063,8 +1063,8 @@ const AddForm = ({ isOpen, onClose, onSuccess, userId, currency = '$' }) => {
                   exit={{ opacity: 0, y: -20 }}
                   className={`fixed top-4 left-1/2 -translate-x-1/2 z-[70] px-4 py-3 rounded-xl shadow-lg flex items-center gap-3 ${
                     toast.type === 'error'
-                      ? 'bg-red-50 border border-red-200 text-red-700'
-                      : 'bg-green-50 border border-green-200 text-green-700'
+                      ? 'bg-neutral-50 border border-neutral-200 text-neutral-700'
+                      : 'bg-neutral-50 border border-neutral-200 text-neutral-700'
                   }`}
                 >
                   {toast.type === 'error' ? (

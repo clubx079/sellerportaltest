@@ -294,9 +294,9 @@ export default function ImageGalleryManager({ images = [], onImagesChange, selle
   return (
     <div className="space-y-4">
       {uploadError && (
-        <div className="flex items-start gap-2 p-3 bg-[#FEF0EF] border border-[#F5C4C0] rounded text-[13px] text-[#D03839]">
+        <div className="flex items-start gap-2 p-3 bg-tint border-[1.5px] border-ink rounded-[10px] text-[13px] font-semibold text-ink">
           <span className="flex-1">{uploadError}</span>
-          <button type="button" onClick={() => setUploadError(null)} className="flex-shrink-0 text-[#D03839] hover:text-[#B02020]"><X size={14} /></button>
+          <button type="button" onClick={() => setUploadError(null)} className="flex-shrink-0 text-ink hover:text-smoke-2"><X size={14} /></button>
         </div>
       )}
       {/* Upload Area */}
@@ -305,31 +305,31 @@ export default function ImageGalleryManager({ images = [], onImagesChange, selle
         onDragLeave={handleDrag}
         onDragOver={handleDrag}
         onDrop={handleDrop}
-        className={`border-2 border-dashed rounded p-8 text-center transition-all ${
+        className={`border-2 border-dashed rounded-[12px] p-8 text-center transition-all duration-120 ${
           dragActive
-            ? 'border-[#D03839] bg-[#FEF0EF]'
-            : 'border-neutral-300 hover:border-neutral-400'
+            ? 'border-ink bg-tint'
+            : 'border-line hover:border-ink'
         }`}
       >
         <div className="flex flex-col items-center">
-          <div className="w-16 h-16 rounded flex items-center justify-center mb-4 bg-[#D03839]">
+          <div className="w-16 h-16 rounded-[12px] flex items-center justify-center mb-4 bg-ink">
             {totalUploading > 0 ? (
-              <Loader className="w-8 h-8 text-white animate-spin" />
+              <Loader className="w-8 h-8 text-white motion-safe:animate-spin" />
             ) : (
               <Upload className="w-8 h-8 text-white" />
             )}
           </div>
-          <p className="text-base font-semibold text-neutral-900 mb-2">
+          <p className="font-display text-base font-semibold tracking-[-0.01em] text-body mb-2">
             {totalUploading > 0
               ? `Uploading ${totalUploading} image${totalUploading > 1 ? 's' : ''}...`
               : 'Upload Property Images'}
           </p>
-          <p className="text-sm text-neutral-600 mb-1">
+          <p className="text-sm text-smoke-2 mb-1">
             {totalUploading > 0
               ? `Processing ${totalUploading} image${totalUploading > 1 ? 's' : ''}...`
               : 'Click to select or drag and drop multiple images'}
           </p>
-          <p className="text-xs text-neutral-500 mb-4">
+          <p className="font-mono text-[11px] text-muted mb-4">
             Images optimized & uploaded up to {MAX_CONCURRENT_UPLOADS} at a time
           </p>
           <input
@@ -343,7 +343,7 @@ export default function ImageGalleryManager({ images = [], onImagesChange, selle
           />
           <label
             htmlFor="image-upload"
-            className={`inline-flex items-center gap-2 px-4 py-2 bg-[#D03839] hover:bg-[#E0493B] text-white rounded text-sm font-medium transition-colors cursor-pointer ${
+            className={`inline-flex items-center gap-2 px-4 py-2 bg-ink hover:bg-smoke-2 text-white border-[1.5px] border-ink rounded-[10px] text-sm font-semibold shadow-soft-3 transition-all duration-120 cursor-pointer ${
               totalUploading > 0 ? 'opacity-50 cursor-not-allowed' : ''
             }`}
           >
@@ -355,23 +355,23 @@ export default function ImageGalleryManager({ images = [], onImagesChange, selle
 
       {/* Stats Bar */}
       {localImages.length > 0 && (
-        <div className="flex items-center justify-between text-xs text-neutral-600 bg-neutral-50 border border-neutral-200 rounded p-3">
+        <div className="flex items-center justify-between font-mono text-[11px] text-smoke-2 bg-tint-2 border border-hairline rounded-[10px] p-3">
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
               {totalUploading > 0 ? (
-                <Loader size={14} className="text-[#D03839] animate-spin" />
+                <Loader size={14} className="text-ink motion-safe:animate-spin" />
               ) : (
-                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                <div className="w-2 h-2 bg-ink rounded-pill"></div>
               )}
-              <span className="font-semibold text-neutral-900">{localImages.length} Total</span>
+              <span className="font-semibold text-body">{localImages.length} Total</span>
             </div>
             {uploadingCount > 0 && (
-              <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
+              <span className="px-2 py-1 bg-muted text-white rounded-pill font-mono text-[10.5px] font-semibold uppercase tracking-[0.05em]">
                 Uploading: {uploadingCount}
               </span>
             )}
             {completedCount > 0 && (
-              <span className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">
+              <span className="px-2 py-1 bg-ink text-white rounded-pill font-mono text-[10.5px] font-semibold uppercase tracking-[0.05em]">
                 Completed: {completedCount}
               </span>
             )}
@@ -385,7 +385,7 @@ export default function ImageGalleryManager({ images = [], onImagesChange, selle
           {localImages.map((image, index) => (
             <div
               key={image.id}
-              className="relative group bg-neutral-100 rounded overflow-hidden aspect-square transition-all duration-300"
+              className="relative group bg-stripes rounded-[12px] border-[1.5px] border-ink overflow-hidden aspect-square"
             >
               {/* Image Preview */}
               {image.status === 'queued' || image.status === 'uploading' ? (
@@ -397,8 +397,8 @@ export default function ImageGalleryManager({ images = [], onImagesChange, selle
                   />}
                   <div className="absolute inset-0 flex items-center justify-center bg-black/20">
                     <div className="text-center">
-                      <Loader className="w-8 h-8 text-white animate-spin mx-auto mb-2" />
-                      <p className="text-xs text-white font-medium">
+                      <Loader className="w-8 h-8 text-white motion-safe:animate-spin mx-auto mb-2" />
+                      <p className="font-mono text-[11px] text-white font-medium">
                         {image.status === 'queued' ? 'Queued...' : 'Uploading...'}
                       </p>
                     </div>
@@ -407,7 +407,7 @@ export default function ImageGalleryManager({ images = [], onImagesChange, selle
                   <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button
                       onClick={() => handleRemove(image.id, null)}
-                      className="p-1.5 bg-red-500 hover:bg-red-600 text-white rounded transition-colors"
+                      className="p-1.5 bg-ink hover:bg-smoke-2 text-white rounded-[8px] transition-colors duration-120"
                       title="Cancel upload"
                     >
                       <X size={14} />
@@ -415,18 +415,18 @@ export default function ImageGalleryManager({ images = [], onImagesChange, selle
                   </div>
                 </div>
               ) : image.status === 'error' ? (
-                <div className="w-full h-full flex flex-col items-center justify-center bg-red-50">
+                <div className="w-full h-full flex flex-col items-center justify-center bg-tint-2">
                   <img
                     src={image.preview}
                     alt={`Failed ${index + 1}`}
                     className="w-full h-full object-cover opacity-20 absolute inset-0"
                   />
                   <div className="text-center p-4 relative z-10">
-                    <X className="w-8 h-8 text-red-500 mx-auto mb-2" />
-                    <p className="text-xs text-red-600 mb-2">Upload failed</p>
+                    <X className="w-8 h-8 text-ink mx-auto mb-2" />
+                    <p className="text-xs font-semibold text-ink mb-2">Upload failed</p>
                     <button
                       onClick={() => handleRetry(image.id)}
-                      className="px-3 py-1.5 bg-[#D03839] hover:bg-[#E0493B] text-white text-xs rounded transition-colors"
+                      className="px-3 py-1.5 bg-ink hover:bg-smoke-2 text-white border border-ink text-xs font-semibold rounded-[8px] transition-colors duration-120"
                     >
                       Retry Upload
                     </button>
@@ -444,10 +444,10 @@ export default function ImageGalleryManager({ images = [], onImagesChange, selle
                   <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
                     <button
                       onClick={() => handleSetFeatured(image.id)}
-                      className={`p-2 rounded transition-colors ${
+                      className={`p-2 rounded-[8px] transition-colors duration-120 ${
                         image.isFeatured
-                          ? 'bg-yellow-500 text-white'
-                          : 'bg-white text-neutral-700 hover:bg-yellow-500 hover:text-white'
+                          ? 'bg-ink text-white'
+                          : 'bg-white text-ink hover:bg-ink hover:text-white'
                       }`}
                       title="Set as featured"
                     >
@@ -455,7 +455,7 @@ export default function ImageGalleryManager({ images = [], onImagesChange, selle
                     </button>
                     <button
                       onClick={() => handleRemove(image.id, image.imageKey)}
-                      className="p-2 bg-red-500 hover:bg-red-600 text-white rounded transition-colors"
+                      className="p-2 bg-ink hover:bg-smoke-2 text-white rounded-[8px] transition-colors duration-120"
                       title="Remove"
                     >
                       <X size={16} />
@@ -464,7 +464,7 @@ export default function ImageGalleryManager({ images = [], onImagesChange, selle
 
                   {/* Featured Badge */}
                   {image.isFeatured && (
-                    <div className="absolute top-2 left-2 px-2 py-1 bg-yellow-500 text-white text-xs font-medium rounded flex items-center gap-1">
+                    <div className="absolute top-2 left-2 px-2.5 py-1 bg-body text-white font-mono text-[10.5px] font-semibold uppercase tracking-[0.05em] rounded-pill flex items-center gap-1">
                       <Star size={12} fill="currentColor" />
                       Featured
                     </div>

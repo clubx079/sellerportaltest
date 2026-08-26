@@ -53,7 +53,7 @@ const ExpenseView = ({ isOpen, onClose, expense }) => {
             className="fixed right-0 top-0 h-screen w-full md:w-[600px] lg:w-[700px] bg-white shadow-2xl z-[60] flex flex-col"
           >
             {/* Header */}
-            <div className="bg-[#472F97] px-4 sm:px-6 py-4 flex items-center justify-between">
+            <div className="bg-[#111111] px-4 sm:px-6 py-4 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-white/10 flex items-center justify-center">
                   <Receipt className="w-4 h-4 sm:w-5 sm:h-5 text-white" />

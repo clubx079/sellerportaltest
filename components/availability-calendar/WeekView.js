@@ -48,13 +48,13 @@ const WeekView = ({ currentDate, bookings, rooms, halls, isRoomView }) => {
   const getStatusColor = (status) => {
     switch (status?.toLowerCase()) {
       case 'booked':
-        return 'bg-red-100 border-red-300 text-red-700';
+        return 'bg-neutral-100 border-neutral-300 text-neutral-700';
       case 'checked_in':
-        return 'bg-yellow-100 border-yellow-300 text-yellow-700';
+        return 'bg-neutral-100 border-neutral-300 text-neutral-700';
       case 'checked_out':
         return 'bg-neutral-200 border-neutral-300 text-neutral-600';
       default:
-        return 'bg-green-100 border-green-300 text-green-700';
+        return 'bg-neutral-100 border-neutral-300 text-neutral-700';
     }
   };
 
@@ -142,8 +142,8 @@ const WeekView = ({ currentDate, bookings, rooms, halls, isRoomView }) => {
                         </div>
                       </div>
                     ) : (
-                      <div className="h-full rounded-lg border border-dashed border-green-300 bg-green-50 flex items-center justify-center">
-                        <span className="text-xs text-green-600 font-medium">Available</span>
+                      <div className="h-full rounded-lg border border-dashed border-neutral-300 bg-neutral-50 flex items-center justify-center">
+                        <span className="text-xs text-neutral-600 font-medium">Available</span>
                       </div>
                     )}
                   </td>

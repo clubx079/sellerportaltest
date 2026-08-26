@@ -14,11 +14,11 @@ import {
 // Design system avatar colors
 // Light pastel backgrounds + darker text pairs from design system
 const AVATAR_PAIRS = [
-  { bg: '#FEF0EF', text: '#D03839' },  // primary-surface / primary
-  { bg: '#E4F5EC', text: '#0F6E56' },  // success-surface / success
-  { bg: '#FEF3E2', text: '#B5620A' },  // warning-surface / warning
-  { bg: '#F0F0EC', text: '#444441' },  // neutral surface / body
-  { bg: '#FAFAF8', text: '#1A1816' },  // light surface / primary text
+  { bg: '#f2f2f2', text: '#111111' },  // primary-surface / primary
+  { bg: '#f2f2f2', text: '#111111' },  // success-surface / success
+  { bg: '#f2f2f2', text: '#555555' },  // warning-surface / warning
+  { bg: '#ececec', text: '#444444' },  // neutral surface / body
+  { bg: '#fafafa', text: '#171717' },  // light surface / primary text
 ];
 function getAvatarPair(seed = '') {
   const str = String(seed || 'u');
@@ -185,7 +185,7 @@ export default function DashboardPage() {
     {
       label: "Active listings", value: stats.activeProperties,
       sub: stats.recentlyAdded > 0 ? `+${stats.recentlyAdded} this week` : null, subUp: true,
-      icon: <Home className="w-4 h-4 text-[#D03839]" />, iconBg: "#FEF0EF"
+      icon: <Home className="w-4 h-4 text-ink" />, iconBg: "#f2f2f2"
     },
     {
       label: "Total views",
@@ -196,12 +196,12 @@ export default function DashboardPage() {
         ? `+${stats.viewsThisWeek} this week`
         : (!stats.hasSevenDayViews && stats.viewsLast30Days > 0 ? `+${stats.viewsLast30Days} last 30 days` : null),
       subUp: true,
-      icon: <Eye className="w-4 h-4 text-[#B5620A]" />, iconBg: "#FEF3E2"
+      icon: <Eye className="w-4 h-4 text-smoke-3" />, iconBg: "#f2f2f2"
     },
     {
       label: "Offers received", value: stats.offersReceived,
       sub: stats.offersThisWeek > 0 ? `+${stats.offersThisWeek} this week` : null, subUp: true,
-      icon: <FileText className="w-4 h-4 text-[#B5620A]" />, iconBg: "#FEF3E2"
+      icon: <FileText className="w-4 h-4 text-smoke-3" />, iconBg: "#f2f2f2"
     },
     {
       label: "Deals closed", value: stats.dealsClosed,
@@ -209,32 +209,32 @@ export default function DashboardPage() {
       // entirely rather than show a fake 0. Otherwise show the honest count.
       sub: (stats.closedThisMonth != null && stats.closedThisMonth > 0) ? `+${stats.closedThisMonth} this month` : null,
       subUp: true,
-      icon: <CheckCircle2 className="w-4 h-4 text-[#0F6E56]" />, iconBg: "#E4F5EC"
+      icon: <CheckCircle2 className="w-4 h-4 text-ink" />, iconBg: "#f2f2f2"
     },
   ];
 
   const manageItems = [
-    { label: "Post a new deal", desc: "Create a listing", icon: <PlusCircle className="w-5 h-5 text-[#737370]" />, href: "/properties/new", show: perms.isOwner || perms.listings_create },
-    { label: "Edit Listings", desc: "Update your deals", icon: <Edit3 className="w-5 h-5 text-[#D03839]" />, href: "/properties", show: perms.isOwner || perms.listings_update },
-    { label: "View Offers", desc: `${stats.offersReceived} pending offers`, icon: <FileText className="w-5 h-5 text-[#B5620A]" />, href: "/offers", show: true },
+    { label: "Post a new deal", desc: "Create a listing", icon: <PlusCircle className="w-5 h-5 text-muted" />, href: "/properties/new", show: perms.isOwner || perms.listings_create },
+    { label: "Edit Listings", desc: "Update your deals", icon: <Edit3 className="w-5 h-5 text-ink" />, href: "/properties", show: perms.isOwner || perms.listings_update },
+    { label: "View Offers", desc: `${stats.offersReceived} pending offers`, icon: <FileText className="w-5 h-5 text-smoke-3" />, href: "/offers", show: true },
     // 4th slot: Create Contract when allowed, otherwise swap in Messages so the row stays full.
     (perms.isOwner || perms.contracts_create)
-      ? { label: "Create Contract", desc: "Send a deal to a buyer", icon: <ScrollText className="w-5 h-5 text-[#0F6E56]" />, href: "/contracts/new", show: true }
-      : { label: "Messages", desc: "Chat with buyers", icon: <MessageSquare className="w-5 h-5 text-[#0F6E56]" />, href: "/messages", show: true },
+      ? { label: "Create Contract", desc: "Send a deal to a buyer", icon: <ScrollText className="w-5 h-5 text-ink" />, href: "/contracts/new", show: true }
+      : { label: "Messages", desc: "Chat with buyers", icon: <MessageSquare className="w-5 h-5 text-ink" />, href: "/messages", show: true },
   ].filter(item => item.show);
 
   return (
-    <div className="min-h-full bg-[#FAFAF8]" style={{ fontFamily: 'var(--font-dm-sans), sans-serif' }}>
+    <div className="min-h-full bg-tint-3" style={{ fontFamily: 'var(--font-instrument), sans-serif' }}>
       {/* Header */}
       <div className="px-2 lg:px-4 pt-5 pb-4">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-[24px] font-bold text-[#1A1816] tracking-[-0.56px]">Welcome Back, {firstName}</h1>
-            <p className="text-[14px] text-[#737370] mt-0.5">{getCurrentDate()}</p>
+            <h1 className="font-display font-bold text-[26px] md:text-[29px] leading-[1.1] tracking-[-0.025em] text-ink">Welcome Back, {firstName}</h1>
+            <p className="font-mono text-[11.5px] text-muted uppercase tracking-[0.08em] mt-1">{getCurrentDate()}</p>
           </div>
           <div className="flex items-center gap-3">
             {(perms.isOwner || perms.listings_create) && (
-              <Link href="/properties/new" className="hidden lg:flex items-center gap-2 px-4 py-2.5 bg-[#1A1816] text-white text-[14px] font-semibold rounded hover:bg-[#2a2826] transition-colors duration-200">
+              <Link href="/properties/new" className="hidden lg:flex items-center gap-2 px-[18px] py-2.5 bg-ink text-white text-[14px] font-semibold border-[1.5px] border-ink rounded-[10px] shadow-soft-3 hover:bg-smoke-2 transition-all duration-[120ms]">
                 <PlusCircle className="w-4 h-4" />
                 Post a Deal
               </Link>
@@ -247,22 +247,22 @@ export default function DashboardPage() {
         {/* KPI Cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
           {kpiCards.map(card => (
-            <div key={card.label} className="bg-white rounded border border-[#E8E8E4] px-4 py-5 flex flex-col">
+            <div key={card.label} className="bg-white border-[1.5px] border-ink rounded-[12px] shadow-offset-4 px-4 py-5 flex flex-col">
               {/* Top row — label + icon */}
               <div className="flex items-start justify-between mb-5">
-                <p className="text-[13px] font-medium text-[#737370]">{card.label}</p>
-                <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0" style={{ backgroundColor: card.iconBg }}>
+                <p className="font-mono text-[11px] font-semibold text-muted uppercase tracking-[0.12em]">{card.label}</p>
+                <div className="w-8 h-8 rounded-[8px] bg-tint flex items-center justify-center flex-shrink-0">
                   {card.icon}
                 </div>
               </div>
               {/* Number + trend */}
               {loading ? (
-                <div className="h-9 w-16 bg-[#FAFAF8] rounded animate-pulse" />
+                <div className="h-9 w-16 bg-tint rounded motion-safe:animate-pulse" />
               ) : (
                 <div>
-                  <p className="text-[36px] font-bold text-[#1A1816] leading-none tracking-tight">{card.value}</p>
+                  <p className="font-display font-bold text-[34px] text-ink leading-none tracking-[-0.02em]">{card.value}</p>
                   {card.sub && (
-                    <p className={`text-[12px] font-medium mt-2 flex items-center gap-1 ${card.subUp ? 'text-[#0F6E56]' : 'text-[#D03839]'}`}>
+                    <p className="font-mono text-[11px] font-semibold text-ink mt-2 flex items-center gap-1">
                       {card.subUp ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
                       {card.sub}
                     </p>
@@ -276,24 +276,24 @@ export default function DashboardPage() {
         {/* My Listings + Recent Messages */}
         <div className="grid grid-cols-1 xl:grid-cols-5 gap-5 mb-8">
           {/* My Listings */}
-          <div className="xl:col-span-3 bg-white rounded border border-[#E8E8E4] overflow-hidden">
+          <div className="xl:col-span-3 bg-white border-[1.5px] border-ink rounded-[12px] shadow-offset-4 overflow-hidden">
             {/* Header */}
-            <div className="flex items-center justify-between px-4 py-3 border-b border-[#E8E8E4]">
-              <h2 className="text-[14px] font-normal text-[#1A1816]">My Listings</h2>
-              <Link href="/properties" className="text-[13px] font-medium text-[#737370] hover:text-[#1A1816] transition-colors duration-200">View all</Link>
+            <div className="flex items-center justify-between px-4 py-3 border-b border-hairline">
+              <h2 className="font-display font-semibold text-[16.5px] tracking-[-0.01em] text-ink">My Listings</h2>
+              <Link href="/properties" className="font-mono text-[11px] font-semibold uppercase tracking-[0.08em] text-muted hover:text-ink transition-colors duration-[120ms]">View all</Link>
             </div>
 
             {loading ? (
               <div className="min-h-[340px] flex flex-col items-center justify-center gap-3">
-                <div className="animate-spin rounded-full h-8 w-8 border-2 border-[#E8E8E4] border-t-[#1A1816]"></div>
-                <p className="text-[13px] text-[#A8A8A4]">Loading listings...</p>
+                <div className="motion-safe:animate-spin rounded-full h-8 w-8 border-2 border-hairline border-t-ink"></div>
+                <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-muted">Loading listings...</p>
               </div>
             ) : recentProperties.length === 0 ? (
               <div className="p-8 text-center min-h-[340px] flex flex-col items-center justify-center">
-                <Building2 className="w-8 h-8 text-[#A8A8A4] mx-auto mb-3" />
-                <p className="text-[14px] font-medium text-[#444441] mb-3">No listings yet</p>
+                <Building2 className="w-8 h-8 text-mist mx-auto mb-3" />
+                <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.12em] text-muted mb-4">No listings yet</p>
                 {(perms.isOwner || perms.listings_create) && (
-                  <Link href="/properties/new" className="inline-flex items-center gap-2 px-4 py-2 bg-[#D03839] text-white text-[13px] font-semibold rounded hover:bg-[#E0493B] transition-colors duration-200">
+                  <Link href="/properties/new" className="inline-flex items-center gap-2 px-4 py-2 bg-ink text-white text-[13px] font-semibold border-[1.5px] border-ink rounded-[10px] shadow-soft-3 hover:bg-smoke-2 transition-all duration-[120ms]">
                     <PlusCircle className="w-4 h-4" /> Post a Deal
                   </Link>
                 )}
@@ -309,36 +309,36 @@ export default function DashboardPage() {
                   const ps = (property.property_status || 'active').toLowerCase();
                   const statusLabel = ps === 'active' ? 'Active' : ps === 'under_review' ? 'Under review' : ps === 'sold' ? 'Sold' : 'Active';
                   const statusStyle = ps === 'active'
-                    ? 'bg-[#E4F5EC] text-[#0F6E56]'
+                    ? 'bg-body text-white'
                     : ps === 'sold'
-                    ? 'bg-[#FEF0EF] text-[#D03839]'
-                    : 'bg-[#F3F3F0] text-[#737370]';
+                    ? 'bg-white text-ink border-[1.5px] border-ink'
+                    : 'bg-white text-muted border-[1.5px] border-line';
 
                   return (
-                    <div key={property.id} className="bg-white rounded border border-[#E8E8E4] overflow-hidden flex-shrink-0 w-[85vw] sm:w-[calc(50%-8px)]">
+                    <div key={property.id} className="bg-white border-[1.5px] border-ink rounded-[12px] shadow-offset-3 overflow-hidden flex-shrink-0 w-[85vw] sm:w-[calc(50%-8px)]">
                       {/* Image */}
-                      <div className="relative h-[220px] bg-[#FAFAF8]">
+                      <div className="relative h-[220px] border-b-[1.5px] border-ink bg-[repeating-linear-gradient(45deg,#f2f2f2_0px,#f2f2f2_10px,#fafafa_10px,#fafafa_20px)]">
                         {image ? (
                           <img src={image} alt="" className="w-full h-full object-cover" />
                         ) : (
-                          <div className="w-full h-full flex items-center justify-center"><Building2 className="w-8 h-8 text-[#A8A8A4]" /></div>
+                          <div className="w-full h-full flex items-center justify-center"><Building2 className="w-8 h-8 text-mist" /></div>
                         )}
-                        <span className={`absolute top-3 left-3 px-2.5 py-1 text-[12px] font-semibold rounded-full ${statusStyle}`}>
+                        <span className={`absolute top-3 left-3 px-2.5 py-1 font-mono text-[10.5px] font-semibold uppercase tracking-[0.05em] rounded-pill ${statusStyle}`}>
                           {statusLabel}
                         </span>
                       </div>
 
                       {/* Content */}
                       <div className="p-4">
-                        <p className="text-[16px] font-semibold text-[#1A1816] mb-1.5 line-clamp-1">{title}</p>
-                        <div className="flex items-center gap-1.5 text-[13px] text-[#737370] mb-3">
+                        <p className="font-display font-semibold text-[16.5px] tracking-[-0.01em] text-ink mb-1.5 line-clamp-1">{title}</p>
+                        <div className="flex items-center gap-1.5 font-mono text-[11px] text-muted mb-3">
                           {location && <><MapPin className="w-3.5 h-3.5 flex-shrink-0" /><span>{location}</span></>}
-                          {property.bedrooms && <><span className="text-[#E8E8E4]">•</span><span>{property.bedrooms} bed</span></>}
-                          {property.bathrooms && <><span className="text-[#E8E8E4]">•</span><span>{property.bathrooms} bath</span></>}
+                          {property.bedrooms && <><span className="text-hairline">•</span><span>{property.bedrooms} bed</span></>}
+                          {property.bathrooms && <><span className="text-hairline">•</span><span>{property.bathrooms} bath</span></>}
                         </div>
-                        <p className="text-[28px] font-bold text-[#1A1816] leading-none mb-3">{formatCurrency(property.price)}</p>
+                        <p className="font-display font-bold text-[21px] text-ink leading-none mb-3">{formatCurrency(property.price)}</p>
                         {/* Stats */}
-                        <div className="flex items-center gap-3 text-[12px] text-[#737370] mb-4">
+                        <div className="flex items-center gap-3 font-mono text-[11px] text-muted mb-4">
                           <span className="flex items-center gap-1"><Eye className="w-3.5 h-3.5" /> {property.view_count ?? 0} views</span>
                           <span className="flex items-center gap-1"><Heart className="w-3.5 h-3.5" /> {property.saves_count ?? 0} saves</span>
                           <span className="flex items-center gap-1"><FileText className="w-3.5 h-3.5" /> {property.offers_count ?? 0} offers</span>
@@ -346,11 +346,11 @@ export default function DashboardPage() {
                         {/* Buttons */}
                         <div className="flex gap-2">
                           {(perms.isOwner || perms.listings_update) && (
-                            <Link href={`/properties/edit/${property.id}`} className="flex-1 py-2.5 text-center border border-[#1A1816] text-[#1A1816] text-[13px] font-semibold rounded hover:bg-[#FAFAF8] transition-colors duration-200">
+                            <Link href={`/properties/edit/${property.id}`} className="flex-1 py-2.5 text-center bg-white text-ink text-[13px] font-semibold border-[1.5px] border-ink rounded-[10px] shadow-offset-2 hover:bg-tint transition-all duration-[120ms]">
                               Edit
                             </Link>
                           )}
-                          <Link href={`/properties/preview/${property.id}`} className="flex-1 py-2.5 text-center bg-[#FEF0EF] text-[#D03839] text-[13px] font-semibold rounded border border-[#D03839] hover:bg-[#fde4e3] transition-colors duration-200">
+                          <Link href={`/properties/preview/${property.id}`} className="flex-1 py-2.5 text-center bg-ink text-white text-[13px] font-semibold border-[1.5px] border-ink rounded-[10px] shadow-soft-3 hover:bg-smoke-2 transition-all duration-[120ms]">
                             View Deal
                           </Link>
                         </div>
@@ -363,33 +363,33 @@ export default function DashboardPage() {
           </div>
 
           {/* Recent Messages */}
-          <div className="xl:col-span-2 bg-white rounded border border-[#E8E8E4] overflow-hidden flex flex-col">
-            <div className="px-4 py-3 border-b border-[#E8E8E4] flex items-center justify-between">
-              <h2 className="text-[14px] font-normal text-[#1A1816]">Recent messages</h2>
-              <Link href="/messages" className="text-[13px] font-medium text-[#737370] hover:text-[#1A1816] transition-colors duration-200">View all</Link>
+          <div className="xl:col-span-2 bg-white border-[1.5px] border-ink rounded-[12px] shadow-offset-4 overflow-hidden flex flex-col">
+            <div className="px-4 py-3 border-b border-hairline flex items-center justify-between">
+              <h2 className="font-display font-semibold text-[16.5px] tracking-[-0.01em] text-ink">Recent messages</h2>
+              <Link href="/messages" className="font-mono text-[11px] font-semibold uppercase tracking-[0.08em] text-muted hover:text-ink transition-colors duration-[120ms]">View all</Link>
             </div>
             {loading ? (
-              <div className="p-4 space-y-3">{[...Array(4)].map((_, i) => <div key={i} className="h-12 bg-[#FAFAF8] rounded animate-pulse" />)}</div>
+              <div className="p-4 space-y-3">{[...Array(4)].map((_, i) => <div key={i} className="h-12 bg-tint rounded motion-safe:animate-pulse" />)}</div>
             ) : recentQueries.length === 0 ? (
               <div className="p-8 text-center">
-                <MessageCircle className="w-8 h-8 text-[#A8A8A4] mx-auto mb-3" />
-                <p className="text-[14px] font-medium text-[#444441]">No messages yet</p>
+                <MessageCircle className="w-8 h-8 text-mist mx-auto mb-3" />
+                <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">No messages yet</p>
               </div>
             ) : (
-              <div className="divide-y divide-[#E8E8E4]">
+              <div className="divide-y divide-hairline-2">
                 {recentQueries.map(q => (
-                  <Link key={q.id} href={`/messages?conversation=${q.id}`} className="flex items-start gap-3 px-4 py-3 hover:bg-[#FAFAF8] transition-colors duration-200">
+                  <Link key={q.id} href={`/messages?conversation=${q.id}`} className="flex items-start gap-3 px-4 py-3 hover:bg-tint transition-colors duration-[120ms]">
                     <div className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0" style={{ backgroundColor: getAvatarPair(q.buyer_name || q.id).bg }}>
-                      <span className="text-[12px] font-semibold" style={{ color: getAvatarPair(q.buyer_name || q.id).text }}>{getInitials(q.buyer_name)}</span>
+                      <span className="font-mono text-[12px] font-semibold" style={{ color: getAvatarPair(q.buyer_name || q.id).text }}>{getInitials(q.buyer_name)}</span>
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between gap-2">
-                        <p className="text-[13px] font-semibold text-[#1A1816] truncate">{q.buyer_name || "Buyer"}</p>
-                        <span className="text-[11px] text-[#A8A8A4] flex-shrink-0">{formatTimeAgo(q.last_message_at)}</span>
+                        <p className="text-[13px] font-semibold text-ink truncate">{q.buyer_name || "Buyer"}</p>
+                        <span className="font-mono text-[10.5px] text-muted flex-shrink-0">{formatTimeAgo(q.last_message_at)}</span>
                       </div>
-                      <p className="text-[12px] text-[#737370] truncate mt-0.5">{q.last_message_preview || "No message yet"}</p>
+                      <p className="text-[12px] text-muted truncate mt-0.5">{q.last_message_preview || "No message yet"}</p>
                     </div>
-                    {(q.unread_count ?? 0) > 0 && <span className="w-2.5 h-2.5 rounded-full bg-[#D03839] flex-shrink-0 mt-1.5"></span>}
+                    {(q.unread_count ?? 0) > 0 && <span className="w-2.5 h-2.5 rounded-full bg-ink flex-shrink-0 mt-1.5"></span>}
                   </Link>
                 ))}
               </div>
@@ -399,18 +399,18 @@ export default function DashboardPage() {
 
         {/* Manage Listings */}
         <div>
-          <h2 className="text-[18px] font-bold text-[#1A1816] tracking-[-0.56px] mb-3">Manage Listings</h2>
+          <h2 className="font-display font-bold text-[19px] tracking-[-0.02em] text-ink mb-3">Manage Listings</h2>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
             {manageItems.map(item => (
-              <Link key={item.label} href={item.href} className="flex items-center gap-3 bg-white rounded border border-[#E8E8E4] px-4 py-4 hover:bg-[#FAFAF8] transition-colors duration-200 group">
-                <div className="w-10 h-10 rounded-full bg-[#FAFAF8] flex items-center justify-center flex-shrink-0">
+              <Link key={item.label} href={item.href} className="flex items-center gap-3 bg-white border-[1.5px] border-ink rounded-[12px] shadow-offset-3 px-4 py-4 hover:bg-tint transition-all duration-[120ms] group">
+                <div className="w-10 h-10 rounded-[10px] bg-tint flex items-center justify-center flex-shrink-0">
                   {item.icon}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-[13px] font-semibold text-[#1A1816]">{item.label}</p>
-                  <p className="text-[11px] text-[#A8A8A4]">{item.desc}</p>
+                  <p className="text-[13px] font-semibold text-ink">{item.label}</p>
+                  <p className="font-mono text-[10.5px] text-muted">{item.desc}</p>
                 </div>
-                <ChevronRight className="w-4 h-4 text-[#A8A8A4] flex-shrink-0" />
+                <ChevronRight className="w-4 h-4 text-mist flex-shrink-0" />
               </Link>
             ))}
           </div>

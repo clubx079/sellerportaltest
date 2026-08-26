@@ -59,11 +59,11 @@ function ContractPayForm({ amount, onSuccess }) {
   return (
     <form onSubmit={handlePay} className="space-y-4">
       <PaymentElement />
-      {err && <div className="p-3 bg-[#FEF0EF] border border-[#F5C4C0] rounded text-[13px] text-[#D03839]">{err}</div>}
+      {err && <div className="p-3 bg-tint border-[1.5px] border-ink rounded-[10px] text-[13px] font-semibold text-ink">{err}</div>}
       <button
         type="submit"
         disabled={!stripe || processing}
-        className="w-full h-[48px] bg-[#D03839] hover:bg-[#B8102A] active:scale-[0.98] text-white text-[14px] font-semibold rounded transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-[0_4px_12px_rgba(208,56,57,0.25)]"
+        className="w-full h-[48px] bg-ink hover:bg-smoke-2 text-white text-[14px] font-semibold border-[1.5px] border-ink rounded-[10px] shadow-soft-3 transition-all duration-120 disabled:opacity-50 flex items-center justify-center gap-2"
       >
         {processing ? <>Processing…</> : `Pay ${fmtFee(amount)} & send contract`}
       </button>
@@ -86,8 +86,8 @@ function fmtDate(v) {
 }
 const todayISOf = () => new Date().toISOString().slice(0, 10)
 
-const INPUT_CLS = 'w-full h-10 px-3 border border-[#E8E8E4] rounded text-[13px] text-[#1A1816] placeholder:text-[#A8A8A4] focus:outline-none focus:border-[#D03839] focus:ring-1 focus:ring-[#D03839]/20'
-const LABEL_CLS = 'block text-[12px] font-semibold text-[#444441] mb-1.5'
+const INPUT_CLS = 'w-full h-11 px-3.5 bg-white border-[1.5px] border-line rounded-[9px] text-[14px] text-body placeholder:text-mist focus:outline-none focus:border-ink focus:shadow-offset-3 transition-all duration-120'
+const LABEL_CLS = 'block font-mono text-[11px] font-semibold uppercase tracking-[0.08em] text-smoke-2 mb-1.5'
 
 function roleLabels(isAssignment) {
   return isAssignment ? { buyer: 'Assignee', seller: 'Assignor' } : { buyer: 'Buyer', seller: 'Seller' }
@@ -567,39 +567,39 @@ export default function NewContractWizardPage() {
     return (
       <div className="p-4 lg:p-6">
         <div className="flex items-center gap-3 mb-6">
-          <button onClick={() => { setPayClientSecret(null); setSending(false) }} className="flex items-center gap-1.5 text-[13px] text-[#737370] hover:text-[#1A1816] transition-colors">
+          <button onClick={() => { setPayClientSecret(null); setSending(false) }} className="flex items-center gap-1.5 font-mono text-[11px] font-semibold uppercase tracking-[0.08em] text-muted hover:text-ink transition-colors duration-120">
             <ChevronLeft className="w-4 h-4" /> Back to contract
           </button>
         </div>
         <div className="max-w-[460px] mx-auto">
-          <div className="bg-white border border-[#E8E8E4] rounded overflow-hidden">
-            <div className="px-5 py-4 border-b border-[#E8E8E4] flex items-center gap-3">
-              <div className="w-9 h-9 bg-[#D03839]/10 rounded flex items-center justify-center shrink-0"><FileText className="w-4 h-4 text-[#D03839]" /></div>
+          <div className="bg-white border-[1.5px] border-ink rounded-[14px] shadow-offset-5 overflow-hidden">
+            <div className="px-5 py-4 border-b-[1.5px] border-ink flex items-center gap-3">
+              <div className="w-9 h-9 bg-tint border-[1.5px] border-ink rounded-[10px] flex items-center justify-center shrink-0"><FileText className="w-4 h-4 text-ink" /></div>
               <div>
-                <h1 className="text-[16px] font-bold text-[#1A1816] leading-tight">Send contract</h1>
-                <p className="text-[12px] text-[#737370]">Pay the one-time fee to send it for signature</p>
+                <h1 className="font-display text-[16.5px] font-bold text-body tracking-[-0.01em] leading-tight">Send contract</h1>
+                <p className="text-[12px] text-muted">Pay the one-time fee to send it for signature</p>
               </div>
             </div>
-            <div className="px-5 py-4 border-b border-[#E8E8E4]">
+            <div className="px-5 py-4 border-b border-hairline">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <p className="text-[14px] font-semibold text-[#1A1816]">Contract</p>
-                  {fieldValues.property_address ? <p className="text-[12px] text-[#737370] mt-0.5">{fieldValues.property_address}</p> : null}
+                  <p className="text-[14px] font-semibold text-body">Contract</p>
+                  {fieldValues.property_address ? <p className="font-mono text-[11.5px] text-muted mt-0.5">{fieldValues.property_address}</p> : null}
                 </div>
-                <p className="text-[14px] font-bold text-[#1A1816] whitespace-nowrap">{fmtFee(payAmount)}</p>
+                <p className="font-mono text-[14px] font-bold text-ink whitespace-nowrap">{fmtFee(payAmount)}</p>
               </div>
-              <div className="flex items-center justify-between mt-3 pt-3 border-t border-[#E8E8E4]">
-                <span className="text-[13px] font-semibold text-[#1A1816]">Total due</span>
-                <span className="text-[16px] font-bold text-[#1A1816]">{fmtFee(payAmount)}</span>
+              <div className="flex items-center justify-between mt-3 pt-3 border-t border-hairline">
+                <span className="font-mono text-[11px] font-semibold uppercase tracking-[0.08em] text-smoke-2">Total due</span>
+                <span className="font-mono text-[16px] font-bold text-ink">{fmtFee(payAmount)}</span>
               </div>
             </div>
             <div className="p-5">
-              <Elements stripe={stripePromise} options={{ clientSecret: payClientSecret, appearance: { theme: 'stripe', variables: { colorPrimary: '#D03839' } } }}>
+              <Elements stripe={stripePromise} options={{ clientSecret: payClientSecret, appearance: { theme: 'stripe', variables: { colorPrimary: '#111111' } } }}>
                 <ContractPayForm amount={payAmount} onSuccess={() => { setPayClientSecret(null); doSend() }} />
               </Elements>
             </div>
-            <div className="px-5 py-3.5 bg-[#FAFAF8] border-t border-[#E8E8E4] text-center">
-              <span className="text-[12px] text-[#737370]">Secured by Stripe · One-time charge, no subscription</span>
+            <div className="px-5 py-3.5 bg-tint-3 border-t border-hairline text-center">
+              <span className="font-mono text-[10.5px] uppercase tracking-[0.06em] text-muted">Secured by Stripe · One-time charge, no subscription</span>
             </div>
           </div>
         </div>
@@ -612,19 +612,19 @@ export default function NewContractWizardPage() {
     return (
       <div className="p-4 lg:p-6">
         <div className="flex items-center gap-3 mb-5">
-          <div className="w-9 h-9 bg-[#D03839]/10 rounded flex items-center justify-center shrink-0"><PenLine className="w-4 h-4 text-[#D03839]" /></div>
+          <div className="w-9 h-9 bg-tint border-[1.5px] border-ink rounded-[10px] flex items-center justify-center shrink-0"><PenLine className="w-4 h-4 text-ink" /></div>
           <div>
-            <h1 className="text-[18px] font-bold text-[#1A1816] leading-tight">{signingTitle}</h1>
-            <p className="text-[13px] text-[#737370]">Review and sign below — the {L.buyer.toLowerCase()} gets a signing link once the {L.seller.toLowerCase()} signs.</p>
+            <h1 className="font-display text-[18px] font-bold text-body tracking-[-0.01em] leading-tight">{signingTitle}</h1>
+            <p className="text-[13px] text-muted">Review and sign below — the {L.buyer.toLowerCase()} gets a signing link once the {L.seller.toLowerCase()} signs.</p>
           </div>
         </div>
-        <div className="bg-white border border-[#E8E8E4] rounded overflow-hidden">
+        <div className="bg-white border-[1.5px] border-ink rounded-[12px] shadow-offset-4 overflow-hidden">
           <DocusealForm
             src={signingEmbedSrc}
             email={effectiveEmail || accountEmail}
             withTitle={false}
             withDownloadButton={false}
-            customCss={`body { font-family: 'DM Sans', -apple-system, sans-serif !important; } .base-button { background: #D03839 !important; border-color: #D03839 !important; border-radius: 4px !important; } .base-button:hover { background: #E0493B !important; }`}
+            customCss={`body { font-family: 'Instrument Sans', -apple-system, sans-serif !important; } .base-button { background: #111111 !important; border-color: #111111 !important; border-radius: 4px !important; } .base-button:hover { background: #444444 !important; }`}
             onComplete={() => router.push('/contracts')}
           />
         </div>
@@ -636,13 +636,13 @@ export default function NewContractWizardPage() {
   if (sentInfo) {
     return (
       <div className="p-4 lg:p-6 max-w-[480px] mx-auto">
-        <div className="bg-white border border-[#E8E8E4] rounded p-8 text-center">
-          <div className="w-12 h-12 bg-[#E4F5EC] rounded-full flex items-center justify-center mx-auto mb-4"><Check className="w-6 h-6 text-[#0F6E56]" /></div>
-          <h1 className="text-[18px] font-bold text-[#1A1816] mb-1.5">Contract sent</h1>
-          <p className="text-[13px] text-[#737370] leading-relaxed">
+        <div className="bg-white border-[1.5px] border-ink rounded-[14px] shadow-offset-4 p-8 text-center">
+          <div className="w-12 h-12 bg-ink rounded-pill flex items-center justify-center mx-auto mb-4"><Check className="w-6 h-6 text-white" /></div>
+          <h1 className="font-display text-[18px] font-bold text-body tracking-[-0.01em] mb-1.5">Contract sent</h1>
+          <p className="text-[13px] text-muted leading-relaxed">
             Each party gets a signing link by email — the {L.seller.toLowerCase()} signs first, then the {L.buyer.toLowerCase()}. Once everyone has signed, all parties receive the completed contract by email.
           </p>
-          <button onClick={() => router.push('/contracts')} className="mt-6 h-10 px-5 inline-flex items-center gap-1.5 text-[13px] font-semibold bg-[#1A1816] text-white rounded hover:bg-black">Go to Contracts</button>
+          <button onClick={() => router.push('/contracts')} className="mt-6 h-10 px-5 inline-flex items-center gap-1.5 text-[13px] font-semibold bg-ink text-white border-[1.5px] border-ink rounded-[10px] shadow-soft-3 hover:bg-smoke-2 transition-all duration-120">Go to Contracts</button>
         </div>
       </div>
     )
@@ -655,11 +655,14 @@ export default function NewContractWizardPage() {
     <div className="p-4 lg:p-6 pb-24 space-y-4">
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
-          <h1 className="text-lg md:text-xl font-semibold tracking-tight text-[#1A1816] truncate">
-            New Contract <span className="text-[#A8A8A4] font-normal">— Step {step} of {NUM_STEPS} · {stepName}</span>
+          <p className="font-mono font-semibold text-[11px] uppercase tracking-[0.14em] text-ink mb-1">
+            Step {step}/{NUM_STEPS} · {stepName}
+          </p>
+          <h1 className="font-display text-[22px] md:text-[26px] font-bold tracking-[-0.02em] text-body truncate">
+            New Contract
           </h1>
           {(step === 1 || step === NUM_STEPS) && (
-            <p className="mt-1 flex items-start gap-1.5 text-[11px] leading-relaxed text-[#A8A8A4]">
+            <p className="mt-1 flex items-start gap-1.5 text-[11px] leading-relaxed text-mist">
               <Info className="w-3.5 h-3.5 shrink-0 mt-px" />
               <span>This is a template provided for your convenience. DeelMap is not a law firm and does not provide legal advice. We strongly recommend you have this document reviewed by a licensed attorney before signing. DeelMap and its affiliates accept no liability for the content, validity, or enforceability of any agreement created using this platform.</span>
             </p>
@@ -674,10 +677,10 @@ export default function NewContractWizardPage() {
         <div className="min-w-0 space-y-4">
 
       <div className="flex items-center gap-1.5">
-        {STEP_NAMES.map((_, i) => <div key={i} className={`h-1.5 flex-1 rounded-full transition-colors ${i + 1 <= step ? 'bg-[#D03839]' : 'bg-[#E8E8E4]'}`} />)}
+        {STEP_NAMES.map((_, i) => <div key={i} className={`h-1.5 flex-1 rounded-[2px] transition-colors duration-120 ${i + 1 <= step ? 'bg-ink' : 'bg-line-2'}`} />)}
       </div>
 
-      <div className="bg-white border border-[#E8E8E4] rounded p-4 md:p-6">
+      <div className="bg-white border-[1.5px] border-ink rounded-[14px] shadow-offset-4 p-4 md:p-6">
         {step === 1 && <Step1Setup templates={templates} templatesLoading={templatesLoading} templatesError={templatesError} onRetryTemplates={loadTemplates} templateId={templateId} onSelectTemplate={(id) => { setTemplateId(String(id)); setDirty(true) }} contractRole={contractRole} onSelectRole={(r) => { setContractRole(r); setDirty(true) }} />}
         {step === 2 && <Step2Property properties={properties} propertiesLoading={propertiesLoading} propertyId={propertyId} onChange={handlePropertyChange} manualAddress={fieldValues.property_address} onManualAddressChange={(v) => setField('property_address', v)} />}
         {step === 3 && <StepPartyInfo party="buyer" L={L} isYou={contractRole === 'buyer'} name={buyerName} email={buyerEmail} address={fieldValues.buyer_address} coName={fieldValues.co_buyer_name} onName={(v) => { setBuyerName(v); setDirty(true) }} onEmail={(v) => { setBuyerEmail(v); setDirty(true) }} onAddress={v => setField('buyer_address', v)} onCoName={v => setField('co_buyer_name', v)} />}
@@ -687,9 +690,9 @@ export default function NewContractWizardPage() {
       </div>
 
       {sendError && (
-        <div className="flex items-start gap-3 p-3 bg-[#FEF0EF] border border-[#F5C4C0] rounded text-[#B82F30]">
+        <div className="flex items-start gap-3 p-3 bg-tint border-[1.5px] border-ink rounded-[10px] text-ink">
           <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
-          <p className="text-sm font-medium flex-1">{sendError}</p>
+          <p className="text-sm font-semibold flex-1">{sendError}</p>
         </div>
       )}
         </div>
@@ -702,15 +705,15 @@ export default function NewContractWizardPage() {
       </div>
 
       <StickyActionBar>
-        <button type="button" onClick={handleBack} className="h-9 px-4 border border-[#E8E8E4] text-[#444441] text-[13px] font-semibold rounded hover:border-[#1A1816] transition-colors flex items-center gap-1.5">
+        <button type="button" onClick={handleBack} className="h-9 px-4 bg-white text-ink border-[1.5px] border-ink rounded-[10px] shadow-offset-2 hover:bg-tint text-[13px] font-semibold transition-colors duration-120 flex items-center gap-1.5">
           <ChevronLeft className="w-4 h-4" /> Back
         </button>
         {step < NUM_STEPS ? (
-          <button type="button" onClick={handleContinue} disabled={!canContinueFromStep(step)} className="flex items-center gap-1.5 h-9 px-5 bg-[#D03839] hover:bg-[#E0493B] text-white text-[13px] font-semibold rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+          <button type="button" onClick={handleContinue} disabled={!canContinueFromStep(step)} className="flex items-center gap-1.5 h-9 px-5 bg-ink hover:bg-smoke-2 text-white text-[13px] font-semibold border-[1.5px] border-ink rounded-[10px] shadow-soft-3 transition-all duration-120 disabled:opacity-50 disabled:cursor-not-allowed">
             Continue <ArrowRight className="w-4 h-4" />
           </button>
         ) : (
-          <button type="button" onClick={handleSend} disabled={sending || selfDeal || !buyerEmail || !sellerPartyEmail || !templateId} className="flex items-center gap-1.5 h-9 px-5 bg-[#D03839] hover:bg-[#E0493B] text-white text-[13px] font-semibold rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+          <button type="button" onClick={handleSend} disabled={sending || selfDeal || !buyerEmail || !sellerPartyEmail || !templateId} className="flex items-center gap-1.5 h-9 px-5 bg-ink hover:bg-smoke-2 text-white text-[13px] font-semibold border-[1.5px] border-ink rounded-[10px] shadow-soft-3 transition-all duration-120 disabled:opacity-50 disabled:cursor-not-allowed">
             {sending ? <><span className="w-3.5 h-3.5 border-2 border-white/60 border-t-transparent rounded-full animate-spin" /> Sending…</> : <><Send className="w-4 h-4" /> Send Contract</>}
           </button>
         )}
@@ -722,31 +725,31 @@ export default function NewContractWizardPage() {
 function Step1Setup({ templates, templatesLoading, templatesError, onRetryTemplates, templateId, onSelectTemplate, contractRole, onSelectRole }) {
   const selectedTemplate = templates.find(t => String(t.id) === String(templateId))
   const L = roleLabels(selectedTemplate?.slug === 'assignment')
-  if (templatesLoading) return <div className="space-y-2">{[1, 2].map(i => <div key={i} className="h-20 bg-[#FAFAF8] border border-[#E8E8E4] rounded animate-pulse" />)}</div>
+  if (templatesLoading) return <div className="space-y-2">{[1, 2].map(i => <div key={i} className="h-20 bg-tint-3 border-[1.5px] border-line rounded-[12px] animate-pulse" />)}</div>
   // The request FAILED — offer a retry rather than the permanent empty-state.
   if (!templates.length && templatesError) return (
-    <div className="text-center py-10 text-[13px] text-[#737370]">
-      <p className="text-[14px] font-semibold text-[#1A1816] mb-1">Couldn't load contract templates</p>
+    <div className="text-center py-10 text-[13px] text-muted">
+      <p className="font-display text-[15px] font-semibold text-body mb-1">Couldn't load contract templates</p>
       <p>Something went wrong reaching our contracts service. Please try again.</p>
-      <button type="button" onClick={onRetryTemplates} className="mt-4 h-10 px-5 inline-flex items-center gap-1.5 text-[13px] font-semibold bg-[#1A1816] text-white rounded hover:bg-black">Retry</button>
+      <button type="button" onClick={onRetryTemplates} className="mt-4 h-10 px-5 inline-flex items-center gap-1.5 text-[13px] font-semibold bg-ink text-white border-[1.5px] border-ink rounded-[10px] shadow-soft-3 hover:bg-smoke-2 transition-all duration-120">Retry</button>
     </div>
   )
   // The request SUCCEEDED but returned zero templates — genuine empty state.
-  if (!templates.length) return <div className="text-center py-10 text-[13px] text-[#737370]"><p className="text-[14px] font-semibold text-[#1A1816] mb-1">No contract templates available</p><p>Contracts aren't available right now. Please try again later or contact support.</p></div>
+  if (!templates.length) return <div className="text-center py-10 text-[13px] text-muted"><p className="font-display text-[15px] font-semibold text-body mb-1">No contract templates available</p><p>Contracts aren't available right now. Please try again later or contact support.</p></div>
   return (
     <div>
-      <h2 className="text-[16px] font-bold text-[#1A1816] mb-1">What are you creating?</h2>
-      <p className="text-[13px] text-[#737370] mb-4">Pick the contract that matches your deal.</p>
+      <h2 className="font-display text-[16.5px] font-bold tracking-[-0.01em] text-body mb-1">What are you creating?</h2>
+      <p className="text-[13px] text-muted mb-4">Pick the contract that matches your deal.</p>
       <div className="space-y-2">
         {templates.map(t => {
           const selected = String(t.id) === String(templateId)
           return (
-            <button key={t.id} type="button" onClick={() => onSelectTemplate(String(t.id))} className={`w-full text-left p-4 border rounded transition-colors ${selected ? 'border-[#D03839] bg-[#FEF0EF]/40' : 'border-[#E8E8E4] hover:border-[#1A1816]'}`}>
+            <button key={t.id} type="button" onClick={() => onSelectTemplate(String(t.id))} className={`w-full text-left p-4 border-[1.5px] rounded-[12px] transition-all duration-120 ${selected ? 'border-ink bg-tint shadow-offset-3' : 'border-line hover:border-ink bg-white'}`}>
               <div className="flex items-start gap-3">
-                <div className={`w-9 h-9 rounded flex items-center justify-center shrink-0 ${selected ? 'bg-[#D03839] text-white' : 'bg-[#FAFAF8] text-[#737370] border border-[#E8E8E4]'}`}><FileText className="w-4 h-4" /></div>
+                <div className={`w-9 h-9 rounded-[10px] flex items-center justify-center shrink-0 ${selected ? 'bg-ink text-white' : 'bg-tint-3 text-muted border-[1.5px] border-line'}`}><FileText className="w-4 h-4" /></div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-[14px] font-bold text-[#1A1816]">{t.label || t.name}</p>
-                  <p className="text-[12px] text-[#737370] mt-0.5">{t.description}</p>
+                  <p className="font-display text-[14.5px] font-bold text-body">{t.label || t.name}</p>
+                  <p className="text-[12px] text-muted mt-0.5">{t.description}</p>
                 </div>
               </div>
             </button>
@@ -754,16 +757,16 @@ function Step1Setup({ templates, templatesLoading, templatesError, onRetryTempla
         })}
       </div>
       {templateId && (
-        <div className="mt-6 pt-6 border-t border-[#E8E8E4]">
-          <h2 className="text-[16px] font-bold text-[#1A1816] mb-1">Which side of this contract are you on?</h2>
-          <p className="text-[13px] text-[#737370] mb-4">We'll pre-fill your details and send the contract to the other party. The {L.seller.toLowerCase()} always signs first.</p>
+        <div className="mt-6 pt-6 border-t border-hairline">
+          <h2 className="font-display text-[16.5px] font-bold tracking-[-0.01em] text-body mb-1">Which side of this contract are you on?</h2>
+          <p className="text-[13px] text-muted mb-4">We'll pre-fill your details and send the contract to the other party. The {L.seller.toLowerCase()} always signs first.</p>
           <div className="grid grid-cols-2 gap-3">
             {[{ k: 'seller', label: `I'm the ${L.seller}` }, { k: 'buyer', label: `I'm the ${L.buyer}` }].map(opt => {
               const selected = contractRole === opt.k
               return (
-                <button key={opt.k} type="button" onClick={() => onSelectRole(opt.k)} className={`p-4 border rounded text-left transition-colors ${selected ? 'border-[#D03839] bg-[#FEF0EF]/40' : 'border-[#E8E8E4] hover:border-[#1A1816]'}`}>
-                  <div className={`w-9 h-9 rounded flex items-center justify-center mb-2 ${selected ? 'bg-[#D03839] text-white' : 'bg-[#FAFAF8] text-[#737370] border border-[#E8E8E4]'}`}>{opt.k === 'seller' ? <Home className="w-4 h-4" /> : <User className="w-4 h-4" />}</div>
-                  <p className="text-[14px] font-bold text-[#1A1816]">{opt.label}</p>
+                <button key={opt.k} type="button" onClick={() => onSelectRole(opt.k)} className={`p-4 border-[1.5px] rounded-[12px] text-left transition-all duration-120 ${selected ? 'border-ink bg-tint shadow-offset-3' : 'border-line hover:border-ink bg-white'}`}>
+                  <div className={`w-9 h-9 rounded-[10px] flex items-center justify-center mb-2 ${selected ? 'bg-ink text-white' : 'bg-tint-3 text-muted border-[1.5px] border-line'}`}>{opt.k === 'seller' ? <Home className="w-4 h-4" /> : <User className="w-4 h-4" />}</div>
+                  <p className="font-display text-[14.5px] font-bold text-body">{opt.label}</p>
                 </button>
               )
             })}
@@ -778,13 +781,13 @@ function Step2Property({ properties, propertiesLoading, propertyId, onChange, ma
   const isManual = propertyId === 'manual'
   return (
     <div>
-      <h2 className="text-[16px] font-bold text-[#1A1816] mb-1">Pick the property</h2>
-      <p className="text-[13px] text-[#737370] mb-4">We'll pre-fill the address on the contract. Don't see it? Enter the address manually.</p>
+      <h2 className="font-display text-[16.5px] font-bold tracking-[-0.01em] text-body mb-1">Pick the property</h2>
+      <p className="text-[13px] text-muted mb-4">We'll pre-fill the address on the contract. Don't see it? Enter the address manually.</p>
       <label className={LABEL_CLS}>Your listings</label>
       {propertiesLoading ? (
-        <div className="h-10 bg-[#E8E8E4] rounded animate-pulse" />
+        <div className="h-11 bg-hairline rounded-[9px] animate-pulse" />
       ) : (
-        <select value={propertyId} onChange={e => onChange(e.target.value)} className={INPUT_CLS + ' bg-white'}>
+        <select value={propertyId} onChange={e => onChange(e.target.value)} className={INPUT_CLS}>
           <option value="">— Select a property —</option>
           {properties.map(p => <option key={p.id} value={p.id}>{p.address || `Untitled (${String(p.id).slice(0, 8)})`}{p.price ? ` · ${fmtPrice(p.price)}` : ''}</option>)}
           <option value="manual">I'll enter the address manually</option>
@@ -792,7 +795,7 @@ function Step2Property({ properties, propertiesLoading, propertyId, onChange, ma
       )}
       {isManual && (
         <div className="mt-4">
-          <label className={LABEL_CLS}>Property Address <span className="text-[#D03839]">*</span></label>
+          <label className={LABEL_CLS}>Property Address <span className="text-ink">*</span></label>
           <GooglePlacesAutocomplete
             defaultValue={manualAddress || ''}
             placeholder="123 Main St, Dallas, TX 75201"
@@ -800,18 +803,18 @@ function Step2Property({ properties, propertiesLoading, propertyId, onChange, ma
             onInputChange={onManualAddressChange}
             onAddressSelect={({ address }) => onManualAddressChange(address)}
           />
-          <p className="text-[11px] text-[#A8A8A4] mt-1.5">Start typing and pick from the dropdown for an accurate address.</p>
+          <p className="text-[11px] text-mist mt-1.5">Start typing and pick from the dropdown for an accurate address.</p>
         </div>
       )}
       {propertyId && propertyId !== 'manual' && (() => {
         const p = properties.find(pp => pp.id === propertyId)
         if (!p) return null
         return (
-          <div className="mt-4 bg-[#FAFAF8] border border-[#E8E8E4] rounded p-3 flex items-start gap-3">
-            <Home className="w-4 h-4 text-[#737370] mt-0.5 shrink-0" />
-            <div className="text-[13px] text-[#1A1816] flex-1 min-w-0">
+          <div className="mt-4 bg-tint-3 border-[1.5px] border-line rounded-[12px] p-3 flex items-start gap-3">
+            <Home className="w-4 h-4 text-muted mt-0.5 shrink-0" />
+            <div className="text-[13px] text-body flex-1 min-w-0">
               <p className="font-semibold truncate">{p.address}</p>
-              <p className="text-[12px] text-[#737370] mt-0.5">{p.price ? fmtPrice(p.price) : '—'}{p.bedrooms ? ` · ${p.bedrooms} bd` : ''}{p.bathrooms ? ` · ${p.bathrooms} ba` : ''}</p>
+              <p className="font-mono text-[11.5px] text-muted mt-0.5">{p.price ? fmtPrice(p.price) : '—'}{p.bedrooms ? ` · ${p.bedrooms} bd` : ''}{p.bathrooms ? ` · ${p.bathrooms} ba` : ''}</p>
             </div>
           </div>
         )
@@ -827,17 +830,17 @@ function StepPartyInfo({ party, L, isYou, name, email, address, coName, coEmail,
   return (
     <div>
       <div className="flex items-center gap-2 mb-1">
-        <h2 className="text-[16px] font-bold text-[#1A1816]">{roleLabel} information</h2>
-        {isYou && <span className="text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded bg-[#FEF3E2] text-[#B5620A]">You</span>}
+        <h2 className="font-display text-[16.5px] font-bold tracking-[-0.01em] text-body">{roleLabel} information</h2>
+        {isYou && <span className="inline-flex items-center h-5 px-2.5 rounded-pill font-mono text-[10.5px] font-semibold uppercase tracking-[0.05em] bg-ink text-white border-[1.5px] border-ink">You</span>}
       </div>
-      <p className="text-[13px] text-[#737370] mb-4">{isYou ? `Your details — pre-filled from your account. Edit anything that's not right.` : `The ${roleLabel.toLowerCase()}'s details. They'll appear on the contract.`}</p>
+      <p className="text-[13px] text-muted mb-4">{isYou ? `Your details — pre-filled from your account. Edit anything that's not right.` : `The ${roleLabel.toLowerCase()}'s details. They'll appear on the contract.`}</p>
       <div className="space-y-4">
         <div>
-          <label className={LABEL_CLS}>{roleLabel} Full Name / LLC <span className="text-[#D03839]">*</span></label>
+          <label className={LABEL_CLS}>{roleLabel} Full Name / LLC <span className="text-ink">*</span></label>
           <input type="text" value={name} onChange={e => onName(e.target.value)} placeholder="John Smith or Acme Holdings LLC" className={INPUT_CLS} />
         </div>
         <div>
-          <label className={LABEL_CLS}>{roleLabel} Email <span className="text-[#D03839]">*</span></label>
+          <label className={LABEL_CLS}>{roleLabel} Email <span className="text-ink">*</span></label>
           <input type="email" value={email} onChange={e => onEmail(e.target.value)} placeholder={`${roleLabel.toLowerCase()}@example.com`} className={INPUT_CLS} required />
         </div>
         <div>
@@ -846,17 +849,17 @@ function StepPartyInfo({ party, L, isYou, name, email, address, coName, coEmail,
         </div>
       </div>
       {party === 'seller' && (
-        <div className="mt-5 pt-5 border-t border-[#E8E8E4]">
+        <div className="mt-5 pt-5 border-t border-hairline">
           {!coOpen ? (
-            <button type="button" onClick={() => setCoOpen(true)} className="inline-flex items-center gap-1 text-[12px] font-semibold text-[#D03839] hover:text-[#B82F30]">+ Add {coLabel} (optional)</button>
+            <button type="button" onClick={() => setCoOpen(true)} className="inline-flex items-center gap-1 font-mono text-[11px] font-semibold uppercase tracking-[0.06em] text-ink hover:text-smoke-2">+ Add {coLabel} (optional)</button>
           ) : (
             <div>
               <div className="flex items-center justify-between mb-3">
                 <div>
-                  <p className="text-[13px] font-semibold text-[#1A1816] capitalize">{coLabel}</p>
-                  <p className="text-[12px] text-[#737370]">For jointly-held deals. They&apos;ll sign the contract too, right after you.</p>
+                  <p className="text-[13px] font-semibold text-body capitalize">{coLabel}</p>
+                  <p className="text-[12px] text-muted">For jointly-held deals. They&apos;ll sign the contract too, right after you.</p>
                 </div>
-                <button type="button" onClick={() => { onCoName(''); onCoEmail?.(''); setCoOpen(false) }} className="text-[12px] text-[#737370] hover:text-[#1A1816]">Remove</button>
+                <button type="button" onClick={() => { onCoName(''); onCoEmail?.(''); setCoOpen(false) }} className="text-[12px] text-muted hover:text-ink">Remove</button>
               </div>
               <div className="space-y-3">
                 <div>
@@ -864,9 +867,9 @@ function StepPartyInfo({ party, L, isYou, name, email, address, coName, coEmail,
                   <input type="text" value={coName || ''} onChange={e => onCoName(e.target.value)} placeholder="Jane Smith" className={INPUT_CLS} />
                 </div>
                 <div>
-                  <label className={LABEL_CLS}>Co-Signer Email <span className="text-[#D03839]">*</span></label>
+                  <label className={LABEL_CLS}>Co-Signer Email <span className="text-ink">*</span></label>
                   <input type="email" value={coEmail || ''} onChange={e => onCoEmail?.(e.target.value)} placeholder="co-seller@example.com" className={INPUT_CLS} />
-                  <p className="text-[11px] text-[#A8A8A4] mt-1">They&apos;ll get a signing link by email once you&apos;ve signed.</p>
+                  <p className="text-[11px] text-mist mt-1">They&apos;ll get a signing link by email once you&apos;ve signed.</p>
                 </div>
               </div>
             </div>
@@ -882,7 +885,7 @@ function FieldRow({ label, hint, children, span }) {
     <div className={span === 'full' ? 'md:col-span-2' : ''}>
       {/* min-height reserves two lines so a wrapped label doesn't push its input
           out of line with the adjacent cell's input in the 2-column grid. */}
-      <label className={`${LABEL_CLS} md:min-h-[2rem]`}>{label}{hint && <span className="text-[#A8A8A4] font-normal ml-1">{hint}</span>}</label>
+      <label className={`${LABEL_CLS} md:min-h-[2rem]`}>{label}{hint && <span className="text-mist font-normal normal-case tracking-normal ml-1">{hint}</span>}</label>
       {children}
     </div>
   )
@@ -894,8 +897,8 @@ function Step5Terms({ values, onChange, template, L, onPersistDefault }) {
   const changeAndSave = (key) => (e) => { const v = e.target.value; onChange(key, v); if (onPersistDefault) onPersistDefault(key, v) }
   return (
     <div>
-      <h2 className="text-[16px] font-bold text-[#1A1816] mb-1">Deal terms</h2>
-      <p className="text-[13px] text-[#737370] mb-4">Numbers and dates that pre-fill on the contract. Required fields are marked.</p>
+      <h2 className="font-display text-[16.5px] font-bold tracking-[-0.01em] text-body mb-1">Deal terms</h2>
+      <p className="text-[13px] text-muted mb-4">Numbers and dates that pre-fill on the contract. Required fields are marked.</p>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <FieldRow label={isAssignment ? 'Agreed Purchase Price ($)' : 'Sale Price ($)'} hint="*">
           <input type="number" value={values.purchase_price || ''} onChange={e => onChange('purchase_price', e.target.value)} placeholder={isAssignment ? '15000' : '250000'} className={INPUT_CLS} />
@@ -909,12 +912,12 @@ function Step5Terms({ values, onChange, template, L, onPersistDefault }) {
           </FieldRow>
         )}
         <FieldRow label="Closing Date" hint="*">
-          <input type="date" min={todayISO} value={values.closing_date || ''} onChange={e => onChange('closing_date', e.target.value)} className={`${INPUT_CLS} ${values.closing_date && values.closing_date < todayISO ? 'border-[#D03839] focus:border-[#D03839]' : ''}`} />
-          {values.closing_date && values.closing_date < todayISO && <p className="text-[11px] text-[#D03839] mt-1">Closing date can't be in the past.</p>}
+          <input type="date" min={todayISO} value={values.closing_date || ''} onChange={e => onChange('closing_date', e.target.value)} className={`${INPUT_CLS} ${values.closing_date && values.closing_date < todayISO ? 'border-ink focus:border-ink' : ''}`} />
+          {values.closing_date && values.closing_date < todayISO && <p className="text-[11px] font-semibold text-ink mt-1">Closing date can't be in the past.</p>}
         </FieldRow>
         {!isAssignment && (
           <FieldRow label="Source of Financing" hint="cash or financing">
-            <select value={values.financing_type || ''} onChange={e => onChange('financing_type', e.target.value)} className={INPUT_CLS + ' bg-white'}>
+            <select value={values.financing_type || ''} onChange={e => onChange('financing_type', e.target.value)} className={INPUT_CLS}>
               <option value="">— Select —</option>
               <option value="cash">Cash</option>
               <option value="financing">Financing</option>
@@ -923,15 +926,15 @@ function Step5Terms({ values, onChange, template, L, onPersistDefault }) {
         )}
         {!isAssignment && (
           <FieldRow label={`${L.seller} Acceptance Deadline`} hint="default 3 days from today">
-            <input type="date" min={todayISO} value={values.acceptance_deadline || ''} onChange={e => onChange('acceptance_deadline', e.target.value)} className={`${INPUT_CLS} ${values.acceptance_deadline && values.acceptance_deadline < todayISO ? 'border-[#D03839] focus:border-[#D03839]' : ''}`} />
-            {values.acceptance_deadline && values.acceptance_deadline < todayISO && <p className="text-[11px] text-[#D03839] mt-1">Acceptance deadline can't be in the past.</p>}
+            <input type="date" min={todayISO} value={values.acceptance_deadline || ''} onChange={e => onChange('acceptance_deadline', e.target.value)} className={`${INPUT_CLS} ${values.acceptance_deadline && values.acceptance_deadline < todayISO ? 'border-ink focus:border-ink' : ''}`} />
+            {values.acceptance_deadline && values.acceptance_deadline < todayISO && <p className="text-[11px] font-semibold text-ink mt-1">Acceptance deadline can't be in the past.</p>}
           </FieldRow>
         )}
       </div>
 
       {!isAssignment && (
         <div className="mt-6">
-          <p className="text-[11px] font-bold text-[#A8A8A4] uppercase tracking-wide mb-3">Closing details <span className="font-normal normal-case">(optional)</span></p>
+          <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-muted mb-3">Closing details <span className="font-normal normal-case tracking-normal">(optional)</span></p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FieldRow label="Title Company / Escrow Agent" hint="who holds the earnest money"><input type="text" value={values.emd_escrow || ''} onChange={changeAndSave('emd_escrow')} placeholder="e.g. Stewart Title of Texas" className={INPUT_CLS} /></FieldRow>
             <FieldRow label="Closing Location" hint="usually title company address"><input type="text" value={values.closing_location || ''} onChange={changeAndSave('closing_location')} placeholder="Same as escrow holder if not sure" className={INPUT_CLS} /></FieldRow>
@@ -943,13 +946,13 @@ function Step5Terms({ values, onChange, template, L, onPersistDefault }) {
 
       {isAssignment && (
         <div className="mt-6">
-          <p className="text-[11px] font-bold text-[#A8A8A4] uppercase tracking-wide mb-3">Underlying Purchase Contract</p>
-          <p className="text-[12px] text-[#737370] mb-3">Reference the original Purchase Contract you're assigning.</p>
+          <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-muted mb-3">Underlying Purchase Contract</p>
+          <p className="text-[12px] text-muted mb-3">Reference the original Purchase Contract you're assigning.</p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FieldRow label="Original Seller Name" hint="* property owner from the original Purchase Contract"><input type="text" value={values.original_seller_name || ''} onChange={e => onChange('original_seller_name', e.target.value)} placeholder="Jane Doe" className={INPUT_CLS} /></FieldRow>
             <FieldRow label="Original Purchase Contract Signed Date" hint="* already signed — today or earlier">
-              <input type="date" max={todayISO} value={values.original_psa_date || ''} onChange={e => onChange('original_psa_date', e.target.value)} className={`${INPUT_CLS} ${values.original_psa_date && values.original_psa_date > todayISO ? 'border-[#D03839] focus:border-[#D03839]' : ''}`} />
-              {values.original_psa_date && values.original_psa_date > todayISO && <p className="text-[11px] text-[#D03839] mt-1">This contract was already signed — the date can&rsquo;t be in the future.</p>}
+              <input type="date" max={todayISO} value={values.original_psa_date || ''} onChange={e => onChange('original_psa_date', e.target.value)} className={`${INPUT_CLS} ${values.original_psa_date && values.original_psa_date > todayISO ? 'border-ink focus:border-ink' : ''}`} />
+              {values.original_psa_date && values.original_psa_date > todayISO && <p className="text-[11px] font-semibold text-ink mt-1">This contract was already signed — the date can&rsquo;t be in the future.</p>}
             </FieldRow>
           </div>
         </div>
@@ -957,7 +960,7 @@ function Step5Terms({ values, onChange, template, L, onPersistDefault }) {
 
       <div className="mt-6">
         <FieldRow label="Additional Terms" hint={isAssignment ? 'one per line (up to 6 lines)' : 'optional'}>
-          <textarea value={values.special_terms || ''} onChange={e => onChange('special_terms', e.target.value)} rows={isAssignment ? 6 : 4} placeholder={isAssignment ? 'Each line becomes one of the 6 numbered lines on the contract.' : 'Any other deal-specific terms…'} className="w-full p-3 border border-[#E8E8E4] rounded text-[13px] text-[#1A1816] placeholder:text-[#A8A8A4] focus:outline-none focus:border-[#D03839] focus:ring-1 focus:ring-[#D03839]/20 resize-none" />
+          <textarea value={values.special_terms || ''} onChange={e => onChange('special_terms', e.target.value)} rows={isAssignment ? 6 : 4} placeholder={isAssignment ? 'Each line becomes one of the 6 numbered lines on the contract.' : 'Any other deal-specific terms…'} className="w-full p-3.5 bg-white border-[1.5px] border-line rounded-[9px] text-[14px] text-body placeholder:text-mist focus:outline-none focus:border-ink focus:shadow-offset-3 transition-all duration-120 resize-none" />
         </FieldRow>
       </div>
     </div>
@@ -1013,25 +1016,25 @@ function Step6Review({ template, L, fieldValues, buyerName, buyerEmail, sellerNa
   return (
     <div>
       <div className="flex items-start justify-between gap-3 mb-1">
-        <h2 className="text-[16px] font-bold text-[#1A1816]">Review &amp; send</h2>
-        <button type="button" onClick={openFullPreview} className="h-9 px-3.5 flex items-center gap-1.5 text-[12px] font-semibold text-[#1A1816] bg-white border border-[#E8E8E4] rounded hover:bg-[#FAFAF8] shrink-0">
+        <h2 className="font-display text-[16.5px] font-bold tracking-[-0.01em] text-body">Review &amp; send</h2>
+        <button type="button" onClick={openFullPreview} className="h-9 px-3.5 flex items-center gap-1.5 text-[12px] font-semibold text-ink bg-white border-[1.5px] border-ink rounded-[10px] shadow-offset-2 hover:bg-tint transition-colors duration-120 shrink-0">
           <FileText className="w-3.5 h-3.5" /> Preview full contract
         </button>
       </div>
-      <p className="text-[13px] text-[#737370] mb-4">Double-check everything. The {L.seller.toLowerCase()} signs first; the {L.buyer.toLowerCase()} gets a signing link after.</p>
-      {selfDeal && <div className="mb-4 p-3 bg-[#FEF0EF] border border-[#F5C4C0] rounded text-[12px] text-[#D03839]">The {L.buyer.toLowerCase()} and {L.seller.toLowerCase()} have the same email. Use different emails to send.</div>}
+      <p className="text-[13px] text-muted mb-4">Double-check everything. The {L.seller.toLowerCase()} signs first; the {L.buyer.toLowerCase()} gets a signing link after.</p>
+      {selfDeal && <div className="mb-4 p-3 bg-tint border-[1.5px] border-ink rounded-[10px] text-[12px] font-semibold text-ink">The {L.buyer.toLowerCase()} and {L.seller.toLowerCase()} have the same email. Use different emails to send.</div>}
       <div className="space-y-4">
         {rows.map(group => (
-          <div key={group.section} className="border border-[#E8E8E4] rounded">
-            <div className="flex items-center justify-between px-4 py-2.5 border-b border-[#E8E8E4] bg-[#FAFAF8]">
-              <p className="text-[12px] font-bold text-[#1A1816] uppercase tracking-wide">{group.section}</p>
-              <button type="button" onClick={() => onJump(group.step)} className="text-[12px] text-[#D03839] hover:underline font-semibold">Edit</button>
+          <div key={group.section} className="border-[1.5px] border-line rounded-[12px] overflow-hidden">
+            <div className="flex items-center justify-between px-4 py-2.5 border-b border-hairline bg-tint-3">
+              <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.12em] text-ink">{group.section}</p>
+              <button type="button" onClick={() => onJump(group.step)} className="font-mono text-[11px] font-semibold uppercase tracking-[0.06em] text-ink hover:underline">Edit</button>
             </div>
-            <div className="divide-y divide-[#F0F0EC]">
+            <div className="divide-y divide-hairline-2">
               {group.items.map((item, i) => (
                 <div key={i} className="flex items-start gap-4 px-4 py-2.5">
-                  <p className="text-[12px] text-[#737370] w-[200px] shrink-0">{item.label}</p>
-                  <p className="text-[13px] text-[#1A1816] flex-1 break-words">{item.value}</p>
+                  <p className="font-mono text-[11px] uppercase tracking-[0.04em] text-muted w-[200px] shrink-0 pt-0.5">{item.label}</p>
+                  <p className="font-mono text-[12.5px] text-body flex-1 break-words">{item.value}</p>
                 </div>
               ))}
             </div>

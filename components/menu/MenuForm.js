@@ -196,7 +196,7 @@ const MenuForm = ({ isOpen, onClose, onSuccess, mode = 'add', menuItem = null, u
             className="fixed right-0 top-0 h-screen w-full md:w-[600px] lg:w-[700px] bg-white shadow-2xl z-[60] flex flex-col"
           >
             {/* Header */}
-            <div className="bg-[#472F97] px-4 sm:px-6 py-4 flex items-center justify-between">
+            <div className="bg-[#111111] px-4 sm:px-6 py-4 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-white/10 flex items-center justify-center">
                   <UtensilsCrossed className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
@@ -221,14 +221,14 @@ const MenuForm = ({ isOpen, onClose, onSuccess, mode = 'add', menuItem = null, u
               <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
                 {/* Basic Info Section */}
                 <div className="bg-neutral-50 rounded-xl p-4 border border-neutral-200">
-                  <h3 className="text-sm font-semibold text-[#472F97] mb-4 flex items-center gap-2">
+                  <h3 className="text-sm font-semibold text-[#111111] mb-4 flex items-center gap-2">
                     <UtensilsCrossed className="w-4 h-4" />
                     Basic Information
                   </h3>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                     <div className="sm:col-span-2">
                       <label className="block text-xs font-medium text-neutral-600 mb-1.5">
-                        Item Name <span className="text-red-500">*</span>
+                        Item Name <span className="text-neutral-500">*</span>
                       </label>
                       <input
                         type="text"
@@ -237,7 +237,7 @@ const MenuForm = ({ isOpen, onClose, onSuccess, mode = 'add', menuItem = null, u
                         onChange={handleChange}
                         required
                         placeholder="Enter item name"
-                        className="w-full border border-neutral-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#472F97] focus:border-transparent"
+                        className="w-full border border-neutral-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#111111] focus:border-transparent"
                       />
                     </div>
                     <div>
@@ -248,12 +248,12 @@ const MenuForm = ({ isOpen, onClose, onSuccess, mode = 'add', menuItem = null, u
                         value={formData.category}
                         onChange={handleChange}
                         placeholder="e.g., Breakfast, Drinks"
-                        className="w-full border border-neutral-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#472F97] focus:border-transparent"
+                        className="w-full border border-neutral-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#111111] focus:border-transparent"
                       />
                     </div>
                     <div>
                       <label className="block text-xs font-medium text-neutral-600 mb-1.5">
-                        Price <span className="text-red-500">*</span>
+                        Price <span className="text-neutral-500">*</span>
                       </label>
                       <input
                         type="number"
@@ -263,7 +263,7 @@ const MenuForm = ({ isOpen, onClose, onSuccess, mode = 'add', menuItem = null, u
                         onChange={handleChange}
                         required
                         placeholder="0.00"
-                        className="w-full border border-neutral-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#472F97] focus:border-transparent"
+                        className="w-full border border-neutral-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#111111] focus:border-transparent"
                       />
                     </div>
                   </div>
@@ -271,7 +271,7 @@ const MenuForm = ({ isOpen, onClose, onSuccess, mode = 'add', menuItem = null, u
 
                 {/* Description Section */}
                 <div className="bg-neutral-50 rounded-xl p-4 border border-neutral-200">
-                  <h3 className="text-sm font-semibold text-[#472F97] mb-4 flex items-center gap-2">
+                  <h3 className="text-sm font-semibold text-[#111111] mb-4 flex items-center gap-2">
                     <FileText className="w-4 h-4" />
                     Description
                   </h3>
@@ -281,13 +281,13 @@ const MenuForm = ({ isOpen, onClose, onSuccess, mode = 'add', menuItem = null, u
                     onChange={handleChange}
                     placeholder="Enter item description"
                     rows={4}
-                    className="w-full border border-neutral-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#472F97] focus:border-transparent resize-none"
+                    className="w-full border border-neutral-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#111111] focus:border-transparent resize-none"
                   />
                 </div>
 
                 {/* Image Upload Section */}
                 <div className="bg-neutral-50 rounded-xl p-4 border border-neutral-200">
-                  <h3 className="text-sm font-semibold text-[#472F97] mb-4 flex items-center gap-2">
+                  <h3 className="text-sm font-semibold text-[#111111] mb-4 flex items-center gap-2">
                     <ImageIcon className="w-4 h-4" />
                     Image
                   </h3>
@@ -340,13 +340,13 @@ const MenuForm = ({ isOpen, onClose, onSuccess, mode = 'add', menuItem = null, u
                     value={formData.image}
                     onChange={handleChange}
                     placeholder="Or enter image URL"
-                    className="w-full border border-neutral-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#472F97] focus:border-transparent"
+                    className="w-full border border-neutral-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#111111] focus:border-transparent"
                   />
                 </div>
 
                 {/* Status Section */}
                 <div className="bg-neutral-50 rounded-xl p-4 border border-neutral-200">
-                  <h3 className="text-sm font-semibold text-[#472F97] mb-4 flex items-center gap-2">
+                  <h3 className="text-sm font-semibold text-[#111111] mb-4 flex items-center gap-2">
                     <ToggleLeft className="w-4 h-4" />
                     Status
                   </h3>
@@ -356,7 +356,7 @@ const MenuForm = ({ isOpen, onClose, onSuccess, mode = 'add', menuItem = null, u
                       name="is_active"
                       checked={formData.is_active}
                       onChange={handleChange}
-                      className="w-4 h-4 text-[#472F97] rounded focus:ring-2 focus:ring-[#472F97]"
+                      className="w-4 h-4 text-[#111111] rounded focus:ring-2 focus:ring-[#111111]"
                     />
                     <div className="flex-1">
                       <p className="text-sm font-medium text-neutral-800">Active</p>
@@ -378,7 +378,7 @@ const MenuForm = ({ isOpen, onClose, onSuccess, mode = 'add', menuItem = null, u
                 <button
                   type="submit"
                   disabled={saving}
-                  className="flex-1 px-4 py-2.5 bg-[#472F97] hover:bg-[#3a2578] text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm"
+                  className="flex-1 px-4 py-2.5 bg-[#111111] hover:bg-[#444444] text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm"
                 >
                   <Save className="w-4 h-4" />
                   {saving ? 'Saving...' : mode === 'edit' ? 'Update Item' : 'Save Item'}

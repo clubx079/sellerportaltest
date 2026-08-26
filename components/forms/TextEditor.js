@@ -174,38 +174,38 @@ const TextEditor = forwardRef(function TextEditor(
   };
 
   return (
-    <div className="border-2 border-neutral-200 rounded-xl overflow-hidden bg-white">
+    <div className="border-[1.5px] border-line rounded-[12px] overflow-hidden bg-white focus-within:border-ink focus-within:shadow-offset-3 transition-all duration-120">
       {/* Toolbar */}
-      <div className="flex items-center gap-2 p-2 border-b border-neutral-200 bg-neutral-50">
+      <div className="flex items-center gap-2 p-2 border-b border-hairline bg-tint-2">
         <button
           type="button"
           title="Bold"
           onClick={() => run('bold')}
-          className="p-2 rounded-lg hover:bg-neutral-200 transition-colors"
+          className="p-2 rounded-[8px] hover:bg-tint transition-colors duration-120"
         >
-          <Bold size={16} className="text-neutral-700" />
+          <Bold size={16} className="text-ink" />
         </button>
         <button
           type="button"
           title="Italic"
           onClick={() => run('italic')}
-          className="p-2 rounded-lg hover:bg-neutral-200 transition-colors"
+          className="p-2 rounded-[8px] hover:bg-tint transition-colors duration-120"
         >
-          <Italic size={16} className="text-neutral-700" />
+          <Italic size={16} className="text-ink" />
         </button>
         <button
           type="button"
           title="Bullets"
           onClick={() => run('insertUnorderedList')}
-          className="p-2 rounded-lg hover:bg-neutral-200 transition-colors"
+          className="p-2 rounded-[8px] hover:bg-tint transition-colors duration-120"
         >
-          <List size={16} className="text-neutral-700" />
+          <List size={16} className="text-ink" />
         </button>
         <select
           aria-label="Heading"
           defaultValue="<p>"
           onChange={(e) => run('formatBlock', e.target.value)}
-          className="ml-2 px-2 py-1 text-sm border border-neutral-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[#472F97]"
+          className="ml-2 px-2 py-1 font-mono text-[11px] font-semibold uppercase tracking-[0.06em] text-ink border-[1.5px] border-line rounded-[8px] bg-white focus:outline-none focus:border-ink"
         >
           <option value="<p>">Normal</option>
           <option value="<h1>">H1</option>
@@ -230,7 +230,7 @@ const TextEditor = forwardRef(function TextEditor(
           whiteSpace: 'normal',
           wordBreak: 'break-word',
         }}
-        className="min-h-[200px] p-4 text-neutral-900 focus:outline-none"
+        className="min-h-[200px] p-4 text-[14px] text-body focus:outline-none"
         data-placeholder={placeholder}
         role="textbox"
         aria-multiline="true"
@@ -241,7 +241,7 @@ const TextEditor = forwardRef(function TextEditor(
       <style jsx>{`
         [contenteditable]:empty:before {
           content: attr(data-placeholder);
-          color: #9ca3af;
+          color: #a3a3a3;
           font-style: italic;
         }
       `}</style>

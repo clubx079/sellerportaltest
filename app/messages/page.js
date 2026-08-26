@@ -9,21 +9,21 @@ import {
 import { createClient } from '@airostack/client';
 
 const API = '/api/seller/chat';
-const FONT = 'var(--font-dm-sans), sans-serif';
+const FONT = 'var(--font-instrument), sans-serif';
 
 // Hover-revealed per-message actions (Reply/Copy always; Delete on your own,
 // Report on the other party's) — inline, no three-dot menu.
 function MessageActions({ isSeller, onReply, onCopy, onDelete, onReport, copied }) {
-  const btn = 'p-1.5 rounded text-[#737370] transition-colors';
+  const btn = 'p-1.5 rounded-[8px] text-muted transition-colors duration-120';
   return (
     <div className="flex items-center gap-0.5 self-center opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
-      <button type="button" onClick={onReply} title="Reply" className={`${btn} hover:bg-[#FAFAF8] hover:text-[#1A1816]`}><CornerUpLeft className="w-3.5 h-3.5" /></button>
-      <button type="button" onClick={onCopy} title={copied ? 'Copied' : 'Copy'} className={`${btn} hover:bg-[#FAFAF8] hover:text-[#1A1816]`}>{copied ? <Check className="w-3.5 h-3.5 text-[#0F6E56]" /> : <Copy className="w-3.5 h-3.5" />}</button>
+      <button type="button" onClick={onReply} title="Reply" className={`${btn} hover:bg-tint hover:text-body`}><CornerUpLeft className="w-3.5 h-3.5" /></button>
+      <button type="button" onClick={onCopy} title={copied ? 'Copied' : 'Copy'} className={`${btn} hover:bg-tint hover:text-body`}>{copied ? <Check className="w-3.5 h-3.5 text-ink" /> : <Copy className="w-3.5 h-3.5" />}</button>
       {isSeller && onDelete && (
-        <button type="button" onClick={onDelete} title="Delete" className={`${btn} hover:bg-[#FEF0EF] hover:text-[#D03839]`}><Trash2 className="w-3.5 h-3.5" /></button>
+        <button type="button" onClick={onDelete} title="Delete" className={`${btn} hover:bg-tint hover:text-ink`}><Trash2 className="w-3.5 h-3.5" /></button>
       )}
       {!isSeller && onReport && (
-        <button type="button" onClick={onReport} title="Report" className={`${btn} hover:bg-[#FEF0EF] hover:text-[#D03839]`}><Flag className="w-3.5 h-3.5" /></button>
+        <button type="button" onClick={onReport} title="Report" className={`${btn} hover:bg-tint hover:text-ink`}><Flag className="w-3.5 h-3.5" /></button>
       )}
     </div>
   );
@@ -38,11 +38,11 @@ function getSupabase() {
 }
 
 const AVATAR_PAIRS = [
-  { bg: '#FEF0EF', text: '#D03839' },
-  { bg: '#E4F5EC', text: '#0F6E56' },
-  { bg: '#FEF3E2', text: '#B5620A' },
-  { bg: '#EBF3FC', text: '#4A90E2' },
-  { bg: '#F3EEFF', text: '#7C3AED' },
+  { bg: '#f2f2f2', text: '#111111' },
+  { bg: '#f2f2f2', text: '#111111' },
+  { bg: '#f2f2f2', text: '#555555' },
+  { bg: '#f2f2f2', text: '#757575' },
+  { bg: '#f2f2f2', text: '#444444' },
 ];
 
 function getAvatarPair(seed = '') {
@@ -678,11 +678,11 @@ export default function MessagesPage() {
 
   if (accessDenied) return (
     <div className="flex flex-col items-center justify-center h-full py-20 text-center" style={{ fontFamily: FONT }}>
-      <div className="w-12 h-12 bg-[#FEF0EF] rounded-full flex items-center justify-center mb-4">
-        <Shield className="w-6 h-6 text-[#D03839]" />
+      <div className="w-12 h-12 bg-tint border-[1.5px] border-ink rounded-full flex items-center justify-center mb-4">
+        <Shield className="w-6 h-6 text-ink" />
       </div>
-      <h3 className="text-[16px] font-bold text-[#1A1816] mb-2">Access Restricted</h3>
-      <p className="text-[13px] text-[#737370] max-w-xs">You don't have permission to access messages. Contact your team owner to request access.</p>
+      <h3 className="font-display font-bold text-[16.5px] tracking-[-0.01em] text-body mb-2">Access Restricted</h3>
+      <p className="text-[13px] text-muted max-w-xs">You don't have permission to access messages. Contact your team owner to request access.</p>
     </div>
   )
 
@@ -691,56 +691,56 @@ export default function MessagesPage() {
       {/* Counter-offer preview/confirm modal — gate the send so sellers
           see the full terms before committing. */}
       {showCounterPreview && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4" onClick={() => setShowCounterPreview(false)}>
-          <div onClick={e => e.stopPropagation()} className="w-full max-w-[460px] bg-white border border-[#E8E8E4] rounded shadow-2xl overflow-hidden">
-            <div className="px-5 py-4 border-b border-[#E8E8E4] flex items-center justify-between">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setShowCounterPreview(false)}>
+          <div onClick={e => e.stopPropagation()} className="w-full max-w-[460px] bg-white border-[1.5px] border-ink rounded-[14px] shadow-offset-6 overflow-hidden">
+            <div className="px-5 py-4 border-b border-hairline flex items-center justify-between">
               <div>
-                <h3 className="text-[16px] font-bold text-[#1A1816]">Review counter offer</h3>
-                <p className="text-[12px] text-[#737370] mt-0.5">This is what {buyerDisplayName} will receive by email.</p>
+                <h3 className="font-display font-bold text-[16.5px] tracking-[-0.01em] text-body">Review counter offer</h3>
+                <p className="text-[12px] text-muted mt-0.5">This is what {buyerDisplayName} will receive by email.</p>
               </div>
-              <button onClick={() => setShowCounterPreview(false)} className="p-1 rounded hover:bg-[#FAFAF8] -mr-1" aria-label="Close">
-                <X className="w-4 h-4 text-[#737370]" />
+              <button onClick={() => setShowCounterPreview(false)} className="p-1 rounded-[8px] hover:bg-tint -mr-1" aria-label="Close">
+                <X className="w-4 h-4 text-muted" />
               </button>
             </div>
             {/* Email-style preview frame so the seller sees the buyer's actual view */}
-            <div className="mx-5 mt-4 rounded border border-[#E8E8E4] overflow-hidden">
-              <div className="bg-[#D03839] px-4 py-2.5">
-                <span className="text-white text-[14px] font-bold tracking-tight">DeelMap</span>
+            <div className="mx-5 mt-4 rounded-[10px] border border-hairline overflow-hidden">
+              <div className="bg-ink px-4 py-2.5">
+                <span className="text-white font-logo text-[14px] font-bold tracking-tight">DeelMap</span>
               </div>
               <div className="px-4 py-3 bg-white">
-                <p className="text-[13px] font-semibold text-[#1A1816]">You\u2019ve received a counter offer</p>
-                <p className="text-[12px] text-[#737370] mt-0.5">{selectedPropertyAddress || 'Your offer'} \u2014 the seller has responded with new terms.</p>
+                <p className="text-[13px] font-semibold text-body">You\u2019ve received a counter offer</p>
+                <p className="text-[12px] text-muted mt-0.5">{selectedPropertyAddress || 'Your offer'} \u2014 the seller has responded with new terms.</p>
               </div>
             </div>
             <div className="px-5 py-4 space-y-3">
               <div className="flex items-baseline justify-between">
-                <span className="text-[12px] font-semibold text-[#A8A8A4] uppercase tracking-wide">Counter price</span>
-                <span className="text-[22px] font-bold text-[#1A1816]">${counterAmount ? Number(counterAmount).toLocaleString() : '0'}</span>
+                <span className="font-mono text-[11px] font-semibold text-muted uppercase tracking-[0.14em]">Counter price</span>
+                <span className="font-display font-bold text-[22px] text-ink">${counterAmount ? Number(counterAmount).toLocaleString() : '0'}</span>
               </div>
-              <div className="flex items-center justify-between py-2 border-t border-[#F0F0EE]">
-                <span className="text-[12px] text-[#737370]">Closing timeline</span>
-                <span className="text-[13px] font-medium text-[#1A1816]">{counterTimeline}</span>
+              <div className="flex items-center justify-between py-2 border-t border-hairline-2">
+                <span className="text-[12px] text-muted">Closing timeline</span>
+                <span className="font-mono text-[12.5px] font-semibold text-body">{counterTimeline}</span>
               </div>
-              <div className="flex items-center justify-between py-2 border-t border-[#F0F0EE]">
-                <span className="text-[12px] text-[#737370]">Financing</span>
-                <span className="text-[13px] font-medium text-[#1A1816]">{counterFinancing}</span>
+              <div className="flex items-center justify-between py-2 border-t border-hairline-2">
+                <span className="text-[12px] text-muted">Financing</span>
+                <span className="font-mono text-[12.5px] font-semibold text-body">{counterFinancing}</span>
               </div>
               {counterNotes && (
-                <div className="py-2 border-t border-[#F0F0EE]">
-                  <span className="block text-[12px] text-[#737370] mb-1">Notes to buyer</span>
-                  <p className="text-[13px] text-[#1A1816] whitespace-pre-wrap leading-relaxed">{counterNotes}</p>
+                <div className="py-2 border-t border-hairline-2">
+                  <span className="block text-[12px] text-muted mb-1">Notes to buyer</span>
+                  <p className="text-[13px] text-body whitespace-pre-wrap leading-relaxed">{counterNotes}</p>
                 </div>
               )}
-              <div className="flex items-start gap-2 bg-[#FEF9EC] border border-[#F5D78E] rounded px-3 py-2.5 mt-2">
-                <AlertCircle className="w-3.5 h-3.5 text-[#B5620A] flex-shrink-0 mt-0.5" />
-                <p className="text-[12px] text-[#B5620A]">The buyer will be notified immediately and can accept, counter, or decline.</p>
+              <div className="flex items-start gap-2 bg-tint-3 border border-line-2 rounded-[10px] px-3 py-2.5 mt-2">
+                <AlertCircle className="w-3.5 h-3.5 text-smoke-3 flex-shrink-0 mt-0.5" />
+                <p className="text-[12px] text-smoke-3">The buyer will be notified immediately and can accept, counter, or decline.</p>
               </div>
             </div>
-            <div className="px-5 py-3 border-t border-[#E8E8E4] bg-[#FAFAF8] flex items-center justify-end gap-2">
+            <div className="px-5 py-3 border-t border-hairline bg-tint-3 flex items-center justify-end gap-2">
               <button
                 type="button"
                 onClick={() => setShowCounterPreview(false)}
-                className="h-9 px-3 border border-[#E8E8E4] text-[#444441] hover:border-[#1A1816] hover:text-[#1A1816] text-[13px] font-semibold rounded transition-colors"
+                className="h-9 px-3 bg-white border-[1.5px] border-ink text-ink hover:bg-tint text-[13px] font-semibold rounded-[10px] transition-colors duration-120"
               >
                 Edit
               </button>
@@ -755,7 +755,7 @@ export default function MessagesPage() {
                   setTimeout(() => setToast(null), 3500);
                 }}
                 disabled={offerActionLoading}
-                className="h-9 px-5 bg-[#D03839] hover:bg-[#E0493B] text-white text-[13px] font-semibold rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="h-9 px-5 bg-ink border-[1.5px] border-ink hover:bg-smoke-2 text-white text-[13px] font-semibold rounded-[10px] shadow-soft-3 transition-colors duration-120 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {offerActionLoading ? 'Sending…' : 'Send counter offer'}
               </button>
@@ -765,21 +765,21 @@ export default function MessagesPage() {
       )}
 
       {error && (
-        <div className="rounded bg-[#FEF0EF] border border-[#F5C4C0] p-3 mb-3 shrink-0">
-          <p className="text-[13px] text-[#D03839]">{error}</p>
+        <div className="rounded-[10px] bg-tint border-[1.5px] border-ink p-3 mb-3 shrink-0">
+          <p className="text-[13px] font-semibold text-ink">{error}</p>
         </div>
       )}
 
       <div className="flex-1 flex min-h-0 bg-white overflow-hidden">
         {/* Left Panel — Conversation List */}
-        <div className={`${openConversationId ? 'hidden lg:flex' : 'flex'} flex-col w-full lg:w-[320px] border-r border-[#E8E8E4] bg-white shrink-0 min-h-0 overflow-hidden`}>
+        <div className={`${openConversationId ? 'hidden lg:flex' : 'flex'} flex-col w-full lg:w-[320px] border-r-[1.5px] border-ink bg-white shrink-0 min-h-0 overflow-hidden`}>
           <div className="flex-shrink-0 px-5 pt-5 pb-4">
             <div className="flex items-center justify-between gap-2 mb-4">
-              <h2 className="text-[20px] font-bold text-[#1A1816] tracking-[-0.66px]">{showBlocked ? 'Blocked users' : 'All Messages'}</h2>
+              <h2 className="font-display font-bold text-[20px] text-body tracking-[-0.02em]">{showBlocked ? 'Blocked users' : 'All Messages'}</h2>
               <button
                 type="button"
                 onClick={() => { const next = !showBlocked; setShowBlocked(next); if (next) fetchBlockedUsers(); }}
-                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded text-[12px] font-medium transition-colors duration-200 ${showBlocked ? 'bg-[#1A1816] text-white' : 'text-[#737370] hover:bg-[#FAFAF8]'}`}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-pill border-[1.5px] border-ink font-mono text-[11px] font-semibold tracking-[0.06em] transition-colors duration-120 ${showBlocked ? 'bg-ink text-white' : 'bg-white text-ink hover:bg-tint'}`}
               >
                 <Ban className="w-3.5 h-3.5" />
                 {showBlocked ? 'Back' : 'Blocked'}
@@ -787,11 +787,11 @@ export default function MessagesPage() {
             </div>
             {!showBlocked && (
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#A8A8A4]" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-mist" />
                 <input
                   type="text" placeholder="Search conversations"
                   value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2.5 bg-[#FAFAF8] border border-[#E8E8E4] rounded text-[14px] text-[#1A1816] placeholder-[#A8A8A4] focus:outline-none focus:border-[#D03839] focus:ring-1 focus:ring-[rgba(208,56,57,.12)] transition-all duration-200"
+                  className="w-full pl-10 pr-4 py-2.5 bg-white border-[1.5px] border-line rounded-[9px] text-[14px] text-body placeholder-mist focus:outline-none focus:border-ink focus:shadow-offset-3 transition-all duration-120"
                 />
               </div>
             )}
@@ -801,33 +801,33 @@ export default function MessagesPage() {
             {showBlocked ? (
               blockedLoading ? (
                 <div className="flex items-center justify-center h-40">
-                  <div className="animate-spin rounded-full h-8 w-8 border-2 border-[#E8E8E4] border-t-[#1A1816]" />
+                  <div className="motion-safe:animate-spin rounded-full h-8 w-8 border-2 border-hairline border-t-ink" />
                 </div>
               ) : blockedUsers.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-40 text-center px-6">
-                  <Ban className="w-8 h-8 text-[#A8A8A4] mb-3" />
-                  <p className="text-[14px] font-medium text-[#444441]">No blocked users</p>
+                  <Ban className="w-8 h-8 text-mist mb-3" />
+                  <p className="text-[14px] font-medium text-smoke-2">No blocked users</p>
                 </div>
               ) : (
                 <div>
                   {blockedUsers.map(row => {
                     const name = capitalizeFirst(row.buyer_name || 'Buyer');
                     return (
-                      <div key={row.conversation_id} className="flex items-center gap-3 px-5 py-3.5 border-b border-[#F3F3F1]">
+                      <div key={row.conversation_id} className="flex items-center gap-3 px-5 py-3.5 border-b border-hairline">
                         <div
-                          className="w-10 h-10 rounded-full flex items-center justify-center text-[13px] font-semibold flex-shrink-0"
+                          className="w-10 h-10 rounded-full border-[1.5px] border-ink flex items-center justify-center font-mono text-[12px] font-semibold flex-shrink-0"
                           style={{ backgroundColor: getAvatarPair(name).bg, color: getAvatarPair(name).text }}
                         >
                           {getInitials(name)}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <h3 className="text-[14px] font-medium text-[#1A1816] truncate">{name}</h3>
-                          <p className="text-[11px] text-[#A8A8A4] truncate">Blocked {row.blocked_at ? new Date(row.blocked_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : ''}</p>
+                          <h3 className="text-[14px] font-semibold text-body truncate">{name}</h3>
+                          <p className="font-mono text-[11px] text-mist truncate">Blocked {row.blocked_at ? new Date(row.blocked_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : ''}</p>
                         </div>
                         <button
                           type="button"
                           onClick={() => unblockConversation(row.conversation_id)}
-                          className="flex-shrink-0 px-3 py-1.5 border border-[#E8E8E4] hover:bg-[#FAFAF8] text-[#1A1816] text-[12px] font-semibold rounded transition-colors duration-200"
+                          className="flex-shrink-0 px-3 py-1.5 bg-white border-[1.5px] border-ink hover:bg-tint text-ink text-[12px] font-semibold rounded-[8px] transition-colors duration-120"
                         >
                           Unblock
                         </button>
@@ -838,12 +838,12 @@ export default function MessagesPage() {
               )
             ) : loading ? (
               <div className="flex items-center justify-center h-40">
-                <div className="animate-spin rounded-full h-8 w-8 border-2 border-[#E8E8E4] border-t-[#1A1816]" />
+                <div className="motion-safe:animate-spin rounded-full h-8 w-8 border-2 border-hairline border-t-ink" />
               </div>
             ) : displayedConversations.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-40 text-center px-6">
-                <MessageCircle className="w-8 h-8 text-[#A8A8A4] mb-3" />
-                <p className="text-[14px] font-medium text-[#444441]">{searchQuery ? 'No conversations found' : 'No conversations yet'}</p>
+                <MessageCircle className="w-8 h-8 text-mist mb-3" />
+                <p className="text-[14px] font-medium text-smoke-2">{searchQuery ? 'No conversations found' : 'No conversations yet'}</p>
               </div>
             ) : (
               <div>
@@ -858,29 +858,33 @@ export default function MessagesPage() {
                       key={c.id}
                       onClick={() => setOpenConversationId(c.id)}
                       onContextMenu={e => { e.preventDefault(); setContextMenu({ x: e.clientX, y: e.clientY, conv: c }); }}
-                      className={`flex items-start gap-3 px-5 py-3.5 cursor-pointer transition-colors duration-200 border-l-2 ${
-                        isActive ? 'bg-[#FAFAF8] border-l-[#D03839]' : 'border-l-transparent hover:bg-[#FAFAF8]'
+                      className={`flex items-start gap-3 px-5 py-3.5 cursor-pointer transition-colors duration-120 border-b border-hairline border-l-2 ${
+                        isActive ? 'bg-tint border-l-ink' : 'bg-white border-l-transparent hover:bg-tint-2'
                       }`}
                     >
                       <div
-                        className="w-10 h-10 rounded-full flex items-center justify-center text-[13px] font-semibold flex-shrink-0"
+                        className="w-10 h-10 rounded-full border-[1.5px] border-ink flex items-center justify-center font-mono text-[12px] font-semibold flex-shrink-0"
                         style={{ backgroundColor: getAvatarPair(name).bg, color: getAvatarPair(name).text }}
                       >
                         {initials}
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between gap-2">
-                          <h3 className={`text-[14px] truncate ${hasUnread ? 'font-bold text-[#1A1816]' : 'font-medium text-[#1A1816]'}`}>{name}</h3>
-                          <span className="text-[11px] text-[#A8A8A4] flex-shrink-0">{formatTimeAgo(c.last_message_at)}</span>
+                          <h3 className={`text-[14px] truncate ${hasUnread ? 'font-bold text-ink' : 'font-semibold text-body'}`}>{name}</h3>
+                          <span className="font-mono text-[11px] text-mist flex-shrink-0">{formatTimeAgo(c.last_message_at)}</span>
                         </div>
                         {c.buyer_email && (
-                          <p className="text-[11px] text-[#A8A8A4] truncate mt-0">{c.buyer_email}</p>
+                          <p className="font-mono text-[10.5px] text-mist truncate mt-0">{c.buyer_email}</p>
                         )}
                         <div className="flex items-center justify-between gap-2 mt-0.5">
-                          <p className={`text-[12px] truncate ${hasUnread ? 'text-[#444441] font-medium' : 'text-[#737370]'}`}>
+                          <p className={`text-[13.5px] truncate ${hasUnread ? 'text-body font-medium' : 'text-smoke-3'}`}>
                             {c.last_message_preview || 'No messages yet'}
                           </p>
-                          {hasUnread && <span className="w-2.5 h-2.5 rounded-full bg-[#D03839] flex-shrink-0"></span>}
+                          {hasUnread && (
+                            <span className="min-w-[18px] h-[18px] px-1 rounded-pill bg-ink text-white font-mono text-[10px] font-semibold flex items-center justify-center flex-shrink-0">
+                              {(c.unread_count ?? 0) > 9 ? '9+' : c.unread_count}
+                            </span>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -894,32 +898,32 @@ export default function MessagesPage() {
         {/* Center Panel — Chat */}
         <div className={`${openConversationId ? 'flex' : 'hidden lg:flex'} flex-1 flex-col bg-white min-w-0 min-h-0`}>
           {!openConversationId ? (
-            <div className="flex-1 flex items-center justify-center bg-[#FAFAF8]">
+            <div className="flex-1 flex items-center justify-center bg-tint-3">
               <div className="text-center">
-                <MessageCircle className="w-10 h-10 text-[#A8A8A4] mx-auto mb-3" />
-                <h3 className="text-[14px] font-semibold text-[#1A1816] mb-1">Select a conversation</h3>
-                <p className="text-[13px] text-[#737370]">Choose a conversation to view messages</p>
+                <MessageCircle className="w-10 h-10 text-mist mx-auto mb-3" />
+                <h3 className="text-[14px] font-semibold text-body mb-1">Select a conversation</h3>
+                <p className="text-[13px] text-muted">Choose a conversation to view messages</p>
               </div>
             </div>
           ) : (
             <>
               {/* Chat Header */}
-              <div className="flex-shrink-0 px-6 py-4 border-b border-[#E8E8E4] bg-white">
+              <div className="flex-shrink-0 px-6 py-4 border-b border-hairline bg-white">
                 <div className="flex items-center gap-3">
-                  <button type="button" onClick={() => setOpenConversationId(null)} className="lg:hidden p-2 -ml-2 rounded hover:bg-[#FAFAF8] transition-colors duration-200">
-                    <ArrowLeft className="w-5 h-5 text-[#444441]" />
+                  <button type="button" onClick={() => setOpenConversationId(null)} className="lg:hidden p-2 -ml-2 rounded-[8px] hover:bg-tint transition-colors duration-120">
+                    <ArrowLeft className="w-5 h-5 text-smoke-2" />
                   </button>
                   <div className="flex-1 min-w-0">
-                    <h2 className="text-[16px] font-bold text-[#1A1816]">{buyerDisplayName}</h2>
-                    <p className="text-[13px] text-[#737370] truncate">{selectedPropertyAddress || 'Interested Buyer'}</p>
+                    <h2 className="font-display font-bold text-[16.5px] tracking-[-0.01em] text-body">{buyerDisplayName}</h2>
+                    <p className="font-mono text-[11.5px] text-muted truncate">{selectedPropertyAddress || 'Interested Buyer'}</p>
                   </div>
                   {(selectedPropertyAddress || offer) && (
                     <button
                       type="button"
                       onClick={() => setShowMobilePropPanel(true)}
-                      className="xl:hidden p-2 rounded hover:bg-[#FAFAF8] transition-colors duration-200 flex-shrink-0"
+                      className="xl:hidden p-2 rounded-[8px] hover:bg-tint transition-colors duration-120 flex-shrink-0"
                     >
-                      <MoreVertical className="w-5 h-5 text-[#444441]" />
+                      <MoreVertical className="w-5 h-5 text-smoke-2" />
                     </button>
                   )}
                 </div>
@@ -930,9 +934,9 @@ export default function MessagesPage() {
                 {messages.length === 0 ? (
                   <div className="flex items-center justify-center h-full">
                     <div className="text-center">
-                      <Send className="w-8 h-8 text-[#A8A8A4] mx-auto mb-3" />
-                      <p className="text-[14px] font-medium text-[#444441]">No messages yet</p>
-                      <p className="text-[12px] text-[#737370] mt-1">Start the conversation</p>
+                      <Send className="w-8 h-8 text-mist mx-auto mb-3" />
+                      <p className="text-[14px] font-medium text-smoke-2">No messages yet</p>
+                      <p className="text-[12px] text-muted mt-1">Start the conversation</p>
                     </div>
                   </div>
                 ) : (
@@ -940,13 +944,13 @@ export default function MessagesPage() {
                     {Object.entries(messagesByDate).map(([dateKey, msgs]) => (
                       <div key={dateKey}>
                         <div className="flex items-center justify-center mb-4">
-                          <span className="text-[12px] text-[#A8A8A4] font-medium bg-white px-3">
+                          <span className="font-mono font-semibold text-[11px] uppercase tracking-[0.14em] text-muted bg-white px-3">
                             {formatDateHeader(msgs[0].created_at)}
                           </span>
                         </div>
                         <div className="space-y-4">
                           {msgs.map((item, idx) => {
-                            const statusColors = { pending: 'bg-[#EBF3FC] text-[#4A90E2]', accepted: 'bg-[#E4F5EC] text-[#0F6E56]', rejected: 'bg-[#FEF0EF] text-[#D03839]', countered: 'bg-[#FFF7ED] text-[#C27A12]', withdrawn: 'bg-[#F3F3F1] text-[#737370]' };
+                            const statusColors = { pending: 'bg-tint text-ink', accepted: 'bg-ink text-white', rejected: 'bg-mist text-white', countered: 'bg-tint text-ink', withdrawn: 'bg-mist text-white' };
                             const statusLabel = { pending: 'Pending', accepted: 'Accepted', rejected: 'Rejected', countered: 'Countered', withdrawn: 'Withdrawn' };
 
                             // Offer card from offers table (has its own status)
@@ -956,26 +960,26 @@ export default function MessagesPage() {
                               return (
                                 <div key={`offer-${item.id}`}>
                                   {isSeller
-                                    ? <p className="text-[12px] font-medium text-[#444441] mb-1 text-right">You</p>
-                                    : <p className="text-[12px] font-medium text-[#444441] mb-1">{buyerDisplayName}</p>
+                                    ? <p className="font-mono text-[10.5px] font-semibold uppercase tracking-[0.05em] text-muted mb-1 text-right">You</p>
+                                    : <p className="font-mono text-[10.5px] font-semibold uppercase tracking-[0.05em] text-muted mb-1">{buyerDisplayName}</p>
                                   }
                                   <div className={`flex ${isSeller ? 'justify-end' : 'justify-start'}`}>
-                                    <div className="bg-white border border-[#E8E8E4] rounded px-4 py-3 shadow-sm w-full max-w-[300px]">
+                                    <div className="bg-white border-[1.5px] border-ink rounded-[12px] px-4 py-3 shadow-offset-2 w-full max-w-[300px]">
                                       <div className="flex items-center justify-between mb-2">
-                                        <span className="inline-block text-[11px] font-semibold px-2 py-0.5 rounded-full bg-[#EBF3FC] text-[#4A90E2]">
+                                        <span className="inline-block font-mono text-[10px] font-semibold uppercase tracking-[0.08em] text-muted">
                                           {isCounter ? 'Counter offer' : 'Offer submitted'}
                                         </span>
-                                        <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${statusColors[item.status] || statusColors.pending}`}>
+                                        <span className={`font-mono text-[10px] font-semibold uppercase tracking-[0.05em] px-2 py-0.5 rounded-pill ${statusColors[item.status] || statusColors.pending}`}>
                                           {statusLabel[item.status] || item.status}
                                         </span>
                                       </div>
-                                      <p className="text-[22px] font-bold text-[#1A1816] leading-none mb-1">{formatCurrency(item.offer_price)}</p>
+                                      <p className="font-display text-[21px] font-bold text-ink leading-none mb-1">{formatCurrency(item.offer_price)}</p>
                                       {(item.financing_type || item.closing_timeline) && (
-                                        <p className="text-[12px] text-[#737370]">
+                                        <p className="font-mono text-[11.5px] text-muted">
                                           {[item.financing_type, item.closing_timeline ? `Close in ${item.closing_timeline}` : null].filter(Boolean).join(' · ')}
                                         </p>
                                       )}
-                                      <span className="text-[11px] text-[#A8A8A4] mt-1 block">{formatTime(item.created_at)}</span>
+                                      <span className="font-mono text-[10.5px] text-mist mt-1 block">{formatTime(item.created_at)}</span>
                                     </div>
                                   </div>
                                 </div>
@@ -987,42 +991,42 @@ export default function MessagesPage() {
                             const isSeller = m.sender_type === 'seller';
                             return (
                               <div key={m.id}>
-                                {isSeller && <p className="text-[12px] font-medium text-[#444441] mb-1 text-right">You</p>}
-                                {!isSeller && <p className="text-[12px] font-medium text-[#444441] mb-1">{buyerDisplayName}</p>}
+                                {isSeller && <p className="font-mono text-[10.5px] font-semibold uppercase tracking-[0.05em] text-muted mb-1 text-right">You</p>}
+                                {!isSeller && <p className="font-mono text-[10.5px] font-semibold uppercase tracking-[0.05em] text-muted mb-1">{buyerDisplayName}</p>}
                                 <div className={`group flex items-center gap-1.5 ${isSeller ? 'justify-end' : 'justify-start'}`}>
                                   {isSeller && !m.is_deleted && (
                                     <MessageActions isSeller onReply={() => setReplyingTo(m)} onCopy={() => copyMessage(m)} onDelete={() => setDeletingMsg(m)} copied={copiedKey === m.id} />
                                   )}
                                   <div className="max-w-[70%]">
                                     {m.reply_preview && (
-                                      <div className="mb-1 px-3 py-1.5 rounded bg-[#FAFAF8] border-l-2 border-[#D03839]">
-                                        <p className="text-[10px] font-semibold text-[#737370]">{m.reply_preview.sender_type === 'seller' ? 'You' : buyerDisplayName}</p>
-                                        <p className="text-[12px] text-[#737370] truncate">{m.reply_preview.text}</p>
+                                      <div className="mb-1 px-3 py-1.5 rounded-[8px] bg-tint-2 border-l-2 border-ink">
+                                        <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.05em] text-muted">{m.reply_preview.sender_type === 'seller' ? 'You' : buyerDisplayName}</p>
+                                        <p className="text-[12px] text-muted truncate">{m.reply_preview.text}</p>
                                       </div>
                                     )}
                                     {m.is_deleted ? (
-                                      <div className="rounded px-4 py-3 border border-dashed border-[#E8E8E4]">
-                                        <p className="text-[13px] italic text-[#A8A8A4]">This message was deleted</p>
+                                      <div className="rounded-[12px] px-4 py-3 border-[1.5px] border-dashed border-line">
+                                        <p className="text-[13px] italic text-mist">This message was deleted</p>
                                       </div>
                                     ) : (
-                                    <div className={`rounded px-4 py-3 ${isSeller ? 'bg-[#FEF0EF] text-[#1A1816] border border-[#F5C4C0]' : 'bg-[#FAFAF8] text-[#1A1816] border border-[#E8E8E4]'}`}>
+                                    <div className={`rounded-[12px] px-4 py-2.5 ${isSeller ? 'bg-ink text-white' : 'bg-tint text-body'}`}>
                                       {m.message_text && <p className="text-[14px] leading-relaxed whitespace-pre-wrap break-words">{m.message_text}</p>}
                                       {m.has_attachment && m.attachment_url && (
                                         /\.(png|jpe?g|gif|webp|heic)$/i.test(m.attachment_name || m.attachment_url)
                                           ? <a href={m.attachment_url} target="_blank" rel="noopener noreferrer" className={m.message_text ? 'mt-2 block' : 'block'}>
-                                              <img src={m.attachment_url} alt={m.attachment_name || 'attachment'} className="max-w-full rounded border border-[#E8E8E4] max-h-64 object-cover" />
+                                              <img src={m.attachment_url} alt={m.attachment_name || 'attachment'} className="max-w-full rounded-[10px] border border-hairline max-h-64 object-cover" />
                                             </a>
-                                          : <a href={m.attachment_url} target="_blank" rel="noopener noreferrer" className={`${m.message_text ? 'mt-2' : ''} flex items-center gap-2 text-[13px] font-medium text-[#D03839] underline`}>
+                                          : <a href={m.attachment_url} target="_blank" rel="noopener noreferrer" className={`${m.message_text ? 'mt-2' : ''} inline-flex items-center gap-2 font-mono text-[12px] font-semibold underline ${isSeller ? 'text-white' : 'text-ink'}`}>
                                               <Paperclip className="w-3.5 h-3.5" /> {m.attachment_name || 'Download attachment'}
                                             </a>
                                       )}
                                     </div>
                                     )}
                                     <div className={`flex items-center gap-1 mt-1 ${isSeller ? 'justify-end' : 'justify-start'}`}>
-                                      <span className="text-[11px] text-[#A8A8A4]">{formatTime(m.created_at)}</span>
+                                      <span className="font-mono text-[10.5px] text-muted">{formatTime(m.created_at)}</span>
                                       {isSeller && !m.is_deleted && (m.is_read
-                                        ? <CheckCheck className="w-3.5 h-3.5 text-[#4A90E2]" />
-                                        : <Check className="w-3.5 h-3.5 text-[#A8A8A4]" />
+                                        ? <CheckCheck className="w-3.5 h-3.5 text-muted" />
+                                        : <Check className="w-3.5 h-3.5 text-mist" />
                                       )}
                                     </div>
                                   </div>
@@ -1044,40 +1048,40 @@ export default function MessagesPage() {
               {/* Replying-to banner */}
               {replyingTo && (
                 <div className="flex-shrink-0 px-6 pt-3">
-                  <div className="flex items-center gap-2 px-3 py-2 bg-[#FAFAF8] border-l-2 border-[#D03839] rounded">
-                    <CornerUpLeft className="w-3.5 h-3.5 text-[#D03839] shrink-0" />
+                  <div className="flex items-center gap-2 px-3 py-2 bg-tint-2 border-l-2 border-ink rounded-[8px]">
+                    <CornerUpLeft className="w-3.5 h-3.5 text-ink shrink-0" />
                     <div className="flex-1 min-w-0">
-                      <p className="text-[11px] font-semibold text-[#737370]">Replying to {replyingTo.sender_type === 'seller' ? 'yourself' : buyerDisplayName}</p>
-                      <p className="text-[12px] text-[#737370] truncate">{replyingTo.message_text || '[Attachment]'}</p>
+                      <p className="font-mono text-[10.5px] font-semibold uppercase tracking-[0.05em] text-muted">Replying to {replyingTo.sender_type === 'seller' ? 'yourself' : buyerDisplayName}</p>
+                      <p className="text-[12px] text-muted truncate">{replyingTo.message_text || '[Attachment]'}</p>
                     </div>
-                    <button type="button" onClick={() => setReplyingTo(null)} className="p-1 rounded hover:bg-white text-[#737370]"><X className="w-3.5 h-3.5" /></button>
+                    <button type="button" onClick={() => setReplyingTo(null)} className="p-1 rounded-[8px] hover:bg-white text-muted"><X className="w-3.5 h-3.5" /></button>
                   </div>
                 </div>
               )}
 
               {/* Input */}
-              <div className="flex-shrink-0 px-6 py-4 border-t border-[#E8E8E4] bg-white">
+              <div className="flex-shrink-0 px-6 py-4 border-t border-hairline bg-white">
                 <form onSubmit={e => { e.preventDefault(); sendMessage(); }} className="flex items-end gap-2">
                   <input ref={fileInputRef} type="file" className="hidden"
                     accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt"
                     onChange={e => { const f = e.target.files?.[0]; if (f) sendAttachment(f); }} />
                   <button type="button" onClick={() => fileInputRef.current?.click()} disabled={uploadingAttachment || !openConversationId}
                     title="Attach a file"
-                    className="p-2.5 rounded hover:bg-[#FAFAF8] transition-colors duration-200 flex-shrink-0 disabled:opacity-50">
-                    {uploadingAttachment ? <Loader2 className="w-5 h-5 text-[#737370] animate-spin" /> : <Paperclip className="w-5 h-5 text-[#737370]" />}
+                    className="p-2.5 rounded-[8px] hover:bg-tint transition-colors duration-120 flex-shrink-0 disabled:opacity-50">
+                    {uploadingAttachment ? <Loader2 className="w-5 h-5 text-muted motion-safe:animate-spin" /> : <Paperclip className="w-5 h-5 text-muted" />}
                   </button>
                   <div className="relative flex-shrink-0" ref={emojiPickerRef}>
                     <button type="button" onClick={() => setShowEmojiPicker(prev => !prev)} disabled={!openConversationId}
                       title="Add emoji"
-                      className="p-2.5 rounded hover:bg-[#FAFAF8] transition-colors duration-200 disabled:opacity-50">
-                      <Smile className="w-5 h-5 text-[#737370]" />
+                      className="p-2.5 rounded-[8px] hover:bg-tint transition-colors duration-120 disabled:opacity-50">
+                      <Smile className="w-5 h-5 text-muted" />
                     </button>
                     {showEmojiPicker && (
-                      <div className="absolute bottom-full left-0 mb-2 w-[280px] bg-white border border-[#E8E8E4] rounded-lg shadow-xl z-[60] p-3">
+                      <div className="absolute bottom-full left-0 mb-2 w-[280px] bg-white border-[1.5px] border-ink rounded-[12px] shadow-offset-4 z-[60] p-3">
                         <div className="grid grid-cols-10 gap-0.5">
                           {EMOJI_LIST.map(emoji => (
                             <button key={emoji} type="button" onClick={() => insertEmoji(emoji)}
-                              className="w-6 h-6 flex items-center justify-center text-[17px] leading-none rounded hover:bg-[#FAFAF8] transition-colors duration-150">
+                              className="w-6 h-6 flex items-center justify-center text-[17px] leading-none rounded-[8px] hover:bg-tint transition-colors duration-120">
                               {emoji}
                             </button>
                           ))}
@@ -1090,11 +1094,11 @@ export default function MessagesPage() {
                     onChange={e => setMessageText(e.target.value)}
                     onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }}
                     placeholder="Type your message" disabled={sending} rows={1}
-                    className="flex-1 resize-none px-4 py-2.5 bg-[#FAFAF8] border border-[#E8E8E4] rounded text-[14px] text-[#1A1816] placeholder-[#A8A8A4] focus:outline-none focus:border-[#D03839] focus:ring-1 focus:ring-[rgba(208,56,57,.12)] disabled:opacity-50 max-h-32 transition-all duration-200"
+                    className="flex-1 resize-none px-3.5 py-2.5 bg-white border-[1.5px] border-line rounded-[9px] text-[14px] text-body placeholder-mist focus:outline-none focus:border-ink focus:shadow-offset-3 disabled:opacity-50 max-h-32 transition-all duration-120"
                   />
                   <button type="submit" disabled={!messageText.trim() || sending}
-                    className="p-2.5 bg-[#D03839] hover:bg-[#E0493B] disabled:bg-[#F5C4C0] rounded transition-colors duration-200 disabled:cursor-not-allowed flex-shrink-0">
-                    {sending ? <Loader2 className="w-5 h-5 text-white animate-spin" /> : <Send className="w-5 h-5 text-white" />}
+                    className="p-2.5 bg-ink border-[1.5px] border-ink hover:bg-smoke-2 disabled:bg-line disabled:border-line disabled:shadow-none shadow-soft-3 rounded-[10px] transition-colors duration-120 disabled:cursor-not-allowed flex-shrink-0">
+                    {sending ? <Loader2 className="w-5 h-5 text-white motion-safe:animate-spin" /> : <Send className="w-5 h-5 text-white" />}
                   </button>
                 </form>
               </div>
@@ -1104,48 +1108,48 @@ export default function MessagesPage() {
 
         {/* Right Panel — Offer Details */}
         {openConversationId && selectedConversation && (
-          <div className="hidden xl:flex flex-col w-[300px] border-l border-[#E8E8E4] bg-white overflow-y-auto shrink-0">
+          <div className="hidden xl:flex flex-col w-[300px] border-l-[1.5px] border-ink bg-white overflow-y-auto shrink-0">
 
             {/* COUNTER OFFER FORM */}
             {showCounterForm ? (
               <>
-                <div className="px-5 py-4 border-b border-[#E8E8E4] flex items-center justify-between">
-                  <h3 className="text-[16px] font-bold text-[#1A1816]">Send counter offer</h3>
-                  <button onClick={() => setShowCounterForm(false)} className="p-1 rounded hover:bg-[#FAFAF8]">
-                    <X className="w-4 h-4 text-[#737370]" />
+                <div className="px-5 py-4 border-b border-hairline flex items-center justify-between">
+                  <h3 className="font-display font-bold text-[16.5px] tracking-[-0.01em] text-body">Send counter offer</h3>
+                  <button onClick={() => setShowCounterForm(false)} className="p-1 rounded-[8px] hover:bg-tint">
+                    <X className="w-4 h-4 text-muted" />
                   </button>
                 </div>
                 <div className="px-5 py-4 flex flex-col gap-4">
                   <div>
-                    <label className="block text-[13px] font-medium text-[#1A1816] mb-1.5">Counter price</label>
+                    <label className="block font-mono text-[11px] font-semibold uppercase tracking-[0.08em] text-muted mb-1.5">Counter price</label>
                     <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#737370] text-[13px]">$</span>
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 font-mono text-muted text-[13px]">$</span>
                       <input
                         type="text"
                         value={counterAmount}
                         onChange={e => setCounterAmount(e.target.value.replace(/[^0-9]/g, ''))}
-                        className="w-full pl-6 pr-3 py-2.5 border border-[#E8E8E4] rounded text-[14px] text-[#1A1816] focus:outline-none focus:border-[#D03839]"
+                        className="w-full pl-6 pr-3 py-2.5 border-[1.5px] border-line rounded-[9px] font-mono text-[14px] text-body focus:outline-none focus:border-ink focus:shadow-offset-3 transition-all duration-120"
                       />
                     </div>
                   </div>
                   <div>
-                    <label className="block text-[13px] font-medium text-[#1A1816] mb-1.5">Closing Timeline</label>
+                    <label className="block font-mono text-[11px] font-semibold uppercase tracking-[0.08em] text-muted mb-1.5">Closing Timeline</label>
                     <select value={counterTimeline} onChange={e => setCounterTimeline(e.target.value)}
-                      className="w-full px-3 py-2.5 border border-[#E8E8E4] rounded text-[14px] text-[#1A1816] bg-white focus:outline-none focus:border-[#D03839] appearance-none"
+                      className="w-full px-3 py-2.5 border-[1.5px] border-line rounded-[9px] text-[14px] text-body bg-white focus:outline-none focus:border-ink focus:shadow-offset-3 transition-all duration-120 appearance-none"
                       style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23737370' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 10px center' }}>
                       {['30 days','45 days','60 days','As-is'].map(o => <option key={o}>{o}</option>)}
                     </select>
                   </div>
                   <div>
-                    <label className="block text-[13px] font-medium text-[#1A1816] mb-1.5">Financing type</label>
+                    <label className="block font-mono text-[11px] font-semibold uppercase tracking-[0.08em] text-muted mb-1.5">Financing type</label>
                     <div className="grid grid-cols-2 gap-2">
                       {['Cash','Loan'].map(type => (
                         <button key={type} type="button" onClick={() => setCounterFinancing(type)}
-                          className={`flex items-center gap-2 px-3 py-2.5 border rounded text-[13px] font-medium transition-colors ${
-                            counterFinancing === type ? 'border-[#D03839] text-[#D03839]' : 'border-[#E8E8E4] text-[#444441] hover:border-[#D03839]/30'
+                          className={`flex items-center gap-2 px-3 py-2.5 border-[1.5px] rounded-[9px] text-[13px] font-semibold transition-colors duration-120 ${
+                            counterFinancing === type ? 'border-ink text-ink bg-tint' : 'border-line text-smoke-2 hover:border-ink'
                           }`}>
-                          <div className={`w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center ${counterFinancing === type ? 'border-[#D03839]' : 'border-[#A8A8A4]'}`}>
-                            {counterFinancing === type && <div className="w-1.5 h-1.5 rounded-full bg-[#D03839]" />}
+                          <div className={`w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center ${counterFinancing === type ? 'border-ink' : 'border-mist'}`}>
+                            {counterFinancing === type && <div className="w-1.5 h-1.5 rounded-full bg-ink" />}
                           </div>
                           {type}
                         </button>
@@ -1153,21 +1157,21 @@ export default function MessagesPage() {
                     </div>
                   </div>
                   <div>
-                    <label className="block text-[13px] font-medium text-[#1A1816] mb-1.5">Notes to Buyer</label>
+                    <label className="block font-mono text-[11px] font-semibold uppercase tracking-[0.08em] text-muted mb-1.5">Notes to Buyer</label>
                     <textarea value={counterNotes} onChange={e => setCounterNotes(e.target.value)}
                       placeholder="e.g. Price reflects recent comparable sales..."
                       rows={3}
-                      className="w-full px-3 py-2.5 border border-[#E8E8E4] rounded text-[13px] text-[#1A1816] resize-none focus:outline-none focus:border-[#D03839] placeholder-[#A8A8A4]"
+                      className="w-full px-3 py-2.5 border-[1.5px] border-line rounded-[9px] text-[13px] text-body resize-none focus:outline-none focus:border-ink focus:shadow-offset-3 transition-all duration-120 placeholder-mist"
                     />
                   </div>
-                  <div className="flex items-start gap-2 bg-[#FEF9EC] border border-[#F5D78E] rounded px-3 py-2.5">
-                    <AlertCircle className="w-3.5 h-3.5 text-[#B5620A] flex-shrink-0 mt-0.5" />
-                    <p className="text-[12px] text-[#B5620A]">The buyer will be notified immediately and can accept, counter, or decline your offer</p>
+                  <div className="flex items-start gap-2 bg-tint-3 border border-line-2 rounded-[10px] px-3 py-2.5">
+                    <AlertCircle className="w-3.5 h-3.5 text-smoke-3 flex-shrink-0 mt-0.5" />
+                    <p className="text-[12px] text-smoke-3">The buyer will be notified immediately and can accept, counter, or decline your offer</p>
                   </div>
                   <button
                     onClick={() => setShowCounterPreview(true)}
                     disabled={offerActionLoading || !counterAmount}
-                    className="w-full py-3 bg-[#D03839] text-white text-[14px] font-semibold rounded hover:bg-[#E0493B] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full py-3 bg-ink border-[1.5px] border-ink text-white text-[14px] font-semibold rounded-[10px] shadow-soft-3 hover:bg-smoke-2 transition-colors duration-120 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     Review &amp; Send
                   </button>
@@ -1176,26 +1180,26 @@ export default function MessagesPage() {
             ) : (
               <>
                 {/* Header */}
-                <div className="px-5 py-4 border-b border-[#E8E8E4]">
-                  <h3 className="text-[18px] font-bold text-[#1A1816]">Offer Details</h3>
-                  <p className="text-[13px] text-[#737370]">Buyer & Offer</p>
+                <div className="px-5 py-4 border-b border-hairline">
+                  <h3 className="font-display font-bold text-[18px] tracking-[-0.01em] text-body">Offer Details</h3>
+                  <p className="text-[13px] text-muted">Buyer & Offer</p>
                 </div>
 
                 {/* BUYER INFO */}
-                <div className="px-5 py-4 border-b border-[#E8E8E4]">
-                  <p className="text-[11px] font-semibold text-[#A8A8A4] uppercase tracking-[1.1px] mb-3">Buyer Info</p>
+                <div className="px-5 py-4 border-b border-hairline">
+                  <p className="font-mono text-[11px] font-semibold text-muted uppercase tracking-[0.14em] mb-3">Buyer Info</p>
                   <div className="flex items-center gap-3 mb-3">
                     <div
-                      className="w-10 h-10 rounded-full flex items-center justify-center text-[13px] font-semibold flex-shrink-0"
+                      className="w-10 h-10 rounded-full border-[1.5px] border-ink flex items-center justify-center font-mono text-[12px] font-semibold flex-shrink-0"
                       style={{ backgroundColor: getAvatarPair(buyerDisplayName).bg, color: getAvatarPair(buyerDisplayName).text }}
                     >
                       {getInitials(buyerDisplayName)}
                     </div>
                     <div>
-                      <p className="text-[14px] font-semibold text-[#1A1816]">{buyerDisplayName}</p>
+                      <p className="text-[14px] font-semibold text-body">{buyerDisplayName}</p>
                       <div className="flex items-center gap-1 mt-0.5">
-                        <Shield className="w-3 h-3 text-[#0F6E56]" />
-                        <span className="text-[11px] text-[#0F6E56] font-medium">Verified buyer</span>
+                        <Shield className="w-3 h-3 text-ink" />
+                        <span className="font-mono text-[10.5px] font-semibold text-ink uppercase tracking-[0.05em]">Verified buyer</span>
                       </div>
                     </div>
                   </div>
@@ -1203,21 +1207,21 @@ export default function MessagesPage() {
                     showContactInfo ? (
                       <>
                         {selectedConversation.buyer_email && (
-                          <div className="flex items-center gap-2 text-[13px] text-[#444441] mb-1.5">
-                            <Mail className="w-4 h-4 text-[#737370]" />
+                          <div className="flex items-center gap-2 font-mono text-[12px] text-smoke-2 mb-1.5">
+                            <Mail className="w-4 h-4 text-muted" />
                             <span className="truncate">{selectedConversation.buyer_email}</span>
                           </div>
                         )}
                         {selectedConversation.buyer_phone && (
-                          <div className="flex items-center gap-2 text-[13px] text-[#444441]">
-                            <Phone className="w-4 h-4 text-[#737370]" />
+                          <div className="flex items-center gap-2 font-mono text-[12px] text-smoke-2">
+                            <Phone className="w-4 h-4 text-muted" />
                             <span>{selectedConversation.buyer_phone}</span>
                           </div>
                         )}
-                        <button onClick={() => setShowContactInfo(false)} className="text-[11px] text-[#737370] hover:text-[#1A1816] mt-1.5">Hide contact info</button>
+                        <button onClick={() => setShowContactInfo(false)} className="font-mono text-[11px] text-muted hover:text-body mt-1.5">Hide contact info</button>
                       </>
                     ) : (
-                      <button onClick={() => setShowContactInfo(true)} className="flex items-center gap-1.5 text-[12px] font-semibold text-[#D03839] hover:text-[#B82F30]">
+                      <button onClick={() => setShowContactInfo(true)} className="flex items-center gap-1.5 font-mono text-[11px] font-semibold text-ink hover:text-smoke-2">
                         <Mail className="w-3.5 h-3.5" /> Show contact info
                       </button>
                     )
@@ -1225,62 +1229,62 @@ export default function MessagesPage() {
                 </div>
 
                 {/* OFFER DETAILS */}
-                <div className="px-5 py-4 border-b border-[#E8E8E4]">
-                  <p className="text-[11px] font-semibold text-[#A8A8A4] uppercase tracking-[1.1px] mb-3">Offer Details</p>
+                <div className="px-5 py-4 border-b border-hairline">
+                  <p className="font-mono text-[11px] font-semibold text-muted uppercase tracking-[0.14em] mb-3">Offer Details</p>
                   {offerLoading ? (
-                    <div className="flex items-center justify-center h-16"><Loader2 className="w-5 h-5 animate-spin text-[#A8A8A4]" /></div>
+                    <div className="flex items-center justify-center h-16"><Loader2 className="w-5 h-5 motion-safe:animate-spin text-mist" /></div>
                   ) : !offer ? (
-                    <p className="text-[13px] text-[#737370]">No offer yet from this buyer.</p>
+                    <p className="text-[13px] text-muted">No offer yet from this buyer.</p>
                   ) : (
                     <>
-                      <p className="text-[28px] font-bold text-[#1A1816] tracking-[-0.56px] mb-1">{formatCurrency(offer.offer_price)}</p>
+                      <p className="font-display text-[28px] font-bold text-ink tracking-[-0.02em] mb-1">{formatCurrency(offer.offer_price)}</p>
                       <div className="mb-3">
-                        {offer.status === 'pending' && <span className="inline-block px-2 py-0.5 bg-[#FEF3E2] text-[#B5620A] text-[11px] font-semibold rounded">Negotiating</span>}
-                        {offer.status === 'accepted' && <span className="inline-block px-2 py-0.5 bg-[#E4F5EC] text-[#0F6E56] text-[11px] font-semibold rounded">Accepted</span>}
-                        {offer.status === 'rejected' && <span className="inline-block px-2 py-0.5 bg-[#FEF0EF] text-[#D03839] text-[11px] font-semibold rounded">Rejected</span>}
-                        {offer.status === 'countered' && <span className="inline-block px-2 py-0.5 bg-[#EBF3FC] text-[#4A90E2] text-[11px] font-semibold rounded">Counter Sent</span>}
+                        {offer.status === 'pending' && <span className="inline-block px-2.5 py-0.5 bg-tint text-ink font-mono text-[10.5px] font-semibold uppercase tracking-[0.05em] rounded-pill">Negotiating</span>}
+                        {offer.status === 'accepted' && <span className="inline-block px-2.5 py-0.5 bg-ink text-white font-mono text-[10.5px] font-semibold uppercase tracking-[0.05em] rounded-pill">Accepted</span>}
+                        {offer.status === 'rejected' && <span className="inline-block px-2.5 py-0.5 bg-mist text-white font-mono text-[10.5px] font-semibold uppercase tracking-[0.05em] rounded-pill">Rejected</span>}
+                        {offer.status === 'countered' && <span className="inline-block px-2.5 py-0.5 bg-tint text-ink font-mono text-[10.5px] font-semibold uppercase tracking-[0.05em] rounded-pill">Counter Sent</span>}
                       </div>
                       <div className="grid grid-cols-2 gap-2">
-                        <div className="border border-[#E8E8E4] rounded px-3 py-2.5">
-                          <p className="text-[11px] text-[#737370]">Closing</p>
-                          <p className="text-[13px] font-semibold text-[#1A1816]">{offer.closing_timeline || '—'}</p>
+                        <div className="border border-hairline rounded-[10px] px-3 py-2.5">
+                          <p className="font-mono text-[10px] uppercase tracking-[0.08em] text-muted">Closing</p>
+                          <p className="font-mono text-[12.5px] font-semibold text-body">{offer.closing_timeline || '—'}</p>
                         </div>
-                        <div className="border border-[#E8E8E4] rounded px-3 py-2.5">
-                          <p className="text-[11px] text-[#737370]">Financing</p>
-                          <p className="text-[13px] font-semibold text-[#1A1816]">{offer.financing_type || '—'}</p>
+                        <div className="border border-hairline rounded-[10px] px-3 py-2.5">
+                          <p className="font-mono text-[10px] uppercase tracking-[0.08em] text-muted">Financing</p>
+                          <p className="font-mono text-[12.5px] font-semibold text-body">{offer.financing_type || '—'}</p>
                         </div>
-                        <div className="border border-[#E8E8E4] rounded px-3 py-2.5">
-                          <p className="text-[11px] text-[#737370]">Inspection</p>
-                          <p className="text-[13px] font-semibold text-[#1A1816]">{offer.inspection_period || 'Waived'}</p>
+                        <div className="border border-hairline rounded-[10px] px-3 py-2.5">
+                          <p className="font-mono text-[10px] uppercase tracking-[0.08em] text-muted">Inspection</p>
+                          <p className="font-mono text-[12.5px] font-semibold text-body">{offer.inspection_period || 'Waived'}</p>
                         </div>
-                        <div className="border border-[#E8E8E4] rounded px-3 py-2.5">
-                          <p className="text-[11px] text-[#737370]">Submitted</p>
-                          <p className="text-[13px] font-semibold text-[#1A1816]">
+                        <div className="border border-hairline rounded-[10px] px-3 py-2.5">
+                          <p className="font-mono text-[10px] uppercase tracking-[0.08em] text-muted">Submitted</p>
+                          <p className="font-mono text-[12.5px] font-semibold text-body">
                             {offer.created_at ? new Date(offer.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'Today'}
                           </p>
                         </div>
                       </div>
                       {offer.notes && (
-                        <p className="mt-3 text-[12px] text-[#737370] italic">&quot;{offer.notes}&quot;</p>
+                        <p className="mt-3 text-[12px] text-muted italic">&quot;{offer.notes}&quot;</p>
                       )}
                     </>
                   )}
                 </div>
 
                 {/* BUYER CREDIBILITY */}
-                <div className="px-5 py-4 border-b border-[#E8E8E4]">
-                  <p className="text-[11px] font-semibold text-[#A8A8A4] uppercase tracking-[1.1px] mb-3">Buyer Credibility</p>
+                <div className="px-5 py-4 border-b border-hairline">
+                  <p className="font-mono text-[11px] font-semibold text-muted uppercase tracking-[0.14em] mb-3">Buyer Credibility</p>
                   {buyerStatsLoading ? (
-                    <div className="flex items-center justify-center h-12"><Loader2 className="w-4 h-4 animate-spin text-[#A8A8A4]" /></div>
+                    <div className="flex items-center justify-center h-12"><Loader2 className="w-4 h-4 motion-safe:animate-spin text-mist" /></div>
                   ) : (
                     <div className="grid grid-cols-2 gap-2">
-                      <div className="border border-[#E8E8E4] rounded px-3 py-2.5 text-center">
-                        <p className="text-[18px] font-bold text-[#4A90E2]">{buyerStats?.pastDeals ?? 0}</p>
-                        <p className="text-[11px] text-[#737370] mt-0.5">Past Deals</p>
+                      <div className="border border-hairline rounded-[10px] px-3 py-2.5 text-center">
+                        <p className="font-display text-[18px] font-bold text-body">{buyerStats?.pastDeals ?? 0}</p>
+                        <p className="font-mono text-[10px] uppercase tracking-[0.08em] text-muted mt-0.5">Past Deals</p>
                       </div>
-                      <div className="border border-[#E8E8E4] rounded px-3 py-2.5 text-center">
-                        <p className="text-[18px] font-bold text-[#0F6E56]">{buyerStats ? `${buyerStats.successRate}%` : '0%'}</p>
-                        <p className="text-[11px] text-[#737370] mt-0.5">Success Rate</p>
+                      <div className="border border-hairline rounded-[10px] px-3 py-2.5 text-center">
+                        <p className="font-display text-[18px] font-bold text-ink">{buyerStats ? `${buyerStats.successRate}%` : '0%'}</p>
+                        <p className="font-mono text-[10px] uppercase tracking-[0.08em] text-muted mt-0.5">Success Rate</p>
                       </div>
                     </div>
                   )}
@@ -1289,26 +1293,26 @@ export default function MessagesPage() {
                 {/* RESPOND TO OFFER — always visible, disabled when no pending offer */}
                 {!(offer && (offer.status === 'accepted' || offer.status === 'rejected' || offer.status === 'countered')) && (
                   <div className="px-5 py-4">
-                    <p className="text-[11px] font-semibold text-[#A8A8A4] uppercase tracking-[1.1px] mb-3">Respond to Offer</p>
+                    <p className="font-mono text-[11px] font-semibold text-muted uppercase tracking-[0.14em] mb-3">Respond to Offer</p>
                     {!offer || offer.status !== 'pending' ? (
-                      <p className="text-[12px] text-[#A8A8A4] mb-3">No offer received yet</p>
+                      <p className="font-mono text-[11px] text-mist mb-3">No offer received yet</p>
                     ) : null}
                     <button
                       onClick={() => offer && offer.status === 'pending' ? setShowAcceptModal(true) : undefined}
                       disabled={!offer || offer.status !== 'pending'}
-                      className="w-full py-3 bg-[#D03839] text-white text-[14px] font-semibold rounded transition-colors duration-200 mb-2 disabled:opacity-40 disabled:cursor-not-allowed hover:enabled:bg-[#E0493B]">
+                      className="w-full py-3 bg-ink border-[1.5px] border-ink text-white text-[14px] font-semibold rounded-[10px] shadow-soft-3 transition-colors duration-120 mb-2 disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none hover:enabled:bg-smoke-2">
                       Accept Offer
                     </button>
                     <button
                       onClick={() => offer && offer.status === 'pending' ? (setShowCounterForm(true), setCounterAmount(String(Math.round(offer.offer_price || 0)))) : undefined}
                       disabled={!offer || offer.status !== 'pending'}
-                      className="w-full py-3 border border-[#E8E8E4] text-[#1A1816] text-[14px] font-semibold rounded transition-colors duration-200 mb-2 disabled:opacity-40 disabled:cursor-not-allowed hover:enabled:bg-[#FAFAF8]">
+                      className="w-full py-3 bg-white border-[1.5px] border-ink text-ink text-[14px] font-semibold rounded-[10px] shadow-offset-3 transition-colors duration-120 mb-2 disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none hover:enabled:bg-tint">
                       Counter Offer
                     </button>
                     <button
                       onClick={() => offer && offer.status === 'pending' ? setShowRejectModal(true) : undefined}
                       disabled={!offer || offer.status !== 'pending'}
-                      className="w-full py-2.5 text-[#737370] text-[13px] font-medium transition-colors duration-200 text-center disabled:opacity-40 disabled:cursor-not-allowed hover:enabled:text-[#D03839]">
+                      className="w-full py-2.5 text-muted text-[13px] font-medium transition-colors duration-120 text-center disabled:opacity-40 disabled:cursor-not-allowed hover:enabled:text-ink">
                       Reject Offer
                     </button>
                   </div>
@@ -1320,35 +1324,35 @@ export default function MessagesPage() {
                     {offer.contract_submission_id ? (
                       contractStatus?.status === 'completed' ? (
                         <>
-                          <div className="bg-[#E4F5EC] border border-[#A8DFBA] rounded px-4 py-3 mb-3">
-                            <p className="text-[13px] font-semibold text-[#0F6E56] mb-1">Contract signed</p>
-                            <p className="text-[12px] text-[#0F6E56]">Both parties have signed. You can view the fully executed contract.</p>
+                          <div className="bg-tint border-[1.5px] border-ink rounded-[10px] px-4 py-3 mb-3">
+                            <p className="text-[13px] font-semibold text-ink mb-1">Contract signed</p>
+                            <p className="text-[12px] text-ink">Both parties have signed. You can view the fully executed contract.</p>
                           </div>
                           <a
                             href={contractStatus.document_url || '/contracts'}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="flex items-center justify-center gap-1.5 w-full py-3 border border-[#E8E8E4] hover:bg-[#FAFAF8] text-[#1A1816] text-[14px] font-semibold rounded transition-colors"
+                            className="flex items-center justify-center gap-1.5 w-full py-3 bg-white border-[1.5px] border-ink hover:bg-tint text-ink text-[14px] font-semibold rounded-[10px] shadow-offset-3 transition-colors duration-120"
                           >
                             <FileText className="w-4 h-4" />
                             View Contract
                           </a>
                         </>
                       ) : (
-                        <div className="bg-[#FEF3E2] border border-[#F5D9A8] rounded px-4 py-3">
-                          <p className="text-[13px] font-semibold text-[#B5620A] mb-1">Contract sent</p>
-                          <p className="text-[12px] text-[#B5620A]">Waiting on the buyer's signature. We'll notify you once it's fully signed.</p>
+                        <div className="bg-tint-2 border border-line-2 rounded-[10px] px-4 py-3">
+                          <p className="text-[13px] font-semibold text-smoke-3 mb-1">Contract sent</p>
+                          <p className="text-[12px] text-smoke-3">Waiting on the buyer's signature. We'll notify you once it's fully signed.</p>
                         </div>
                       )
                     ) : (
                       <>
-                        <div className="bg-[#E4F5EC] border border-[#A8DFBA] rounded px-4 py-3 mb-3">
-                          <p className="text-[13px] font-semibold text-[#0F6E56] mb-1">Offer accepted</p>
-                          <p className="text-[12px] text-[#0F6E56]">Send the contract to lock in the deal — we'll pre-fill it from this offer.</p>
+                        <div className="bg-tint border-[1.5px] border-ink rounded-[10px] px-4 py-3 mb-3">
+                          <p className="text-[13px] font-semibold text-ink mb-1">Offer accepted</p>
+                          <p className="text-[12px] text-ink">Send the contract to lock in the deal — we'll pre-fill it from this offer.</p>
                         </div>
                         <a
                           href={`/contracts/new?from_offer=${offer.id}`}
-                          className="flex items-center justify-center gap-1.5 w-full py-3 bg-[#0F6E56] hover:bg-[#0C5A47] text-white text-[14px] font-semibold rounded transition-colors"
+                          className="flex items-center justify-center gap-1.5 w-full py-3 bg-ink border-[1.5px] border-ink hover:bg-smoke-2 text-white text-[14px] font-semibold rounded-[10px] shadow-soft-3 transition-colors duration-120"
                         >
                           <FileText className="w-4 h-4" />
                           Create Contract
@@ -1359,17 +1363,17 @@ export default function MessagesPage() {
                 )}
                 {offer && offer.status === 'rejected' && (
                   <div className="px-5 py-4">
-                    <div className="bg-[#FEF0EF] border border-[#F5C4C0] rounded px-4 py-3">
-                      <p className="text-[13px] font-semibold text-[#D03839]">Offer rejected</p>
-                      <p className="text-[12px] text-[#D03839] mt-1">You can still continue the conversation.</p>
+                    <div className="bg-tint-2 border border-line-2 rounded-[10px] px-4 py-3">
+                      <p className="text-[13px] font-semibold text-smoke-3">Offer rejected</p>
+                      <p className="text-[12px] text-smoke-3 mt-1">You can still continue the conversation.</p>
                     </div>
                   </div>
                 )}
                 {offer && offer.status === 'countered' && (
                   <div className="px-5 py-4">
-                    <div className="bg-[#EBF3FC] border border-[#B0CFF0] rounded px-4 py-3">
-                      <p className="text-[13px] font-semibold text-[#4A90E2]">Counter offer sent</p>
-                      <p className="text-[12px] text-[#4A90E2] mt-1">Waiting for buyer's response.</p>
+                    <div className="bg-tint-2 border border-line-2 rounded-[10px] px-4 py-3">
+                      <p className="text-[13px] font-semibold text-muted">Counter offer sent</p>
+                      <p className="text-[12px] text-muted mt-1">Waiting for buyer's response.</p>
                     </div>
                   </div>
                 )}
@@ -1381,71 +1385,71 @@ export default function MessagesPage() {
         {/* Mobile Property Panel */}
         {showMobilePropPanel && selectedConversation && (
           <div className="xl:hidden fixed inset-0 z-[90] flex justify-end" onClick={() => setShowMobilePropPanel(false)}>
-            <div className="w-full max-w-sm bg-white h-full overflow-y-auto shadow-2xl flex flex-col" onClick={e => e.stopPropagation()}>
-              <div className="px-5 py-4 border-b border-[#E8E8E4] flex items-center justify-between flex-shrink-0">
+            <div className="w-full max-w-sm bg-white h-full overflow-y-auto border-l-[1.5px] border-ink flex flex-col" onClick={e => e.stopPropagation()}>
+              <div className="px-5 py-4 border-b border-hairline flex items-center justify-between flex-shrink-0">
                 <div>
-                  <h3 className="text-[16px] font-bold text-[#1A1816]">Property Details</h3>
-                  <p className="text-[13px] text-[#737370] truncate max-w-[200px]">{selectedPropertyAddress || 'Conversation'}</p>
+                  <h3 className="font-display font-bold text-[16.5px] tracking-[-0.01em] text-body">Property Details</h3>
+                  <p className="font-mono text-[11.5px] text-muted truncate max-w-[200px]">{selectedPropertyAddress || 'Conversation'}</p>
                 </div>
-                <button onClick={() => setShowMobilePropPanel(false)} className="p-2 rounded hover:bg-[#FAFAF8] transition-colors">
-                  <X className="w-5 h-5 text-[#444441]" />
+                <button onClick={() => setShowMobilePropPanel(false)} className="p-2 rounded-[8px] hover:bg-tint transition-colors duration-120">
+                  <X className="w-5 h-5 text-smoke-2" />
                 </button>
               </div>
-              <div className="px-5 py-4 border-b border-[#E8E8E4]">
-                <p className="text-[11px] font-semibold text-[#A8A8A4] uppercase tracking-[1.1px] mb-3">Buyer Info</p>
+              <div className="px-5 py-4 border-b border-hairline">
+                <p className="font-mono text-[11px] font-semibold text-muted uppercase tracking-[0.14em] mb-3">Buyer Info</p>
                 <div className="flex items-center gap-3 mb-3">
-                  <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0" style={{ backgroundColor: getAvatarPair(buyerDisplayName).bg }}>
-                    <span className="text-[13px] font-semibold" style={{ color: getAvatarPair(buyerDisplayName).text }}>{getInitials(buyerDisplayName)}</span>
+                  <div className="w-10 h-10 rounded-full border-[1.5px] border-ink flex items-center justify-center flex-shrink-0" style={{ backgroundColor: getAvatarPair(buyerDisplayName).bg }}>
+                    <span className="font-mono text-[12px] font-semibold" style={{ color: getAvatarPair(buyerDisplayName).text }}>{getInitials(buyerDisplayName)}</span>
                   </div>
                   <div>
-                    <p className="text-[14px] font-semibold text-[#1A1816]">{buyerDisplayName}</p>
+                    <p className="text-[14px] font-semibold text-body">{buyerDisplayName}</p>
                     <div className="flex items-center gap-1">
-                      <Shield className="w-3 h-3 text-[#0F6E56]" />
-                      <span className="text-[11px] text-[#0F6E56] font-medium">Verified buyer</span>
+                      <Shield className="w-3 h-3 text-ink" />
+                      <span className="font-mono text-[10.5px] font-semibold text-ink uppercase tracking-[0.05em]">Verified buyer</span>
                     </div>
                   </div>
                 </div>
                 {selectedConversation.buyer_email && (
-                  <div className="flex items-center gap-2 text-[13px] text-[#444441] mb-1.5">
-                    <Mail className="w-4 h-4 text-[#737370]" />
+                  <div className="flex items-center gap-2 font-mono text-[12px] text-smoke-2 mb-1.5">
+                    <Mail className="w-4 h-4 text-muted" />
                     <span className="truncate">{selectedConversation.buyer_email}</span>
                   </div>
                 )}
                 {selectedConversation.buyer_phone && (
-                  <div className="flex items-center gap-2 text-[13px] text-[#444441]">
-                    <Phone className="w-4 h-4 text-[#737370]" />
+                  <div className="flex items-center gap-2 font-mono text-[12px] text-smoke-2">
+                    <Phone className="w-4 h-4 text-muted" />
                     <span>{selectedConversation.buyer_phone}</span>
                   </div>
                 )}
               </div>
               {offer && (
-                <div className="px-5 py-4 border-b border-[#E8E8E4]">
-                  <p className="text-[11px] font-semibold text-[#A8A8A4] uppercase tracking-[1.1px] mb-3">Offer Details</p>
-                  <p className="text-[28px] font-bold text-[#1A1816] mb-1">{formatCurrency(offer.offer_price)}</p>
-                  {offer.status === 'pending' && <span className="inline-block px-2 py-0.5 bg-[#FEF3E2] text-[#B5620A] text-[11px] font-semibold rounded">Negotiating</span>}
-                  {offer.status === 'accepted' && <span className="inline-block px-2 py-0.5 bg-[#E4F5EC] text-[#0F6E56] text-[11px] font-semibold rounded">Accepted</span>}
-                  {offer.status === 'rejected' && <span className="inline-block px-2 py-0.5 bg-[#FEF0EF] text-[#D03839] text-[11px] font-semibold rounded">Rejected</span>}
-                  {offer.status === 'countered' && <span className="inline-block px-2 py-0.5 bg-[#EBF3FC] text-[#4A90E2] text-[11px] font-semibold rounded">Counter Sent</span>}
+                <div className="px-5 py-4 border-b border-hairline">
+                  <p className="font-mono text-[11px] font-semibold text-muted uppercase tracking-[0.14em] mb-3">Offer Details</p>
+                  <p className="font-display text-[28px] font-bold text-ink tracking-[-0.02em] mb-1">{formatCurrency(offer.offer_price)}</p>
+                  {offer.status === 'pending' && <span className="inline-block px-2.5 py-0.5 bg-tint text-ink font-mono text-[10.5px] font-semibold uppercase tracking-[0.05em] rounded-pill">Negotiating</span>}
+                  {offer.status === 'accepted' && <span className="inline-block px-2.5 py-0.5 bg-ink text-white font-mono text-[10.5px] font-semibold uppercase tracking-[0.05em] rounded-pill">Accepted</span>}
+                  {offer.status === 'rejected' && <span className="inline-block px-2.5 py-0.5 bg-mist text-white font-mono text-[10.5px] font-semibold uppercase tracking-[0.05em] rounded-pill">Rejected</span>}
+                  {offer.status === 'countered' && <span className="inline-block px-2.5 py-0.5 bg-tint text-ink font-mono text-[10.5px] font-semibold uppercase tracking-[0.05em] rounded-pill">Counter Sent</span>}
 
                   {offer.status === 'pending' && (
                     <div className="mt-4">
-                      <p className="text-[11px] font-semibold text-[#A8A8A4] uppercase tracking-[1.1px] mb-3">Respond to Offer</p>
+                      <p className="font-mono text-[11px] font-semibold text-muted uppercase tracking-[0.14em] mb-3">Respond to Offer</p>
                       <button
                         onClick={() => setShowAcceptModal(true)}
                         disabled={offerActionLoading}
-                        className="w-full py-3 bg-[#D03839] text-white text-[14px] font-semibold rounded transition-colors duration-200 mb-2 disabled:opacity-40 disabled:cursor-not-allowed hover:enabled:bg-[#E0493B]">
+                        className="w-full py-3 bg-ink border-[1.5px] border-ink text-white text-[14px] font-semibold rounded-[10px] shadow-soft-3 transition-colors duration-120 mb-2 disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none hover:enabled:bg-smoke-2">
                         Accept Offer
                       </button>
                       <button
                         onClick={() => { setShowMobilePropPanel(false); setCounterAmount(String(Math.round(offer.offer_price || 0))); setShowCounterPreview(true); }}
                         disabled={offerActionLoading}
-                        className="w-full py-3 border border-[#E8E8E4] text-[#1A1816] text-[14px] font-semibold rounded transition-colors duration-200 mb-2 disabled:opacity-40 disabled:cursor-not-allowed hover:enabled:bg-[#FAFAF8]">
+                        className="w-full py-3 bg-white border-[1.5px] border-ink text-ink text-[14px] font-semibold rounded-[10px] shadow-offset-2 transition-colors duration-120 mb-2 disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none hover:enabled:bg-tint">
                         Counter Offer
                       </button>
                       <button
                         onClick={() => setShowRejectModal(true)}
                         disabled={offerActionLoading}
-                        className="w-full py-2.5 text-[#737370] text-[13px] font-medium transition-colors duration-200 text-center disabled:opacity-40 disabled:cursor-not-allowed hover:enabled:text-[#D03839]">
+                        className="w-full py-2.5 text-muted text-[13px] font-medium transition-colors duration-120 text-center disabled:opacity-40 disabled:cursor-not-allowed hover:enabled:text-ink">
                         Reject Offer
                       </button>
                     </div>
@@ -1454,9 +1458,9 @@ export default function MessagesPage() {
               )}
               {selectedPropertyAddress && (
                 <div className="px-5 py-4">
-                  <p className="text-[11px] font-semibold text-[#A8A8A4] uppercase tracking-[1.1px] mb-2">Property</p>
-                  <div className="flex items-start gap-2 text-[13px] text-[#444441]">
-                    <MapPin className="w-4 h-4 text-[#737370] flex-shrink-0 mt-0.5" />
+                  <p className="font-mono text-[11px] font-semibold text-muted uppercase tracking-[0.14em] mb-2">Property</p>
+                  <div className="flex items-start gap-2 font-mono text-[12px] text-smoke-2">
+                    <MapPin className="w-4 h-4 text-muted flex-shrink-0 mt-0.5" />
                     <span>{selectedPropertyAddress}</span>
                   </div>
                 </div>
@@ -1468,25 +1472,25 @@ export default function MessagesPage() {
         {/* Accept Offer Modal */}
         {showAcceptModal && offer && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50" onClick={() => setShowAcceptModal(false)}>
-            <div className="bg-white rounded w-full max-w-[400px] p-6 shadow-2xl" onClick={e => e.stopPropagation()}>
-              <div className="flex items-center justify-center w-12 h-12 rounded-full bg-[#E4F5EC] mx-auto mb-4">
-                <Check className="w-6 h-6 text-[#0F6E56]" />
+            <div className="bg-white border-[1.5px] border-ink rounded-[14px] shadow-offset-6 w-full max-w-[400px] p-6" onClick={e => e.stopPropagation()}>
+              <div className="flex items-center justify-center w-12 h-12 rounded-full bg-tint border-[1.5px] border-ink mx-auto mb-4">
+                <Check className="w-6 h-6 text-ink" />
               </div>
-              <h3 className="text-[18px] font-bold text-[#1A1816] text-center mb-2">Accept this offer?</h3>
-              <p className="text-[14px] text-[#444441] text-center mb-4">
+              <h3 className="font-display font-bold text-[18px] tracking-[-0.01em] text-body text-center mb-2">Accept this offer?</h3>
+              <p className="text-[14px] text-smoke-2 text-center mb-4">
                 You're about to accept {formatCurrency(offer.offer_price)} from {buyerDisplayName}. This action cannot be undone.
               </p>
-              <div className="flex items-start gap-2 bg-[#FEF9EC] border border-[#F5D78E] rounded px-3 py-2.5 mb-5">
-                <AlertCircle className="w-4 h-4 text-[#B5620A] flex-shrink-0 mt-0.5" />
-                <p className="text-[12px] text-[#B5620A]">Both parties will be notified and next steps will begin automatically</p>
+              <div className="flex items-start gap-2 bg-tint-3 border border-line-2 rounded-[10px] px-3 py-2.5 mb-5">
+                <AlertCircle className="w-4 h-4 text-smoke-3 flex-shrink-0 mt-0.5" />
+                <p className="text-[12px] text-smoke-3">Both parties will be notified and next steps will begin automatically</p>
               </div>
               <div className="flex gap-3">
                 <button onClick={() => setShowAcceptModal(false)}
-                  className="flex-1 py-3 border border-[#E8E8E4] text-[#444441] text-[14px] font-medium rounded hover:bg-[#FAFAF8] transition-colors">
+                  className="flex-1 py-3 bg-white border-[1.5px] border-ink text-ink text-[14px] font-semibold rounded-[10px] hover:bg-tint transition-colors duration-120">
                   Cancel
                 </button>
                 <button onClick={() => handleOfferAction('accept')} disabled={offerActionLoading}
-                  className="flex-1 py-3 bg-[#D03839] text-white text-[14px] font-semibold rounded hover:bg-[#E0493B] transition-colors disabled:opacity-50">
+                  className="flex-1 py-3 bg-ink border-[1.5px] border-ink text-white text-[14px] font-semibold rounded-[10px] shadow-soft-3 hover:bg-smoke-2 transition-colors duration-120 disabled:opacity-50">
                   {offerActionLoading ? 'Accepting...' : 'Accept Offer'}
                 </button>
               </div>
@@ -1497,22 +1501,22 @@ export default function MessagesPage() {
         {/* Reject Offer Modal */}
         {showRejectModal && offer && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50" onClick={() => setShowRejectModal(false)}>
-            <div className="bg-white rounded w-full max-w-[400px] p-6 shadow-2xl" onClick={e => e.stopPropagation()}>
-              <h3 className="text-[18px] font-bold text-[#1A1816] text-center mb-2">Reject this offer?</h3>
-              <p className="text-[14px] text-[#444441] text-center mb-4">
+            <div className="bg-white border-[1.5px] border-ink rounded-[14px] shadow-offset-6 w-full max-w-[400px] p-6" onClick={e => e.stopPropagation()}>
+              <h3 className="font-display font-bold text-[18px] tracking-[-0.01em] text-body text-center mb-2">Reject this offer?</h3>
+              <p className="text-[14px] text-smoke-2 text-center mb-4">
                 This action will decline {buyerDisplayName}'s offer of {formatCurrency(offer.offer_price)}. You can still continue the conversation after rejecting.
               </p>
-              <div className="flex items-start gap-2 bg-[#FEF9EC] border border-[#F5D78E] rounded px-3 py-2.5 mb-5">
-                <AlertCircle className="w-4 h-4 text-[#B5620A] flex-shrink-0 mt-0.5" />
-                <p className="text-[12px] text-[#B5620A]">Both parties will be notified and next steps will begin automatically</p>
+              <div className="flex items-start gap-2 bg-tint-3 border border-line-2 rounded-[10px] px-3 py-2.5 mb-5">
+                <AlertCircle className="w-4 h-4 text-smoke-3 flex-shrink-0 mt-0.5" />
+                <p className="text-[12px] text-smoke-3">Both parties will be notified and next steps will begin automatically</p>
               </div>
               <div className="flex gap-3">
                 <button onClick={() => setShowRejectModal(false)}
-                  className="flex-1 py-3 border border-[#E8E8E4] text-[#444441] text-[14px] font-medium rounded hover:bg-[#FAFAF8] transition-colors">
+                  className="flex-1 py-3 bg-white border-[1.5px] border-ink text-ink text-[14px] font-semibold rounded-[10px] hover:bg-tint transition-colors duration-120">
                   Cancel
                 </button>
                 <button onClick={() => handleOfferAction('reject')} disabled={offerActionLoading}
-                  className="flex-1 py-3 bg-[#D03839] text-white text-[14px] font-semibold rounded hover:bg-[#E0493B] transition-colors disabled:opacity-50">
+                  className="flex-1 py-3 bg-ink border-[1.5px] border-ink text-white text-[14px] font-semibold rounded-[10px] shadow-soft-3 hover:bg-smoke-2 transition-colors duration-120 disabled:opacity-50">
                   {offerActionLoading ? 'Rejecting...' : 'Reject Offer'}
                 </button>
               </div>
@@ -1524,47 +1528,47 @@ export default function MessagesPage() {
       {/* Context Menu */}
       {contextMenu?.conv && (
         <div
-          className="fixed z-[90] w-44 rounded border border-[#E8E8E4] bg-white shadow-lg p-1"
+          className="fixed z-[90] w-44 rounded-[10px] border-[1.5px] border-ink bg-white shadow-offset-4 p-1"
           style={{ top: contextMenu.y, left: contextMenu.x }}
           onClick={e => e.stopPropagation()}
         >
-          <button className="w-full text-left text-[13px] px-3 py-2 rounded text-[#444441] hover:bg-[#FAFAF8] transition-colors duration-200" onClick={() => { updateConversationPref(contextMenu.conv.id, { is_pinned: !contextMenu.conv.is_pinned }); setContextMenu(null); }}>
+          <button className="w-full text-left text-[13px] px-3 py-2 rounded-[8px] text-smoke-2 hover:bg-tint transition-colors duration-120" onClick={() => { updateConversationPref(contextMenu.conv.id, { is_pinned: !contextMenu.conv.is_pinned }); setContextMenu(null); }}>
             {contextMenu.conv.is_pinned ? 'Unpin' : 'Pin conversation'}
           </button>
-          <button className="w-full text-left text-[13px] px-3 py-2 rounded text-[#444441] hover:bg-[#FAFAF8] transition-colors duration-200" onClick={() => { updateConversationPref(contextMenu.conv.id, { mark_unread: true }); setContextMenu(null); }}>
+          <button className="w-full text-left text-[13px] px-3 py-2 rounded-[8px] text-smoke-2 hover:bg-tint transition-colors duration-120" onClick={() => { updateConversationPref(contextMenu.conv.id, { mark_unread: true }); setContextMenu(null); }}>
             Mark as unread
           </button>
-          <div className="my-1 border-t border-[#E8E8E4]" />
-          <button className="w-full text-left text-[13px] px-3 py-2 rounded text-[#D03839] hover:bg-[#FEF0EF] transition-colors duration-200" onClick={() => { deleteConversation(contextMenu.conv.id); setContextMenu(null); }}>
+          <div className="my-1 border-t border-hairline" />
+          <button className="w-full text-left text-[13px] font-semibold px-3 py-2 rounded-[8px] text-ink hover:bg-tint transition-colors duration-120" onClick={() => { deleteConversation(contextMenu.conv.id); setContextMenu(null); }}>
             Delete chat
           </button>
-          <button className="w-full text-left text-[13px] px-3 py-2 rounded text-[#D03839] hover:bg-[#FEF0EF] transition-colors duration-200" onClick={() => { setBlockConfirm(contextMenu.conv); setContextMenu(null); }}>
+          <button className="w-full text-left text-[13px] font-semibold px-3 py-2 rounded-[8px] text-ink hover:bg-tint transition-colors duration-120" onClick={() => { setBlockConfirm(contextMenu.conv); setContextMenu(null); }}>
             Block user
           </button>
-          <button className="w-full text-left text-[13px] px-3 py-2 rounded text-[#D03839] hover:bg-[#FEF0EF] transition-colors duration-200" onClick={() => { setReportingConv(contextMenu.conv); setContextMenu(null); }}>
+          <button className="w-full text-left text-[13px] font-semibold px-3 py-2 rounded-[8px] text-ink hover:bg-tint transition-colors duration-120" onClick={() => { setReportingConv(contextMenu.conv); setContextMenu(null); }}>
             Report user
           </button>
         </div>
       )}
 
       {toast && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] bg-[#1A1816] text-white text-[13px] font-medium px-4 py-3 rounded shadow-lg flex items-center gap-2 max-w-[90vw]">
-          <span className="w-1.5 h-1.5 rounded-full bg-[#0F6E56] flex-shrink-0" />
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] bg-ink text-white text-[13px] font-medium px-4 py-3 rounded-[10px] shadow-grey-4 flex items-center gap-2 max-w-[90vw]">
+          <span className="w-1.5 h-1.5 rounded-full bg-white flex-shrink-0" />
           {toast}
         </div>
       )}
 
       {blockConfirm && (
         <div className="fixed inset-0 z-[95] flex items-center justify-center p-4" >
-          <div className="fixed inset-0 bg-[#1A1816]/40" onClick={() => setBlockConfirm(null)} aria-hidden="true" />
-          <div className="relative bg-white rounded shadow-lg border border-[#E8E8E4] max-w-md w-full p-6 z-10">
+          <div className="fixed inset-0 bg-[#171717]/40" onClick={() => setBlockConfirm(null)} aria-hidden="true" />
+          <div className="relative bg-white rounded-[14px] shadow-offset-6 border-[1.5px] border-ink max-w-md w-full p-6 z-10">
             <div className="flex items-start gap-3 mb-4">
-              <div className="w-10 h-10 rounded bg-[#FEF0EF] flex items-center justify-center flex-shrink-0">
-                <Ban className="w-5 h-5 text-[#D03839]" strokeWidth={2} />
+              <div className="w-10 h-10 rounded-[10px] bg-tint border-[1.5px] border-ink flex items-center justify-center flex-shrink-0">
+                <Ban className="w-5 h-5 text-ink" strokeWidth={2} />
               </div>
               <div className="flex-1 min-w-0">
-                <h3 className="text-[16px] font-semibold text-[#1A1816] mb-1">Block this buyer?</h3>
-                <p className="text-[13px] text-[#737370]">
+                <h3 className="font-display font-semibold text-[16.5px] tracking-[-0.01em] text-body mb-1">Block this buyer?</h3>
+                <p className="text-[13px] text-muted">
                   {blockConfirm.buyer_name || 'This buyer'} won't be able to message you anymore, and this conversation will be hidden. You can unblock them later from this conversation's menu.
                 </p>
               </div>
@@ -1573,12 +1577,12 @@ export default function MessagesPage() {
               <button
                 type="button"
                 onClick={() => setBlockConfirm(null)}
-                className="flex-1 h-10 px-4 text-[13px] font-semibold text-[#1A1816] bg-white border border-[#E8E8E4] rounded hover:bg-[#FAFAF8] transition-colors"
+                className="flex-1 h-10 px-4 text-[13px] font-semibold text-ink bg-white border-[1.5px] border-ink rounded-[10px] hover:bg-tint transition-colors duration-120"
               >Cancel</button>
               <button
                 type="button"
                 onClick={() => { updateConversationPref(blockConfirm.id, { is_blocked: true }); setBlockConfirm(null); }}
-                className="flex-1 h-10 px-4 text-[13px] font-semibold text-white bg-[#D03839] hover:bg-[#E0493B] rounded transition-colors"
+                className="flex-1 h-10 px-4 text-[13px] font-semibold text-white bg-ink border-[1.5px] border-ink hover:bg-smoke-2 rounded-[10px] shadow-soft-3 transition-colors duration-120"
               >Block buyer</button>
             </div>
           </div>
@@ -1587,8 +1591,8 @@ export default function MessagesPage() {
 
       {/* Toast */}
       {msgToast && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] px-4 py-2.5 rounded shadow-lg text-[13px] font-medium text-white flex items-center gap-2"
-          style={{ background: msgToast.kind === 'error' ? '#D03839' : '#1A1816' }}>
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] px-4 py-2.5 rounded-[10px] shadow-grey-4 text-[13px] font-medium text-white flex items-center gap-2"
+          style={{ background: msgToast.kind === 'error' ? '#111111' : '#171717' }}>
           {msgToast.kind === 'error' ? <X className="w-4 h-4" /> : <Check className="w-4 h-4" />}
           {msgToast.text}
         </div>
@@ -1597,12 +1601,12 @@ export default function MessagesPage() {
       {/* Delete-message confirm */}
       {deletingMsg && (
         <div className="fixed inset-0 z-[100] bg-black/40 flex items-center justify-center p-4" onClick={() => setDeletingMsg(null)}>
-          <div className="bg-white rounded w-full max-w-sm shadow-xl p-5" onClick={e => e.stopPropagation()}>
-            <h3 className="text-[16px] font-bold text-[#1A1816] mb-1">Delete this message?</h3>
-            <p className="text-[13px] text-[#737370] mb-4">It will be removed for everyone in this chat and replaced with &ldquo;This message was deleted.&rdquo;</p>
+          <div className="bg-white rounded-[14px] border-[1.5px] border-ink shadow-offset-6 w-full max-w-sm p-5" onClick={e => e.stopPropagation()}>
+            <h3 className="font-display font-bold text-[16.5px] tracking-[-0.01em] text-body mb-1">Delete this message?</h3>
+            <p className="text-[13px] text-muted mb-4">It will be removed for everyone in this chat and replaced with &ldquo;This message was deleted.&rdquo;</p>
             <div className="flex justify-end gap-2">
-              <button type="button" onClick={() => setDeletingMsg(null)} className="h-9 px-4 border border-[#E8E8E4] text-[#444441] text-[13px] font-semibold rounded hover:bg-[#FAFAF8] transition-colors">Cancel</button>
-              <button type="button" onClick={() => deleteMessage(deletingMsg.id)} className="h-9 px-4 bg-[#D03839] hover:bg-[#E0493B] text-white text-[13px] font-semibold rounded transition-colors">Delete</button>
+              <button type="button" onClick={() => setDeletingMsg(null)} className="h-9 px-4 bg-white border-[1.5px] border-ink text-ink text-[13px] font-semibold rounded-[10px] hover:bg-tint transition-colors duration-120">Cancel</button>
+              <button type="button" onClick={() => deleteMessage(deletingMsg.id)} className="h-9 px-4 bg-ink border-[1.5px] border-ink hover:bg-smoke-2 text-white text-[13px] font-semibold rounded-[10px] shadow-soft-3 transition-colors duration-120">Delete</button>
             </div>
           </div>
         </div>
@@ -1611,31 +1615,31 @@ export default function MessagesPage() {
       {/* Report-message dialog */}
       {reportingConv && (
         <div className="fixed inset-0 z-[100] bg-black/40 flex items-center justify-center p-4" onClick={() => !submittingReport && setReportingConv(null)}>
-          <div className="bg-white rounded w-full max-w-md shadow-xl" onClick={e => e.stopPropagation()}>
-            <div className="px-5 py-4 border-b border-[#E8E8E4] flex items-center gap-2">
-              <Flag className="w-4 h-4 text-[#D03839]" />
-              <h3 className="text-[16px] font-bold text-[#1A1816]">Report this person</h3>
+          <div className="bg-white rounded-[14px] border-[1.5px] border-ink shadow-offset-6 w-full max-w-md" onClick={e => e.stopPropagation()}>
+            <div className="px-5 py-4 border-b border-hairline flex items-center gap-2">
+              <Flag className="w-4 h-4 text-ink" />
+              <h3 className="font-display font-bold text-[16.5px] tracking-[-0.01em] text-body">Report this person</h3>
             </div>
             <div className="px-5 py-4 space-y-4">
-              <p className="text-[13px] text-[#737370]">Our team will review this conversation. Reports help us keep DeelMap safe from scams and abuse.</p>
+              <p className="text-[13px] text-muted">Our team will review this conversation. Reports help us keep DeelMap safe from scams and abuse.</p>
               <div>
-                <label className="block text-[12px] font-semibold text-[#444441] mb-1.5">Reason</label>
+                <label className="block font-mono text-[11px] font-semibold uppercase tracking-[0.08em] text-muted mb-1.5">Reason</label>
                 <div className="grid grid-cols-2 gap-2">
                   {[['spam', 'Spam'], ['scam', 'Scam / fraud'], ['abuse', 'Abusive'], ['other', 'Other']].map(([val, lbl]) => (
                     <button key={val} type="button" onClick={() => setReportReason(val)}
-                      className={`h-9 px-3 rounded border text-[13px] font-medium transition-colors ${reportReason === val ? 'border-[#D03839] bg-[#FEF0EF] text-[#D03839]' : 'border-[#E8E8E4] text-[#444441] hover:border-[#1A1816]'}`}>{lbl}</button>
+                      className={`h-9 px-3 rounded-[8px] border-[1.5px] font-mono text-[11px] font-semibold tracking-[0.06em] transition-colors duration-120 ${reportReason === val ? 'border-ink bg-ink text-white' : 'border-line text-smoke-2 hover:border-ink'}`}>{lbl}</button>
                   ))}
                 </div>
               </div>
               <div>
-                <label className="block text-[12px] font-semibold text-[#444441] mb-1.5">Details <span className="font-normal text-[#A8A8A4]">(optional)</span></label>
+                <label className="block font-mono text-[11px] font-semibold uppercase tracking-[0.08em] text-muted mb-1.5">Details <span className="font-normal text-mist normal-case">(optional)</span></label>
                 <textarea value={reportDetails} onChange={e => setReportDetails(e.target.value)} rows={3} placeholder="Add anything that helps us review this…"
-                  className="w-full px-3 py-2 border border-[#E8E8E4] rounded text-[13px] text-[#1A1816] placeholder-[#A8A8A4] focus:outline-none focus:border-[#D03839] resize-none" />
+                  className="w-full px-3 py-2 border-[1.5px] border-line rounded-[9px] text-[13px] text-body placeholder-mist focus:outline-none focus:border-ink focus:shadow-offset-3 transition-all duration-120 resize-none" />
               </div>
             </div>
-            <div className="px-5 py-3.5 border-t border-[#E8E8E4] flex justify-end gap-2">
-              <button type="button" onClick={() => setReportingConv(null)} disabled={submittingReport} className="h-9 px-4 border border-[#E8E8E4] text-[#444441] text-[13px] font-semibold rounded hover:bg-[#FAFAF8] transition-colors disabled:opacity-50">Cancel</button>
-              <button type="button" onClick={submitReport} disabled={submittingReport} className="h-9 px-4 bg-[#D03839] hover:bg-[#E0493B] text-white text-[13px] font-semibold rounded transition-colors disabled:opacity-50 flex items-center gap-1.5">{submittingReport && <Loader2 className="w-3.5 h-3.5 animate-spin" />} Submit report</button>
+            <div className="px-5 py-3.5 border-t border-hairline flex justify-end gap-2">
+              <button type="button" onClick={() => setReportingConv(null)} disabled={submittingReport} className="h-9 px-4 bg-white border-[1.5px] border-ink text-ink text-[13px] font-semibold rounded-[10px] hover:bg-tint transition-colors duration-120 disabled:opacity-50">Cancel</button>
+              <button type="button" onClick={submitReport} disabled={submittingReport} className="h-9 px-4 bg-ink border-[1.5px] border-ink hover:bg-smoke-2 text-white text-[13px] font-semibold rounded-[10px] shadow-soft-3 transition-colors duration-120 disabled:opacity-50 flex items-center gap-1.5">{submittingReport && <Loader2 className="w-3.5 h-3.5 motion-safe:animate-spin" />} Submit report</button>
             </div>
           </div>
         </div>

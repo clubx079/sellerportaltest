@@ -41,6 +41,16 @@ const PROPERTY_TYPES = [
   'Other'
 ];
 
+// ── BW-retro shared field recipes (docs/BRAND_UI.md) ─────────────────────────
+const INPUT_CLS = 'w-full bg-white border-[1.5px] border-line rounded-[9px] px-3.5 py-3 text-[14px] text-body placeholder:text-mist focus:border-ink focus:shadow-offset-3 focus:outline-none transition-all duration-120';
+const INPUT_MONO_CLS = 'w-full bg-white border-[1.5px] border-line rounded-[9px] px-3.5 py-3 text-[14px] font-mono text-body placeholder:text-mist focus:border-ink focus:shadow-offset-3 focus:outline-none transition-all duration-120';
+const LABEL_CLS = 'block text-[13px] font-semibold text-ink mb-2';
+const HELP_CLS = 'text-[12px] text-muted mt-1';
+const SECTION_H_CLS = 'font-display font-semibold text-[16.5px] tracking-[-0.01em] text-ink';
+const EYEBROW_CLS = 'font-mono font-semibold text-[11px] uppercase tracking-[0.14em] text-ink';
+const BTN_PRIMARY_CLS = 'bg-ink text-white border-[1.5px] border-ink rounded-[10px] font-semibold shadow-soft-3 hover:bg-smoke-2 transition-all duration-120';
+const BTN_GHOST_CLS = 'bg-white text-ink border-[1.5px] border-ink rounded-[10px] font-semibold shadow-offset-3 hover:bg-tint transition-all duration-120';
+
 function PropertySelect({ value, onChange, options }) {
   const [open, setOpen] = React.useState(false)
   const ref = React.useRef(null)
@@ -53,15 +63,15 @@ function PropertySelect({ value, onChange, options }) {
   return (
     <div className="relative" ref={ref}>
       <button type="button" onClick={() => setOpen(o => !o)}
-        className="w-full px-3 py-2.5 pr-8 border border-[#E8E8E4] rounded bg-white text-[13px] text-left text-[#1A1816] cursor-pointer hover:border-[#1A1816] transition-colors flex items-center justify-between">
-        <span className={value === '' ? 'text-[#A8A8A4]' : ''}>{label}</span>
-        <ChevronDown className={`absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none text-[#737370] transition-transform ${open ? 'rotate-180' : ''}`} />
+        className="w-full px-3.5 py-3 pr-8 border-[1.5px] border-line rounded-[9px] bg-white text-[14px] text-left text-body cursor-pointer hover:border-ink focus:border-ink focus:shadow-offset-3 focus:outline-none transition-all duration-120 flex items-center justify-between">
+        <span className={value === '' ? 'text-mist' : ''}>{label}</span>
+        <ChevronDown className={`absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none text-muted transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
       {open && (
-        <div className="absolute z-30 top-full left-0 mt-1 w-full bg-white border border-[#E8E8E4] rounded shadow-lg overflow-hidden">
+        <div className="absolute z-30 top-full left-0 mt-1.5 w-full bg-white border-[1.5px] border-ink rounded-[10px] shadow-offset-3 overflow-hidden">
           {options.map(opt => (
             <div key={opt.value} onClick={() => { onChange(String(opt.value)); setOpen(false) }}
-              className={`px-3 py-2 text-[13px] cursor-pointer transition-colors ${String(value) === String(opt.value) ? 'bg-[#1A1816] text-white' : 'text-[#1A1816] hover:bg-[#FAFAF8]'}`}>
+              className={`px-3.5 py-2 text-[13px] cursor-pointer transition-colors duration-120 ${String(value) === String(opt.value) ? 'bg-ink text-white' : 'text-body hover:bg-tint'}`}>
               {opt.label}
             </div>
           ))}
@@ -916,24 +926,24 @@ export default function NewPropertyPage() {
 
   if (accessDenied) {
     return (
-      <div className="min-h-screen bg-[#FAFAF8] flex items-center justify-center p-6" style={{ fontFamily: 'var(--font-dm-sans), sans-serif' }}>
-        <div className="bg-white border border-[#E8E8E4] rounded p-10 text-center max-w-sm">
-          <div className="w-12 h-12 bg-[#F3F3F0] rounded flex items-center justify-center mx-auto mb-4">
-            <Lock className="w-6 h-6 text-[#A8A8A4]" />
+      <div className="min-h-screen bg-tint-3 flex items-center justify-center p-6 font-sans">
+        <div className="bg-white border-[1.5px] border-ink rounded-[14px] shadow-offset-4 p-10 text-center max-w-sm">
+          <div className="w-12 h-12 bg-tint border-[1.5px] border-ink rounded-[10px] flex items-center justify-center mx-auto mb-4">
+            <Lock className="w-6 h-6 text-ink" />
           </div>
-          <h2 className="text-[16px] font-bold text-[#1A1816] mb-2">Access Restricted</h2>
-          <p className="text-[13px] text-[#737370] leading-relaxed">You don&apos;t have permission to create listings. Contact your team owner to request access.</p>
+          <h2 className={`${SECTION_H_CLS} mb-2`}>Access Restricted</h2>
+          <p className="text-[13px] text-muted leading-relaxed">You don&apos;t have permission to create listings. Contact your team owner to request access.</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="space-y-3 md:space-y-4" style={{ fontFamily: 'var(--font-dm-sans), sans-serif' }}>
+    <div className="space-y-3 md:space-y-4 font-sans">
 
       {/* Trial banner */}
       {trialPlan?.status === 'trialing' && (trialPlan.listings_used_this_period ?? 0) < 1 && (
-        <div className="flex items-start gap-3 px-4 py-3 bg-[#FEF3E2] border border-[#F3C97D] rounded text-[13px] text-[#B5620A]">
+        <div className="flex items-start gap-3 px-4 py-3 bg-tint border-[1.5px] border-ink rounded-[10px] text-[13px] text-ink">
           <AlertCircle size={16} className="flex-shrink-0 mt-0.5" />
           <span>During your free trial, your listing will only be live for 7 days.</span>
         </div>
@@ -951,30 +961,30 @@ export default function NewPropertyPage() {
           : null;
         return (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-            <div className="bg-white rounded shadow-2xl w-full max-w-sm p-6 space-y-4">
+            <div className="bg-white border-[1.5px] border-ink rounded-[14px] shadow-offset-6 w-full max-w-sm p-6 space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="text-[15px] font-bold text-[#1A1816]">
+                <h3 className={SECTION_H_CLS}>
                   {isTrialLimit ? 'Start your subscription' : 'Listing limit reached'}
                 </h3>
-                <button onClick={() => { setShowUpgradePrompt(false); setUpgradeError(null); endTrialCalledRef.current = false; }} className="p-1.5 rounded hover:bg-[#F0F0EE] transition-colors">
-                  <X size={16} className="text-[#737370]" />
+                <button onClick={() => { setShowUpgradePrompt(false); setUpgradeError(null); endTrialCalledRef.current = false; }} className="p-1.5 rounded-[8px] hover:bg-tint transition-colors duration-120">
+                  <X size={16} className="text-muted" />
                 </button>
               </div>
 
               {isTrialLimit ? (
                 <>
-                  <p className="text-[13px] text-[#737370]">
+                  <p className="text-[13px] text-muted">
                     Your free trial allows 1 published listing. To publish more, your trial will end now and your <strong>{planLabel}</strong> subscription ({planPrice}) will begin immediately.{selectedAddOns.length > 0 ? ' You\'ll then be taken back to complete your add-on payment.' : ''}
                   </p>
-                  <div className="bg-[#FAFAF8] border border-[#E8E8E4] rounded p-3 flex items-center justify-between">
-                    <span className="text-[13px] font-medium text-[#1A1816]">{planLabel}</span>
-                    <span className="text-[13px] font-bold text-[#1A1816]">{planPrice}</span>
+                  <div className="bg-tint-3 border-[1.5px] border-line rounded-[10px] p-3 flex items-center justify-between">
+                    <span className="text-[13px] font-medium text-body">{planLabel}</span>
+                    <span className="text-[13px] font-mono font-bold text-ink">{planPrice}</span>
                   </div>
-                  {upgradeError && <p className="text-[12px] text-red-600">{upgradeError}</p>}
+                  {upgradeError && <p className="text-[12px] font-semibold text-ink">{upgradeError}</p>}
                   <div className="flex gap-3">
                     <button
                       onClick={() => { setShowUpgradePrompt(false); setUpgradeError(null); endTrialCalledRef.current = false; }}
-                      className="flex-1 h-[40px] border border-[#E8E8E4] rounded text-[13px] font-medium text-[#1A1816] hover:border-[#1A1816] transition-colors"
+                      className={`flex-1 h-[40px] text-[13px] ${BTN_GHOST_CLS}`}
                     >
                       Cancel
                     </button>
@@ -1009,7 +1019,7 @@ export default function NewPropertyPage() {
                           setUpgradeLoading(false);
                         }
                       }}
-                      className="flex-1 h-[40px] bg-[#D03839] hover:bg-[#E0493B] rounded text-[13px] font-semibold text-white transition-colors disabled:opacity-50"
+                      className={`flex-1 h-[40px] text-[13px] ${BTN_PRIMARY_CLS} disabled:opacity-50`}
                     >
                       {upgradeLoading ? 'Processing…' : 'Confirm & Publish'}
                     </button>
@@ -1017,20 +1027,20 @@ export default function NewPropertyPage() {
                 </>
               ) : (
                 <>
-                  <p className="text-[13px] text-[#737370]">
+                  <p className="text-[13px] text-muted">
                     Your Pro plan includes 5 published listings per billing period. You've used all 5 this period.
                     {resetDate ? ` Your limit resets on ${resetDate}.` : ''} Upgrade to Enterprise for unlimited listings.
                   </p>
                   <div className="flex gap-3">
                     <button
                       onClick={() => setShowUpgradePrompt(false)}
-                      className="flex-1 h-[40px] border border-[#E8E8E4] rounded text-[13px] font-medium text-[#1A1816] hover:border-[#1A1816] transition-colors"
+                      className={`flex-1 h-[40px] text-[13px] ${BTN_GHOST_CLS}`}
                     >
                       Close
                     </button>
                     <button
                       onClick={() => { setShowUpgradePrompt(false); router.push('/plans'); }}
-                      className="flex-1 h-[40px] bg-[#D03839] hover:bg-[#E0493B] rounded text-[13px] font-semibold text-white transition-colors"
+                      className={`flex-1 h-[40px] text-[13px] ${BTN_PRIMARY_CLS}`}
                     >
                       Upgrade to Enterprise
                     </button>
@@ -1047,15 +1057,15 @@ export default function NewPropertyPage() {
         <div className="flex items-center gap-3">
           <button
             onClick={async () => { await handleSave('draft'); router.back() }}
-            className="p-2 rounded hover:bg-[#F0F0EE] transition-colors"
+            className="p-2 rounded-[8px] hover:bg-tint transition-colors duration-120"
           >
-            <ArrowLeft size={20} className="text-[#737370]" />
+            <ArrowLeft size={20} className="text-muted" />
           </button>
           <div>
-            <h1 className="text-[18px] md:text-[20px] font-bold tracking-[-0.4px] text-[#1A1816]">
+            <h1 className="font-display font-bold text-[20px] md:text-[22px] tracking-[-0.025em] text-ink">
               {draftId ? 'Complete Your Listing' : 'Post a Deal'}
             </h1>
-            <p className="text-[12px] text-[#737370] mt-0.5">
+            <p className="text-[12px] text-muted mt-0.5">
               {draftId ? 'Your saved draft has been pre-filled — review and submit when ready' : 'Create a new wholesale property listing'}
             </p>
           </div>
@@ -1071,24 +1081,24 @@ export default function NewPropertyPage() {
 
       {/* Notifications */}
       {error && (
-        <div className="flex items-start gap-3 p-3 bg-[#FEF0EF] border border-[#F5C4C0] rounded text-[#D03839]">
+        <div className="flex items-start gap-3 p-3 bg-tint border-[1.5px] border-ink rounded-[10px] text-ink">
           <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
           <div className="flex-1">
-            <p className="text-[13px] font-medium">{error}</p>
+            <p className="text-[13px] font-semibold">{error}</p>
           </div>
-          <button onClick={() => setError(null)} className="text-[#D03839]/60 hover:text-[#D03839]">
+          <button onClick={() => setError(null)} className="text-ink/60 hover:text-ink">
             <X className="w-4 h-4" />
           </button>
         </div>
       )}
 
       {success && (
-        <div className="flex items-start gap-3 p-3 bg-[#E4F5EC] border border-[#A8DFBA] rounded text-[#0F6E56]">
+        <div className="flex items-start gap-3 p-3 bg-tint border-[1.5px] border-ink rounded-[10px] text-ink">
           <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
           <div className="flex-1">
-            <p className="text-[13px] font-medium">{success}</p>
+            <p className="text-[13px] font-semibold">{success}</p>
           </div>
-          <button onClick={() => setSuccess(null)} className="text-[#0F6E56]/60 hover:text-[#0F6E56]">
+          <button onClick={() => setSuccess(null)} className="text-ink/60 hover:text-ink">
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -1097,11 +1107,11 @@ export default function NewPropertyPage() {
 
       {/* Upload Warning */}
       {imageUploadStatus.isUploading && (
-        <div className="flex items-start gap-3 p-4 bg-[#EBF3FC] border border-[#B3D4F5] rounded">
-          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-[#4A90E2]"></div>
+        <div className="flex items-start gap-3 p-4 bg-tint border-[1.5px] border-ink rounded-[10px]">
+          <div className="motion-safe:animate-spin rounded-full h-5 w-5 border-2 border-line border-t-ink"></div>
           <div>
-            <h4 className="font-medium text-[#1A1816] mb-1 text-[13px]">Uploading Images</h4>
-            <p className="text-[13px] text-[#737370]">
+            <h4 className="font-semibold text-ink mb-1 text-[13px]">Uploading Images</h4>
+            <p className="text-[13px] text-muted">
               Please wait for {imageUploadStatus.uploadingCount} image{imageUploadStatus.uploadingCount > 1 ? 's' : ''} to finish uploading before publishing.
             </p>
           </div>
@@ -1109,9 +1119,9 @@ export default function NewPropertyPage() {
       )}
 
       {/* Tabs */}
-      <div className="bg-white rounded border border-[#E8E8E4] overflow-hidden">
-        {/* Step indicator */}
-        <div className="flex border-b border-[#E8E8E4]">
+      <div className="bg-white border-[1.5px] border-ink rounded-[14px] shadow-offset-4 overflow-hidden">
+        {/* Step indicator — mono numerals on a hairline track, ink marks progress */}
+        <div className="flex border-b border-hairline">
           {[
             { id: 'basic',     label: 'Basic Info' },
             { id: 'images',    label: 'Images' },
@@ -1134,17 +1144,17 @@ export default function NewPropertyPage() {
                 }}
                 title={!accessible ? (lockedReason(tab.id) || undefined) : undefined}
                 aria-disabled={!accessible}
-                className={`flex-1 flex items-center justify-center gap-1.5 px-1 md:px-5 py-3.5 text-[12px] font-medium transition-colors border-b-2
-                  ${active    ? 'border-[#D03839] text-[#D03839] bg-[#FEF0EF]/30'
-                  : complete  ? 'border-transparent text-[#0F6E56] hover:bg-[#FAFAF8]'
-                  : accessible ? 'border-transparent text-[#737370] hover:text-[#1A1816] hover:bg-[#FAFAF8]'
-                  : 'border-transparent text-[#C4C4C0] cursor-not-allowed'}`}
+                className={`flex-1 flex items-center justify-center gap-2 px-1 md:px-5 py-3.5 font-mono text-[10.5px] font-semibold uppercase tracking-[0.08em] transition-colors duration-120 border-b-2 -mb-px
+                  ${active    ? 'border-ink text-ink'
+                  : complete  ? 'border-transparent text-ink hover:bg-tint-3'
+                  : accessible ? 'border-transparent text-muted hover:text-ink hover:bg-tint-3'
+                  : 'border-transparent text-mist cursor-not-allowed'}`}
               >
-                <span className={`w-[18px] h-[18px] rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0
-                  ${active    ? 'bg-[#D03839] text-white'
-                  : complete  ? 'bg-[#0F6E56] text-white'
-                  : accessible ? 'bg-[#E8E8E4] text-[#737370]'
-                  : 'bg-[#F0F0EE] text-[#C4C4C0]'}`}
+                <span className={`w-[22px] h-[22px] rounded-pill border-[1.5px] flex items-center justify-center font-mono text-[11px] font-semibold flex-shrink-0
+                  ${active    ? 'bg-ink border-ink text-white shadow-offset-2'
+                  : complete  ? 'bg-ink border-ink text-white'
+                  : accessible ? 'bg-white border-line text-muted'
+                  : 'bg-white border-line text-mist'}`}
                 >
                   {complete ? <Check className="w-2.5 h-2.5" /> : !accessible ? <Lock className="w-2.5 h-2.5" /> : idx + 1}
                 </span>
@@ -1160,33 +1170,33 @@ export default function NewPropertyPage() {
           {activeTab === 'basic' && (
             <div className="space-y-6">
               <div>
-                <label className="block text-[13px] font-semibold text-[#1A1816] mb-2">Location <span className="text-[#D03839]">*</span></label>
+                <label className={LABEL_CLS}>Location <span className="text-ink">*</span></label>
                 <GooglePlacesAutocomplete
                   onAddressSelect={handleAddressSelect}
                   defaultValue={formData.location || ''}
                 />
-                <p className="text-[12px] text-[#737370] mt-1">
+                <p className={HELP_CLS}>
                   Start typing to search for an address
                 </p>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-[13px] font-semibold text-[#1A1816] mb-2">Price ($) <span className="text-[#D03839]">*</span></label>
+                  <label className={LABEL_CLS}>Price ($) <span className="text-ink">*</span></label>
                   <input
                     type="number"
                     value={formData.price || ''}
                     onChange={(e) => handleInputChange('price', e.target.value)}
-                    className="w-full px-4 py-3 border border-[#E8E8E4] rounded focus:border-[#D03839] focus:outline-none transition-colors text-[13px] text-[#1A1816] placeholder:text-[#A8A8A4]"
+                    className={INPUT_MONO_CLS}
                     placeholder="2500000"
                   />
                 </div>
                 <div>
-                  <label className="block text-[13px] font-semibold text-[#1A1816] mb-2">Property Type <span className="text-[#D03839]">*</span></label>
+                  <label className={LABEL_CLS}>Property Type <span className="text-ink">*</span></label>
                   <select
                     value={formData.property_type ?? ''}
                     onChange={(e) => handleInputChange('property_type', e.target.value)}
-                    className="w-full px-4 py-3 border border-[#E8E8E4] rounded focus:border-[#D03839] focus:outline-none transition-colors text-[13px] text-[#1A1816]"
+                    className={INPUT_CLS}
                   >
                     <option value="">Select property type</option>
                     {PROPERTY_TYPES.map((type) => (
@@ -1198,36 +1208,36 @@ export default function NewPropertyPage() {
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-[13px] font-semibold text-[#1A1816] mb-2">Beds <span className="text-[#D03839]">*</span></label>
+                  <label className={LABEL_CLS}>Beds <span className="text-ink">*</span></label>
                   <input
                     type="number"
                     min="0"
                     step="1"
                     value={formData.bedrooms || ''}
                     onChange={(e) => handleInputChange('bedrooms', e.target.value)}
-                    className="w-full px-4 py-3 border border-[#E8E8E4] rounded focus:border-[#D03839] focus:outline-none transition-colors text-[13px] text-[#1A1816] placeholder:text-[#A8A8A4]"
+                    className={INPUT_MONO_CLS}
                     placeholder="e.g. 3"
                   />
                 </div>
                 <div>
-                  <label className="block text-[13px] font-semibold text-[#1A1816] mb-2">Baths <span className="text-[#D03839]">*</span></label>
+                  <label className={LABEL_CLS}>Baths <span className="text-ink">*</span></label>
                   <input
                     type="number"
                     min="0"
                     step="0.5"
                     value={formData.bathrooms || ''}
                     onChange={(e) => handleInputChange('bathrooms', e.target.value)}
-                    className="w-full px-4 py-3 border border-[#E8E8E4] rounded focus:border-[#D03839] focus:outline-none transition-colors text-[13px] text-[#1A1816] placeholder:text-[#A8A8A4]"
+                    className={INPUT_MONO_CLS}
                     placeholder="e.g. 2 or 2.5"
                   />
                 </div>
                 <div>
-                  <label className="block text-[13px] font-semibold text-[#1A1816] mb-2">Floor Area (sqft) <span className="text-[#D03839]">*</span></label>
+                  <label className={LABEL_CLS}>Floor Area (sqft) <span className="text-ink">*</span></label>
                   <input
                     type="number"
                     value={formData.floor_area || ''}
                     onChange={(e) => handleInputChange('floor_area', e.target.value)}
-                    className="w-full px-4 py-3 border border-[#E8E8E4] rounded focus:border-[#D03839] focus:outline-none transition-colors text-[13px] text-[#1A1816] placeholder:text-[#A8A8A4]"
+                    className={INPUT_MONO_CLS}
                     placeholder="25000"
                     min="0"
                   />
@@ -1235,11 +1245,11 @@ export default function NewPropertyPage() {
               </div>
 
               <div>
-                <label className="block text-[13px] font-semibold text-[#1A1816] mb-2">Property Status</label>
+                <label className={LABEL_CLS}>Property Status</label>
                 <select
                   value={formData.property_status || 'available'}
                   onChange={(e) => handleInputChange('property_status', e.target.value)}
-                  className="w-full px-4 py-3 border border-[#E8E8E4] rounded focus:border-[#D03839] focus:outline-none transition-colors text-[13px] text-[#1A1816]"
+                  className={INPUT_CLS}
                 >
                   {PROPERTY_STATUSES.map(status => (
                     <option key={status.value} value={status.value}>{status.label}</option>
@@ -1251,12 +1261,12 @@ export default function NewPropertyPage() {
                   Sellers can keep the defaults or override them per-listing. */}
               <div>
                 <div className="mb-3">
-                  <h3 className="text-[15px] font-semibold text-[#1A1816]">Contact Info</h3>
-                  <p className="text-[13px] text-[#737370] mt-0.5">How buyers can reach you about this listing. Pre-filled from your profile — edit if you want different contact info on this listing.</p>
+                  <h3 className={SECTION_H_CLS}>Contact Info</h3>
+                  <p className="text-[13px] text-muted mt-0.5">How buyers can reach you about this listing. Pre-filled from your profile — edit if you want different contact info on this listing.</p>
                 </div>
                 {trialPlan?.plan_type === 'enterprise' && teamMembers.length > 0 && (
                   <div className="mb-4">
-                    <label className="block text-[13px] font-semibold text-[#1A1816] mb-2">Pick a team member</label>
+                    <label className={LABEL_CLS}>Pick a team member</label>
                     <select
                       value={selectedTeamMemberId}
                       onChange={(e) => {
@@ -1270,7 +1280,7 @@ export default function NewPropertyPage() {
                         setFormData(prev => ({ ...prev, contact_name: memberName, contact_phone: memberPhone }));
                         setDirty(true);
                       }}
-                      className="w-full px-4 py-3 border border-[#E8E8E4] rounded text-[13px] text-[#1A1816] focus:border-[#D03839] focus:outline-none transition-colors bg-white"
+                      className={INPUT_CLS}
                     >
                       <option value="">Custom (fill in below)</option>
                       {teamMembers.map(m => (
@@ -1283,23 +1293,23 @@ export default function NewPropertyPage() {
                 )}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-[13px] font-semibold text-[#1A1816] mb-2">Contact Name</label>
+                    <label className={LABEL_CLS}>Contact Name</label>
                     <input
                       type="text"
                       value={formData.contact_name || ''}
                       onChange={(e) => handleInputChange('contact_name', e.target.value)}
                       placeholder="Your name or company"
-                      className="w-full px-4 py-3 border border-[#E8E8E4] rounded text-[13px] text-[#1A1816] focus:border-[#D03839] focus:outline-none transition-colors"
+                      className={INPUT_CLS}
                     />
                   </div>
                   <div>
-                    <label className="block text-[13px] font-semibold text-[#1A1816] mb-2">Contact Phone</label>
+                    <label className={LABEL_CLS}>Contact Phone</label>
                     <input
                       type="tel"
                       value={formData.contact_phone || ''}
                       onChange={(e) => handleInputChange('contact_phone', e.target.value)}
                       placeholder="+1 (555) 000-0000"
-                      className="w-full px-4 py-3 border border-[#E8E8E4] rounded text-[13px] text-[#1A1816] focus:border-[#D03839] focus:outline-none transition-colors"
+                      className={INPUT_CLS}
                     />
                   </div>
                 </div>
@@ -1308,23 +1318,23 @@ export default function NewPropertyPage() {
               {/* Featured Image Preview */}
               {imageUploadStatus.images.length > 0 && (
                 <div>
-                  <label className="block text-[13px] font-semibold text-[#1A1816] mb-2">Featured Image</label>
-                  <div className="border border-[#E8E8E4] rounded p-4 bg-[#FAFAF8]">
+                  <label className={LABEL_CLS}>Featured Image</label>
+                  <div className="border-[1.5px] border-line rounded-[12px] p-4 bg-stripes">
                     {imageUploadStatus.images.some(img => img.status === 'completed' && img.isFeatured) ? (
                       <div className="flex items-center gap-4">
                         <img
                           src={imageUploadStatus.images.find(img => img.status === 'completed' && img.isFeatured)?.imageUrl}
                           alt="Featured"
-                          className="w-24 h-24 object-cover rounded"
+                          className="w-24 h-24 object-cover rounded-[9px] border-[1.5px] border-ink"
                         />
                         <div>
-                          <p className="text-[13px] font-medium text-[#1A1816] mb-1">Featured image selected</p>
-                          <p className="text-[12px] text-[#737370]">You can change or clear this in the Images tab</p>
+                          <p className="text-[13px] font-semibold text-ink mb-1">Featured image selected</p>
+                          <p className="text-[12px] text-muted">You can change or clear this in the Images tab</p>
                         </div>
                       </div>
                     ) : (
                       <div className="text-center py-4">
-                        <p className="text-[13px] text-[#737370]">Select a featured image in the Images tab</p>
+                        <p className="font-mono text-[12px] text-muted">Select a featured image in the Images tab</p>
                       </div>
                     )}
                   </div>
@@ -1335,11 +1345,11 @@ export default function NewPropertyPage() {
 
           {/* Images Tab */}
           <div className={activeTab === 'images' ? '' : 'hidden'}>
-            <h3 className="text-[15px] font-semibold text-[#1A1816] mb-2">
-              Property Images <span className="text-[#D03839]">*</span>
+            <h3 className={`${SECTION_H_CLS} mb-2`}>
+              Property Images <span className="text-ink">*</span>
             </h3>
-            <p className="text-[13px] text-[#737370] mb-6">
-              Upload property images. They will be automatically compressed and uploaded immediately. The first image will be set as the featured image. <span className="font-medium text-[#1A1816]">At least one image is required to continue.</span>
+            <p className="text-[13px] text-muted mb-6">
+              Upload property images. They will be automatically compressed and uploaded immediately. The first image will be set as the featured image. <span className="font-semibold text-ink">At least one image is required to continue.</span>
             </p>
             <ImageGalleryManager
               images={imageUploadStatus.images}
@@ -1354,37 +1364,37 @@ export default function NewPropertyPage() {
           {activeTab === 'ownership' && (
             <div className="space-y-6">
               <div>
-                <h3 className="text-[15px] font-semibold text-[#1A1816] mb-1">Your relationship to this property</h3>
-                <p className="text-[13px] text-[#737370] mb-5">This helps buyers understand the deal structure.</p>
+                <h3 className={`${SECTION_H_CLS} mb-1`}>Your relationship to this property</h3>
+                <p className="text-[13px] text-muted mb-5">This helps buyers understand the deal structure.</p>
                 <div className="grid grid-cols-2 gap-3">
                   <button
                     type="button"
                     onClick={() => { setSellerType('owner'); setOwnershipConfirmed(false) }}
-                    className={`flex flex-col items-center gap-3 p-5 rounded border-2 transition-all ${
+                    className={`flex flex-col items-center gap-3 p-5 rounded-[12px] border-[1.5px] transition-all duration-120 ${
                       sellerType === 'owner'
-                        ? 'border-[#D03839] bg-[#FEF0EF]'
-                        : 'border-[#E8E8E4] bg-white hover:border-[#1A1816]'
+                        ? 'border-ink bg-tint shadow-offset-3'
+                        : 'border-line bg-white hover:border-ink'
                     }`}
                   >
-                    <Home className={`w-7 h-7 ${sellerType === 'owner' ? 'text-[#D03839]' : 'text-[#737370]'}`} />
+                    <Home className={`w-7 h-7 ${sellerType === 'owner' ? 'text-ink' : 'text-muted'}`} />
                     <div className="text-center">
-                      <p className={`text-[13px] font-semibold ${sellerType === 'owner' ? 'text-[#D03839]' : 'text-[#1A1816]'}`}>I&apos;m the Owner</p>
-                      <p className="text-[11px] text-[#737370] mt-0.5">I own this property directly</p>
+                      <p className={`text-[13px] font-semibold ${sellerType === 'owner' ? 'text-ink' : 'text-body'}`}>I&apos;m the Owner</p>
+                      <p className="text-[11px] text-muted mt-0.5">I own this property directly</p>
                     </div>
                   </button>
                   <button
                     type="button"
                     onClick={() => setSellerType('wholesaler')}
-                    className={`flex flex-col items-center gap-3 p-5 rounded border-2 transition-all ${
+                    className={`flex flex-col items-center gap-3 p-5 rounded-[12px] border-[1.5px] transition-all duration-120 ${
                       sellerType === 'wholesaler'
-                        ? 'border-[#D03839] bg-[#FEF0EF]'
-                        : 'border-[#E8E8E4] bg-white hover:border-[#1A1816]'
+                        ? 'border-ink bg-tint shadow-offset-3'
+                        : 'border-line bg-white hover:border-ink'
                     }`}
                   >
-                    <FileText className={`w-7 h-7 ${sellerType === 'wholesaler' ? 'text-[#D03839]' : 'text-[#737370]'}`} />
+                    <FileText className={`w-7 h-7 ${sellerType === 'wholesaler' ? 'text-ink' : 'text-muted'}`} />
                     <div className="text-center">
-                      <p className={`text-[13px] font-semibold ${sellerType === 'wholesaler' ? 'text-[#D03839]' : 'text-[#1A1816]'}`}>I&apos;m a Wholesaler</p>
-                      <p className="text-[11px] text-[#737370] mt-0.5">I have a contract to assign</p>
+                      <p className={`text-[13px] font-semibold ${sellerType === 'wholesaler' ? 'text-ink' : 'text-body'}`}>I&apos;m a Wholesaler</p>
+                      <p className="text-[11px] text-muted mt-0.5">I have a contract to assign</p>
                     </div>
                   </button>
                 </div>
@@ -1392,19 +1402,19 @@ export default function NewPropertyPage() {
 
               {sellerType === 'owner' && (
                 <div>
-                  <p className="text-[13px] font-semibold text-[#1A1816] mb-1.5">
-                    Ownership confirmation <span className="text-[#D03839]">*</span>
-                    <span className="ml-2 font-normal text-[12px] text-[#737370]">Required to continue</span>
+                  <p className="text-[13px] font-semibold text-ink mb-1.5">
+                    Ownership confirmation <span className="text-ink">*</span>
+                    <span className="ml-2 font-mono font-semibold text-[11px] uppercase tracking-[0.08em] text-muted">Required to continue</span>
                   </p>
-                  <div className="rounded border border-[#E8E8E4] bg-[#FAFAF8] p-4">
+                  <div className="rounded-[12px] border-[1.5px] border-line bg-tint-3 p-4">
                   <label className="flex items-start gap-3 cursor-pointer">
                     <input
                       type="checkbox"
                       checked={ownershipConfirmed}
                       onChange={e => setOwnershipConfirmed(e.target.checked)}
-                      className="mt-0.5 w-4 h-4 accent-[#D03839] shrink-0"
+                      className="mt-0.5 w-4 h-4 accent-ink shrink-0"
                     />
-                    <span className="text-[13px] text-[#444441] leading-snug">
+                    <span className="text-[13px] text-smoke-2 leading-snug">
                       I confirm that I am the legal owner of this property and have the authority to list it for sale. I understand that providing false ownership information may result in listing removal and account suspension.
                     </span>
                   </label>
@@ -1414,17 +1424,17 @@ export default function NewPropertyPage() {
 
               {sellerType === 'wholesaler' && (
                 <div>
-                  <h3 className="text-[15px] font-semibold text-[#1A1816] mb-1">
-                    Purchase Contract / Agreement <span className="text-[#D03839]">*</span>
+                  <h3 className={`${SECTION_H_CLS} mb-1`}>
+                    Purchase Contract / Agreement <span className="text-ink">*</span>
                   </h3>
-                  <p className="text-[13px] text-[#737370] mb-4">
+                  <p className="text-[13px] text-muted mb-4">
                     Upload your signed purchase contract or agreement. Required before publishing. (PDF or DOC)
                   </p>
 
                   {!contractUpload.url ? (
-                    <div className="border border-dashed border-[#E8E8E4] rounded p-8 text-center">
-                      <FileText className="w-12 h-12 text-[#A8A8A4] mx-auto mb-4" />
-                      <p className="text-[13px] text-[#737370] mb-4">Upload PDF or DOC file</p>
+                    <div className="border-[1.5px] border-dashed border-line rounded-[12px] p-8 text-center hover:border-ink transition-colors duration-120">
+                      <FileText className="w-12 h-12 text-mist mx-auto mb-4" />
+                      <p className="font-mono text-[12px] uppercase tracking-[0.08em] text-muted mb-4">Upload PDF or DOC file</p>
                       <input
                         type="file"
                         id="contract-upload"
@@ -1435,7 +1445,7 @@ export default function NewPropertyPage() {
                       />
                       <label
                         htmlFor="contract-upload"
-                        className={`inline-flex items-center gap-2 px-4 py-2 bg-[#D03839] hover:bg-[#E0493B] text-white rounded text-[13px] font-medium transition-colors cursor-pointer ${
+                        className={`inline-flex items-center gap-2 px-4 py-2 text-[13px] ${BTN_PRIMARY_CLS} cursor-pointer ${
                           contractUpload.uploading ? 'opacity-50 cursor-not-allowed' : ''
                         }`}
                       >
@@ -1443,19 +1453,19 @@ export default function NewPropertyPage() {
                       </label>
                     </div>
                   ) : (
-                    <div className="bg-[#FAFAF8] border border-[#E8E8E4] rounded p-4">
+                    <div className="bg-tint-3 border-[1.5px] border-ink rounded-[12px] shadow-offset-3 p-4">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 bg-[#D03839]/10 rounded flex items-center justify-center">
-                            <FileText className="w-5 h-5 text-[#D03839]" />
+                          <div className="w-10 h-10 bg-white border-[1.5px] border-ink rounded-[9px] flex items-center justify-center">
+                            <FileText className="w-5 h-5 text-ink" />
                           </div>
                           <div>
-                            <p className="text-[13px] font-medium text-[#1A1816]">{contractUpload.filename || 'Contract'}</p>
+                            <p className="text-[13px] font-semibold text-ink">{contractUpload.filename || 'Contract'}</p>
                             <a
                               href={contractUpload.url}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="text-[12px] text-[#D03839] hover:underline"
+                              className="font-mono text-[11px] uppercase tracking-[0.06em] text-ink underline underline-offset-2 hover:bg-tint"
                             >
                               View Document
                             </a>
@@ -1463,7 +1473,7 @@ export default function NewPropertyPage() {
                         </div>
                         <button
                           onClick={handleRemoveContract}
-                          className="p-2 rounded hover:bg-[#E8E8E4] text-[#737370] transition-colors"
+                          className="p-2 rounded-[8px] border-[1.5px] border-ink bg-white text-ink hover:bg-tint transition-colors duration-120"
                         >
                           <X className="w-4 h-4" />
                         </button>
@@ -1479,7 +1489,7 @@ export default function NewPropertyPage() {
           {activeTab === 'content' && (
             <div className="space-y-6">
               <div>
-                <label className="block text-[13px] font-semibold text-[#1A1816] mb-2">Property Description</label>
+                <label className={LABEL_CLS}>Property Description</label>
                 <TextEditor
                   ref={descRef}
                   id="description-editor"
@@ -1489,7 +1499,7 @@ export default function NewPropertyPage() {
               </div>
 
               <div>
-                <label className="block text-[13px] font-semibold text-[#1A1816] mb-1">Repairs & Renovation <span className="text-[#A8A8A4] font-normal">(optional)</span></label>
+                <label className="block text-[13px] font-semibold text-ink mb-1">Repairs & Renovation <span className="font-mono font-semibold text-[11px] uppercase tracking-[0.08em] text-muted">(optional)</span></label>
                 <TextEditor
                   ref={repairsRef}
                   id="repairs-editor"
@@ -1500,12 +1510,12 @@ export default function NewPropertyPage() {
 
               {/* Inspection Report (optional) */}
               <div>
-                <label className="block text-[13px] font-semibold text-[#1A1816] mb-1">Inspection Report <span className="text-[#A8A8A4] font-normal">(optional)</span></label>
-                <p className="text-[12px] text-[#737370] mb-3">Upload the inspection report for this property (PDF or DOC)</p>
+                <label className="block text-[13px] font-semibold text-ink mb-1">Inspection Report <span className="font-mono font-semibold text-[11px] uppercase tracking-[0.08em] text-muted">(optional)</span></label>
+                <p className="text-[12px] text-muted mb-3">Upload the inspection report for this property (PDF or DOC)</p>
                 {!inspectionReport.url ? (
-                  <div className="border border-dashed border-[#E8E8E4] rounded p-6 text-center">
-                    <Upload className="w-8 h-8 text-[#A8A8A4] mx-auto mb-3" />
-                    <p className="text-[13px] text-[#737370] mb-3">PDF or DOC file</p>
+                  <div className="border-[1.5px] border-dashed border-line rounded-[12px] p-6 text-center hover:border-ink transition-colors duration-120">
+                    <Upload className="w-8 h-8 text-mist mx-auto mb-3" />
+                    <p className="font-mono text-[12px] uppercase tracking-[0.08em] text-muted mb-3">PDF or DOC file</p>
                     <input
                       type="file"
                       id="inspection-upload"
@@ -1516,7 +1526,7 @@ export default function NewPropertyPage() {
                     />
                     <label
                       htmlFor="inspection-upload"
-                      className={`inline-flex items-center gap-2 px-4 py-2 bg-[#D03839] hover:bg-[#E0493B] text-white rounded text-[13px] font-medium transition-colors cursor-pointer ${
+                      className={`inline-flex items-center gap-2 px-4 py-2 text-[13px] ${BTN_PRIMARY_CLS} cursor-pointer ${
                         inspectionReport.uploading ? 'opacity-50 cursor-not-allowed' : ''
                       }`}
                     >
@@ -1524,20 +1534,20 @@ export default function NewPropertyPage() {
                     </label>
                   </div>
                 ) : (
-                  <div className="bg-[#FAFAF8] border border-[#E8E8E4] rounded p-4">
+                  <div className="bg-tint-3 border-[1.5px] border-ink rounded-[12px] shadow-offset-3 p-4">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 bg-[#D03839]/10 rounded flex items-center justify-center">
-                          <Upload className="w-4 h-4 text-[#D03839]" />
+                        <div className="w-9 h-9 bg-white border-[1.5px] border-ink rounded-[9px] flex items-center justify-center">
+                          <Upload className="w-4 h-4 text-ink" />
                         </div>
                         <div>
-                          <p className="text-[13px] font-medium text-[#1A1816]">Inspection Report</p>
-                          <a href={inspectionReport.url} target="_blank" rel="noopener noreferrer" className="text-[12px] text-[#D03839] hover:underline">
+                          <p className="text-[13px] font-semibold text-ink">Inspection Report</p>
+                          <a href={inspectionReport.url} target="_blank" rel="noopener noreferrer" className="font-mono text-[11px] uppercase tracking-[0.06em] text-ink underline underline-offset-2 hover:bg-tint">
                             View Document
                           </a>
                         </div>
                       </div>
-                      <button onClick={handleRemoveInspection} className="p-2 rounded hover:bg-[#E8E8E4] text-[#737370] transition-colors">
+                      <button onClick={handleRemoveInspection} className="p-2 rounded-[8px] border-[1.5px] border-ink bg-white text-ink hover:bg-tint transition-colors duration-120">
                         <X className="w-4 h-4" />
                       </button>
                     </div>
@@ -1551,34 +1561,34 @@ export default function NewPropertyPage() {
           {activeTab === 'seo' && (
             <div className="space-y-6">
               <div>
-                <h3 className="text-[15px] font-semibold text-[#1A1816] mb-4">Search Engine Optimization</h3>
+                <h3 className={`${SECTION_H_CLS} mb-4`}>Search Engine Optimization</h3>
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-[13px] font-semibold text-[#1A1816] mb-2">SEO Title</label>
+                    <label className={LABEL_CLS}>SEO Title</label>
                     <input
                       type="text"
                       value={formData.seo_title || ''}
                       onChange={(e) => handleInputChange('seo_title', e.target.value)}
-                      className="w-full px-4 py-3 border border-[#E8E8E4] rounded focus:border-[#D03839] focus:outline-none transition-colors text-[13px] text-[#1A1816] placeholder:text-[#A8A8A4]"
+                      className={INPUT_CLS}
                       placeholder="Luxury Beachfront Hotel Investment Opportunity"
                       maxLength="60"
                     />
-                    <div className="text-[12px] text-[#737370] mt-1">
+                    <div className="font-mono text-[11.5px] text-muted mt-1">
                       {(formData.seo_title || '').length}/60 characters
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-[13px] font-semibold text-[#1A1816] mb-2">SEO Description</label>
+                    <label className={LABEL_CLS}>SEO Description</label>
                     <textarea
                       value={formData.seo_description || ''}
                       onChange={(e) => handleInputChange('seo_description', e.target.value)}
-                      className="w-full px-4 py-3 border border-[#E8E8E4] rounded focus:border-[#D03839] focus:outline-none transition-colors text-[13px] text-[#1A1816] placeholder:text-[#A8A8A4]"
+                      className={INPUT_CLS}
                       rows="3"
                       placeholder="Discover this stunning wholesale hotel property..."
                       maxLength="160"
                     />
-                    <div className="text-[12px] text-[#737370] mt-1">
+                    <div className="font-mono text-[11.5px] text-muted mt-1">
                       {(formData.seo_description || '').length}/160 characters
                     </div>
                   </div>
@@ -1586,26 +1596,26 @@ export default function NewPropertyPage() {
               </div>
 
               <div>
-                <h3 className="text-[15px] font-semibold text-[#1A1816] mb-4">Social Media</h3>
+                <h3 className={`${SECTION_H_CLS} mb-4`}>Social Media</h3>
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-[13px] font-semibold text-[#1A1816] mb-2">Social Title</label>
+                    <label className={LABEL_CLS}>Social Title</label>
                     <input
                       type="text"
                       value={formData.social_title || ''}
                       onChange={(e) => handleInputChange('social_title', e.target.value)}
-                      className="w-full px-4 py-3 border border-[#E8E8E4] rounded focus:border-[#D03839] focus:outline-none transition-colors text-[13px] text-[#1A1816] placeholder:text-[#A8A8A4]"
+                      className={INPUT_CLS}
                       placeholder="Same as SEO title"
                       maxLength="60"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-[13px] font-semibold text-[#1A1816] mb-2">Social Description</label>
+                    <label className={LABEL_CLS}>Social Description</label>
                     <textarea
                       value={formData.social_description || ''}
                       onChange={(e) => handleInputChange('social_description', e.target.value)}
-                      className="w-full px-4 py-3 border border-[#E8E8E4] rounded focus:border-[#D03839] focus:outline-none transition-colors text-[13px] text-[#1A1816] placeholder:text-[#A8A8A4]"
+                      className={INPUT_CLS}
                       rows="3"
                       placeholder="Same as SEO description"
                       maxLength="160"
@@ -1613,15 +1623,15 @@ export default function NewPropertyPage() {
                   </div>
 
                   <div>
-                    <label className="block text-[13px] font-semibold text-[#1A1816] mb-2">Social Image URL</label>
+                    <label className={LABEL_CLS}>Social Image URL</label>
                     <input
                       type="url"
                       value={formData.social_image_url || ''}
                       onChange={(e) => handleInputChange('social_image_url', e.target.value)}
-                      className="w-full px-4 py-3 border border-[#E8E8E4] rounded focus:border-[#D03839] focus:outline-none transition-colors text-[13px] text-[#1A1816] placeholder:text-[#A8A8A4]"
+                      className={INPUT_CLS}
                       placeholder="https://example.com/image.jpg"
                     />
-                    <div className="text-[12px] text-[#737370] mt-1">
+                    <div className={HELP_CLS}>
                       Leave empty to use first uploaded image
                     </div>
                   </div>
@@ -1657,14 +1667,14 @@ export default function NewPropertyPage() {
 
           {/* ── Step footer ──────────────────────────────────────────────── */}
           {activeTab !== 'addons' && (
-            <div className="flex items-center justify-between pt-6 mt-6 border-t border-[#E8E8E4]">
+            <div className="flex items-center justify-between pt-6 mt-6 border-t border-hairline">
               <button
                 type="button"
                 onClick={() => {
                   const prevIdx = TAB_ORDER.indexOf(activeTab) - 1;
                   if (prevIdx >= 0) handleTabChange(TAB_ORDER[prevIdx]);
                 }}
-                className={`flex items-center gap-1.5 px-4 py-2 rounded border border-[#E8E8E4] text-[13px] font-medium text-[#737370] hover:border-[#1A1816] hover:text-[#1A1816] transition-colors ${activeTab === 'basic' ? 'invisible' : ''}`}
+                className={`flex items-center gap-1.5 px-4 py-2 text-[13px] ${BTN_GHOST_CLS} ${activeTab === 'basic' ? 'invisible' : ''}`}
               >
                 <ArrowLeft className="w-4 h-4" /> Back
               </button>
@@ -1679,7 +1689,7 @@ export default function NewPropertyPage() {
                 <button
                   type="button"
                   onClick={handleContinue}
-                  className="flex items-center gap-1.5 px-5 py-2 bg-[#D03839] hover:bg-[#E0493B] text-white text-[13px] font-semibold rounded transition-colors"
+                  className={`flex items-center gap-1.5 px-[22px] py-2.5 text-[13.5px] ${BTN_PRIMARY_CLS}`}
                 >
                   Continue <ChevronRight className="w-4 h-4" />
                 </button>
@@ -1723,14 +1733,14 @@ function AddOnsCheckoutForm({ amount, onSuccess, onError, onBack }) {
       <button
         type="submit"
         disabled={!stripe || processing}
-        className="w-full h-[46px] bg-[#D03839] hover:bg-[#E0493B] active:scale-[0.98] text-white text-[14px] font-semibold rounded transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+        className={`w-full h-[46px] text-[14px] ${BTN_PRIMARY_CLS} disabled:opacity-50 flex items-center justify-center gap-2`}
       >
         {processing
-          ? <><span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" /> Processing…</>
+          ? <><span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full motion-safe:animate-spin" /> Processing…</>
           : `Pay $${(amount / 100).toFixed(2)} & Publish`}
       </button>
       {onBack && (
-        <button type="button" onClick={onBack} className="w-full text-[12px] text-[#737370] hover:text-[#1A1816] transition-colors text-center">
+        <button type="button" onClick={onBack} className="w-full font-mono text-[11px] uppercase tracking-[0.06em] text-muted hover:text-ink transition-colors duration-120 text-center">
           ← Change add-ons
         </button>
       )}
@@ -1868,7 +1878,7 @@ function AddOnsTab({
   const displayTotal = finalAmount != null ? finalAmount : Math.max(0, total - estimatedDiscount)
 
   return (
-    <div className="space-y-6" style={{ fontFamily: 'var(--font-dm-sans), sans-serif' }}>
+    <div className="space-y-6 font-sans">
 
       {/* ── Two-column: add-ons (left) + order summary (right) ── */}
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-6 items-start">
@@ -1878,20 +1888,20 @@ function AddOnsTab({
 
           {/* What you're paying for */}
           <div>
-            <p className="text-[11px] font-medium tracking-[0.12em] uppercase text-[#737370] mb-3">What you&apos;re getting</p>
-            <div className="relative border border-[#E8E8E4] rounded bg-[#FAFAF8] p-5 overflow-hidden">
-              <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-[#D03839]" />
+            <p className={`${EYEBROW_CLS} mb-3`}>What you&apos;re getting</p>
+            <div className="relative border-[1.5px] border-ink rounded-[12px] shadow-offset-3 bg-tint-3 p-5 overflow-hidden">
+              <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-ink" />
               <div className="flex justify-between items-baseline mb-3">
                 <div className="flex items-center gap-2">
-                  <span className="text-[15px] font-bold text-[#1A1816]">Basic Listing</span>
-                  <span className="font-mono text-[10px] font-medium tracking-[0.08em] uppercase text-[#737370] bg-white border border-[#E8E8E4] px-2 py-0.5 rounded">30 Days</span>
+                  <span className="font-display font-semibold text-[16.5px] tracking-[-0.01em] text-ink">Basic Listing</span>
+                  <span className="font-mono text-[10px] font-semibold tracking-[0.08em] uppercase text-muted bg-white border-[1.5px] border-line px-2 py-0.5 rounded-pill">30 Days</span>
                 </div>
-                <span className="text-[16px] font-bold text-[#0F6E56]">FREE</span>
+                <span className="font-display text-[16px] font-bold text-ink">FREE</span>
               </div>
               <ul className="flex flex-wrap gap-x-5 gap-y-1.5">
                 {['Public marketplace listing', 'Full photo gallery', 'Buyer inquiry inbox', 'Listing analytics'].map(feat => (
-                  <li key={feat} className="flex items-center gap-1.5 text-[12px] text-[#737370]">
-                    <Check className="w-3 h-3 text-[#0F6E56] flex-shrink-0" />
+                  <li key={feat} className="flex items-center gap-1.5 text-[12px] text-muted">
+                    <Check className="w-3 h-3 text-ink flex-shrink-0" />
                     {feat}
                   </li>
                 ))}
@@ -1901,9 +1911,9 @@ function AddOnsTab({
 
           {/* Optional add-ons */}
           <div>
-            <p className="text-[14px] font-semibold text-[#1A1816] mb-0.5">
+            <p className="text-[14px] font-semibold text-ink mb-0.5">
               Add extras to get more visibility and close faster.{' '}
-              <span className="text-[13px] font-normal italic text-[#737370]">(optional)</span>
+              <span className="font-mono font-semibold text-[11px] uppercase tracking-[0.08em] text-muted">(optional)</span>
             </p>
             <div className="mt-3 space-y-2.5">
               {ADD_ONS.map((ao) => {
@@ -1918,38 +1928,38 @@ function AddOnsTab({
                     type="button"
                     onClick={() => !isDisabled && toggleAddOn(ao.id)}
                     disabled={isDisabled}
-                    className={`w-full grid grid-cols-[44px_1fr_auto_22px] gap-4 items-center p-[18px_20px] border rounded text-left transition-all
-                      ${selected ? 'border-[#D03839] bg-gradient-to-b from-[#FEF8F9] to-white shadow-[0_0_0_1px_#D03839]'
-                      : isDisabled ? 'border-[#E8E8E4] bg-white opacity-40 cursor-not-allowed'
-                      : 'border-[#E8E8E4] bg-white hover:border-[#C8C8C4] hover:-translate-y-px hover:shadow-sm'}`}
+                    className={`w-full grid grid-cols-[44px_1fr_auto_22px] gap-4 items-center p-[18px_20px] border-[1.5px] rounded-[12px] text-left transition-all duration-120
+                      ${selected ? 'border-ink bg-tint shadow-offset-3'
+                      : isDisabled ? 'border-line bg-white opacity-40 cursor-not-allowed'
+                      : 'border-line bg-white hover:border-ink'}`}
                   >
-                    <div className={`w-11 h-11 rounded flex items-center justify-center flex-shrink-0 ${selected ? 'bg-[#FEF0EF] text-[#D03839]' : 'bg-[#F3F3F0] text-[#444441]'}`}>
+                    <div className={`w-11 h-11 rounded-[9px] flex items-center justify-center flex-shrink-0 ${selected ? 'bg-white border-[1.5px] border-ink text-ink' : 'bg-tint text-smoke-2'}`}>
                       <Icon className="w-5 h-5" />
                     </div>
                     <div className="min-w-0">
                       <div className="flex items-center flex-wrap gap-2 mb-0.5">
-                        <span className="text-[14px] font-semibold text-[#1A1816]">{ao.label}</span>
-                        <span className="font-mono text-[10px] font-medium tracking-[0.08em] uppercase text-[#737370] bg-[#F3F3F0] border border-[#E8E8E4] px-1.5 py-0.5 rounded">
+                        <span className="text-[14px] font-semibold text-ink">{ao.label}</span>
+                        <span className="font-mono text-[10px] font-semibold tracking-[0.08em] uppercase text-muted bg-white border-[1.5px] border-line px-1.5 py-0.5 rounded-pill">
                           {ao.duration}
                         </span>
                         {ao.savings && (
-                          <span className="font-mono text-[10px] font-semibold tracking-[0.06em] uppercase text-[#0F6E56] bg-[#E4F5EC] px-1.5 py-0.5 rounded">
+                          <span className="font-mono text-[10px] font-bold tracking-[0.06em] uppercase text-ink bg-tint border-[1.5px] border-ink px-1.5 py-0.5 rounded-pill">
                             Save ${(ao.savings / 100).toFixed(2)}
                           </span>
                         )}
                       </div>
-                      <p className="text-[13px] text-[#737370]">{ao.desc}</p>
+                      <p className="text-[13px] text-muted">{ao.desc}</p>
                     </div>
                     <div className="text-right flex-shrink-0">
                       {!isLifetimeFree && ao.strikePrice && (
-                        <p className="text-[12px] text-[#A8A8A4] line-through">${(ao.strikePrice / 100).toFixed(2)}</p>
+                        <p className="font-mono text-[11px] text-mist line-through">${(ao.strikePrice / 100).toFixed(2)}</p>
                       )}
-                      <p className={`text-[15px] font-bold ${isLifetimeFree ? 'text-[#0F6E56]' : selected ? 'text-[#D03839]' : 'text-[#1A1816]'}`}>
+                      <p className={`font-display text-[15px] font-bold ${isLifetimeFree ? 'text-ink' : selected ? 'text-ink' : 'text-body'}`}>
                         {isLifetimeFree ? 'Free' : `+$${(ao.price / 100).toFixed(2)}`}
                       </p>
                     </div>
-                    <div className={`w-[22px] h-[22px] rounded-full border flex items-center justify-center flex-shrink-0 transition-all
-                      ${selected ? 'bg-[#D03839] border-[#D03839]' : 'border-[#D4D4CF]'}`}>
+                    <div className={`w-[22px] h-[22px] rounded-pill border-[1.5px] flex items-center justify-center flex-shrink-0 transition-all duration-120
+                      ${selected ? 'bg-ink border-ink' : 'border-line bg-white'}`}>
                       {selected && <Check className="w-3 h-3 text-white" />}
                     </div>
                   </button>
@@ -1962,7 +1972,7 @@ function AddOnsTab({
             <button
               type="button"
               onClick={onBack}
-              className="flex items-center gap-1.5 px-4 py-2 rounded border border-[#E8E8E4] text-[13px] font-medium text-[#737370] hover:border-[#1A1816] hover:text-[#1A1816] transition-colors"
+              className={`flex items-center gap-1.5 px-4 py-2 text-[13px] ${BTN_GHOST_CLS}`}
             >
               <ArrowLeft className="w-4 h-4" /> Back
             </button>
@@ -1970,55 +1980,55 @@ function AddOnsTab({
         </div>
 
         {/* Right: sticky order summary */}
-        <div className="lg:sticky lg:top-6 border border-[#E8E8E4] rounded overflow-hidden bg-white flex flex-col">
+        <div className="lg:sticky lg:top-6 border-[1.5px] border-ink rounded-[14px] shadow-offset-4 overflow-hidden bg-white flex flex-col">
 
           {/* Property preview */}
-          <div className="p-5 border-b border-[#E8E8E4] flex gap-3.5">
+          <div className="p-5 border-b border-hairline flex gap-3.5">
             {featuredImage?.imageUrl ? (
-              <img src={featuredImage.imageUrl} alt="" className="w-16 h-16 rounded object-cover flex-shrink-0 border border-[#E8E8E4]" />
+              <img src={featuredImage.imageUrl} alt="" className="w-16 h-16 rounded-[9px] object-cover flex-shrink-0 border-[1.5px] border-ink" />
             ) : (
-              <div className="w-16 h-16 rounded bg-gradient-to-br from-[#3A4A5C] to-[#1E2830] flex-shrink-0 flex items-center justify-center border border-[#E8E8E4]">
-                <Home className="w-6 h-6 text-white/60" />
+              <div className="w-16 h-16 rounded-[9px] bg-stripes flex-shrink-0 flex items-center justify-center border-[1.5px] border-line">
+                <Home className="w-6 h-6 text-muted" />
               </div>
             )}
             <div className="min-w-0">
-              <p className="font-mono text-[10px] font-medium tracking-[0.12em] uppercase text-[#737370] mb-1">Your Listing</p>
-              <p className="text-[14px] font-bold text-[#1A1816] truncate leading-snug">{formData?.location || 'Untitled Property'}</p>
+              <p className="font-mono text-[10px] font-semibold tracking-[0.14em] uppercase text-muted mb-1">Your Listing</p>
+              <p className="text-[14px] font-bold text-ink truncate leading-snug">{formData?.location || 'Untitled Property'}</p>
               {formData?.property_type && (
-                <p className="text-[12px] text-[#737370] truncate mt-0.5">{formData.property_type}</p>
+                <p className="font-mono text-[11px] text-muted truncate mt-0.5">{formData.property_type}</p>
               )}
             </div>
           </div>
 
           {/* Order lines */}
-          <div className="p-5 flex-1 border-b border-[#E8E8E4]">
+          <div className="p-5 flex-1 border-b border-hairline">
             <div className="flex justify-between items-baseline mb-3.5">
-              <p className="font-mono text-[10px] font-medium tracking-[0.12em] uppercase text-[#737370]">Order Summary</p>
-              <p className="text-[11px] text-[#737370] font-medium">{1 + selectedAddOns.length} item{selectedAddOns.length !== 0 ? 's' : ''}</p>
+              <p className="font-mono text-[10px] font-semibold tracking-[0.14em] uppercase text-muted">Order Summary</p>
+              <p className="font-mono text-[11px] text-muted font-medium">{1 + selectedAddOns.length} item{selectedAddOns.length !== 0 ? 's' : ''}</p>
             </div>
-            <div className="divide-y divide-[#F0F0EE]">
+            <div className="divide-y divide-hairline-2">
               <div className="flex justify-between items-baseline py-2">
-                <span className="text-[13px] font-medium text-[#1A1816]">Basic Listing <span className="font-normal text-[#737370]">· 30 days</span></span>
-                <span className="text-[13px] font-bold text-[#0F6E56]">FREE</span>
+                <span className="text-[13px] font-medium text-body">Basic Listing <span className="font-normal text-muted">· 30 days</span></span>
+                <span className="font-mono text-[12.5px] font-bold text-ink">FREE</span>
               </div>
               {selectedAddOns.map(id => {
                 const ao = ADD_ONS.find(a => a.id === id)
                 if (!ao) return null
                 return (
                   <div key={id} className="flex justify-between items-baseline py-2">
-                    <span className="text-[13px] text-[#444441]">
-                      <span className="text-[11px] text-[#A8A8A4] mr-1">+</span>{ao.label}
+                    <span className="text-[13px] text-smoke-2">
+                      <span className="text-[11px] text-mist mr-1">+</span>{ao.label}
                     </span>
-                    <span className="text-[13px] font-bold text-[#0F6E56]">{isLifetimeFree ? 'Free' : `+$${(ao.price / 100).toFixed(2)}`}</span>
+                    <span className="font-mono text-[12.5px] font-bold text-ink">{isLifetimeFree ? 'Free' : `+$${(ao.price / 100).toFixed(2)}`}</span>
                   </div>
                 )
               })}
               {discountLineAmount > 0 && (
                 <div className="flex justify-between items-baseline py-2">
-                  <span className="text-[13px] text-[#0F6E56] flex items-center gap-1">
+                  <span className="text-[13px] text-ink flex items-center gap-1">
                     <span className="text-[11px]">↓</span>{appliedPromo?.name || 'Promo discount'}
                   </span>
-                  <span className="text-[13px] font-bold text-[#0F6E56]">−${(discountLineAmount / 100).toFixed(2)}</span>
+                  <span className="font-mono text-[12.5px] font-bold text-ink">−${(discountLineAmount / 100).toFixed(2)}</span>
                 </div>
               )}
             </div>
@@ -2026,12 +2036,12 @@ function AddOnsTab({
 
           {/* Promo code — hidden for lifetime free accounts */}
           {total > 0 && !isLifetimeFree && (
-            <div className="px-5 py-4 border-b border-[#E8E8E4]">
+            <div className="px-5 py-4 border-b border-hairline">
               {appliedPromo ? (
                 <div className="flex items-center justify-between gap-2">
                   <div>
-                    <p className="text-[12px] font-semibold text-[#0F6E56]">{appliedPromo.name} applied</p>
-                    <p className="text-[11px] text-[#737370]">
+                    <p className="text-[12px] font-semibold text-ink">{appliedPromo.name} applied</p>
+                    <p className="font-mono text-[11px] text-muted">
                       {appliedPromo.discount.type === 'percent'
                         ? `${appliedPromo.discount.value}% off`
                         : `$${appliedPromo.discount.value.toFixed(2)} off`}
@@ -2041,12 +2051,12 @@ function AddOnsTab({
                     <button
                       type="button"
                       onClick={() => { setAppliedPromo(null); setPromoCode(''); setFinalAmount(null) }}
-                      className="text-[11px] text-[#D03839] font-medium hover:underline"
+                      className="font-mono text-[11px] uppercase tracking-[0.06em] text-ink font-semibold underline underline-offset-2 hover:bg-tint"
                     >Remove</button>
                   )}
                 </div>
               ) : addOnClientSecret ? (
-                <p className="text-[12px] text-[#A8A8A4]">No promo code applied</p>
+                <p className="font-mono text-[11px] text-mist">No promo code applied</p>
               ) : (
                 <div>
                   <div className="flex gap-2">
@@ -2056,35 +2066,34 @@ function AddOnsTab({
                       onChange={e => setPromoCode(e.target.value.toUpperCase())}
                       onKeyDown={e => e.key === 'Enter' && validatePromo()}
                       placeholder="Promo code"
-                      className="flex-1 h-9 px-3 text-[13px] border border-[#E8E8E4] rounded outline-none focus:border-[#1A1816] bg-white"
-                      style={{ fontFamily: 'var(--font-dm-sans), sans-serif' }}
+                      className="flex-1 h-9 px-3 font-mono text-[12px] tracking-[0.04em] border-[1.5px] border-line rounded-[8px] outline-none focus:border-ink focus:shadow-offset-2 transition-all duration-120 bg-white placeholder:text-mist"
                     />
                     <button
                       type="button"
                       onClick={validatePromo}
                       disabled={promoValidating || !promoCode.trim()}
-                      className="h-9 px-3 text-[13px] font-semibold text-white bg-[#1A1816] rounded disabled:opacity-40 hover:bg-[#333] transition-colors flex items-center gap-1.5"
+                      className={`h-9 px-3 text-[13px] ${BTN_PRIMARY_CLS} disabled:opacity-40 flex items-center gap-1.5`}
                     >
-                      {promoValidating ? <span className="animate-spin w-3 h-3 border-2 border-white/30 border-t-white rounded-full" /> : 'Apply'}
+                      {promoValidating ? <span className="motion-safe:animate-spin w-3 h-3 border-2 border-white/30 border-t-white rounded-full" /> : 'Apply'}
                     </button>
                   </div>
-                  {promoError && <p className="text-[11px] text-[#D03839] mt-1.5">{promoError}</p>}
+                  {promoError && <p className="text-[11px] font-semibold text-ink mt-1.5">{promoError}</p>}
                 </div>
               )}
             </div>
           )}
 
           {/* Total */}
-          <div className="px-5 py-4 flex justify-between items-baseline border-b border-[#E8E8E4]">
+          <div className="px-5 py-4 flex justify-between items-baseline border-b border-hairline">
             <div>
-              <p className="text-[15px] font-bold text-[#1A1816]">Total</p>
-              <p className="text-[11px] text-[#737370] mt-0.5">{isLifetimeFree ? 'Complimentary — DeelMap account' : total === 0 ? 'Included in your subscription' : 'One-time charge'}</p>
+              <p className="font-display text-[15px] font-bold text-ink">Total</p>
+              <p className="font-mono text-[10.5px] text-muted mt-0.5">{isLifetimeFree ? 'Complimentary — DeelMap account' : total === 0 ? 'Included in your subscription' : 'One-time charge'}</p>
             </div>
             <div className="text-right">
               {!isLifetimeFree && discountLineAmount > 0 && (
-                <p className="text-[13px] text-[#A8A8A4] line-through">${(total / 100).toFixed(2)}</p>
+                <p className="font-mono text-[12px] text-mist line-through">${(total / 100).toFixed(2)}</p>
               )}
-              <span className={`text-[28px] font-bold tracking-tight ${isLifetimeFree ? 'text-[#0F6E56]' : 'text-[#1A1816]'}`}>
+              <span className="font-display text-[28px] font-bold tracking-tight text-ink">
                 {isLifetimeFree ? 'Free' : `$${(displayTotal / 100).toFixed(2)}`}
               </span>
             </div>
@@ -2098,10 +2107,10 @@ function AddOnsTab({
                   type="button"
                   onClick={handleInitPayment}
                   disabled={addOnLoading}
-                  className={`w-full h-[48px] text-white text-[14px] font-semibold rounded transition-all disabled:opacity-50 flex items-center justify-center gap-2 ${isLifetimeFree ? 'bg-[#0F6E56] hover:bg-[#0D5E49]' : 'bg-[#D03839] hover:bg-[#E0493B]'}`}
+                  className={`w-full h-[48px] text-[14px] ${BTN_PRIMARY_CLS} disabled:opacity-50 flex items-center justify-center gap-2`}
                 >
                   {addOnLoading
-                    ? <><span className="animate-spin w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full" />Processing payment…</>
+                    ? <><span className="motion-safe:animate-spin w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full" />Processing payment…</>
                     : isLifetimeFree ? 'Publish Listing' : `Pay $${(displayTotal / 100).toFixed(2)} with saved card`}
                 </button>
               ) : (
@@ -2109,10 +2118,10 @@ function AddOnsTab({
                   type="button"
                   onClick={() => onPublish('active', { skipFeaturedPrompt: true, forceAutoSelectFeatured: true })}
                   disabled={saving}
-                  className="w-full h-[48px] bg-[#D03839] hover:bg-[#E0493B] text-white text-[14px] font-semibold rounded transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                  className={`w-full h-[48px] text-[14px] ${BTN_PRIMARY_CLS} disabled:opacity-50 flex items-center justify-center gap-2`}
                 >
                   {saving
-                    ? <><span className="animate-spin w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full" />Publishing…</>
+                    ? <><span className="motion-safe:animate-spin w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full" />Publishing…</>
                     : <>Publish for Free <Eye className="w-4 h-4" /></>}
                 </button>
               )}
@@ -2122,27 +2131,27 @@ function AddOnsTab({
           {/* Payment result messages */}
           {paymentSuccess && (
             <div className="px-5 pb-4">
-              <div className="p-3 bg-[#E4F5EC] border border-[#A8DFBA] rounded text-[13px] text-[#0F6E56] font-medium flex items-center gap-2">
+              <div className="p-3 bg-tint border-[1.5px] border-ink rounded-[10px] text-[13px] text-ink font-semibold flex items-center gap-2">
                 <Check className="w-4 h-4 flex-shrink-0" />{paymentSuccess}
               </div>
             </div>
           )}
           {addOnError && !addOnClientSecret && (
             <div className="px-5 pb-4">
-              <div className="p-3 bg-[#FEF0EF] border border-[#F5C4C0] rounded text-[13px] text-[#D03839]">{addOnError}</div>
+              <div className="p-3 bg-tint border-[1.5px] border-ink rounded-[10px] text-[13px] font-semibold text-ink">{addOnError}</div>
             </div>
           )}
 
           {/* Secured footer */}
           {!isLifetimeFree && (
-            <div className="px-5 py-3.5 bg-[#FAFAF6] border-t border-[#E8E8E4] text-center">
+            <div className="px-5 py-3.5 bg-tint-3 border-t border-hairline text-center">
               <div className="flex items-center justify-center gap-1.5 mb-1">
-                <svg className="w-3 h-3 text-[#737370]" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+                <svg className="w-3 h-3 text-muted" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
                   <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
                 </svg>
-                <span className="text-[12px] text-[#737370]">Secured by Stripe</span>
+                <span className="font-mono text-[11px] tracking-[0.05em] text-muted">Secured by Stripe</span>
               </div>
-              <p className="text-[11px] text-[#A8A8A4]">No subscription · No auto-renewal</p>
+              <p className="font-mono text-[10.5px] text-mist">No subscription · No auto-renewal</p>
             </div>
           )}
         </div>
@@ -2150,13 +2159,13 @@ function AddOnsTab({
 
       {/* ── Payment form — full width below, shown after "Proceed to Payment" ── */}
       {addOnClientSecret && stripePromise && (
-        <div className="border border-[#E8E8E4] rounded p-6 bg-white">
-          <p className="text-[14px] font-semibold text-[#1A1816] mb-1">Payment Details</p>
-          <p className="text-[13px] text-[#737370] mb-5">
-            Your card will be charged <span className="font-semibold text-[#1A1816]">${((finalAmount ?? total) / 100).toFixed(2)}</span> upon publishing.
+        <div className="border-[1.5px] border-ink rounded-[14px] shadow-offset-4 p-6 bg-white">
+          <p className={`${SECTION_H_CLS} mb-1`}>Payment Details</p>
+          <p className="text-[13px] text-muted mb-5">
+            Your card will be charged <span className="font-mono font-semibold text-ink">${((finalAmount ?? total) / 100).toFixed(2)}</span> upon publishing.
           </p>
           {addOnError && (
-            <div className="mb-4 p-3 bg-[#FEF0EF] border border-[#F5C4C0] rounded text-[13px] text-[#D03839]">{addOnError}</div>
+            <div className="mb-4 p-3 bg-tint border-[1.5px] border-ink rounded-[10px] text-[13px] font-semibold text-ink">{addOnError}</div>
           )}
           <Elements stripe={stripePromise} options={{ clientSecret: addOnClientSecret }}>
             <AddOnsCheckoutForm

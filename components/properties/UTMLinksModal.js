@@ -4,10 +4,10 @@ import { useState, useEffect } from 'react';
 import { X, Copy, Check, ExternalLink, Link2, Users, Info } from 'lucide-react';
 
 const PLATFORMS = [
-  { name: 'Facebook', code: 'facebook', utm: 'fb', icon: 'https://cdn.simpleicons.org/facebook/1877F2' },
-  { name: 'Twitter', code: 'twitter', utm: 'x', icon: 'https://cdn.simpleicons.org/x/000000' },
-  { name: 'Instagram', code: 'instagram', utm: 'ig', icon: 'https://cdn.simpleicons.org/instagram/E4405F' },
-  { name: 'Email', code: 'email', utm: 'email', icon: 'https://cdn.simpleicons.org/gmail/EA4335' },
+  { name: 'Facebook', code: 'facebook', utm: 'fb', icon: 'https://cdn.simpleicons.org/facebook/111111' },
+  { name: 'Twitter', code: 'twitter', utm: 'x', icon: 'https://cdn.simpleicons.org/x/111111' },
+  { name: 'Instagram', code: 'instagram', utm: 'ig', icon: 'https://cdn.simpleicons.org/instagram/111111' },
+  { name: 'Email', code: 'email', utm: 'email', icon: 'https://cdn.simpleicons.org/gmail/111111' },
 ];
 
 const DEELMAP_VIEW_BASE_URL = typeof window !== 'undefined'
@@ -55,28 +55,28 @@ export function UTMLinksModal({ isOpen, onClose, property, baseUrl, userId }) {
 
   return (
     <div
-      className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/20 backdrop-blur-sm"
+      className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-ink/40"
       onClick={onClose}
       role="dialog"
       aria-modal="true"
       aria-labelledby="utm-modal-title"
     >
       <div
-        className="bg-white rounded shadow-xl w-full max-w-xl max-h-[90vh] overflow-hidden flex flex-col border border-[#E8E8E4]"
+        className="bg-white rounded-[14px] border-[1.5px] border-ink shadow-offset-6 w-full max-w-xl max-h-[90vh] overflow-hidden flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-[#E8E8E4]">
+        <div className="flex items-center justify-between gap-3 px-5 py-4 border-b-[1.5px] border-ink">
           <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-1.5 text-[#737370] mb-0.5">
+            <div className="flex items-center gap-1.5 text-muted mb-0.5">
               <Link2 className="w-3.5 h-3.5 shrink-0" />
-              <span className="text-[11px] font-semibold uppercase tracking-[1px]">Share links</span>
+              <span className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em]">Share links</span>
             </div>
-            <h2 id="utm-modal-title" className="text-[16px] font-bold text-[#1A1816]">
+            <h2 id="utm-modal-title" className="font-display text-[16.5px] font-bold tracking-[-0.01em] text-body">
               UTM tracking links
             </h2>
             {displayAddress && (
-              <p className="text-[12px] text-[#737370] mt-0.5 truncate" title={displayAddress}>
+              <p className="text-[12px] text-muted mt-0.5 truncate" title={displayAddress}>
                 {displayAddress}
               </p>
             )}
@@ -84,7 +84,7 @@ export function UTMLinksModal({ isOpen, onClose, property, baseUrl, userId }) {
           <button
             type="button"
             onClick={onClose}
-            className="w-8 h-8 flex items-center justify-center rounded hover:bg-[#FAFAF8] text-[#737370] hover:text-[#1A1816] transition-colors shrink-0"
+            className="w-8 h-8 flex items-center justify-center rounded-[8px] hover:bg-tint text-muted hover:text-body transition-colors duration-120 shrink-0"
             aria-label="Close"
           >
             <X className="w-4 h-4" />
@@ -92,10 +92,10 @@ export function UTMLinksModal({ isOpen, onClose, property, baseUrl, userId }) {
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-4 min-h-0 bg-[#FAFAF8]">
+        <div className="flex-1 overflow-y-auto p-4 min-h-0 bg-tint-3">
           {!hasValidSlug && (
-            <div className="rounded border border-[#F5D78E] bg-[#FEF9EC] p-3 mb-3">
-              <p className="text-[12px] text-[#B5620A]">
+            <div className="rounded-[10px] border-[1.5px] border-ink bg-tint p-3 mb-3">
+              <p className="text-[12px] font-semibold text-ink">
                 No shareable link yet. Save or publish this property first so a link can be generated.
               </p>
             </div>
@@ -110,27 +110,27 @@ export function UTMLinksModal({ isOpen, onClose, property, baseUrl, userId }) {
               return (
                 <div
                   key={platform.code}
-                  className="rounded border border-[#E8E8E4] bg-white overflow-hidden"
+                  className="rounded-[12px] border-[1.5px] border-ink bg-white overflow-hidden"
                 >
                   <div className="p-3">
                     {/* Row 1: platform name left, viewer count right */}
                     <div className="flex items-center justify-between gap-2 mb-2">
                       <span className="inline-flex items-center gap-2">
                         <img src={platform.icon} alt="" className="w-4 h-4 shrink-0" />
-                        <span className="text-[13px] font-semibold text-[#1A1816]">{platform.name}</span>
+                        <span className="text-[13px] font-semibold text-body">{platform.name}</span>
                       </span>
                       {countsLoading ? (
-                        <span className="h-5 w-16 bg-[#F0F0EE] rounded animate-pulse" />
+                        <span className="h-5 w-16 bg-tint rounded motion-safe:animate-pulse" />
                       ) : count !== null ? (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-[#FAFAF8] border border-[#E8E8E4] px-2 py-0.5 text-[11px] font-medium text-[#737370]">
-                          <Users className="w-3 h-3 text-[#A8A8A4]" />
+                        <span className="inline-flex items-center gap-1 rounded-pill bg-tint border border-line px-2 py-0.5 font-mono text-[10.5px] font-semibold text-ink">
+                          <Users className="w-3 h-3 text-muted" />
                           {count} {count === 1 ? 'viewer' : 'viewers'}
                         </span>
                       ) : null}
                     </div>
                     {/* Row 2: link block */}
-                    <div className="rounded bg-[#FAFAF8] border border-[#E8E8E4] p-2 mb-2">
-                      <code className="text-[11px] text-[#1A1816] break-all block leading-relaxed">
+                    <div className="rounded-[8px] bg-tint-3 border border-hairline p-2 mb-2">
+                      <code className="font-mono text-[11px] text-body break-all block leading-relaxed">
                         {link}
                       </code>
                     </div>
@@ -140,7 +140,7 @@ export function UTMLinksModal({ isOpen, onClose, property, baseUrl, userId }) {
                         type="button"
                         onClick={(e) => { e.stopPropagation(); openLink(platform); }}
                         disabled={!hasValidSlug}
-                        className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded text-[12px] font-semibold border border-[#E8E8E4] text-[#1A1816] bg-white hover:bg-[#FAFAF8] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-[9px] text-[12px] font-semibold border-[1.5px] border-ink text-ink bg-white shadow-offset-2 hover:bg-tint transition-all duration-120 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         <ExternalLink className="w-3.5 h-3.5" />
                         Open
@@ -148,10 +148,10 @@ export function UTMLinksModal({ isOpen, onClose, property, baseUrl, userId }) {
                       <button
                         type="button"
                         onClick={() => copyToClipboard(link, platform.code)}
-                        className={`inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded text-[12px] font-semibold transition-colors ${
+                        className={`inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-[9px] text-[12px] font-semibold transition-colors duration-120 ${
                           isCopied
-                            ? 'bg-[#E4F5EC] text-[#0F6E56] border border-[#A8DFBA]'
-                            : 'bg-[#FEF0EF] text-[#D03839] hover:bg-[#FEE4E3] border border-[#F5C4C0]'
+                            ? 'bg-tint text-ink border-[1.5px] border-ink'
+                            : 'bg-ink text-white border-[1.5px] border-ink hover:bg-smoke-2'
                         }`}
                       >
                         {isCopied ? (
@@ -167,9 +167,9 @@ export function UTMLinksModal({ isOpen, onClose, property, baseUrl, userId }) {
             })}
           </div>
 
-          <div className="mt-4 flex items-start gap-2 rounded bg-white border border-[#E8E8E4] p-3">
-            <Info className="w-3.5 h-3.5 text-[#A8A8A4] shrink-0 mt-0.5" />
-            <p className="text-[11px] text-[#737370] leading-relaxed">
+          <div className="mt-4 flex items-start gap-2 rounded-[10px] bg-white border border-hairline p-3">
+            <Info className="w-3.5 h-3.5 text-mist shrink-0 mt-0.5" />
+            <p className="text-[11px] text-muted leading-relaxed">
               Share each link on the matching platform. Visitors who click through will be counted by source.
             </p>
           </div>

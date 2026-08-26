@@ -57,13 +57,13 @@ const MonthView = ({ currentDate, bookings, rooms, halls, isRoomView }) => {
   const getStatusColor = (status) => {
     switch (status?.toLowerCase()) {
       case 'booked':
-        return 'bg-red-100 border-red-300 text-red-700';
+        return 'bg-neutral-100 border-neutral-300 text-neutral-700';
       case 'checked_in':
-        return 'bg-yellow-100 border-yellow-300 text-yellow-700';
+        return 'bg-neutral-100 border-neutral-300 text-neutral-700';
       case 'checked_out':
         return 'bg-neutral-200 border-neutral-300 text-neutral-600';
       default:
-        return 'bg-green-100 border-green-300 text-green-700';
+        return 'bg-neutral-100 border-neutral-300 text-neutral-700';
     }
   };
 

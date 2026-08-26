@@ -27,7 +27,7 @@ const ViewForm = ({ isOpen, onClose, amenity }) => {
           {/* Side Panel */}
           <div className="fixed right-0 top-0 h-screen w-full sm:w-[90%] md:w-[600px] lg:w-[700px] bg-white shadow-2xl z-[60] flex flex-col">
             {/* Header */}
-            <div className="bg-[#472F97] px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between">
+            <div className="bg-[#111111] px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between">
               <div className="flex items-center gap-2 sm:gap-3">
                 <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-white/10 flex items-center justify-center">
                   <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
@@ -99,15 +99,15 @@ const ViewForm = ({ isOpen, onClose, amenity }) => {
                   <div className="flex items-center gap-1.5 sm:gap-2">
                     {amenity.is_active ? (
                       <>
-                        <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-green-600" />
-                        <span className="px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-semibold bg-green-100 text-green-700 border border-green-200">
+                        <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-neutral-600" />
+                        <span className="px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-semibold bg-neutral-100 text-neutral-700 border border-neutral-200">
                           Active
                         </span>
                       </>
                     ) : (
                       <>
-                        <XCircle className="w-4 h-4 sm:w-5 sm:h-5 text-red-600" />
-                        <span className="px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-semibold bg-red-100 text-red-700 border border-red-200">
+                        <XCircle className="w-4 h-4 sm:w-5 sm:h-5 text-neutral-600" />
+                        <span className="px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-semibold bg-neutral-100 text-neutral-700 border border-neutral-200">
                           Inactive
                         </span>
                       </>
@@ -120,7 +120,7 @@ const ViewForm = ({ isOpen, onClose, amenity }) => {
               <div className="sticky bottom-0 bg-white border-t border-neutral-200 px-4 sm:px-6 py-3 sm:py-4">
                 <button
                   onClick={onClose}
-                  className="w-full px-3 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm bg-[#472F97] hover:bg-[#3a2578] text-white font-medium rounded-xl transition-colors"
+                  className="w-full px-3 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm bg-[#111111] hover:bg-[#444444] text-white font-medium rounded-xl transition-colors"
                 >
                   Close
                 </button>

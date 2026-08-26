@@ -29,6 +29,15 @@ const PROPERTY_TYPES = [
   'Other'
 ];
 
+// ── BW-retro shared field recipes (docs/BRAND_UI.md) ─────────────────────────
+const INPUT_CLS = 'w-full bg-white border-[1.5px] border-line rounded-[9px] px-3.5 py-3 text-[14px] text-body placeholder:text-mist focus:border-ink focus:shadow-offset-3 focus:outline-none transition-all duration-120';
+const INPUT_MONO_CLS = 'w-full bg-white border-[1.5px] border-line rounded-[9px] px-3.5 py-3 text-[14px] font-mono text-body placeholder:text-mist focus:border-ink focus:shadow-offset-3 focus:outline-none transition-all duration-120';
+const LABEL_CLS = 'block text-[13px] font-semibold text-ink mb-2';
+const HELP_CLS = 'text-[12px] text-muted mt-1';
+const SECTION_H_CLS = 'font-display font-semibold text-[16.5px] tracking-[-0.01em] text-ink';
+const BTN_PRIMARY_CLS = 'bg-ink text-white border-[1.5px] border-ink rounded-[10px] font-semibold shadow-soft-3 hover:bg-smoke-2 transition-all duration-120';
+const BTN_GHOST_CLS = 'bg-white text-ink border-[1.5px] border-ink rounded-[10px] font-semibold shadow-offset-3 hover:bg-tint transition-all duration-120';
+
 const slugToTitle = (slug) => (
   slug
     ? slug.replace(/\d+$/, '').replace(/-+$/, '').replace(/-/g, ' ').trim()
@@ -68,15 +77,15 @@ function PropertySelect({ value, onChange, options }) {
   return (
     <div className="relative" ref={ref}>
       <button type="button" onClick={() => setOpen(o => !o)}
-        className="w-full px-3 py-2.5 pr-8 border border-[#E8E8E4] rounded bg-white text-[13px] text-left text-[#1A1816] cursor-pointer hover:border-[#1A1816] transition-colors flex items-center justify-between">
-        <span className={value === '' ? 'text-[#A8A8A4]' : ''}>{label}</span>
-        <ChevronDown className={`absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none text-[#737370] transition-transform ${open ? 'rotate-180' : ''}`} />
+        className="w-full px-3.5 py-3 pr-8 border-[1.5px] border-line rounded-[9px] bg-white text-[14px] text-left text-body cursor-pointer hover:border-ink focus:border-ink focus:shadow-offset-3 focus:outline-none transition-all duration-120 flex items-center justify-between">
+        <span className={value === '' ? 'text-mist' : ''}>{label}</span>
+        <ChevronDown className={`absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none text-muted transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
       {open && (
-        <div className="absolute z-30 top-full left-0 mt-1 w-full bg-white border border-[#E8E8E4] rounded shadow-lg overflow-hidden">
+        <div className="absolute z-30 top-full left-0 mt-1.5 w-full bg-white border-[1.5px] border-ink rounded-[10px] shadow-offset-3 overflow-hidden">
           {options.map(opt => (
             <div key={opt.value} onClick={() => { onChange(String(opt.value)); setOpen(false) }}
-              className={`px-3 py-2 text-[13px] cursor-pointer transition-colors ${String(value) === String(opt.value) ? 'bg-[#1A1816] text-white' : 'text-[#1A1816] hover:bg-[#FAFAF8]'}`}>
+              className={`px-3.5 py-2 text-[13px] cursor-pointer transition-colors duration-120 ${String(value) === String(opt.value) ? 'bg-ink text-white' : 'text-body hover:bg-tint'}`}>
               {opt.label}
             </div>
           ))}
@@ -1007,13 +1016,13 @@ export default function EditPropertyPage() {
 
   if (accessDenied) {
     return (
-      <div className="min-h-screen bg-[#FAFAF8] flex items-center justify-center p-6" style={{ fontFamily: 'var(--font-dm-sans), sans-serif' }}>
-        <div className="bg-white border border-[#E8E8E4] rounded p-10 text-center max-w-sm">
-          <div className="w-12 h-12 bg-[#F3F3F0] rounded flex items-center justify-center mx-auto mb-4">
-            <AlertTriangle className="w-6 h-6 text-[#A8A8A4]" />
+      <div className="min-h-screen bg-tint-3 flex items-center justify-center p-6 font-sans">
+        <div className="bg-white border-[1.5px] border-ink rounded-[14px] shadow-offset-4 p-10 text-center max-w-sm">
+          <div className="w-12 h-12 bg-tint border-[1.5px] border-ink rounded-[10px] flex items-center justify-center mx-auto mb-4">
+            <AlertTriangle className="w-6 h-6 text-ink" />
           </div>
-          <h2 className="text-[16px] font-bold text-[#1A1816] mb-2">Access Restricted</h2>
-          <p className="text-[13px] text-[#737370] leading-relaxed">You don&apos;t have permission to edit listings. Contact your team owner to request access.</p>
+          <h2 className={`${SECTION_H_CLS} mb-2`}>Access Restricted</h2>
+          <p className="text-[13px] text-muted leading-relaxed">You don&apos;t have permission to edit listings. Contact your team owner to request access.</p>
         </div>
       </div>
     );
@@ -1022,25 +1031,25 @@ export default function EditPropertyPage() {
   if (loadingProperty) {
     return (
       <div className="min-h-[50vh] flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-2 border-neutral-900 border-t-transparent"></div>
+        <div className="motion-safe:animate-spin rounded-full h-8 w-8 border-2 border-ink border-t-transparent"></div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-3 md:space-y-4">
+    <div className="space-y-3 md:space-y-4 font-sans">
       {/* Header — orientation only. Actions live in the sticky footer. */}
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0">
           <button
             onClick={() => router.back()}
-            className="p-2 rounded hover:bg-neutral-100 transition-colors shrink-0"
+            className="p-2 rounded-[8px] hover:bg-tint transition-colors duration-120 shrink-0"
             aria-label="Go back"
           >
-            <ArrowLeft size={20} className="text-neutral-600" />
+            <ArrowLeft size={20} className="text-muted" />
           </button>
           <div className="min-w-0">
-            <h1 className="text-lg md:text-xl font-semibold tracking-tight text-[#1A1816] truncate">
+            <h1 className="font-display font-bold text-[20px] md:text-[22px] tracking-[-0.025em] text-ink truncate">
               {formData.location || formData.title || 'Edit Property'}
             </h1>
             {formData.status === 'draft' && (
@@ -1060,24 +1069,24 @@ export default function EditPropertyPage() {
 
       {/* Notifications */}
       {error && (
-        <div className="flex items-start gap-3 p-3 bg-[#FEF0EF] border border-[#F5C4C0] rounded text-[#B82F30]">
+        <div className="flex items-start gap-3 p-3 bg-tint border-[1.5px] border-ink rounded-[10px] text-ink">
           <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
           <div className="flex-1">
-            <p className="text-sm font-medium">{error}</p>
+            <p className="text-[13px] font-semibold">{error}</p>
           </div>
-          <button onClick={() => setError(null)} className="text-[#F5C4C0] hover:text-[#B82F30]">
+          <button onClick={() => setError(null)} className="text-ink/60 hover:text-ink">
             <X className="w-4 h-4" />
           </button>
         </div>
       )}
 
       {success && (
-        <div className="flex items-start gap-3 p-3 bg-[#E4F5EC] border border-[#9FDBB8] rounded text-[#0F6E56]">
+        <div className="flex items-start gap-3 p-3 bg-tint border-[1.5px] border-ink rounded-[10px] text-ink">
           <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
           <div className="flex-1">
-            <p className="text-sm font-medium">{success}</p>
+            <p className="text-[13px] font-semibold">{success}</p>
           </div>
-          <button onClick={() => setSuccess(null)} className="text-[#9FDBB8] hover:text-[#0F6E56]">
+          <button onClick={() => setSuccess(null)} className="text-ink/60 hover:text-ink">
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -1085,11 +1094,11 @@ export default function EditPropertyPage() {
 
       {/* Upload Warning */}
       {imageUploadStatus.isUploading && (
-        <div className="flex items-start gap-3 p-4 bg-[#FAFAF8] border border-[#E8E8E4] rounded">
-          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-[#1A1816]"></div>
+        <div className="flex items-start gap-3 p-4 bg-tint border-[1.5px] border-ink rounded-[10px]">
+          <div className="motion-safe:animate-spin rounded-full h-5 w-5 border-2 border-line border-t-ink"></div>
           <div>
-            <h4 className="font-medium text-[#1A1816] mb-1">Uploading Images</h4>
-            <p className="text-sm text-[#737370]">
+            <h4 className="font-semibold text-ink mb-1 text-[13px]">Uploading Images</h4>
+            <p className="text-[13px] text-muted">
               Please wait for {imageUploadStatus.uploadingCount} image{imageUploadStatus.uploadingCount > 1 ? 's' : ''} to finish uploading before sending for review.
             </p>
           </div>
@@ -1116,33 +1125,33 @@ export default function EditPropertyPage() {
             if (el) {
               el.scrollIntoView({ behavior: 'smooth', block: 'center' })
               // brief highlight pulse so the user sees what they jumped to
-              el.classList.add('ring-2', 'ring-[#B42318]', 'ring-offset-2', 'rounded')
-              setTimeout(() => el.classList.remove('ring-2', 'ring-[#B42318]', 'ring-offset-2', 'rounded'), 1500)
+              el.classList.add('ring-2', 'ring-ink', 'ring-offset-2', 'rounded-[10px]')
+              setTimeout(() => el.classList.remove('ring-2', 'ring-ink', 'ring-offset-2', 'rounded-[10px]'), 1500)
             }
           }, 60)
         }
         return (
-          <div className="bg-[#FEF3F2] border border-[#FECDCA] rounded p-4">
+          <div className="bg-tint border-[1.5px] border-ink rounded-[12px] shadow-offset-3 p-4">
             <div className="flex items-start gap-3">
-              <div className="w-8 h-8 rounded bg-[#FEE4E2] flex items-center justify-center flex-shrink-0">
-                <AlertTriangle className="w-4 h-4 text-[#B42318]" />
+              <div className="w-8 h-8 rounded-[8px] bg-white border-[1.5px] border-ink flex items-center justify-center flex-shrink-0">
+                <AlertTriangle className="w-4 h-4 text-ink" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-[14px] font-semibold text-[#B42318] mb-1">Your listing wasn&apos;t approved</p>
-                <p className="text-[13px] text-[#B42318]/80 mb-3">Click an issue to jump to it. Fix it and click <span className="font-semibold">Publish</span> to send back for review.</p>
+                <p className="text-[14px] font-semibold text-ink mb-1">Your listing wasn&apos;t approved</p>
+                <p className="text-[13px] text-smoke-2 mb-3">Click an issue to jump to it. Fix it and click <span className="font-semibold text-ink">Publish</span> to send back for review.</p>
                 <div className="space-y-1">
                   {Object.entries(rMap).map(([key, reason]) => (
                     <button
                       key={key}
                       type="button"
                       onClick={() => goToIssue(key)}
-                      className="flex items-start gap-2 text-left w-full px-2 py-1.5 -mx-2 rounded hover:bg-[#FEE4E2] transition-colors group"
+                      className="flex items-start gap-2 text-left w-full px-2 py-1.5 -mx-2 rounded-[8px] hover:bg-white transition-colors duration-120 group"
                     >
-                      <span className="w-1.5 h-1.5 rounded-full bg-[#B42318] flex-shrink-0 mt-1.5" />
-                      <p className="text-[12px] text-[#B42318] flex-1">
-                        <span className="font-semibold capitalize">{key === 'inspection' ? 'Inspection Report' : key}:</span> {reason}
+                      <span className="w-1.5 h-1.5 rounded-pill bg-ink flex-shrink-0 mt-1.5" />
+                      <p className="text-[12px] text-smoke-2 flex-1">
+                        <span className="font-semibold text-ink capitalize">{key === 'inspection' ? 'Inspection Report' : key}:</span> {reason}
                       </p>
-                      <span className="text-[11px] text-[#B42318]/60 font-medium opacity-0 group-hover:opacity-100 transition-opacity shrink-0 mt-0.5">Jump to field →</span>
+                      <span className="font-mono text-[10.5px] uppercase tracking-[0.06em] text-muted opacity-0 group-hover:opacity-100 transition-opacity shrink-0 mt-0.5">Jump to field →</span>
                     </button>
                   ))}
                 </div>
@@ -1161,8 +1170,9 @@ export default function EditPropertyPage() {
           ownership: !!rMap.contract,
         }
         return (
-      <div className="bg-white rounded border border-[#E8E8E4] overflow-hidden">
-        <div className="flex border-b border-[#E8E8E4]">
+      <div className="bg-white border-[1.5px] border-ink rounded-[14px] shadow-offset-4 overflow-hidden">
+        {/* Step indicator — mono numerals on a hairline track, ink marks progress */}
+        <div className="flex border-b border-hairline">
           {[
             { id: 'basic',     label: 'Basic Info' },
             { id: 'images',    label: 'Images' },
@@ -1173,18 +1183,18 @@ export default function EditPropertyPage() {
             <button
               key={tab.id}
               onClick={() => handleTabChange(tab.id)}
-              className={`flex-1 flex items-center justify-center gap-1.5 px-1 md:px-5 py-3.5 text-[12px] font-medium transition-colors border-b-2
+              className={`flex-1 flex items-center justify-center gap-2 px-1 md:px-5 py-3.5 font-mono text-[10.5px] font-semibold uppercase tracking-[0.08em] transition-colors duration-120 border-b-2 -mb-px
                 ${activeTab === tab.id
-                  ? 'border-[#D03839] text-[#D03839] bg-[#FEF0EF]/30'
-                  : 'border-transparent text-[#737370] hover:text-[#1A1816] hover:bg-[#FAFAF8]'}`}
+                  ? 'border-ink text-ink'
+                  : 'border-transparent text-muted hover:text-ink hover:bg-tint-3'}`}
             >
-              <span className={`w-[18px] h-[18px] rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0
-                ${activeTab === tab.id ? 'bg-[#D03839] text-white' : 'bg-[#E8E8E4] text-[#737370]'}`}
+              <span className={`w-[22px] h-[22px] rounded-pill border-[1.5px] flex items-center justify-center font-mono text-[11px] font-semibold flex-shrink-0
+                ${activeTab === tab.id ? 'bg-ink border-ink text-white shadow-offset-2' : 'bg-white border-line text-muted'}`}
               >
                 {idx + 1}
               </span>
               <span className="hidden sm:inline">{tab.label}</span>
-              {tabHasIssue[tab.id] && <span title="This tab has issues to fix" className="w-2 h-2 rounded-full bg-[#B42318] ring-2 ring-[#FEE4E2] flex-shrink-0 animate-pulse" />}
+              {tabHasIssue[tab.id] && <span title="This tab has issues to fix" className="w-2 h-2 rounded-pill bg-ink ring-2 ring-hairline-2 flex-shrink-0 motion-safe:animate-pulse" />}
             </button>
           ))}
         </div>
@@ -1195,34 +1205,34 @@ export default function EditPropertyPage() {
           {activeTab === 'basic' && (
             <div className="space-y-6">
               <div>
-                <label className="block text-sm font-semibold text-neutral-700 mb-2">Location *</label>
+                <label className={LABEL_CLS}>Location *</label>
                 <GooglePlacesAutocomplete
                   onAddressSelect={handleAddressSelect}
                   defaultValue={formData.location || ''}
                 />
-                <p className="text-xs text-neutral-500 mt-1">
+                <p className={HELP_CLS}>
                   Start typing to search for an address
                 </p>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-semibold text-neutral-700 mb-2">Price ($)</label>
+                  <label className={LABEL_CLS}>Price ($)</label>
                   <input
                     type="number"
                     min="0"
                     value={formData.price || ''}
                     onChange={(e) => handleInputChange('price', e.target.value)}
-                    className="w-full px-4 py-3 border-2 border-neutral-200 rounded focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all text-sm"
+                    className={INPUT_MONO_CLS}
                     placeholder="2500000"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-neutral-700 mb-2">Property Type</label>
+                  <label className={LABEL_CLS}>Property Type</label>
                   <select
                     value={formData.property_type ?? ''}
                     onChange={(e) => handleInputChange('property_type', e.target.value)}
-                    className="w-full px-4 py-3 border-2 border-neutral-200 rounded focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all text-sm"
+                    className={INPUT_CLS}
                   >
                     <option value="">Select property type</option>
                     {PROPERTY_TYPES.map((type) => (
@@ -1234,36 +1244,36 @@ export default function EditPropertyPage() {
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-sm font-semibold text-neutral-700 mb-2">Beds</label>
+                  <label className={LABEL_CLS}>Beds</label>
                   <input
                     type="number"
                     min="0"
                     step="1"
                     value={formData.bedrooms || ''}
                     onChange={(e) => handleInputChange('bedrooms', e.target.value)}
-                    className="w-full px-4 py-3 border-2 border-neutral-200 rounded focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all text-sm"
+                    className={INPUT_MONO_CLS}
                     placeholder="e.g. 3"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-neutral-700 mb-2">Baths</label>
+                  <label className={LABEL_CLS}>Baths</label>
                   <input
                     type="number"
                     min="0"
                     step="0.5"
                     value={formData.bathrooms || ''}
                     onChange={(e) => handleInputChange('bathrooms', e.target.value)}
-                    className="w-full px-4 py-3 border-2 border-neutral-200 rounded focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all text-sm"
+                    className={INPUT_MONO_CLS}
                     placeholder="e.g. 2 or 2.5"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-neutral-700 mb-2">Floor Area (sqft)</label>
+                  <label className={LABEL_CLS}>Floor Area (sqft)</label>
                   <input
                     type="number"
                     value={formData.floor_area || ''}
                     onChange={(e) => handleInputChange('floor_area', e.target.value)}
-                    className="w-full px-4 py-3 border-2 border-neutral-200 rounded focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all text-sm"
+                    className={INPUT_MONO_CLS}
                     placeholder="25000"
                     min="0"
                   />
@@ -1272,11 +1282,11 @@ export default function EditPropertyPage() {
 
               {sourceType !== 'scraped' && (
                 <div>
-                  <label className="block text-sm font-semibold text-neutral-700 mb-2">Property Status</label>
+                  <label className={LABEL_CLS}>Property Status</label>
                   <select
                     value={formData.property_status || 'available'}
                     onChange={(e) => handleInputChange('property_status', e.target.value)}
-                    className="w-full px-4 py-3 border-2 border-neutral-200 rounded focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all text-sm"
+                    className={INPUT_CLS}
                   >
                     {PROPERTY_STATUSES.map(status => (
                       <option key={status.value} value={status.value}>{status.label}</option>
@@ -1289,12 +1299,12 @@ export default function EditPropertyPage() {
                   Sellers can keep the defaults or override them per-listing. */}
               <div>
                 <div className="mb-3">
-                  <h3 className="text-[15px] font-semibold text-[#1A1816]">Contact Info</h3>
-                  <p className="text-[13px] text-[#737370] mt-0.5">How buyers can reach you about this listing. Pre-filled from your profile — edit if you want different contact info on this listing.</p>
+                  <h3 className={SECTION_H_CLS}>Contact Info</h3>
+                  <p className="text-[13px] text-muted mt-0.5">How buyers can reach you about this listing. Pre-filled from your profile — edit if you want different contact info on this listing.</p>
                 </div>
                 {sellerPlanType === 'enterprise' && (teamMembers.length > 0 || !teamLoaded) && (
                   <div className="mb-4">
-                    <label className="block text-[13px] font-semibold text-[#1A1816] mb-2">Pick a team member</label>
+                    <label className={LABEL_CLS}>Pick a team member</label>
                     {teamLoaded ? (
                       <select
                         value={selectedTeamMemberId}
@@ -1309,7 +1319,7 @@ export default function EditPropertyPage() {
                           setFormData(prev => ({ ...prev, contact_name: memberName, contact_phone: memberPhone }));
                           setDirty(true);
                         }}
-                        className="w-full px-4 py-3 border border-[#E8E8E4] rounded text-[13px] text-[#1A1816] focus:border-[#D03839] focus:outline-none transition-colors bg-white"
+                        className={INPUT_CLS}
                       >
                         <option value="">Custom (fill in below)</option>
                         {teamMembers.map(m => (
@@ -1319,29 +1329,29 @@ export default function EditPropertyPage() {
                         ))}
                       </select>
                     ) : (
-                      <div className="w-full h-[46px] rounded bg-[#F4F4F0] animate-pulse" aria-hidden="true" />
+                      <div className="w-full h-[46px] rounded-[9px] bg-tint motion-safe:animate-pulse" aria-hidden="true" />
                     )}
                   </div>
                 )}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-[13px] font-semibold text-[#1A1816] mb-2">Contact Name</label>
+                    <label className={LABEL_CLS}>Contact Name</label>
                     <input
                       type="text"
                       value={formData.contact_name || ''}
                       onChange={(e) => handleInputChange('contact_name', e.target.value)}
                       placeholder="Your name or company"
-                      className="w-full px-4 py-3 border border-[#E8E8E4] rounded text-[13px] text-[#1A1816] focus:border-[#D03839] focus:outline-none transition-colors"
+                      className={INPUT_CLS}
                     />
                   </div>
                   <div>
-                    <label className="block text-[13px] font-semibold text-[#1A1816] mb-2">Contact Phone</label>
+                    <label className={LABEL_CLS}>Contact Phone</label>
                     <input
                       type="tel"
                       value={formData.contact_phone || ''}
                       onChange={(e) => handleInputChange('contact_phone', e.target.value)}
                       placeholder="+1 (555) 000-0000"
-                      className="w-full px-4 py-3 border border-[#E8E8E4] rounded text-[13px] text-[#1A1816] focus:border-[#D03839] focus:outline-none transition-colors"
+                      className={INPUT_CLS}
                     />
                   </div>
                 </div>
@@ -1350,23 +1360,23 @@ export default function EditPropertyPage() {
               {/* Featured Image Preview */}
               {imageUploadStatus.images.length > 0 && (
                 <div>
-                  <label className="block text-sm font-semibold text-neutral-700 mb-2">Featured Image</label>
-                  <div className="border-2 border-neutral-200 rounded p-4 bg-neutral-50">
+                  <label className={LABEL_CLS}>Featured Image</label>
+                  <div className="border-[1.5px] border-line rounded-[12px] p-4 bg-stripes">
                     {imageUploadStatus.images.some(img => img.status === 'completed' && img.isFeatured) ? (
                       <div className="flex items-center gap-4">
                         <img
                           src={imageUploadStatus.images.find(img => img.status === 'completed' && img.isFeatured)?.imageUrl}
                           alt="Featured"
-                          className="w-24 h-24 object-cover rounded"
+                          className="w-24 h-24 object-cover rounded-[9px] border-[1.5px] border-ink"
                         />
                         <div>
-                          <p className="text-sm font-medium text-neutral-900 mb-1">Featured image selected</p>
-                          <p className="text-xs text-neutral-500">You can change or clear this in the Images tab</p>
+                          <p className="text-[13px] font-semibold text-ink mb-1">Featured image selected</p>
+                          <p className="text-[12px] text-muted">You can change or clear this in the Images tab</p>
                         </div>
                       </div>
                     ) : (
                       <div className="text-center py-4">
-                        <p className="text-sm text-neutral-500">Select a featured image in the Images tab</p>
+                        <p className="font-mono text-[12px] text-muted">Select a featured image in the Images tab</p>
                       </div>
                     )}
                   </div>
@@ -1377,14 +1387,14 @@ export default function EditPropertyPage() {
 
           {/* Images Tab */}
           <div id="rejection-target-photo" className={activeTab === 'images' ? '' : 'hidden'}>
-            <h3 className="text-lg font-semibold text-neutral-900 mb-2">Property Images</h3>
-            <p className="text-sm text-neutral-600 mb-4">
+            <h3 className={`${SECTION_H_CLS} mb-2`}>Property Images</h3>
+            <p className="text-[13px] text-muted mb-4">
               Upload property images. They will be automatically compressed and uploaded immediately. The first image will be set as the featured image.
             </p>
             {rejectionReason && parseRejectionReasons(rejectionReason).photo && (
-              <div className="flex items-start gap-2.5 bg-[#FEF3F2] border border-[#FECDCA] rounded px-3 py-2.5 mb-5">
-                <AlertTriangle className="w-3.5 h-3.5 text-[#B42318] flex-shrink-0 mt-0.5" />
-                <p className="text-[12px] text-[#B42318]"><span className="font-semibold">Issue:</span> {parseRejectionReasons(rejectionReason).photo}</p>
+              <div className="flex items-start gap-2.5 bg-tint border-[1.5px] border-ink rounded-[10px] px-3 py-2.5 mb-5">
+                <AlertTriangle className="w-3.5 h-3.5 text-ink flex-shrink-0 mt-0.5" />
+                <p className="text-[12px] font-semibold text-ink"><span className="font-mono text-[10.5px] uppercase tracking-[0.08em]">Issue:</span> {parseRejectionReasons(rejectionReason).photo}</p>
               </div>
             )}
             <ImageGalleryManager
@@ -1400,37 +1410,37 @@ export default function EditPropertyPage() {
           {activeTab === 'ownership' && (
             <div className="space-y-6">
               <div>
-                <h3 className="text-[15px] font-semibold text-[#1A1816] mb-1">Your relationship to this property</h3>
-                <p className="text-[13px] text-[#737370] mb-5">This helps buyers understand the deal structure.</p>
+                <h3 className={`${SECTION_H_CLS} mb-1`}>Your relationship to this property</h3>
+                <p className="text-[13px] text-muted mb-5">This helps buyers understand the deal structure.</p>
                 <div className="grid grid-cols-2 gap-3">
                   <button
                     type="button"
                     onClick={() => setSellerType('owner')}
-                    className={`flex flex-col items-center gap-3 p-5 rounded border-2 transition-all ${
+                    className={`flex flex-col items-center gap-3 p-5 rounded-[12px] border-[1.5px] transition-all duration-120 ${
                       sellerType === 'owner'
-                        ? 'border-[#D03839] bg-[#FEF0EF]'
-                        : 'border-[#E8E8E4] bg-white hover:border-[#1A1816]'
+                        ? 'border-ink bg-tint shadow-offset-3'
+                        : 'border-line bg-white hover:border-ink'
                     }`}
                   >
-                    <Home className={`w-7 h-7 ${sellerType === 'owner' ? 'text-[#D03839]' : 'text-[#737370]'}`} />
+                    <Home className={`w-7 h-7 ${sellerType === 'owner' ? 'text-ink' : 'text-muted'}`} />
                     <div className="text-center">
-                      <p className={`text-[13px] font-semibold ${sellerType === 'owner' ? 'text-[#D03839]' : 'text-[#1A1816]'}`}>I&apos;m the Owner</p>
-                      <p className="text-[11px] text-[#737370] mt-0.5">I own this property directly</p>
+                      <p className={`text-[13px] font-semibold ${sellerType === 'owner' ? 'text-ink' : 'text-body'}`}>I&apos;m the Owner</p>
+                      <p className="text-[11px] text-muted mt-0.5">I own this property directly</p>
                     </div>
                   </button>
                   <button
                     type="button"
                     onClick={() => setSellerType('wholesaler')}
-                    className={`flex flex-col items-center gap-3 p-5 rounded border-2 transition-all ${
+                    className={`flex flex-col items-center gap-3 p-5 rounded-[12px] border-[1.5px] transition-all duration-120 ${
                       sellerType === 'wholesaler'
-                        ? 'border-[#D03839] bg-[#FEF0EF]'
-                        : 'border-[#E8E8E4] bg-white hover:border-[#1A1816]'
+                        ? 'border-ink bg-tint shadow-offset-3'
+                        : 'border-line bg-white hover:border-ink'
                     }`}
                   >
-                    <FileText className={`w-7 h-7 ${sellerType === 'wholesaler' ? 'text-[#D03839]' : 'text-[#737370]'}`} />
+                    <FileText className={`w-7 h-7 ${sellerType === 'wholesaler' ? 'text-ink' : 'text-muted'}`} />
                     <div className="text-center">
-                      <p className={`text-[13px] font-semibold ${sellerType === 'wholesaler' ? 'text-[#D03839]' : 'text-[#1A1816]'}`}>I&apos;m a Wholesaler</p>
-                      <p className="text-[11px] text-[#737370] mt-0.5">I have a contract to assign</p>
+                      <p className={`text-[13px] font-semibold ${sellerType === 'wholesaler' ? 'text-ink' : 'text-body'}`}>I&apos;m a Wholesaler</p>
+                      <p className="text-[11px] text-muted mt-0.5">I have a contract to assign</p>
                     </div>
                   </button>
                 </div>
@@ -1438,18 +1448,18 @@ export default function EditPropertyPage() {
 
               {sellerType === 'wholesaler' && (
                 <div id="rejection-target-contract">
-                  <h3 className="text-[15px] font-semibold text-[#1A1816] mb-1">Assignment Contract</h3>
-                  <p className="text-[13px] text-[#737370] mb-3">Upload your signed assignment contract. (PDF or DOC)</p>
+                  <h3 className={`${SECTION_H_CLS} mb-1`}>Assignment Contract</h3>
+                  <p className="text-[13px] text-muted mb-3">Upload your signed assignment contract. (PDF or DOC)</p>
                   {rejectionReason && parseRejectionReasons(rejectionReason).contract && (
-                    <div className="flex items-start gap-2.5 bg-[#FEF3F2] border border-[#FECDCA] rounded px-3 py-2.5 mb-4">
-                      <AlertTriangle className="w-3.5 h-3.5 text-[#B42318] flex-shrink-0 mt-0.5" />
-                      <p className="text-[12px] text-[#B42318]"><span className="font-semibold">Issue:</span> {parseRejectionReasons(rejectionReason).contract}</p>
+                    <div className="flex items-start gap-2.5 bg-tint border-[1.5px] border-ink rounded-[10px] px-3 py-2.5 mb-4">
+                      <AlertTriangle className="w-3.5 h-3.5 text-ink flex-shrink-0 mt-0.5" />
+                      <p className="text-[12px] font-semibold text-ink"><span className="font-mono text-[10.5px] uppercase tracking-[0.08em]">Issue:</span> {parseRejectionReasons(rejectionReason).contract}</p>
                     </div>
                   )}
                   {!contractUpload.url ? (
-                    <div className="border border-dashed border-[#E8E8E4] rounded p-8 text-center">
-                      <FileText className="w-12 h-12 text-[#A8A8A4] mx-auto mb-4" />
-                      <p className="text-[13px] text-[#737370] mb-4">Upload PDF or DOC file</p>
+                    <div className="border-[1.5px] border-dashed border-line rounded-[12px] p-8 text-center hover:border-ink transition-colors duration-120">
+                      <FileText className="w-12 h-12 text-mist mx-auto mb-4" />
+                      <p className="font-mono text-[12px] uppercase tracking-[0.08em] text-muted mb-4">Upload PDF or DOC file</p>
                       <input
                         type="file"
                         id="contract-upload"
@@ -1460,7 +1470,7 @@ export default function EditPropertyPage() {
                       />
                       <label
                         htmlFor="contract-upload"
-                        className={`inline-flex items-center gap-2 px-4 py-2 bg-[#D03839] hover:bg-[#B82F30] text-white rounded text-[13px] font-medium transition-colors cursor-pointer ${
+                        className={`inline-flex items-center gap-2 px-4 py-2 text-[13px] ${BTN_PRIMARY_CLS} cursor-pointer ${
                           contractUpload.uploading ? 'opacity-50 cursor-not-allowed' : ''
                         }`}
                       >
@@ -1468,18 +1478,18 @@ export default function EditPropertyPage() {
                       </label>
                     </div>
                   ) : (
-                    <div className="bg-[#FAFAF8] border border-[#E8E8E4] rounded p-4">
+                    <div className="bg-tint-3 border-[1.5px] border-ink rounded-[12px] shadow-offset-3 p-4">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 bg-[#D03839]/10 rounded flex items-center justify-center">
-                            <FileText className="w-5 h-5 text-[#D03839]" />
+                          <div className="w-10 h-10 bg-white border-[1.5px] border-ink rounded-[9px] flex items-center justify-center">
+                            <FileText className="w-5 h-5 text-ink" />
                           </div>
                           <div>
-                            <p className="text-[13px] font-medium text-[#1A1816]">{contractUpload.filename || 'Contract'}</p>
-                            <a href={contractUpload.url} target="_blank" rel="noopener noreferrer" className="text-[12px] text-[#D03839] hover:underline">View Document</a>
+                            <p className="text-[13px] font-semibold text-ink">{contractUpload.filename || 'Contract'}</p>
+                            <a href={contractUpload.url} target="_blank" rel="noopener noreferrer" className="font-mono text-[11px] uppercase tracking-[0.06em] text-ink underline underline-offset-2 hover:bg-tint">View Document</a>
                           </div>
                         </div>
-                        <button onClick={handleRemoveContract} className="p-2 rounded hover:bg-[#E8E8E4] text-[#737370] transition-colors">
+                        <button onClick={handleRemoveContract} className="p-2 rounded-[8px] border-[1.5px] border-ink bg-white text-ink hover:bg-tint transition-colors duration-120">
                           <X className="w-4 h-4" />
                         </button>
                       </div>
@@ -1494,11 +1504,11 @@ export default function EditPropertyPage() {
           {activeTab === 'content' && (
             <div className="space-y-6">
               <div id="rejection-target-description">
-                <label className="block text-sm font-semibold text-neutral-700 mb-2">Property Description</label>
+                <label className={LABEL_CLS}>Property Description</label>
                 {rejectionReason && parseRejectionReasons(rejectionReason).description && (
-                  <div className="flex items-start gap-2.5 bg-[#FEF3F2] border border-[#FECDCA] rounded px-3 py-2.5 mb-2">
-                    <AlertTriangle className="w-3.5 h-3.5 text-[#B42318] flex-shrink-0 mt-0.5" />
-                    <p className="text-[12px] text-[#B42318]"><span className="font-semibold">Issue:</span> {parseRejectionReasons(rejectionReason).description}</p>
+                  <div className="flex items-start gap-2.5 bg-tint border-[1.5px] border-ink rounded-[10px] px-3 py-2.5 mb-2">
+                    <AlertTriangle className="w-3.5 h-3.5 text-ink flex-shrink-0 mt-0.5" />
+                    <p className="text-[12px] font-semibold text-ink"><span className="font-mono text-[10.5px] uppercase tracking-[0.08em]">Issue:</span> {parseRejectionReasons(rejectionReason).description}</p>
                   </div>
                 )}
                 <TextEditor
@@ -1510,11 +1520,11 @@ export default function EditPropertyPage() {
               </div>
 
               <div id="rejection-target-repairs">
-                <label className="block text-sm font-semibold text-neutral-700 mb-2">Repairs & Renovation</label>
+                <label className={LABEL_CLS}>Repairs & Renovation</label>
                 {rejectionReason && parseRejectionReasons(rejectionReason).repairs && (
-                  <div className="flex items-start gap-2.5 bg-[#FEF3F2] border border-[#FECDCA] rounded px-3 py-2.5 mb-2">
-                    <AlertTriangle className="w-3.5 h-3.5 text-[#B42318] flex-shrink-0 mt-0.5" />
-                    <p className="text-[12px] text-[#B42318]"><span className="font-semibold">Issue:</span> {parseRejectionReasons(rejectionReason).repairs}</p>
+                  <div className="flex items-start gap-2.5 bg-tint border-[1.5px] border-ink rounded-[10px] px-3 py-2.5 mb-2">
+                    <AlertTriangle className="w-3.5 h-3.5 text-ink flex-shrink-0 mt-0.5" />
+                    <p className="text-[12px] font-semibold text-ink"><span className="font-mono text-[10.5px] uppercase tracking-[0.08em]">Issue:</span> {parseRejectionReasons(rejectionReason).repairs}</p>
                   </div>
                 )}
                 <TextEditor
@@ -1526,18 +1536,18 @@ export default function EditPropertyPage() {
               </div>
 
               <div id="rejection-target-inspection">
-                <label className="block text-[13px] font-semibold text-[#1A1816] mb-1">Inspection Report <span className="text-[#A8A8A4] font-normal">(optional)</span></label>
+                <label className="block text-[13px] font-semibold text-ink mb-1">Inspection Report <span className="font-mono font-semibold text-[11px] uppercase tracking-[0.08em] text-muted">(optional)</span></label>
                 {rejectionReason && parseRejectionReasons(rejectionReason).inspection && (
-                  <div className="flex items-start gap-2.5 bg-[#FEF3F2] border border-[#FECDCA] rounded px-3 py-2.5 mb-2">
-                    <AlertTriangle className="w-3.5 h-3.5 text-[#B42318] flex-shrink-0 mt-0.5" />
-                    <p className="text-[12px] text-[#B42318]"><span className="font-semibold">Issue:</span> {parseRejectionReasons(rejectionReason).inspection}</p>
+                  <div className="flex items-start gap-2.5 bg-tint border-[1.5px] border-ink rounded-[10px] px-3 py-2.5 mb-2">
+                    <AlertTriangle className="w-3.5 h-3.5 text-ink flex-shrink-0 mt-0.5" />
+                    <p className="text-[12px] font-semibold text-ink"><span className="font-mono text-[10.5px] uppercase tracking-[0.08em]">Issue:</span> {parseRejectionReasons(rejectionReason).inspection}</p>
                   </div>
                 )}
-                <p className="text-[12px] text-[#737370] mb-3">Upload the inspection report for this property (PDF or DOC)</p>
+                <p className="text-[12px] text-muted mb-3">Upload the inspection report for this property (PDF or DOC)</p>
                 {!inspectionReport.url ? (
-                  <div className="border border-dashed border-[#E8E8E4] rounded p-6 text-center">
-                    <Upload className="w-8 h-8 text-[#A8A8A4] mx-auto mb-3" />
-                    <p className="text-[13px] text-[#737370] mb-3">PDF or DOC file</p>
+                  <div className="border-[1.5px] border-dashed border-line rounded-[12px] p-6 text-center hover:border-ink transition-colors duration-120">
+                    <Upload className="w-8 h-8 text-mist mx-auto mb-3" />
+                    <p className="font-mono text-[12px] uppercase tracking-[0.08em] text-muted mb-3">PDF or DOC file</p>
                     <input
                       type="file"
                       id="inspection-upload"
@@ -1548,7 +1558,7 @@ export default function EditPropertyPage() {
                     />
                     <label
                       htmlFor="inspection-upload"
-                      className={`inline-flex items-center gap-2 px-4 py-2 bg-[#D03839] hover:bg-[#B82F30] text-white rounded text-[13px] font-medium transition-colors cursor-pointer ${
+                      className={`inline-flex items-center gap-2 px-4 py-2 text-[13px] ${BTN_PRIMARY_CLS} cursor-pointer ${
                         inspectionReport.uploading ? 'opacity-50 cursor-not-allowed' : ''
                       }`}
                     >
@@ -1556,18 +1566,18 @@ export default function EditPropertyPage() {
                     </label>
                   </div>
                 ) : (
-                  <div className="bg-[#FAFAF8] border border-[#E8E8E4] rounded p-4">
+                  <div className="bg-tint-3 border-[1.5px] border-ink rounded-[12px] shadow-offset-3 p-4">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 bg-[#D03839]/10 rounded flex items-center justify-center">
-                          <Upload className="w-4 h-4 text-[#D03839]" />
+                        <div className="w-9 h-9 bg-white border-[1.5px] border-ink rounded-[9px] flex items-center justify-center">
+                          <Upload className="w-4 h-4 text-ink" />
                         </div>
                         <div>
-                          <p className="text-[13px] font-medium text-[#1A1816]">Inspection Report</p>
-                          <a href={inspectionReport.url} target="_blank" rel="noopener noreferrer" className="text-[12px] text-[#D03839] hover:underline">View Document</a>
+                          <p className="text-[13px] font-semibold text-ink">Inspection Report</p>
+                          <a href={inspectionReport.url} target="_blank" rel="noopener noreferrer" className="font-mono text-[11px] uppercase tracking-[0.06em] text-ink underline underline-offset-2 hover:bg-tint">View Document</a>
                         </div>
                       </div>
-                      <button onClick={handleRemoveInspection} className="p-2 rounded hover:bg-[#E8E8E4] text-[#737370] transition-colors">
+                      <button onClick={handleRemoveInspection} className="p-2 rounded-[8px] border-[1.5px] border-ink bg-white text-ink hover:bg-tint transition-colors duration-120">
                         <X className="w-4 h-4" />
                       </button>
                     </div>
@@ -1581,34 +1591,34 @@ export default function EditPropertyPage() {
           {activeTab === 'seo' && (
             <div className="space-y-6">
               <div>
-                <h3 className="text-lg font-semibold text-neutral-900 mb-4">Search Engine Optimization</h3>
+                <h3 className={`${SECTION_H_CLS} mb-4`}>Search Engine Optimization</h3>
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-semibold text-neutral-700 mb-2">SEO Title</label>
+                    <label className={LABEL_CLS}>SEO Title</label>
                     <input
                       type="text"
                       value={formData.seo_title || ''}
                       onChange={(e) => handleInputChange('seo_title', e.target.value)}
-                      className="w-full px-4 py-3 border-2 border-neutral-200 rounded focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all text-sm"
+                      className={INPUT_CLS}
                       placeholder="Luxury Beachfront Hotel Investment Opportunity"
                       maxLength="60"
                     />
-                    <div className="text-xs text-neutral-500 mt-1">
+                    <div className="font-mono text-[11.5px] text-muted mt-1">
                       {(formData.seo_title || '').length}/60 characters
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-sm font-semibold text-neutral-700 mb-2">SEO Description</label>
+                    <label className={LABEL_CLS}>SEO Description</label>
                     <textarea
                       value={formData.seo_description || ''}
                       onChange={(e) => handleInputChange('seo_description', e.target.value)}
-                      className="w-full px-4 py-3 border-2 border-neutral-200 rounded focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all text-sm"
+                      className={INPUT_CLS}
                       rows="3"
                       placeholder="Discover this stunning wholesale hotel property..."
                       maxLength="160"
                     />
-                    <div className="text-xs text-neutral-500 mt-1">
+                    <div className="font-mono text-[11.5px] text-muted mt-1">
                       {(formData.seo_description || '').length}/160 characters
                     </div>
                   </div>
@@ -1616,26 +1626,26 @@ export default function EditPropertyPage() {
               </div>
 
               <div>
-                <h3 className="text-lg font-semibold text-neutral-900 mb-4">Social Media</h3>
+                <h3 className={`${SECTION_H_CLS} mb-4`}>Social Media</h3>
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-semibold text-neutral-700 mb-2">Social Title</label>
+                    <label className={LABEL_CLS}>Social Title</label>
                     <input
                       type="text"
                       value={formData.social_title || ''}
                       onChange={(e) => handleInputChange('social_title', e.target.value)}
-                      className="w-full px-4 py-3 border-2 border-neutral-200 rounded focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all text-sm"
+                      className={INPUT_CLS}
                       placeholder="Same as SEO title"
                       maxLength="60"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-semibold text-neutral-700 mb-2">Social Description</label>
+                    <label className={LABEL_CLS}>Social Description</label>
                     <textarea
                       value={formData.social_description || ''}
                       onChange={(e) => handleInputChange('social_description', e.target.value)}
-                      className="w-full px-4 py-3 border-2 border-neutral-200 rounded focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all text-sm"
+                      className={INPUT_CLS}
                       rows="3"
                       placeholder="Same as SEO description"
                       maxLength="160"
@@ -1643,15 +1653,15 @@ export default function EditPropertyPage() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-semibold text-neutral-700 mb-2">Social Image URL</label>
+                    <label className={LABEL_CLS}>Social Image URL</label>
                     <input
                       type="url"
                       value={formData.social_image_url || ''}
                       onChange={(e) => handleInputChange('social_image_url', e.target.value)}
-                      className="w-full px-4 py-3 border-2 border-neutral-200 rounded focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all text-sm"
+                      className={INPUT_CLS}
                       placeholder="https://example.com/image.jpg"
                     />
-                    <div className="text-xs text-neutral-500 mt-1">
+                    <div className={HELP_CLS}>
                       Leave empty to use first uploaded image
                     </div>
                   </div>
@@ -1691,7 +1701,7 @@ export default function EditPropertyPage() {
                 type="button"
                 onClick={goPrev}
                 disabled={!hasPrev}
-                className="inline-flex items-center gap-1.5 px-3 py-2 rounded border border-[#E8E8E4] text-[13px] font-medium text-[#444441] hover:border-[#1A1816] hover:text-[#1A1816] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                className={`inline-flex items-center gap-1.5 px-3 py-2 text-[13px] ${BTN_GHOST_CLS} disabled:opacity-40 disabled:cursor-not-allowed`}
               >
                 <ArrowLeft className="w-4 h-4" /> Previous
               </button>
@@ -1699,7 +1709,7 @@ export default function EditPropertyPage() {
                 type="button"
                 onClick={goNext}
                 disabled={!hasNext}
-                className="inline-flex items-center gap-1.5 px-3 py-2 rounded border border-[#E8E8E4] text-[13px] font-medium text-[#444441] hover:border-[#1A1816] hover:text-[#1A1816] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                className={`inline-flex items-center gap-1.5 px-3 py-2 text-[13px] ${BTN_GHOST_CLS} disabled:opacity-40 disabled:cursor-not-allowed`}
               >
                 Continue <ChevronRight className="w-4 h-4" />
               </button>
@@ -1707,7 +1717,7 @@ export default function EditPropertyPage() {
                 type="button"
                 onClick={() => handleSave('active')}
                 disabled={saving || autoSaving || imageUploadStatus.isUploading}
-                className="inline-flex items-center justify-center gap-2 bg-[#D03839] hover:bg-[#B82F30] text-white px-5 py-2 rounded text-[13px] font-semibold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+                className={`inline-flex items-center justify-center gap-2 px-5 py-2 text-[13px] ${BTN_PRIMARY_CLS} disabled:opacity-50 disabled:cursor-not-allowed`}
               >
                 {imageUploadStatus.isUploading
                   ? 'Please wait…'

@@ -192,7 +192,7 @@ const AddForm = ({ isOpen, onClose, onSuccess, userId, currency = '$' }) => {
             className="fixed right-0 top-0 h-screen w-full md:w-[600px] lg:w-[700px] bg-white shadow-2xl z-[60] flex flex-col"
           >
             {/* Header */}
-            <div className="bg-[#472F97] px-4 sm:px-6 py-4 flex items-center justify-between">
+            <div className="bg-[#111111] px-4 sm:px-6 py-4 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-white/10 flex items-center justify-center">
                   <BedDouble className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
@@ -217,7 +217,7 @@ const AddForm = ({ isOpen, onClose, onSuccess, userId, currency = '$' }) => {
                 <div className="bg-neutral-50 rounded-xl p-4 border border-neutral-200">
                   <h3 className="text-sm font-semibold text-neutral-900 mb-2 flex items-center gap-2">
                     <Calendar className="w-4 h-4" />
-                    Select Booking <span className="text-red-500">*</span>
+                    Select Booking <span className="text-neutral-500">*</span>
                   </h3>
                   <SearchableSelect
                     options={bookingOptions}
@@ -234,7 +234,7 @@ const AddForm = ({ isOpen, onClose, onSuccess, userId, currency = '$' }) => {
                 <div className="bg-neutral-50 rounded-xl p-4 border border-neutral-200">
                   <h3 className="text-sm font-semibold text-neutral-900 mb-2 flex items-center gap-2">
                     <BedDouble className="w-4 h-4" />
-                    Select Room <span className="text-red-500">*</span>
+                    Select Room <span className="text-neutral-500">*</span>
                   </h3>
                   <SearchableSelect
                     options={roomOptions}
@@ -252,7 +252,7 @@ const AddForm = ({ isOpen, onClose, onSuccess, userId, currency = '$' }) => {
                   <div className="bg-neutral-50 rounded-xl p-4 border border-neutral-200">
                     <h3 className="text-sm font-semibold text-neutral-900 mb-2 flex items-center gap-2">
                       <Calendar className="w-4 h-4" />
-                      Check In <span className="text-red-500">*</span>
+                      Check In <span className="text-neutral-500">*</span>
                     </h3>
                     <input
                       type="datetime-local"
@@ -265,7 +265,7 @@ const AddForm = ({ isOpen, onClose, onSuccess, userId, currency = '$' }) => {
                   <div className="bg-neutral-50 rounded-xl p-4 border border-neutral-200">
                     <h3 className="text-sm font-semibold text-neutral-900 mb-2 flex items-center gap-2">
                       <Calendar className="w-4 h-4" />
-                      Check Out <span className="text-red-500">*</span>
+                      Check Out <span className="text-neutral-500">*</span>
                     </h3>
                     <input
                       type="datetime-local"
@@ -281,7 +281,7 @@ const AddForm = ({ isOpen, onClose, onSuccess, userId, currency = '$' }) => {
                 <div className="bg-neutral-50 rounded-xl p-4 border border-neutral-200">
                   <h3 className="text-sm font-semibold text-neutral-900 mb-2 flex items-center gap-2">
                     <Users className="w-4 h-4" />
-                    Status <span className="text-red-500">*</span>
+                    Status <span className="text-neutral-500">*</span>
                   </h3>
                   <select
                     value={formData.status}
@@ -307,7 +307,7 @@ const AddForm = ({ isOpen, onClose, onSuccess, userId, currency = '$' }) => {
                 <button
                   type="submit"
                   disabled={saving}
-                  className="w-full sm:flex-1 px-4 py-2.5 sm:py-3 bg-[#472F97] hover:bg-[#3a2578] text-white text-sm font-semibold rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  className="w-full sm:flex-1 px-4 py-2.5 sm:py-3 bg-[#111111] hover:bg-[#444444] text-white text-sm font-semibold rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
                   <Save className="w-4 h-4" />
                   {saving ? 'Saving...' : 'Book Room'}

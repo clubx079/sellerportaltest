@@ -3,17 +3,10 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Loader2, AlertCircle, Check, Calendar, Zap, Building2, ArrowRight, X, CreditCard } from 'lucide-react'
 
+// Checklist glyph — value-encoded mono ✓ / — (inherits the row's text color).
 const CheckIcon = ({ filled }) => (
-  <span
-    className={`flex-shrink-0 mt-0.5 w-3.5 h-3.5 rounded-full flex items-center justify-center border ${
-      filled ? 'bg-[#1A1816] border-[#1A1816]' : 'border-[#E8E8E4]'
-    }`}
-  >
-    {filled && (
-      <svg width="7" height="5" viewBox="0 0 7 5" fill="none">
-        <path d="M1 2.5L2.8 4.2L6 1" stroke="#FAFAF8" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
-    )}
+  <span className="flex-shrink-0 font-mono text-[12px] font-bold leading-[1.5]">
+    {filled ? '✓' : '—'}
   </span>
 )
 
@@ -22,17 +15,20 @@ function formatDate(iso) {
   return new Date(iso).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
 }
 
+// Status is value-encoded, never hue: active = ink fill, trial/canceling =
+// muted fill, past_due = white + ink outline, canceled = line-2 outline.
+const pillBase = 'inline-flex items-center px-2.5 py-0.5 rounded-pill font-mono text-[10.5px] font-semibold uppercase tracking-[0.05em]'
 function StatusBadge({ status }) {
   const map = {
-    active:    { label: 'Active',     cls: 'bg-[#E4F5EC] text-[#0F6E56] border-[#9FDBB8]' },
-    trialing:  { label: 'Trial',      cls: 'bg-[#FEF3E2] text-[#B5620A] border-[#F5D9A0]' },
-    past_due:  { label: 'Past due',   cls: 'bg-[#FEF0EF] text-[#D03839] border-[#F5C4C0]' },
-    canceled:  { label: 'Canceled',   cls: 'bg-[#F3F3F0] text-[#737370] border-[#E8E8E4]' },
-    canceling: { label: 'Canceling',  cls: 'bg-[#FEF3E2] text-[#B5620A] border-[#F5D9A0]' },
+    active:    { label: 'Active',     cls: 'bg-ink text-white border-[1.5px] border-ink' },
+    trialing:  { label: 'Trial',      cls: 'bg-muted text-white border-[1.5px] border-muted' },
+    past_due:  { label: 'Past due',   cls: 'bg-white text-ink border-[1.5px] border-ink' },
+    canceled:  { label: 'Canceled',   cls: 'bg-white text-muted border-[1.5px] border-line-2' },
+    canceling: { label: 'Canceling',  cls: 'bg-muted text-white border-[1.5px] border-muted' },
   }
-  const s = map[status] || { label: status || '—', cls: 'bg-[#F3F3F0] text-[#737370] border-[#E8E8E4]' }
+  const s = map[status] || { label: status || '—', cls: 'bg-white text-muted border-[1.5px] border-line-2' }
   return (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold border ${s.cls}`}>
+    <span className={`${pillBase} ${s.cls}`}>
       {s.label}
     </span>
   )
@@ -57,7 +53,7 @@ const ENTERPRISE_FEATURES = [
   [true, 'Team accounts'],
   [true, 'Custom branding'],
   [true, 'Dedicated account support'],
-  [true, <>API access <span className="text-[10px] text-[#A8A8A4] ml-0.5">· soon</span></>],
+  [true, <>API access <span className="font-mono text-[10px] text-mist ml-0.5">· soon</span></>],
 ]
 
 
@@ -177,7 +173,7 @@ export default function PlansPage() {
   if (loading) {
     return (
       <div className="min-h-[50vh] flex items-center justify-center">
-        <Loader2 className="w-6 h-6 animate-spin text-[#737370]" />
+        <Loader2 className="w-6 h-6 animate-spin text-muted" />
       </div>
     )
   }
@@ -186,26 +182,26 @@ export default function PlansPage() {
     return (
       <div className="max-w-4xl mx-auto space-y-5">
         <div>
-          <h1 className="text-lg md:text-xl font-semibold tracking-tight text-[#1A1816]">Plans</h1>
-          <p className="text-[13px] text-[#737370] mt-0.5">Your subscription plan.</p>
+          <h1 className="font-display text-[22px] font-bold tracking-[-0.02em] text-body">Plans</h1>
+          <p className="text-[13px] text-muted mt-0.5">Your subscription plan.</p>
         </div>
-        <div className="bg-white border-2 border-[#1A1816] rounded p-5 flex flex-col max-w-sm">
+        <div className="bg-white border-[1.5px] border-ink rounded-2xl shadow-offset-5 p-5 flex flex-col max-w-sm">
           <div className="min-h-[22px] mb-3">
-            <span className="inline-block text-[11px] font-semibold bg-[#E4F5EC] text-[#0F6E56] border border-[#9FDBB8] px-2.5 py-0.5 rounded">
+            <span className={`${pillBase} bg-ink text-white border-[1.5px] border-ink`}>
               Lifetime Free
             </span>
           </div>
-          <p className="text-[11px] font-semibold tracking-[0.09em] uppercase text-[#A8A8A4] mb-1">Subscription</p>
-          <h2 className="text-2xl font-bold text-[#1A1816] tracking-tight mb-1">Enterprise</h2>
-          <p className="text-xs text-[#737370] leading-relaxed mb-4">Full enterprise access, complimentary.</p>
-          <div className="w-full py-2.5 text-center text-xs font-semibold tracking-[0.05em] uppercase border border-[#E8E8E4] text-[#A8A8A4] rounded mb-5 cursor-default select-none">
+          <p className="font-mono text-[11px] font-semibold tracking-[0.14em] uppercase text-muted mb-1">Subscription</p>
+          <h2 className="font-display text-2xl font-bold text-body tracking-[-0.02em] mb-1">Enterprise</h2>
+          <p className="text-xs text-muted leading-relaxed mb-4">Full enterprise access, complimentary.</p>
+          <div className="w-full py-2.5 text-center font-mono text-[11px] font-semibold tracking-[0.06em] uppercase border-[1.5px] border-line-2 text-mist rounded-[10px] mb-5 cursor-default select-none">
             Active — no billing required
           </div>
-          <hr className="border-t border-[#E8E8E4] mb-4" />
-          <p className="text-[11px] font-semibold tracking-[0.09em] uppercase text-[#A8A8A4] mb-3">Includes</p>
+          <hr className="border-t border-hairline mb-4" />
+          <p className="font-mono text-[11px] font-semibold tracking-[0.14em] uppercase text-muted mb-3">Includes</p>
           <ul className="flex flex-col gap-1.5 flex-1">
             {ENTERPRISE_FEATURES.map(([on, label], i) => (
-              <li key={i} className={`flex items-start gap-2 text-xs leading-snug ${on ? 'text-[#1A1816]' : 'text-[#A8A8A4]'}`}>
+              <li key={i} className={`flex items-start gap-2 text-[13.5px] leading-snug ${on ? 'text-body' : 'text-mist'}`}>
                 <CheckIcon filled={on} />{label}
               </li>
             ))}
@@ -221,21 +217,21 @@ export default function PlansPage() {
 
         {/* Page header */}
         <div>
-          <h1 className="text-lg md:text-xl font-semibold tracking-tight text-[#1A1816]">Plans</h1>
-          <p className="text-[13px] text-[#737370] mt-0.5">Manage your subscription plan.</p>
+          <h1 className="font-display text-[22px] font-bold tracking-[-0.02em] text-body">Plans</h1>
+          <p className="text-[13px] text-muted mt-0.5">Manage your subscription plan.</p>
         </div>
 
         {/* Alerts */}
         {error && (
-          <div className="flex items-start gap-3 p-3 bg-[#FEF0EF] border border-[#F5C4C0] rounded text-[#B82F30]">
+          <div className="flex items-start gap-3 p-3 bg-tint border-[1.5px] border-ink rounded-[10px] text-ink">
             <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
-            <p className="text-[13px] font-medium">{error}</p>
+            <p className="text-[13px] font-semibold">{error}</p>
           </div>
         )}
         {success && (
-          <div className="flex items-start gap-3 p-3 bg-[#E4F5EC] border border-[#9FDBB8] rounded text-[#0F6E56]">
+          <div className="flex items-start gap-3 p-3 bg-tint border-[1.5px] border-ink rounded-[10px] text-ink">
             <Check className="w-4 h-4 flex-shrink-0 mt-0.5" />
-            <p className="text-[13px] font-medium">{success}</p>
+            <p className="text-[13px] font-semibold">{success}</p>
           </div>
         )}
 
@@ -243,19 +239,19 @@ export default function PlansPage() {
           <>
             {/* ── Past-due recovery banner ── */}
             {plan.status === 'past_due' && (
-              <div className="bg-[#FEF0EF] border border-[#F5C4C0] rounded p-4 mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div className="bg-tint border-[1.5px] border-ink rounded-[12px] p-4 mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <div className="flex items-start gap-3">
-                  <div className="w-9 h-9 rounded-full bg-white border border-[#F5C4C0] flex items-center justify-center flex-shrink-0">
-                    <CreditCard className="w-4 h-4 text-[#D03839]" />
+                  <div className="w-9 h-9 rounded-[10px] bg-white border-[1.5px] border-ink flex items-center justify-center flex-shrink-0">
+                    <CreditCard className="w-4 h-4 text-ink" />
                   </div>
                   <div>
-                    <p className="text-[14px] font-semibold text-[#1A1816]">Your last payment failed</p>
-                    <p className="text-[12px] text-[#737370] mt-0.5">Update your card to keep your plan active and retry the charge.</p>
+                    <p className="text-[14px] font-semibold text-body">Your last payment failed</p>
+                    <p className="text-[12px] text-muted mt-0.5">Update your card to keep your plan active and retry the charge.</p>
                   </div>
                 </div>
                 <button
                   onClick={() => router.push('/billing')}
-                  className="flex-shrink-0 h-9 px-4 bg-[#D03839] hover:bg-[#E0493B] text-white text-[13px] font-semibold rounded transition-colors"
+                  className="flex-shrink-0 h-9 px-4 bg-ink hover:bg-smoke-2 text-white text-[13px] font-semibold border-[1.5px] border-ink rounded-[10px] shadow-soft-3 transition-all duration-120"
                 >
                   Update card &amp; retry
                 </button>
@@ -263,23 +259,23 @@ export default function PlansPage() {
             )}
 
             {/* ── Current plan summary card ── */}
-            <div className="bg-white border border-[#E8E8E4] rounded overflow-hidden">
-              <div className="flex items-center justify-between px-5 py-4 border-b border-[#E8E8E4]">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.09em] text-[#A8A8A4]">Current Plan</p>
+            <div className="bg-white border-[1.5px] border-ink rounded-[14px] shadow-offset-4 overflow-hidden">
+              <div className="flex items-center justify-between px-5 py-4 border-b-[1.5px] border-ink">
+                <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-ink">Current Plan</p>
                 <StatusBadge status={plan.status} />
               </div>
               <div className="p-5">
                 <div className="flex items-center gap-3 mb-5">
-                  <div className={`w-10 h-10 rounded flex items-center justify-center flex-shrink-0 ${
-                    isEnterprise ? 'bg-[#1A1816] text-white' : 'bg-[#FEF0EF] text-[#D03839]'
+                  <div className={`w-10 h-10 rounded-[10px] border-[1.5px] border-ink flex items-center justify-center flex-shrink-0 ${
+                    isEnterprise ? 'bg-ink text-white' : 'bg-tint text-ink'
                   }`}>
                     {isEnterprise ? <Building2 className="w-5 h-5" /> : <Zap className="w-5 h-5" />}
                   </div>
                   <div>
-                    <p className="text-[17px] font-bold text-[#1A1816] leading-tight">
+                    <p className="font-display text-[17px] font-bold text-body tracking-[-0.01em] leading-tight">
                       {isPro ? 'Pro Seller' : isEnterprise ? 'Enterprise' : '—'}
                     </p>
-                    <p className="text-[12px] text-[#737370] mt-0.5">
+                    <p className="font-mono text-[11.5px] text-muted mt-0.5">
                       {isAnnual ? 'Annual billing' : 'Monthly billing'}
                       {' · '}
                       {isPro ? (isAnnual ? '$948 / year' : '$99 / month') : (isAnnual ? '$2,868 / year' : '$299 / month')}
@@ -287,14 +283,14 @@ export default function PlansPage() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-4 pt-4 border-t border-[#E8E8E4]">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-4 pt-4 border-t border-hairline">
                   {isTrialing && plan.trial_ends_at && (
                     <div>
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#A8A8A4] mb-1">Trial ends</p>
-                      <p className="text-[14px] font-semibold text-[#B5620A] mb-1">{formatDate(plan.trial_ends_at)}</p>
+                      <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.08em] text-muted mb-1">Trial ends</p>
+                      <p className="font-mono text-[14px] font-semibold text-smoke-3 mb-1">{formatDate(plan.trial_ends_at)}</p>
                       <button
                         onClick={() => setShowEndTrialConfirm(true)}
-                        className="text-[11px] font-semibold text-[#737370] underline underline-offset-2 hover:text-[#1A1816] hover:no-underline"
+                        className="font-mono text-[10.5px] font-semibold uppercase tracking-[0.05em] text-muted underline underline-offset-2 hover:text-ink hover:no-underline"
                       >
                         End trial early
                       </button>
@@ -302,44 +298,44 @@ export default function PlansPage() {
                   )}
                   {plan.current_period_end && (
                     <div>
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#A8A8A4] mb-1">
+                      <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.08em] text-muted mb-1">
                         {isTrialing ? 'First billing' : 'Next renewal'}
                       </p>
-                      <p className="text-[14px] font-semibold text-[#1A1816]">{formatDate(plan.current_period_end)}</p>
+                      <p className="font-mono text-[14px] font-semibold text-body">{formatDate(plan.current_period_end)}</p>
                     </div>
                   )}
                   <div>
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#A8A8A4] mb-1">Listings used</p>
-                    <p className="text-[14px] font-semibold text-[#1A1816]">
+                    <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.08em] text-muted mb-1">Listings used</p>
+                    <p className="font-mono text-[14px] font-semibold text-body">
                       {plan.listings_used_this_period ?? 0}{isPro ? ' / 5' : isEnterprise ? ' / ∞' : ''}
                     </p>
                   </div>
                   <div>
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#A8A8A4] mb-1">Billing cycle</p>
-                    <p className="text-[14px] font-semibold text-[#1A1816]">{isAnnual ? 'Annual' : 'Monthly'}</p>
+                    <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.08em] text-muted mb-1">Billing cycle</p>
+                    <p className="font-mono text-[14px] font-semibold text-body">{isAnnual ? 'Annual' : 'Monthly'}</p>
                   </div>
                 </div>
 
                 {/* End trial confirmation */}
                 {isTrialing && showEndTrialConfirm && (
-                  <div className="mt-4 pt-4 border-t border-[#E8E8E4] flex items-start gap-3">
-                    <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5 text-[#B5620A]" />
+                  <div className="mt-4 pt-4 border-t border-hairline flex items-start gap-3">
+                    <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5 text-ink" />
                     <div className="flex-1 min-w-0">
-                      <p className="text-[13px] font-semibold text-[#1A1816]">End your trial now?</p>
-                      <p className="text-[12px] text-[#737370] mt-0.5">Your card will be charged immediately and your subscription will activate today.</p>
+                      <p className="text-[13px] font-semibold text-body">End your trial now?</p>
+                      <p className="text-[12px] text-muted mt-0.5">Your card will be charged immediately and your subscription will activate today.</p>
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
                       <button
                         onClick={() => setShowEndTrialConfirm(false)}
                         disabled={endingTrial}
-                        className="text-[12px] font-semibold text-[#737370] hover:text-[#1A1816] disabled:opacity-50"
+                        className="text-[12px] font-semibold text-muted hover:text-ink disabled:opacity-50"
                       >
                         Cancel
                       </button>
                       <button
                         onClick={handleEndTrial}
                         disabled={endingTrial}
-                        className="flex items-center gap-1.5 px-3 py-1.5 bg-[#1A1816] text-white text-[12px] font-semibold rounded hover:bg-[#2d2d2a] disabled:opacity-50 transition-colors"
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-ink text-white text-[12px] font-semibold border-[1.5px] border-ink rounded-[10px] shadow-soft-3 hover:bg-smoke-2 disabled:opacity-50 transition-all duration-120"
                       >
                         {endingTrial && <Loader2 className="w-3 h-3 animate-spin" />}
                         End trial
@@ -350,14 +346,14 @@ export default function PlansPage() {
 
                 {/* Usage bar for Pro */}
                 {isPro && (
-                  <div className="mt-4 pt-4 border-t border-[#E8E8E4]">
+                  <div className="mt-4 pt-4 border-t border-hairline">
                     <div className="flex justify-between items-center mb-1.5">
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#A8A8A4]">Monthly listings</p>
-                      <p className="text-[11px] text-[#737370]">{plan.listings_used_this_period ?? 0} of 5 used</p>
+                      <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">Monthly listings</p>
+                      <p className="font-mono text-[11px] text-muted">{plan.listings_used_this_period ?? 0} of 5 used</p>
                     </div>
-                    <div className="h-1.5 bg-[#F3F3F0] rounded-full overflow-hidden">
+                    <div className="h-1.5 bg-tint border border-line rounded-pill overflow-hidden">
                       <div
-                        className="h-full bg-[#D03839] rounded-full transition-all"
+                        className="h-full bg-ink rounded-pill transition-all"
                         style={{ width: `${Math.min(100, ((plan.listings_used_this_period ?? 0) / 5) * 100)}%` }}
                       />
                     </div>
@@ -368,11 +364,11 @@ export default function PlansPage() {
 
             {/* ── Pending change notice ── */}
             {pending && !success && (
-              <div className="flex items-start gap-3 p-4 bg-[#FEF3E2] border border-[#F3C97D] rounded">
-                <Calendar className="w-4 h-4 flex-shrink-0 mt-0.5 text-[#B5620A]" />
+              <div className="flex items-start gap-3 p-4 bg-tint border-[1.5px] border-line rounded-[12px]">
+                <Calendar className="w-4 h-4 flex-shrink-0 mt-0.5 text-smoke-3" />
                 <div className="flex-1 min-w-0">
-                  <p className="text-[13px] font-semibold text-[#B5620A]">Plan change scheduled</p>
-                  <p className="text-[12px] text-[#B5620A] mt-0.5">
+                  <p className="text-[13px] font-semibold text-body">Plan change scheduled</p>
+                  <p className="text-[12px] text-smoke-3 mt-0.5">
                     Switching to <strong>{pending.plan_type === 'enterprise' ? 'Enterprise' : 'Pro Seller'} ({pending.billing_cycle === 'annual' ? 'Annual' : 'Monthly'})</strong> on {formatDate(pending.scheduled_for)}.
                     Your current plan remains active until then.
                   </p>
@@ -380,7 +376,7 @@ export default function PlansPage() {
                 <button
                   onClick={handleCancelPending}
                   disabled={cancelingPend}
-                  className="flex-shrink-0 flex items-center gap-1 text-[12px] font-semibold text-[#B5620A] underline underline-offset-2 hover:no-underline disabled:opacity-50"
+                  className="flex-shrink-0 flex items-center gap-1 font-mono text-[11px] font-semibold uppercase tracking-[0.05em] text-smoke-3 underline underline-offset-2 hover:no-underline disabled:opacity-50"
                 >
                   {cancelingPend ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Cancel change'}
                 </button>
@@ -389,26 +385,31 @@ export default function PlansPage() {
 
             {/* ── Section label ── */}
             <div className="flex items-center gap-3 pt-1">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.09em] text-[#A8A8A4] whitespace-nowrap">
+              <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-ink whitespace-nowrap">
                 {isPro ? 'Upgrade your plan' : 'Change your plan'}
               </p>
-              <div className="flex-1 h-px bg-[#E8E8E4]" />
+              <div className="flex-1 h-px bg-hairline" />
             </div>
 
-            {/* ── Billing toggle ── */}
+            {/* ── Billing toggle — value-encoded ink/line pills ── */}
             <div className="flex flex-col items-center gap-2 py-2">
-              <div className="flex items-center gap-3 bg-[#F5F5F3] border border-[#E8E8E4] rounded-full px-5 py-2.5">
-                <span className={`text-[13px] font-semibold transition-colors ${!viewAnnual ? 'text-[#1A1816]' : 'text-[#A8A8A4]'}`}>Monthly</span>
+              <div className="inline-flex items-center gap-1.5">
                 <button
                   type="button"
-                  onClick={() => setViewAnnual(v => !v)}
-                  className={`relative w-11 h-6 rounded-full flex-shrink-0 transition-colors ${viewAnnual ? 'bg-[#D03839]' : 'bg-[#D4D4CF]'}`}
+                  onClick={() => setViewAnnual(false)}
+                  className={`font-mono text-[11px] font-semibold uppercase tracking-[0.06em] border-[1.5px] border-ink rounded-pill px-3.5 py-2 transition-colors duration-120 ${!viewAnnual ? 'bg-ink text-white' : 'bg-white text-ink hover:bg-tint'}`}
                 >
-                  <span className={`absolute top-[4px] left-[4px] w-4 h-4 rounded-full bg-white shadow transition-transform duration-200 ${viewAnnual ? 'translate-x-[20px]' : ''}`} />
+                  Monthly
                 </button>
-                <span className={`text-[13px] font-semibold transition-colors ${viewAnnual ? 'text-[#1A1816]' : 'text-[#A8A8A4]'}`}>Annual</span>
+                <button
+                  type="button"
+                  onClick={() => setViewAnnual(true)}
+                  className={`font-mono text-[11px] font-semibold uppercase tracking-[0.06em] border-[1.5px] border-ink rounded-pill px-3.5 py-2 transition-colors duration-120 ${viewAnnual ? 'bg-ink text-white' : 'bg-white text-ink hover:bg-tint'}`}
+                >
+                  Annual
+                </button>
               </div>
-              <span className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full transition-opacity ${viewAnnual ? 'bg-[#E4F5EC] text-[#0F6E56] border border-[#9FDBB8] opacity-100' : 'opacity-0'}`}>
+              <span className={`font-mono text-[10.5px] font-semibold uppercase tracking-[0.05em] px-2.5 py-0.5 rounded-pill bg-tint text-ink border-[1.5px] border-ink transition-opacity ${viewAnnual ? 'opacity-100' : 'opacity-0'}`}>
                 Save 20% on annual billing
               </span>
             </div>
@@ -416,82 +417,91 @@ export default function PlansPage() {
             {/* ── Plan cards ── */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
 
-              {/* Pro Seller */}
+              {/* Pro Seller — the "most popular" card gets the black-card-on-paper treatment */}
               {(() => {
                 const isCurrent     = isPro && (isAnnual === viewAnnual)
                 const isPendingThis = pending?.plan_type === 'pro' && pending?.billing_cycle === (viewAnnual ? 'annual' : 'monthly')
                 const isCycleSwitch = isPro && (isAnnual !== viewAnnual)
                 const isAction      = (isEnterprise || isCycleSwitch) && !isPendingThis && canChange
+                const dark          = !isCurrent && !isPendingThis
 
                 return (
-                  <div className={`bg-white rounded p-5 flex flex-col border-2 ${
-                    isCurrent ? 'border-[#D03839]' : isPendingThis ? 'border-[#F3C97D]' : 'border-[#E8E8E4]'
+                  <div className={`rounded-2xl p-5 flex flex-col ${
+                    dark
+                      ? 'bg-coal text-white border-2 border-ink shadow-grey-7'
+                      : isCurrent
+                        ? 'bg-white border-[1.5px] border-ink shadow-offset-5'
+                        : 'bg-white border-[1.5px] border-line'
                   }`}>
-                    <div className="min-h-[22px] mb-3">
+                    <div className="min-h-[22px] mb-3 flex items-center gap-2 flex-wrap">
                       {isCurrent && (
-                        <span className="inline-block text-[11px] font-semibold bg-[#FEF0EF] text-[#D03839] px-2.5 py-0.5 rounded">
+                        <span className={`${pillBase} bg-ink text-white border-[1.5px] border-ink`}>
                           Current plan
                         </span>
                       )}
                       {isPro && !isCurrent && !isPendingThis && (
-                        <span className="inline-block text-[11px] font-semibold bg-[#F3F3F0] text-[#737370] px-2.5 py-0.5 rounded">
+                        <span className={`${pillBase} bg-coal text-mist border-[1.5px] border-coal-line`}>
                           Your plan · billed {isAnnual ? 'annually' : 'monthly'}
                         </span>
                       )}
                       {isPendingThis && (
-                        <span className="inline-block text-[11px] font-semibold bg-[#FEF3E2] text-[#B5620A] px-2.5 py-0.5 rounded">
+                        <span className={`${pillBase} bg-muted text-white border-[1.5px] border-muted`}>
                           Scheduled
                         </span>
                       )}
                       {!isCurrent && !isPendingThis && (
-                        <span className="inline-block text-[11px] font-semibold bg-[#F3F3F0] text-[#A8A8A4] px-2.5 py-0.5 rounded">
+                        <span className={`${pillBase} bg-white text-coal border-[1.5px] border-white`}>
                           Most popular
                         </span>
                       )}
                     </div>
 
-                    <p className="text-[11px] font-semibold tracking-[0.09em] uppercase text-[#A8A8A4] mb-1">Subscription</p>
-                    <h2 className="text-2xl font-bold text-[#1A1816] tracking-tight mb-1">Pro Seller</h2>
-                    <p className="text-xs text-[#737370] leading-relaxed mb-4">
+                    <p className={`font-mono text-[11px] font-semibold tracking-[0.14em] uppercase mb-1 ${dark ? 'text-mist' : 'text-muted'}`}>Subscription</p>
+                    <h2 className={`font-display text-2xl font-bold tracking-[-0.02em] mb-1 ${dark ? 'text-white' : 'text-body'}`}>Pro Seller</h2>
+                    <p className={`text-xs leading-relaxed mb-4 ${dark ? 'text-mist' : 'text-muted'}`}>
                       For active investors and wholesalers moving deals consistently.
                     </p>
 
                     <div className="flex items-end gap-1.5 leading-none mb-1">
-                      <span className="text-[38px] font-bold text-[#1A1816] tracking-tight leading-none">
+                      <span className={`font-display text-[40px] font-bold tracking-[-0.02em] leading-none ${dark ? 'text-white' : 'text-body'}`}>
                         <sup className="text-lg font-normal align-super">$</sup>{viewAnnual ? '948' : '99'}
                       </span>
-                      <span className="text-sm font-normal text-[#737370] mb-1">{viewAnnual ? '/ year' : '/ per month'}</span>
+                      <span className={`font-mono text-[11px] mb-1 ${dark ? 'text-mist' : 'text-muted'}`}>{viewAnnual ? '/ year' : '/ per month'}</span>
                     </div>
-                    <p className="text-xs text-[#737370] mb-1">
+                    <p className={`font-mono text-[11px] mb-1 ${dark ? 'text-mist' : 'text-muted'}`}>
                       {viewAnnual ? '$79/mo · billed as $948 upfront' : 'Billed monthly'} · 5 listings included
                     </p>
-                    <p className="text-[11px] text-[#A8A8A4] mb-5">
+                    <p className={`font-mono text-[10.5px] mb-5 ${dark ? 'text-mist' : 'text-mist'}`}>
                       {viewAnnual ? 'Save $240 vs monthly' : '$19 per additional listing'}
                     </p>
 
                     {isCurrent ? (
-                      <div className="w-full py-2.5 text-center text-xs font-semibold tracking-[0.05em] uppercase border border-[#E8E8E4] text-[#A8A8A4] rounded mb-5 cursor-default select-none">
+                      <div className="w-full py-2.5 text-center font-mono text-[11px] font-semibold tracking-[0.06em] uppercase border-[1.5px] border-line-2 text-mist rounded-[10px] mb-5 cursor-default select-none">
                         Your current plan
                       </div>
                     ) : isPendingThis ? (
-                      <div className="w-full py-2.5 text-center text-xs font-semibold tracking-[0.05em] uppercase border border-[#F3C97D] text-[#B5620A] rounded mb-5 cursor-default select-none">
+                      <div className="w-full py-2.5 text-center font-mono text-[11px] font-semibold tracking-[0.06em] uppercase border-[1.5px] border-line text-smoke-3 rounded-[10px] mb-5 cursor-default select-none">
                         Switching on {formatDate(pending?.scheduled_for)}
                       </div>
                     ) : isAction ? (
                       <button
                         onClick={() => handleInitiateChange('pro')}
-                        className="w-full flex items-center justify-center gap-1.5 py-2.5 text-xs font-semibold tracking-[0.05em] uppercase border border-[#D4D4CF] text-[#1A1816] rounded hover:bg-[#F3F3F0] transition-colors mb-5"
+                        className={`w-full flex items-center justify-center gap-1.5 py-2.5 font-mono text-[11px] font-semibold tracking-[0.06em] uppercase rounded-[10px] transition-colors duration-120 mb-5 ${
+                          dark
+                            ? 'bg-white text-coal border-[1.5px] border-white hover:bg-hairline'
+                            : 'bg-white text-ink border-[1.5px] border-ink shadow-offset-2 hover:bg-tint'
+                        }`}
                       >
                         <ArrowRight className={`w-3.5 h-3.5 ${isEnterprise ? 'rotate-180' : ''}`} />
                         {isEnterprise ? 'Downgrade to Pro' : viewAnnual ? 'Switch to Annual' : 'Switch to Monthly'}
                       </button>
                     ) : null}
 
-                    <hr className="border-t border-[#E8E8E4] mb-4" />
-                    <p className="text-[11px] font-semibold tracking-[0.09em] uppercase text-[#A8A8A4] mb-3">Includes</p>
+                    <hr className={`border-t mb-4 ${dark ? 'border-coal-line' : 'border-hairline'}`} />
+                    <p className={`font-mono text-[11px] font-semibold tracking-[0.14em] uppercase mb-3 ${dark ? 'text-mist' : 'text-muted'}`}>Includes</p>
                     <ul className="flex flex-col gap-1.5 flex-1">
                       {PRO_FEATURES.map(([on, label], i) => (
-                        <li key={i} className={`flex items-start gap-2 text-xs leading-snug ${on ? 'text-[#1A1816]' : 'text-[#A8A8A4]'}`}>
+                        <li key={i} className={`flex items-start gap-2 text-[13.5px] leading-snug ${on ? (dark ? 'text-white' : 'text-body') : (dark ? 'text-smoke-4' : 'text-mist')}`}>
                           <CheckIcon filled={on} />{label}
                         </li>
                       ))}
@@ -508,69 +518,69 @@ export default function PlansPage() {
                 const isAction      = (isPro || isCycleSwitch) && !isPendingThis && canChange
 
                 return (
-                  <div className={`bg-white rounded p-5 flex flex-col border-2 ${
-                    isCurrent ? 'border-[#1A1816]' : isPendingThis ? 'border-[#F3C97D]' : 'border-[#E8E8E4]'
+                  <div className={`bg-white rounded-2xl p-5 flex flex-col border-[1.5px] ${
+                    isCurrent ? 'border-ink shadow-offset-5' : isPendingThis ? 'border-line' : 'border-ink shadow-offset-5'
                   }`}>
                     <div className="min-h-[22px] mb-3">
                       {isEnterprise && !isCurrent && !isPendingThis && (
-                        <span className="inline-block text-[11px] font-semibold bg-[#F3F3F0] text-[#737370] px-2.5 py-0.5 rounded">
+                        <span className={`${pillBase} bg-white text-muted border-[1.5px] border-line-2`}>
                           Your plan · billed {isAnnual ? 'annually' : 'monthly'}
                         </span>
                       )}
                       {isCurrent && (
-                        <span className="inline-block text-[11px] font-semibold bg-[#1A1816] text-white px-2.5 py-0.5 rounded">
+                        <span className={`${pillBase} bg-ink text-white border-[1.5px] border-ink`}>
                           Current plan
                         </span>
                       )}
                       {isPendingThis && (
-                        <span className="inline-block text-[11px] font-semibold bg-[#FEF3E2] text-[#B5620A] px-2.5 py-0.5 rounded">
+                        <span className={`${pillBase} bg-muted text-white border-[1.5px] border-muted`}>
                           Scheduled
                         </span>
                       )}
                     </div>
 
-                    <p className="text-[11px] font-semibold tracking-[0.09em] uppercase text-[#A8A8A4] mb-1">Subscription</p>
-                    <h2 className="text-2xl font-bold text-[#1A1816] tracking-tight mb-1">Enterprise</h2>
-                    <p className="text-xs text-[#737370] leading-relaxed mb-4">
+                    <p className="font-mono text-[11px] font-semibold tracking-[0.14em] uppercase text-muted mb-1">Subscription</p>
+                    <h2 className="font-display text-2xl font-bold text-body tracking-[-0.02em] mb-1">Enterprise</h2>
+                    <p className="text-xs text-muted leading-relaxed mb-4">
                       For acquisition teams running high-volume pipelines.
                     </p>
 
                     <div className="flex items-end gap-1.5 leading-none mb-1">
-                      <span className="text-[38px] font-bold text-[#1A1816] tracking-tight leading-none">
+                      <span className="font-display text-[40px] font-bold text-body tracking-[-0.02em] leading-none">
                         <sup className="text-lg font-normal align-super">$</sup>{viewAnnual ? '2,868' : '299'}
                       </span>
-                      <span className="text-sm font-normal text-[#737370] mb-1">{viewAnnual ? '/ year' : '/ per month'}</span>
+                      <span className="font-mono text-[11px] text-muted mb-1">{viewAnnual ? '/ year' : '/ per month'}</span>
                     </div>
-                    <p className="text-xs text-[#737370] mb-1">
+                    <p className="font-mono text-[11px] text-muted mb-1">
                       {viewAnnual ? '$239/mo · billed as $2,868 upfront' : 'Billed monthly'} · unlimited listings
                     </p>
-                    <p className="text-[11px] text-[#A8A8A4] mb-5">
+                    <p className="font-mono text-[10.5px] text-mist mb-5">
                       {viewAnnual ? 'Save $720 vs monthly' : <>&nbsp;</>}
                     </p>
 
                     {isCurrent ? (
-                      <div className="w-full py-2.5 text-center text-xs font-semibold tracking-[0.05em] uppercase border border-[#E8E8E4] text-[#A8A8A4] rounded mb-5 cursor-default select-none">
+                      <div className="w-full py-2.5 text-center font-mono text-[11px] font-semibold tracking-[0.06em] uppercase border-[1.5px] border-line-2 text-mist rounded-[10px] mb-5 cursor-default select-none">
                         Your current plan
                       </div>
                     ) : isPendingThis ? (
-                      <div className="w-full py-2.5 text-center text-xs font-semibold tracking-[0.05em] uppercase border border-[#F3C97D] text-[#B5620A] rounded mb-5 cursor-default select-none">
+                      <div className="w-full py-2.5 text-center font-mono text-[11px] font-semibold tracking-[0.06em] uppercase border-[1.5px] border-line text-smoke-3 rounded-[10px] mb-5 cursor-default select-none">
                         Switching on {formatDate(pending?.scheduled_for)}
                       </div>
                     ) : isAction ? (
                       <button
                         onClick={() => handleInitiateChange('enterprise')}
-                        className="w-full flex items-center justify-center gap-1.5 py-2.5 text-xs font-semibold tracking-[0.05em] uppercase bg-[#D03839] text-white rounded hover:bg-[#B82F30] transition-colors mb-5"
+                        className="w-full flex items-center justify-center gap-1.5 py-2.5 font-mono text-[11px] font-semibold tracking-[0.06em] uppercase bg-ink text-white border-[1.5px] border-ink rounded-[10px] shadow-soft-3 hover:bg-smoke-2 transition-all duration-120 mb-5"
                       >
                         <ArrowRight className="w-3.5 h-3.5" />
                         {isPro ? 'Upgrade to Enterprise' : viewAnnual ? 'Switch to Annual' : 'Switch to Monthly'}
                       </button>
                     ) : null}
 
-                    <hr className="border-t border-[#E8E8E4] mb-4" />
-                    <p className="text-[11px] font-semibold tracking-[0.09em] uppercase text-[#A8A8A4] mb-3">Includes</p>
+                    <hr className="border-t border-hairline mb-4" />
+                    <p className="font-mono text-[11px] font-semibold tracking-[0.14em] uppercase text-muted mb-3">Includes</p>
                     <ul className="flex flex-col gap-1.5 flex-1">
                       {ENTERPRISE_FEATURES.map(([on, label], i) => (
-                        <li key={i} className={`flex items-start gap-2 text-xs leading-snug ${on ? 'text-[#1A1816]' : 'text-[#A8A8A4]'}`}>
+                        <li key={i} className={`flex items-start gap-2 text-[13.5px] leading-snug ${on ? 'text-body' : 'text-mist'}`}>
                           <CheckIcon filled={on} />{label}
                         </li>
                       ))}
@@ -584,25 +594,25 @@ export default function PlansPage() {
         ) : (
           /* No plan state */
           teamWorkspace ? (
-            <div className="bg-white border border-[#E8E8E4] rounded p-8 flex items-start gap-4">
-              <div className="w-10 h-10 rounded bg-[#E4F5EC] flex items-center justify-center shrink-0">
-                <Zap className="w-5 h-5 text-[#0F6E56]" />
+            <div className="bg-white border-[1.5px] border-ink rounded-[14px] shadow-offset-4 p-8 flex items-start gap-4">
+              <div className="w-10 h-10 rounded-[10px] bg-tint border-[1.5px] border-ink flex items-center justify-center shrink-0">
+                <Zap className="w-5 h-5 text-ink" />
               </div>
               <div>
-                <p className="text-[14px] font-semibold text-[#1A1816] mb-1">Covered by {teamWorkspace.name}</p>
-                <p className="text-[13px] text-[#737370] leading-relaxed">Your access is included under your team's Enterprise plan. Billing and plan management is handled by the team owner.</p>
+                <p className="text-[14px] font-semibold text-body mb-1">Covered by {teamWorkspace.name}</p>
+                <p className="text-[13px] text-muted leading-relaxed">Your access is included under your team's Enterprise plan. Billing and plan management is handled by the team owner.</p>
               </div>
             </div>
           ) : (
-            <div className="bg-white border border-[#E8E8E4] rounded p-8 text-center">
-              <div className="w-12 h-12 rounded bg-[#F3F3F0] flex items-center justify-center mx-auto mb-3">
-                <Zap className="w-6 h-6 text-[#A8A8A4]" />
+            <div className="bg-white border-[1.5px] border-ink rounded-[14px] shadow-offset-4 p-8 text-center">
+              <div className="w-12 h-12 rounded-[10px] bg-tint border-[1.5px] border-ink flex items-center justify-center mx-auto mb-3">
+                <Zap className="w-6 h-6 text-ink" />
               </div>
-              <p className="text-[14px] font-semibold text-[#1A1816] mb-1">No active plan</p>
-              <p className="text-[13px] text-[#737370] mb-4">Complete onboarding to subscribe to a plan.</p>
+              <p className="font-display text-[15px] font-semibold text-body mb-1">No active plan</p>
+              <p className="text-[13px] text-muted mb-4">Complete onboarding to subscribe to a plan.</p>
               <a
                 href="/onboarding"
-                className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-[#D03839] hover:bg-[#B82F30] text-white text-[13px] font-semibold rounded transition-colors"
+                className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-ink hover:bg-smoke-2 text-white text-[13px] font-semibold border-[1.5px] border-ink rounded-[10px] shadow-soft-3 transition-all duration-120"
               >
                 Choose a plan
               </a>

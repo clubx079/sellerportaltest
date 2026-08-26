@@ -15,15 +15,15 @@ const ViewForm = ({ isOpen, onClose, hall }) => {
   const getHousekeepingStatusColor = (status) => {
     switch (status?.toLowerCase()) {
       case 'clean':
-        return 'bg-green-100 text-green-700 border-green-200';
+        return 'bg-neutral-100 text-neutral-700 border-neutral-200';
       case 'dirty':
-        return 'bg-red-100 text-red-700 border-red-200';
+        return 'bg-neutral-100 text-neutral-700 border-neutral-200';
       case 'inspected':
-        return 'bg-blue-100 text-blue-700 border-blue-200';
+        return 'bg-neutral-100 text-neutral-700 border-neutral-200';
       case 'out of service':
         return 'bg-gray-100 text-gray-700 border-gray-200';
       default:
-        return 'bg-yellow-100 text-yellow-700 border-yellow-200';
+        return 'bg-neutral-100 text-neutral-700 border-neutral-200';
     }
   };
 
@@ -42,7 +42,7 @@ const ViewForm = ({ isOpen, onClose, hall }) => {
             className="fixed right-0 top-0 h-screen w-full md:w-[600px] lg:w-[700px] bg-white shadow-2xl z-[60] flex flex-col"
           >
             {/* Header */}
-            <div className="bg-[#472F97] px-6 py-4 flex items-center justify-between">
+            <div className="bg-[#111111] px-6 py-4 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center">
                   <Building2 className="w-5 h-5 text-white" />
@@ -65,7 +65,7 @@ const ViewForm = ({ isOpen, onClose, hall }) => {
               <div className="p-6 space-y-6">
                 {/* Basic Info Section */}
                 <div className="bg-neutral-50 rounded-xl p-4 border border-neutral-200">
-                  <h3 className="text-sm font-semibold text-[#472F97] mb-4 flex items-center gap-2">
+                  <h3 className="text-sm font-semibold text-[#111111] mb-4 flex items-center gap-2">
                     <Building2 className="w-4 h-4" />
                     Basic Information
                   </h3>
@@ -93,7 +93,7 @@ const ViewForm = ({ isOpen, onClose, hall }) => {
 
                 {/* Status Section */}
                 <div className="bg-neutral-50 rounded-xl p-4 border border-neutral-200">
-                  <h3 className="text-sm font-semibold text-[#472F97] mb-4 flex items-center gap-2">
+                  <h3 className="text-sm font-semibold text-[#111111] mb-4 flex items-center gap-2">
                     <CheckCircle2 className="w-4 h-4" />
                     Hall Status
                   </h3>
@@ -117,7 +117,7 @@ const ViewForm = ({ isOpen, onClose, hall }) => {
 
                 {/* Active Status */}
                 <div className="bg-neutral-50 rounded-xl p-4 border border-neutral-200">
-                  <h3 className="text-sm font-semibold text-[#472F97] mb-4 flex items-center gap-2">
+                  <h3 className="text-sm font-semibold text-[#111111] mb-4 flex items-center gap-2">
                     <Layers className="w-4 h-4" />
                     Availability
                   </h3>
@@ -125,8 +125,8 @@ const ViewForm = ({ isOpen, onClose, hall }) => {
                     <label className="block text-xs font-medium text-neutral-600 mb-1.5">Status</label>
                     <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border text-sm font-medium ${
                       hall.is_active
-                        ? 'bg-green-100 text-green-700 border-green-200'
-                        : 'bg-red-100 text-red-700 border-red-200'
+                        ? 'bg-neutral-100 text-neutral-700 border-neutral-200'
+                        : 'bg-neutral-100 text-neutral-700 border-neutral-200'
                     }`}>
                       {hall.is_active ? 'Active' : 'Inactive'}
                     </div>
@@ -138,7 +138,7 @@ const ViewForm = ({ isOpen, onClose, hall }) => {
               <div className="sticky bottom-0 bg-white border-t border-neutral-200 px-6 py-4">
                 <button
                   onClick={onClose}
-                  className="w-full px-4 py-2.5 bg-[#472F97] hover:bg-[#3a2578] text-white font-medium rounded-xl transition-colors"
+                  className="w-full px-4 py-2.5 bg-[#111111] hover:bg-[#444444] text-white font-medium rounded-xl transition-colors"
                 >
                   Close
                 </button>

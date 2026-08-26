@@ -30,7 +30,7 @@ const DeleteConfirmModal = ({ isOpen, onClose, onConfirm, itemName }) => {
               className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
             >
               {/* Header */}
-              <div className="relative bg-[#472F97] p-6">
+              <div className="relative bg-[#111111] p-6">
                 <div className="flex items-center gap-4">
                   <div className="w-14 h-14 rounded-full bg-white/10 flex items-center justify-center">
                     <AlertTriangle className="w-7 h-7 text-white" />
@@ -69,7 +69,7 @@ const DeleteConfirmModal = ({ isOpen, onClose, onConfirm, itemName }) => {
                 </button>
                 <button
                   onClick={onConfirm}
-                  className="flex-1 px-4 py-2.5 bg-[#472F97] hover:bg-[#3a2578] text-white font-medium rounded-xl transition-colors"
+                  className="flex-1 px-4 py-2.5 bg-[#111111] hover:bg-[#444444] text-white font-medium rounded-xl transition-colors"
                 >
                   Delete
                 </button>

@@ -10,12 +10,12 @@ function fmtDate(d) {
 
 function StatusBadge({ status }) {
   if (status === 'active') return (
-    <span className="inline-flex items-center gap-1 px-2 h-5 rounded text-[11px] font-semibold bg-[#E4F5EC] text-[#0F6E56] border border-[#9FDBB8]">
+    <span className="inline-flex items-center gap-1 px-2 h-5 rounded-pill font-mono text-[10.5px] font-semibold uppercase tracking-[0.05em] bg-white text-ink border border-ink">
       <CheckCircle className="w-2.5 h-2.5" /> Active
     </span>
   )
   return (
-    <span className="inline-flex items-center gap-1 px-2 h-5 rounded text-[11px] font-semibold bg-[#FEF3E2] text-[#B5620A] border border-[#F5D9A0]">
+    <span className="inline-flex items-center gap-1 px-2 h-5 rounded-pill font-mono text-[10.5px] font-semibold uppercase tracking-[0.05em] bg-white text-muted border border-line">
       <Clock className="w-2.5 h-2.5" /> Pending
     </span>
   )
@@ -82,15 +82,15 @@ function PermissionToggles({ permissions, onChange }) {
   const allSelected = ALL_PERMISSION_KEYS.every(k => permissions[k])
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between pb-3 border-b border-[#E8E8E4]">
-        <span className="text-[12px] font-semibold text-[#1A1816]">All permissions</span>
+      <div className="flex items-center justify-between pb-3 border-b border-hairline">
+        <span className="text-[12px] font-semibold text-body">All permissions</span>
         <button
           type="button"
           onClick={() => {
             const next = !allSelected
             onChange(Object.fromEntries(ALL_PERMISSION_KEYS.map(k => [k, next])))
           }}
-          className="text-[11px] text-[#D03839] hover:underline font-semibold"
+          className="text-[11px] text-ink hover:underline font-semibold"
         >
           {allSelected ? 'Clear all' : 'Select all'}
         </button>
@@ -100,7 +100,7 @@ function PermissionToggles({ permissions, onChange }) {
         return (
           <div key={group.group}>
             <div className="flex items-center justify-between mb-2">
-              <span className="text-[11px] font-semibold text-[#A8A8A4] uppercase tracking-wider">{group.group}</span>
+              <span className="font-mono text-[10.5px] font-semibold text-muted uppercase tracking-[0.12em]">{group.group}</span>
               <button
                 type="button"
                 onClick={() => {
@@ -108,7 +108,7 @@ function PermissionToggles({ permissions, onChange }) {
                   group.items.forEach(i => { newPerms[i.key] = !allOn })
                   onChange(newPerms)
                 }}
-                className="text-[11px] text-[#D03839] hover:underline font-medium"
+                className="text-[11px] text-ink hover:underline font-medium"
               >
                 {allOn ? 'Remove all' : 'Select all'}
               </button>
@@ -121,14 +121,14 @@ function PermissionToggles({ permissions, onChange }) {
                   onClick={() => onChange({ ...permissions, [item.key]: !permissions[item.key] })}
                   className="flex items-center gap-2.5 w-full text-left group"
                 >
-                  <div className={`w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 transition-colors ${
+                  <div className={`w-4 h-4 rounded-[4px] border-[1.5px] flex items-center justify-center flex-shrink-0 transition-colors ${
                     permissions[item.key]
-                      ? 'bg-[#1A1816] border-[#1A1816]'
-                      : 'border-[#E8E8E4] group-hover:border-[#A8A8A4]'
+                      ? 'bg-ink border-ink'
+                      : 'border-line group-hover:border-ink'
                   }`}>
                     {permissions[item.key] && <Check className="w-2.5 h-2.5 text-white" />}
                   </div>
-                  <span className="text-[13px] text-[#444441] group-hover:text-[#1A1816]">{item.label}</span>
+                  <span className="text-[13px] text-smoke-2 group-hover:text-body">{item.label}</span>
                 </button>
               ))}
             </div>
@@ -187,37 +187,37 @@ function PermissionsPopup({ memberId, currentPermissions, memberRole, onChanged,
     <div className="relative" ref={ref}>
       <button
         onClick={() => setOpen(o => !o)}
-        className={`flex items-center gap-1.5 h-7 px-2.5 border rounded text-[12px] font-medium transition-colors ${
+        className={`flex items-center gap-1.5 h-7 px-2.5 border-[1.5px] rounded-pill font-mono text-[11px] font-semibold transition-colors ${
           open
-            ? 'border-[#1A1816] bg-[#FAFAF8] text-[#1A1816]'
-            : 'border-[#E8E8E4] text-[#444441] hover:border-[#1A1816]'
+            ? 'border-ink bg-tint text-ink'
+            : 'border-line text-smoke-2 hover:border-ink hover:text-ink'
         }`}
       >
         <Settings2 className="w-3 h-3" />
         {count}/{TOTAL_PERMISSIONS} access
       </button>
       {open && (
-        <div className="absolute right-0 top-full mt-1 w-72 bg-white border border-[#E8E8E4] rounded shadow-xl z-30 overflow-hidden">
-          <div className="px-4 py-3 border-b border-[#E8E8E4] flex items-center justify-between">
-            <span className="text-[13px] font-semibold text-[#1A1816]">Manage Access</span>
-            <button onClick={() => setOpen(false)} className="p-1 rounded hover:bg-[#FAFAF8]">
-              <X className="w-3.5 h-3.5 text-[#737370]" />
+        <div className="absolute right-0 top-full mt-1 w-72 bg-white border-[1.5px] border-ink rounded-[12px] shadow-offset-4 z-30 overflow-hidden">
+          <div className="px-4 py-3 border-b border-hairline flex items-center justify-between">
+            <span className="font-display font-semibold text-[13.5px] tracking-[-0.01em] text-body">Manage Access</span>
+            <button onClick={() => setOpen(false)} className="p-1 rounded hover:bg-tint-3">
+              <X className="w-3.5 h-3.5 text-muted" />
             </button>
           </div>
           <div className="p-4 max-h-80 overflow-y-auto">
             <PermissionToggles permissions={perms} onChange={setPerms} />
           </div>
-          <div className="px-4 py-3 border-t border-[#E8E8E4] flex gap-2">
+          <div className="px-4 py-3 border-t border-hairline flex gap-2">
             <button
               onClick={() => { setPerms(currentPermissions || derivePermissionsFromRole(memberRole)); setOpen(false) }}
-              className="flex-1 h-8 border border-[#E8E8E4] text-[#444441] text-[12px] font-medium rounded hover:border-[#1A1816]"
+              className="flex-1 h-8 bg-white border-[1.5px] border-ink text-ink text-[12px] font-semibold rounded-[8px] shadow-offset-2 hover:bg-tint"
             >
               Cancel
             </button>
             <button
               onClick={save}
               disabled={saving}
-              className="flex-1 h-8 bg-[#D03839] hover:bg-[#E0493B] text-white text-[12px] font-semibold rounded disabled:opacity-50"
+              className="flex-1 h-8 bg-ink border-[1.5px] border-ink hover:bg-smoke-2 text-white text-[12px] font-semibold rounded-[8px] disabled:opacity-50"
             >
               {saving ? 'Saving...' : 'Save'}
             </button>
@@ -265,22 +265,22 @@ function InviteModal({ onClose, onInvited, hasOrg, defaultOrgName }) {
   if (isTrialBlock) {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4">
-        <div className="bg-white rounded w-full max-w-[420px] shadow-xl">
-          <div className="flex items-center justify-between px-6 py-4 border-b border-[#E8E8E4]">
-            <h2 className="text-[16px] font-bold text-[#1A1816]">Trial Active</h2>
-            <button onClick={onClose} className="p-1.5 rounded hover:bg-[#FAFAF8] text-[#737370]"><X className="w-4 h-4" /></button>
+        <div className="bg-white rounded-[14px] border-[1.5px] border-ink shadow-offset-6 w-full max-w-[420px]">
+          <div className="flex items-center justify-between px-6 py-4 border-b border-hairline">
+            <h2 className="font-display font-semibold text-[16.5px] tracking-[-0.01em] text-body">Trial Active</h2>
+            <button onClick={onClose} className="p-1.5 rounded hover:bg-tint-3 text-muted"><X className="w-4 h-4" /></button>
           </div>
           <div className="px-6 py-6">
-            <div className="w-10 h-10 bg-[#FEF3E2] rounded flex items-center justify-center mb-4">
-              <AlertTriangle className="w-5 h-5 text-[#B5620A]" />
+            <div className="w-10 h-10 bg-tint border border-hairline rounded-[9px] flex items-center justify-center mb-4">
+              <AlertTriangle className="w-5 h-5 text-smoke-3" />
             </div>
-            <p className="text-[14px] text-[#1A1816] font-semibold mb-2">Your trial is still active</p>
-            <p className="text-[13px] text-[#737370] leading-relaxed mb-6">
+            <p className="text-[14px] text-body font-semibold mb-2">Your trial is still active</p>
+            <p className="text-[13px] text-muted leading-relaxed mb-6">
               Team members can only be invited after your trial ends and your subscription is active.
             </p>
             <div className="flex gap-2">
-              <button onClick={onClose} className="flex-1 h-9 border border-[#E8E8E4] text-[#444441] text-[13px] font-medium rounded hover:border-[#1A1816]">Cancel</button>
-              <button onClick={() => router.push('/plans')} className="flex-1 h-9 bg-[#D03839] hover:bg-[#E0493B] text-white text-[13px] font-semibold rounded">Go to Plans</button>
+              <button onClick={onClose} className="flex-1 h-9 bg-white border-[1.5px] border-ink text-ink text-[13px] font-semibold rounded-[9px] shadow-offset-2 hover:bg-tint">Cancel</button>
+              <button onClick={() => router.push('/plans')} className="flex-1 h-9 bg-ink border-[1.5px] border-ink hover:bg-smoke-2 text-white text-[13px] font-semibold rounded-[9px] shadow-soft-3">Go to Plans</button>
             </div>
           </div>
         </div>
@@ -292,63 +292,63 @@ function InviteModal({ onClose, onInvited, hasOrg, defaultOrgName }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4">
-      <div className="bg-white rounded w-full max-w-[480px] shadow-xl max-h-[90vh] flex flex-col">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-[#E8E8E4] shrink-0">
-          <h2 className="text-[16px] font-bold text-[#1A1816]">Invite Team Member</h2>
-          <button onClick={onClose} className="p-1.5 rounded hover:bg-[#FAFAF8] text-[#737370]"><X className="w-4 h-4" /></button>
+      <div className="bg-white rounded-[14px] border-[1.5px] border-ink shadow-offset-6 w-full max-w-[480px] max-h-[90vh] flex flex-col">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-hairline shrink-0">
+          <h2 className="font-display font-semibold text-[16.5px] tracking-[-0.01em] text-body">Invite Team Member</h2>
+          <button onClick={onClose} className="p-1.5 rounded hover:bg-tint-3 text-muted"><X className="w-4 h-4" /></button>
         </div>
         <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
           <div className="px-6 py-5 space-y-4 overflow-y-auto flex-1">
             {!hasOrg && (
               <div>
-                <label className="block text-[12px] font-semibold text-[#444441] mb-1.5">Team Name</label>
+                <label className="block text-[13px] font-semibold text-body mb-1.5">Team Name</label>
                 <input
                   type="text"
                   placeholder="e.g. Acme Wholesale"
                   value={form.orgName}
                   onChange={e => setForm(f => ({ ...f, orgName: e.target.value }))}
-                  className="w-full h-9 px-3 border border-[#E8E8E4] rounded text-[13px] text-[#1A1816] placeholder:text-[#A8A8A4] focus:outline-none focus:border-[#1A1816]"
+                  className="w-full h-9 px-3 border-[1.5px] border-line rounded-[9px] text-[13px] text-body placeholder:text-mist focus:outline-none focus:border-ink focus:shadow-offset-3"
                 />
               </div>
             )}
             <div>
-              <label className="block text-[12px] font-semibold text-[#444441] mb-1.5">Email Address <span className="text-[#D03839]">*</span></label>
+              <label className="block text-[13px] font-semibold text-body mb-1.5">Email Address <span className="text-ink">*</span></label>
               <input
                 type="email"
                 placeholder="colleague@example.com"
                 value={form.email}
                 onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
-                className="w-full h-9 px-3 border border-[#E8E8E4] rounded text-[13px] text-[#1A1816] placeholder:text-[#A8A8A4] focus:outline-none focus:border-[#1A1816]"
+                className="w-full h-9 px-3 border-[1.5px] border-line rounded-[9px] text-[13px] text-body placeholder:text-mist focus:outline-none focus:border-ink focus:shadow-offset-3"
                 required
               />
             </div>
             <div>
-              <label className="block text-[12px] font-semibold text-[#444441] mb-1.5">Name <span className="text-[#A8A8A4] font-normal">(optional)</span></label>
+              <label className="block text-[13px] font-semibold text-body mb-1.5">Name <span className="text-mist font-normal">(optional)</span></label>
               <input
                 type="text"
                 placeholder="Jane Smith"
                 value={form.name}
                 onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-                className="w-full h-9 px-3 border border-[#E8E8E4] rounded text-[13px] text-[#1A1816] placeholder:text-[#A8A8A4] focus:outline-none focus:border-[#1A1816]"
+                className="w-full h-9 px-3 border-[1.5px] border-line rounded-[9px] text-[13px] text-body placeholder:text-mist focus:outline-none focus:border-ink focus:shadow-offset-3"
               />
             </div>
             <div>
               <div className="flex items-center justify-between mb-3">
-                <label className="text-[12px] font-semibold text-[#444441]">Permissions</label>
-                <span className="text-[11px] text-[#737370]">{permCount} of {TOTAL_PERMISSIONS} selected</span>
+                <label className="text-[13px] font-semibold text-body">Permissions</label>
+                <span className="text-[11px] text-muted">{permCount} of {TOTAL_PERMISSIONS} selected</span>
               </div>
-              <div className="border border-[#E8E8E4] rounded p-4">
+              <div className="border-[1.5px] border-line rounded-[10px] p-4">
                 <PermissionToggles permissions={permissions} onChange={setPermissions} />
               </div>
             </div>
-            {error && <p className="text-[12px] text-[#D03839]">{error}</p>}
+            {error && <p className="text-[12px] text-ink font-semibold">{error}</p>}
           </div>
-          <div className="flex gap-2 px-6 py-4 border-t border-[#E8E8E4] shrink-0">
-            <button type="button" onClick={onClose} className="flex-1 h-9 border border-[#E8E8E4] text-[#444441] text-[13px] font-medium rounded hover:border-[#1A1816]">Cancel</button>
+          <div className="flex gap-2 px-6 py-4 border-t border-hairline shrink-0">
+            <button type="button" onClick={onClose} className="flex-1 h-9 bg-white border-[1.5px] border-ink text-ink text-[13px] font-semibold rounded-[9px] shadow-offset-2 hover:bg-tint">Cancel</button>
             <button
               type="submit"
               disabled={submitting || !form.email}
-              className="flex-1 h-9 bg-[#D03839] hover:bg-[#E0493B] text-white text-[13px] font-semibold rounded disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 h-9 bg-ink border-[1.5px] border-ink hover:bg-smoke-2 text-white text-[13px] font-semibold rounded-[9px] shadow-soft-3 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {submitting ? 'Sending...' : 'Send Invite'}
             </button>
@@ -402,7 +402,7 @@ function MemberPhoneField({ memberId, initialPhone, onChanged }) {
 
   return (
     <div className="flex items-center gap-1.5 mt-1">
-      <Phone className="w-3 h-3 text-[#A8A8A4] shrink-0" />
+      <Phone className="w-3 h-3 text-mist shrink-0" />
       <input
         type="tel"
         value={value}
@@ -410,10 +410,10 @@ function MemberPhoneField({ memberId, initialPhone, onChanged }) {
         onBlur={save}
         onKeyDown={e => { if (e.key === 'Enter') { e.currentTarget.blur() } }}
         placeholder="Add phone number"
-        className="flex-1 max-w-[200px] h-7 px-2 border border-[#E8E8E4] rounded text-[12px] text-[#1A1816] placeholder:text-[#A8A8A4] focus:outline-none focus:border-[#1A1816] transition-colors"
+        className="flex-1 max-w-[200px] h-7 px-2 border-[1.5px] border-line rounded-[8px] text-[12px] text-body placeholder:text-mist focus:outline-none focus:border-ink transition-colors"
       />
-      {saving && <span className="text-[11px] text-[#737370]">Saving…</span>}
-      {error && <span className="text-[11px] text-[#D03839]">{error}</span>}
+      {saving && <span className="font-mono text-[11px] text-muted">Saving…</span>}
+      {error && <span className="text-[11px] text-ink font-semibold">{error}</span>}
     </div>
   )
 }
@@ -515,10 +515,10 @@ export default function TeamPage() {
 
   if (loading) {
     return (
-      <div className="p-4 lg:p-6 space-y-3 animate-pulse">
-        <div className="h-7 bg-[#E8E8E4] rounded w-32" />
-        <div className="h-4 bg-[#E8E8E4] rounded w-64" />
-        {[1, 2].map(i => <div key={i} className="h-16 bg-[#E8E8E4] rounded" />)}
+      <div className="p-4 lg:p-6 space-y-3 motion-safe:animate-pulse">
+        <div className="h-7 bg-hairline rounded w-32" />
+        <div className="h-4 bg-hairline rounded w-64" />
+        {[1, 2].map(i => <div key={i} className="h-16 bg-hairline rounded" />)}
       </div>
     )
   }
@@ -526,15 +526,15 @@ export default function TeamPage() {
   if (error && !data) {
     return (
       <div className="p-4 lg:p-6">
-        <div className="border border-[#F5C6C2] bg-[#FEF0EF] rounded p-8 text-center max-w-lg mx-auto">
-          <div className="w-12 h-12 bg-[#D03839]/10 rounded flex items-center justify-center mx-auto mb-4">
-            <AlertTriangle className="w-6 h-6 text-[#D03839]" />
+        <div className="border-[1.5px] border-ink bg-white rounded-[12px] shadow-offset-4 p-8 text-center max-w-lg mx-auto">
+          <div className="w-12 h-12 bg-tint border-[1.5px] border-ink rounded-[10px] flex items-center justify-center mx-auto mb-4">
+            <AlertTriangle className="w-6 h-6 text-ink" />
           </div>
-          <h3 className="text-[16px] font-bold text-[#1A1816] mb-2">Couldn&apos;t load your team</h3>
-          <p className="text-[13px] text-[#737370] leading-relaxed mb-6">{error}</p>
+          <h3 className="font-display font-semibold text-[16.5px] tracking-[-0.01em] text-body mb-2">Couldn&apos;t load your team</h3>
+          <p className="text-[13px] text-muted leading-relaxed mb-6">{error}</p>
           <button
             onClick={fetchTeam}
-            className="inline-flex items-center gap-2 h-9 px-5 bg-[#D03839] hover:bg-[#E0493B] text-white text-[13px] font-semibold rounded"
+            className="inline-flex items-center gap-2 h-9 px-5 bg-ink border-[1.5px] border-ink hover:bg-smoke-2 text-white text-[13px] font-semibold rounded-[10px] shadow-soft-3"
           >
             <RefreshCw className="w-4 h-4" /> Try again
           </button>
@@ -550,17 +550,17 @@ export default function TeamPage() {
   if (!isEnterprise && !isMemberOfAnyOrg) {
     return (
       <div className="p-4 lg:p-6">
-        <div className="border border-[#E8E8E4] rounded bg-white p-12 text-center max-w-lg mx-auto">
-          <div className="w-12 h-12 bg-[#D03839]/10 rounded flex items-center justify-center mx-auto mb-4">
-            <Users className="w-6 h-6 text-[#D03839]" />
+        <div className="border-[1.5px] border-ink rounded-[12px] shadow-offset-4 bg-white p-12 text-center max-w-lg mx-auto">
+          <div className="w-12 h-12 bg-tint border-[1.5px] border-ink rounded-[10px] flex items-center justify-center mx-auto mb-4">
+            <Users className="w-6 h-6 text-ink" />
           </div>
-          <h3 className="text-[16px] font-bold text-[#1A1816] mb-2">Enterprise Feature</h3>
-          <p className="text-[13px] text-[#737370] leading-relaxed mb-6">
+          <h3 className="font-display font-semibold text-[16.5px] tracking-[-0.01em] text-body mb-2">Enterprise Feature</h3>
+          <p className="text-[13px] text-muted leading-relaxed mb-6">
             Team accounts let you invite colleagues to manage listings, messages, and deals together. Upgrade to Enterprise to unlock this feature.
           </p>
           <button
             onClick={() => router.push('/plans')}
-            className="inline-flex items-center gap-2 h-9 px-5 bg-[#D03839] hover:bg-[#E0493B] text-white text-[13px] font-semibold rounded"
+            className="inline-flex items-center gap-2 h-9 px-5 bg-ink border-[1.5px] border-ink hover:bg-smoke-2 text-white text-[13px] font-semibold rounded-[10px] shadow-soft-3"
           >
             <Zap className="w-4 h-4" /> Upgrade to Enterprise
           </button>
@@ -581,18 +581,18 @@ export default function TeamPage() {
       )}
 
       {isOwner && isTrialing && (
-        <div className="flex items-start gap-3 p-4 bg-[#FEF3E2] border border-[#F5D9A0] rounded mb-5">
-          <AlertTriangle className="w-4 h-4 text-[#B5620A] shrink-0 mt-0.5" />
+        <div className="flex items-start gap-3 p-4 bg-tint border-[1.5px] border-line rounded-[10px] mb-5">
+          <AlertTriangle className="w-4 h-4 text-smoke-3 shrink-0 mt-0.5" />
           <div>
-            <p className="text-[13px] font-semibold text-[#B5620A]">Trial period active</p>
-            <p className="text-[12px] text-[#B5620A] mt-0.5">You can't invite team members while on trial. <button onClick={() => router.push('/plans')} className="underline font-medium">End your trial</button> to activate your subscription first.</p>
+            <p className="text-[13px] font-semibold text-smoke-3">Trial period active</p>
+            <p className="text-[12px] text-smoke-3 mt-0.5">You can't invite team members while on trial. <button onClick={() => router.push('/plans')} className="underline font-medium">End your trial</button> to activate your subscription first.</p>
           </div>
         </div>
       )}
 
       <div className="flex items-start justify-between mb-6">
         <div>
-          <h1 className="text-[24px] font-bold text-[#1A1816] mb-1">Team</h1>
+          <h1 className="font-display font-bold text-[24px] tracking-[-0.02em] text-body mb-1">Team</h1>
           {org ? (
             isOwner ? (
               editingName ? (
@@ -607,29 +607,29 @@ export default function TeamPage() {
                       if (e.key === 'Escape') setEditingName(false)
                     }}
                     disabled={savingName}
-                    className="h-8 px-2.5 border border-[#1A1816] rounded text-[14px] text-[#1A1816] focus:outline-none disabled:opacity-50 w-[240px]"
+                    className="h-8 px-2.5 border-[1.5px] border-ink rounded-[8px] text-[14px] text-body focus:outline-none focus:shadow-offset-2 disabled:opacity-50 w-[240px]"
                   />
                   <button
                     onClick={saveTeamName}
                     disabled={savingName}
-                    className="h-8 px-3 bg-[#D03839] hover:bg-[#E0493B] text-white text-[12px] font-semibold rounded disabled:opacity-50"
+                    className="h-8 px-3 bg-ink border-[1.5px] border-ink hover:bg-smoke-2 text-white text-[12px] font-semibold rounded-[8px] disabled:opacity-50"
                   >
                     {savingName ? 'Saving…' : 'Save'}
                   </button>
                   <button
                     onClick={() => setEditingName(false)}
                     disabled={savingName}
-                    className="h-8 px-3 border border-[#E8E8E4] text-[#444441] text-[12px] font-medium rounded hover:border-[#1A1816] disabled:opacity-50"
+                    className="h-8 px-3 bg-white border-[1.5px] border-ink text-ink text-[12px] font-semibold rounded-[8px] shadow-offset-2 hover:bg-tint disabled:opacity-50"
                   >
                     Cancel
                   </button>
                 </div>
               ) : (
                 <div className="flex items-center gap-1.5 group">
-                  <p className="text-[14px] text-[#737370]">{org.name}</p>
+                  <p className="text-[14px] text-muted">{org.name}</p>
                   <button
                     onClick={() => { setNameDraft(org.name || ''); setEditingName(true) }}
-                    className="p-1 rounded text-[#A8A8A4] hover:text-[#1A1816] hover:bg-[#FAFAF8] transition-colors"
+                    className="p-1 rounded text-mist hover:text-body hover:bg-tint-3 transition-colors"
                     title="Edit team name"
                   >
                     <Pencil className="w-3.5 h-3.5" />
@@ -637,16 +637,16 @@ export default function TeamPage() {
                 </div>
               )
             ) : (
-              <p className="text-[14px] text-[#737370]">{`You're a member of ${org.name}`}</p>
+              <p className="text-[14px] text-muted">{`You're a member of ${org.name}`}</p>
             )
           ) : (
-            <p className="text-[14px] text-[#737370]">Invite colleagues to collaborate on your listings.</p>
+            <p className="text-[14px] text-muted">Invite colleagues to collaborate on your listings.</p>
           )}
         </div>
         {isOwner && (
           <button
             onClick={() => setShowModal(true)}
-            className="flex items-center gap-1.5 h-9 px-4 bg-[#D03839] hover:bg-[#E0493B] text-white text-[13px] font-semibold rounded shrink-0"
+            className="flex items-center gap-1.5 h-9 px-4 bg-ink border-[1.5px] border-ink hover:bg-smoke-2 text-white text-[13px] font-semibold rounded-[10px] shadow-soft-3 shrink-0"
           >
             <Plus className="w-4 h-4" /> Invite Member
           </button>
@@ -656,25 +656,25 @@ export default function TeamPage() {
       <div className="space-y-2">
         {/* Owner row */}
         {org && (
-          <div className="bg-white border border-[#E8E8E4] rounded p-4 flex items-center gap-4">
-            <div className="w-9 h-9 rounded-full bg-[#1A1816] flex items-center justify-center shrink-0">
-              <span className="text-white text-[13px] font-bold">
+          <div className="bg-white border-[1.5px] border-ink rounded-[12px] shadow-offset-4 p-4 flex items-center gap-4">
+            <div className="w-9 h-9 rounded-full bg-ink border-[1.5px] border-ink flex items-center justify-center shrink-0">
+              <span className="font-mono text-white text-[13px] font-bold">
                 {(isOwner ? seller?.contact_person_name : org.owner?.contact_person_name || org.name)?.[0]?.toUpperCase() || '?'}
               </span>
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-0.5">
-                <span className="text-[14px] font-semibold text-[#1A1816] truncate">
+                <span className="text-[14px] font-semibold text-body truncate">
                   {isOwner ? (seller?.contact_person_name || seller?.email) : (org.owner?.contact_person_name || org.owner?.email || 'Owner')}
                 </span>
-                <span className="inline-flex items-center gap-1 px-2 h-5 rounded text-[11px] font-semibold bg-[#F3F3F0] text-[#444441] border border-[#E8E8E4]">
+                <span className="inline-flex items-center gap-1 px-2 h-5 rounded-pill font-mono text-[10.5px] font-semibold uppercase tracking-[0.05em] bg-white text-ink border border-ink">
                   <Crown className="w-2.5 h-2.5" /> Owner
                 </span>
-                <span className="inline-flex items-center gap-1 px-2 h-5 rounded text-[11px] font-semibold bg-[#EBF3FC] text-[#4A90E2] border border-[#C5DDF8]">
+                <span className="inline-flex items-center gap-1 px-2 h-5 rounded-pill font-mono text-[10.5px] font-semibold uppercase tracking-[0.05em] bg-white text-muted border border-line">
                   <Shield className="w-2.5 h-2.5" /> Full Access
                 </span>
               </div>
-              <p className="text-[12px] text-[#737370] truncate">
+              <p className="text-[12px] text-muted truncate">
                 {isOwner ? seller?.email : (org.owner?.email || '')}
               </p>
             </div>
@@ -688,21 +688,21 @@ export default function TeamPage() {
             : derivePermissionsFromRole(m.role)
           const count = getPermissionCount(perms)
           return (
-            <div key={m.id} className="bg-white border border-[#E8E8E4] rounded p-4 flex items-center gap-4">
-              <div className="w-9 h-9 rounded-full bg-[#E8E8E4] flex items-center justify-center shrink-0">
-                <span className="text-[#444441] text-[13px] font-bold">
+            <div key={m.id} className="bg-white border-[1.5px] border-ink rounded-[12px] shadow-offset-4 p-4 flex items-center gap-4">
+              <div className="w-9 h-9 rounded-full bg-tint border-[1.5px] border-ink flex items-center justify-center shrink-0">
+                <span className="font-mono text-ink text-[13px] font-bold">
                   {(m.name || m.email)[0].toUpperCase()}
                 </span>
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-0.5 flex-wrap">
-                  <span className="text-[14px] font-semibold text-[#1A1816] truncate">{m.name || m.email}</span>
+                  <span className="text-[14px] font-semibold text-body truncate">{m.name || m.email}</span>
                   <StatusBadge status={m.status} />
-                  <span className="inline-flex items-center gap-1 px-2 h-5 rounded text-[11px] font-semibold bg-[#F3F3F0] text-[#737370] border border-[#E8E8E4]">
+                  <span className="inline-flex items-center gap-1 px-2 h-5 rounded-pill font-mono text-[10.5px] font-semibold uppercase tracking-[0.05em] bg-white text-muted border border-line">
                     {count >= TOTAL_PERMISSIONS ? 'Full Access' : `${count}/${TOTAL_PERMISSIONS} access`}
                   </span>
                 </div>
-                <div className="flex items-center gap-3 text-[12px] text-[#737370]">
+                <div className="flex items-center gap-3 font-mono text-[11px] text-muted">
                   <span className="truncate">{m.email}</span>
                   <span className="shrink-0">Invited {fmtDate(m.invited_at)}</span>
                 </div>
@@ -727,17 +727,17 @@ export default function TeamPage() {
                     <button
                       onClick={() => resendInvite(m)}
                       disabled={resending === m.id}
-                      className="flex items-center gap-1.5 h-7 px-2.5 border border-[#E8E8E4] rounded text-[12px] font-medium text-[#444441] hover:border-[#1A1816] disabled:opacity-50 transition-colors"
+                      className="flex items-center gap-1.5 h-7 px-2.5 border-[1.5px] border-line rounded-[8px] text-[12px] font-semibold text-ink hover:border-ink disabled:opacity-50 transition-colors"
                       title="Resend invitation email"
                     >
-                      <RefreshCw className={`w-3 h-3 ${resending === m.id ? 'animate-spin' : ''}`} />
+                      <RefreshCw className={`w-3 h-3 ${resending === m.id ? 'motion-safe:animate-spin' : ''}`} />
                       {resending === m.id ? 'Sending…' : 'Resend'}
                     </button>
                   )}
                   <button
                     onClick={() => setConfirmRemove(m)}
                     disabled={removing === m.id}
-                    className="p-2 rounded hover:bg-[#FEF0EF] text-[#737370] hover:text-[#D03839] disabled:opacity-50 transition-colors"
+                    className="p-2 rounded hover:bg-tint text-muted hover:text-ink disabled:opacity-50 transition-colors"
                     title={m.status === 'active' ? 'Remove member' : 'Revoke invitation'}
                   >
                     <Trash2 className="w-4 h-4" />
@@ -749,9 +749,9 @@ export default function TeamPage() {
         })}
 
         {(!members || members.length === 0) && isOwner && (
-          <div className="border border-dashed border-[#E8E8E4] rounded p-8 text-center">
-            <Mail className="w-5 h-5 text-[#A8A8A4] mx-auto mb-2" />
-            <p className="text-[13px] text-[#737370]">No team members yet. Invite someone to get started.</p>
+          <div className="border-[1.5px] border-dashed border-line rounded-[12px] p-8 text-center">
+            <Mail className="w-5 h-5 text-mist mx-auto mb-2" />
+            <p className="text-[13px] text-muted">No team members yet. Invite someone to get started.</p>
           </div>
         )}
       </div>
@@ -759,21 +759,21 @@ export default function TeamPage() {
       {/* Remove / revoke confirmation */}
       {confirmRemove && (
         <div className="fixed inset-0 z-[100] bg-black/40 flex items-center justify-center p-4" onClick={() => removing ? null : setConfirmRemove(null)}>
-          <div className="bg-white rounded w-full max-w-sm shadow-xl p-5" onClick={e => e.stopPropagation()}>
-            <h3 className="text-[16px] font-bold text-[#1A1816] mb-1">
+          <div className="bg-white rounded-[14px] border-[1.5px] border-ink shadow-offset-6 w-full max-w-sm p-5" onClick={e => e.stopPropagation()}>
+            <h3 className="font-display font-semibold text-[16.5px] tracking-[-0.01em] text-body mb-1">
               {confirmRemove.status === 'active' ? 'Remove this member?' : 'Revoke this invitation?'}
             </h3>
-            <p className="text-[13px] text-[#737370] mb-4">
+            <p className="text-[13px] text-muted mb-4">
               {confirmRemove.status === 'active'
-                ? <>This will revoke <span className="font-semibold text-[#1A1816]">{confirmRemove.name || confirmRemove.email}</span>&apos;s access to your team and workspace. They can be re-invited later.</>
-                : <>The invitation link sent to <span className="font-semibold text-[#1A1816]">{confirmRemove.email}</span> will stop working. You can invite them again anytime.</>}
+                ? <>This will revoke <span className="font-semibold text-body">{confirmRemove.name || confirmRemove.email}</span>&apos;s access to your team and workspace. They can be re-invited later.</>
+                : <>The invitation link sent to <span className="font-semibold text-body">{confirmRemove.email}</span> will stop working. You can invite them again anytime.</>}
             </p>
             <div className="flex justify-end gap-2">
               <button
                 type="button"
                 onClick={() => setConfirmRemove(null)}
                 disabled={removing === confirmRemove.id}
-                className="h-9 px-4 border border-[#E8E8E4] text-[#444441] text-[13px] font-semibold rounded hover:bg-[#FAFAF8] disabled:opacity-50 transition-colors"
+                className="h-9 px-4 bg-white border-[1.5px] border-ink text-ink text-[13px] font-semibold rounded-[9px] shadow-offset-2 hover:bg-tint disabled:opacity-50 transition-colors"
               >
                 Cancel
               </button>
@@ -781,7 +781,7 @@ export default function TeamPage() {
                 type="button"
                 onClick={() => removeMember(confirmRemove)}
                 disabled={removing === confirmRemove.id}
-                className="h-9 px-4 bg-[#D03839] hover:bg-[#E0493B] text-white text-[13px] font-semibold rounded disabled:opacity-50 transition-colors"
+                className="h-9 px-4 bg-ink border-[1.5px] border-ink hover:bg-smoke-2 text-white text-[13px] font-semibold rounded-[9px] shadow-soft-3 disabled:opacity-50 transition-colors"
               >
                 {removing === confirmRemove.id ? 'Removing…' : (confirmRemove.status === 'active' ? 'Remove' : 'Revoke')}
               </button>
@@ -792,8 +792,8 @@ export default function TeamPage() {
 
       {/* Toast */}
       {toast && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] px-4 py-2.5 rounded shadow-lg text-[13px] font-medium text-white flex items-center gap-2"
-          style={{ background: toast.kind === 'error' ? '#D03839' : '#1A1816' }}>
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] px-4 py-2.5 rounded-[10px] border-[1.5px] border-ink shadow-offset-3 text-[13px] font-semibold text-white flex items-center gap-2"
+          style={{ background: toast.kind === 'error' ? '#111111' : '#171717' }}>
           {toast.kind === 'error' ? <X className="w-4 h-4" /> : <Check className="w-4 h-4" />}
           {toast.text}
         </div>

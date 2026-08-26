@@ -42,7 +42,7 @@ const MenuView = ({ isOpen, onClose, menuItem, currency = '$' }) => {
             className="fixed right-0 top-0 h-screen w-full sm:w-[90%] md:w-[600px] lg:w-[700px] bg-white shadow-2xl z-[60] flex flex-col"
           >
             {/* Header */}
-            <div className="bg-[#472F97] px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between">
+            <div className="bg-[#111111] px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between">
               <div className="flex items-center gap-2 sm:gap-3">
                 <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-white/10 flex items-center justify-center">
                   <UtensilsCrossed className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
@@ -137,8 +137,8 @@ const MenuView = ({ isOpen, onClose, menuItem, currency = '$' }) => {
                     <label className="block text-xs font-medium text-neutral-600 mb-1.5">Availability</label>
                     <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border text-sm font-medium ${
                       menuItem.is_active
-                        ? 'bg-green-100 text-green-700 border-green-200'
-                        : 'bg-red-100 text-red-700 border-red-200'
+                        ? 'bg-neutral-100 text-neutral-700 border-neutral-200'
+                        : 'bg-neutral-100 text-neutral-700 border-neutral-200'
                     }`}>
                       {menuItem.is_active ? 'Active' : 'Inactive'}
                     </div>
@@ -162,7 +162,7 @@ const MenuView = ({ isOpen, onClose, menuItem, currency = '$' }) => {
               <div className="sticky bottom-0 bg-white border-t border-neutral-200 px-4 sm:px-6 py-3 sm:py-4">
                 <button
                   onClick={onClose}
-                  className="w-full px-3 sm:px-4 py-2 sm:py-2.5 text-sm sm:text-base bg-[#472F97] hover:bg-[#3a2578] text-white font-medium rounded-lg sm:rounded-xl transition-colors"
+                  className="w-full px-3 sm:px-4 py-2 sm:py-2.5 text-sm sm:text-base bg-[#111111] hover:bg-[#444444] text-white font-medium rounded-lg sm:rounded-xl transition-colors"
                 >
                   Close
                 </button>

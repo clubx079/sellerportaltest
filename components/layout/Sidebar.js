@@ -2,8 +2,8 @@
 
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
-import Image from 'next/image'
 import { usePathname } from 'next/navigation'
+import { Logo } from '@/components/ui/Logo'
 import {
   LayoutDashboard, Building2, MessageCircle, X, Settings,
   FileText, TrendingUp, BarChart3, CreditCard, Zap, ScrollText, Gift, Users, LifeBuoy, Bell
@@ -166,19 +166,20 @@ export default function Sidebar({ isOpen, setIsOpen, activeItem, setActiveItem }
       {isOpen && <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40 lg:hidden" onClick={() => setIsOpen(false)} />}
 
       <aside className={`
-        fixed top-0 left-0 z-50 h-full bg-white border-r border-[#E8E8E4]
+        fixed top-0 left-0 z-50 h-full bg-white border-r-[1.5px] border-ink
         flex flex-col w-[260px] min-w-[260px]
         transition-transform duration-300 ease-in-out
         ${isOpen ? 'translate-x-0' : '-translate-x-full'}
         lg:translate-x-0
       `}>
         {/* Logo */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-[#E8E8E4] shrink-0">
-          <Link href="/dashboard">
-            <Image src="/assets/logo-seller-portal.svg" alt="DeelMap Seller Portal" width={147} height={70} priority />
+        <div className="flex items-center justify-between px-4 py-4 border-b border-hairline shrink-0">
+          <Link href="/dashboard" className="flex flex-col items-start gap-1">
+            <Logo size="header" />
+            <span className="font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-muted">Seller Portal</span>
           </Link>
           {isOpen && (
-            <button onClick={() => setIsOpen(false)} className="lg:hidden p-2 rounded hover:bg-[#FAFAF8] text-[#737370] transition-colors duration-200" aria-label="Close menu">
+            <button onClick={() => setIsOpen(false)} className="lg:hidden p-2 rounded-[8px] hover:bg-tint text-muted transition-colors duration-[120ms]" aria-label="Close menu">
               <X className="w-5 h-5" />
             </button>
           )}
@@ -188,7 +189,7 @@ export default function Sidebar({ isOpen, setIsOpen, activeItem, setActiveItem }
         <nav className="flex-1 overflow-y-auto py-4 px-3">
           {sections.map((section, si) => (
             <div key={si} className="mb-5">
-              <p className="px-3 mb-2 text-[11px] font-semibold text-[#A8A8A4] uppercase tracking-[1.1px]">
+              <p className="px-3 mb-2 font-mono text-[10.5px] font-semibold text-muted uppercase tracking-[0.1em]">
                 {section.label}
               </p>
               <div className="flex flex-col gap-0.5">
@@ -200,22 +201,20 @@ export default function Sidebar({ isOpen, setIsOpen, activeItem, setActiveItem }
                   return (
                     <Link
                       key={item.id} href={item.path} onClick={() => handleItemClick(item)}
-                      className={`flex items-center gap-2.5 px-3 py-2.5 rounded text-[14px] transition-all duration-200 ${
-                        isActive ? 'bg-[#FAFAF8] text-[#1A1816] font-semibold' : 'text-[#444441] hover:bg-[#FAFAF8] hover:text-[#1A1816]'
+                      className={`flex items-center gap-2.5 px-3 py-2.5 rounded-[8px] text-[14px] transition-all duration-[120ms] ${
+                        isActive ? 'bg-hairline-2 text-ink font-[650]' : 'text-smoke-2 hover:bg-tint hover:text-ink'
                       }`}
                     >
-                      <Icon className={`w-[18px] h-[18px] flex-shrink-0 ${isActive ? 'text-[#1A1816]' : 'text-[#737370]'}`} />
+                      <Icon className={`w-[18px] h-[18px] flex-shrink-0 ${isActive ? 'text-ink' : 'text-muted'}`} />
                       <div className="flex items-center justify-between gap-2 min-w-0 flex-1">
                         <span className="truncate flex items-center gap-2">
                           {item.label}
                           {item.beta && (
-                            <span className="text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded bg-[#FEF3E2] text-[#B5620A] flex-shrink-0">Beta</span>
+                            <span className="font-mono text-[9px] font-semibold uppercase tracking-[0.06em] px-1.5 py-0.5 rounded-pill bg-tint text-smoke-3 flex-shrink-0">Beta</span>
                           )}
                         </span>
                         {hasBadge && (
-                          <span className={`inline-flex items-center justify-center min-w-[22px] h-[22px] px-1.5 text-[11px] font-semibold rounded ${
-                            item.badgeRed ? 'bg-[#D03839] text-white' : 'bg-[#FAFAF8] text-[#444441] border border-[#E8E8E4]'
-                          }`}>
+                          <span className="inline-flex items-center justify-center min-w-[22px] h-[20px] px-1.5 font-mono text-[10.5px] font-semibold rounded-pill bg-ink text-white">
                             {item.badge > 99 ? '99+' : item.badge}
                           </span>
                         )}
@@ -229,26 +228,26 @@ export default function Sidebar({ isOpen, setIsOpen, activeItem, setActiveItem }
         </nav>
 
         {/* Notification Bell — pinned footer (desktop; mobile bell lives in DashboardLayout navbar) */}
-        <div className="hidden lg:block border-t border-[#E8E8E4] px-3 py-2 shrink-0">
+        <div className="hidden lg:block border-t border-hairline px-3 py-2 shrink-0">
           <div className="relative" ref={notifRef}>
             <button
               type="button"
               onClick={() => setNotifOpen(prev => !prev)}
-              className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded text-[14px] transition-all duration-200 ${notifOpen ? 'bg-[#FAFAF8] text-[#1A1816]' : 'text-[#444441] hover:bg-[#FAFAF8] hover:text-[#1A1816]'}`}
+              className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-[8px] text-[14px] transition-all duration-[120ms] ${notifOpen ? 'bg-hairline-2 text-ink font-[650]' : 'text-smoke-2 hover:bg-tint hover:text-ink'}`}
               aria-label="Notifications"
             >
-              <Bell className={`w-[18px] h-[18px] flex-shrink-0 ${notifOpen ? 'text-[#1A1816]' : 'text-[#737370]'}`} />
+              <Bell className={`w-[18px] h-[18px] flex-shrink-0 ${notifOpen ? 'text-ink' : 'text-muted'}`} />
               <span className="flex-1 text-left">Notifications</span>
               {notifUnread > 0 && (
-                <span className="inline-flex items-center justify-center min-w-[22px] h-[22px] px-1.5 text-[11px] font-semibold rounded bg-[#D03839] text-white">
+                <span className="inline-flex items-center justify-center min-w-[22px] h-[20px] px-1.5 font-mono text-[10.5px] font-semibold rounded-pill bg-ink text-white">
                   {notifUnread > 99 ? '99+' : notifUnread}
                 </span>
               )}
             </button>
             {notifOpen && (
-              <div className="absolute left-0 bottom-full mb-2 w-[300px] bg-white border border-[#E8E8E4] rounded-lg shadow-xl z-[200] overflow-hidden">
-                <div className="flex items-center justify-between px-4 py-3 border-b border-[#E8E8E4]">
-                  <span className="text-[13px] font-semibold text-[#1A1816]">Notifications</span>
+              <div className="absolute left-0 bottom-full mb-2 w-[300px] bg-white border-[1.5px] border-ink rounded-[12px] shadow-offset-4 z-[200] overflow-hidden">
+                <div className="flex items-center justify-between px-4 py-3 border-b border-hairline">
+                  <span className="font-mono text-[11px] font-semibold uppercase tracking-[0.12em] text-ink">Notifications</span>
                   {notifUnread > 0 && (
                     <button
                       onClick={async () => {
@@ -258,7 +257,7 @@ export default function Sidebar({ isOpen, setIsOpen, activeItem, setActiveItem }
                         setNotifUnread(0)
                         setNotifications(prev => prev.map(n => ({ ...n, is_read: true })))
                       }}
-                      className="text-[11px] text-[#D03839] font-medium hover:underline"
+                      className="font-mono text-[10.5px] font-semibold text-ink hover:underline"
                     >
                       Mark all read
                     </button>
@@ -266,7 +265,7 @@ export default function Sidebar({ isOpen, setIsOpen, activeItem, setActiveItem }
                 </div>
                 <div className="max-h-[320px] overflow-y-auto">
                   {notifications.length === 0 ? (
-                    <div className="flex items-center justify-center h-16 text-[13px] text-[#737370]">No notifications yet</div>
+                    <div className="flex items-center justify-center h-16 font-mono text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">No notifications yet</div>
                   ) : (
                     notifications.map(n => (
                       <Link
@@ -281,13 +280,13 @@ export default function Sidebar({ isOpen, setIsOpen, activeItem, setActiveItem }
                             setNotifUnread(prev => Math.max(0, prev - 1))
                           }
                         }}
-                        className={`flex items-start gap-3 px-4 py-3 border-l-2 transition-colors hover:bg-[#FAFAF8] ${n.is_read ? 'border-l-transparent bg-white' : 'border-l-[#D03839] bg-[#FAFAF8]'}`}
+                        className={`flex items-start gap-3 px-4 py-3 border-l-2 border-b border-b-hairline-2 transition-colors duration-[120ms] hover:bg-tint ${n.is_read ? 'border-l-transparent bg-white' : 'border-l-ink bg-tint-2'}`}
                       >
-                        <Bell className="w-4 h-4 text-[#737370] flex-shrink-0 mt-0.5" />
+                        <Bell className="w-4 h-4 text-muted flex-shrink-0 mt-0.5" />
                         <div className="flex-1 min-w-0">
-                          <p className={`text-[13px] truncate ${n.is_read ? 'text-[#444441]' : 'font-semibold text-[#1A1816]'}`}>{n.title}</p>
-                          <p className="text-[11px] text-[#737370] truncate mt-0.5">{n.body}</p>
-                          <p className="text-[10px] text-[#A8A8A4] mt-1">{n.created_at ? new Date(n.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : ''}</p>
+                          <p className={`text-[13px] truncate ${n.is_read ? 'text-smoke-2' : 'font-semibold text-ink'}`}>{n.title}</p>
+                          <p className="text-[11px] text-muted truncate mt-0.5">{n.body}</p>
+                          <p className="font-mono text-[10px] text-muted mt-1">{n.created_at ? new Date(n.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : ''}</p>
                         </div>
                       </Link>
                     ))

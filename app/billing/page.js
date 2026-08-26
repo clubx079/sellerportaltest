@@ -48,12 +48,12 @@ function CardUpdateForm({ customerId, onSaved, onCancel }) {
   return (
     <form onSubmit={handleSave} className="space-y-4">
       <PaymentElement />
-      {error && <div className="p-3 bg-[#FEF0EF] border border-[#F5C4C0] rounded text-[13px] text-[#D03839]">{error}</div>}
+      {error && <div className="p-3 bg-tint border-[1.5px] border-ink rounded-[10px] text-[13px] font-semibold text-ink">{error}</div>}
       <div className="flex items-center gap-3">
         <button type="button" onClick={onCancel} disabled={saving}
-          className="flex-1 h-10 text-[13px] font-semibold text-[#1A1816] bg-white border border-[#E8E8E4] rounded hover:bg-[#FAFAF8] transition-colors disabled:opacity-50">Cancel</button>
+          className="flex-1 h-10 text-[13px] font-semibold text-ink bg-white border-[1.5px] border-ink rounded-[10px] shadow-offset-2 hover:bg-tint transition-colors duration-120 disabled:opacity-50">Cancel</button>
         <button type="submit" disabled={saving || !stripe}
-          className="flex-1 h-10 text-[13px] font-semibold text-white bg-[#D03839] hover:bg-[#E0493B] rounded transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5">
+          className="flex-1 h-10 text-[13px] font-semibold text-white bg-ink hover:bg-smoke-2 border-[1.5px] border-ink rounded-[10px] shadow-soft-3 transition-all duration-120 disabled:opacity-50 flex items-center justify-center gap-1.5">
           {saving ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving…</> : 'Save card'}
         </button>
       </div>
@@ -61,19 +61,22 @@ function CardUpdateForm({ customerId, onSaved, onCancel }) {
   )
 }
 
-const labelCls = 'block text-[12px] font-semibold text-[#737370] uppercase tracking-[0.08em] mb-1'
-const valueCls = 'text-[14px] font-semibold text-[#1A1816]'
+const labelCls = 'block font-mono text-[11px] font-semibold text-muted uppercase tracking-[0.08em] mb-1'
+const valueCls = 'font-mono text-[14px] font-semibold text-body'
 
+// Status is value-encoded, never hue: active = ink fill, trialing = muted fill,
+// past_due = white + ink outline, canceled = line-2 outline.
+const pillBase = 'inline-flex items-center px-2.5 py-0.5 rounded-pill font-mono text-[10.5px] font-semibold uppercase tracking-[0.05em]'
 function PlanBadge({ status }) {
   const map = {
-    active:   { label: 'Active',   cls: 'bg-[#E4F5EC] text-[#0F6E56] border-[#9FDBB8]' },
-    trialing: { label: 'Trialing', cls: 'bg-[#FEF3E2] text-[#B5620A] border-[#F5D9A0]' },
-    past_due: { label: 'Past due', cls: 'bg-[#FEF0EF] text-[#D03839] border-[#F5C4C0]' },
-    canceled: { label: 'Canceled', cls: 'bg-[#F3F3F0] text-[#737370] border-[#E8E8E4]' },
+    active:   { label: 'Active',   cls: 'bg-ink text-white border-[1.5px] border-ink' },
+    trialing: { label: 'Trialing', cls: 'bg-muted text-white border-[1.5px] border-muted' },
+    past_due: { label: 'Past due', cls: 'bg-white text-ink border-[1.5px] border-ink' },
+    canceled: { label: 'Canceled', cls: 'bg-white text-muted border-[1.5px] border-line-2' },
   }
   const s = map[status] || map.active
   return (
-    <span className={`inline-flex items-center px-2.5 py-0.5 rounded text-[12px] font-semibold border ${s.cls}`}>
+    <span className={`${pillBase} ${s.cls}`}>
       {s.label}
     </span>
   )
@@ -246,56 +249,56 @@ export default function BillingPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-[20px] font-bold text-[#1A1816] tracking-tight">Billing</h1>
-        <p className="text-[13px] text-[#737370] mt-0.5">Manage your plan and payment information.</p>
+        <h1 className="font-display text-[22px] font-bold text-body tracking-[-0.02em]">Billing</h1>
+        <p className="text-[13px] text-muted mt-0.5">Manage your plan and payment information.</p>
       </div>
 
       {error && (
-        <div className="flex items-center gap-2 p-3 bg-[#FEF0EF] border border-[#F5C4C0] rounded text-[13px] text-[#D03839]">
+        <div className="flex items-center gap-2 p-3 bg-tint border-[1.5px] border-ink rounded-[10px] text-[13px] font-semibold text-ink">
           <AlertCircle className="w-4 h-4 flex-shrink-0" />
           {error}
         </div>
       )}
 
       {/* Current Plan */}
-      <div className="bg-white border border-[#E8E8E4] rounded p-5">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.09em] text-[#A8A8A4] mb-4">Current Plan</p>
+      <div className="bg-white border-[1.5px] border-ink rounded-[14px] shadow-offset-4 p-5">
+        <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-ink mb-4">Current Plan</p>
         {loading ? (
-          <div className="flex items-center gap-2 text-[#737370] text-[13px]">
+          <div className="flex items-center gap-2 text-muted text-[13px]">
             <Loader2 className="w-4 h-4 animate-spin" /> Loading...
           </div>
         ) : teamWorkspace ? (
-          <div className="flex items-start gap-3 p-4 bg-[#F3F3F0] rounded border border-[#E8E8E4]">
-            <Check className="w-4 h-4 text-[#0F6E56] shrink-0 mt-0.5" />
+          <div className="flex items-start gap-3 p-4 bg-tint rounded-[12px] border-[1.5px] border-line">
+            <Check className="w-4 h-4 text-ink shrink-0 mt-0.5" />
             <div>
-              <p className="text-[14px] font-semibold text-[#1A1816]">Covered by {teamWorkspace.name}</p>
-              <p className="text-[13px] text-[#737370] mt-0.5">Your access is included under your team's Enterprise plan. Billing is managed by the team owner.</p>
+              <p className="text-[14px] font-semibold text-body">Covered by {teamWorkspace.name}</p>
+              <p className="text-[13px] text-muted mt-0.5">Your access is included under your team's Enterprise plan. Billing is managed by the team owner.</p>
             </div>
           </div>
         ) : plan ? (
           <div className="space-y-4">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <p className={valueCls + ' text-[16px]'}>{planLabel(plan.plan_type)}</p>
-                <p className="text-[13px] text-[#737370] mt-0.5 capitalize">
+                <p className="font-display text-[17px] font-bold text-body tracking-[-0.01em]">{planLabel(plan.plan_type)}</p>
+                <p className="font-mono text-[11.5px] text-muted mt-0.5 capitalize">
                   {isLifetimeFree ? 'Lifetime Free' : plan.plan_type !== 'standard' ? plan.billing_cycle : 'One-time payment'}
                 </p>
                 {isLifetimeFree ? null : subDetails?.has_discount ? (
                   <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                    <span className="text-[13px] text-[#A8A8A4] line-through">
+                    <span className="font-mono text-[12.5px] text-mist line-through">
                       {formatCents(subDetails.original_amount)}/{subDetails.interval}
                     </span>
-                    <span className="text-[14px] font-bold text-[#1A1816]">
+                    <span className="font-mono text-[14px] font-bold text-ink">
                       {formatCents(subDetails.discounted_amount)}/{subDetails.interval}
                     </span>
                     {subDetails.coupon_name && (
-                      <span className="text-[11px] font-semibold bg-[#E4F5EC] text-[#0F6E56] border border-[#B6E4CE] px-2 py-0.5 rounded-full">
+                      <span className={`${pillBase} bg-white text-ink border-[1.5px] border-ink`}>
                         {subDetails.coupon_name}
                       </span>
                     )}
                   </div>
                 ) : subDetails?.original_amount ? (
-                  <p className="text-[13px] font-semibold text-[#1A1816] mt-1.5">
+                  <p className="font-mono text-[13px] font-semibold text-ink mt-1.5">
                     {formatCents(subDetails.original_amount)}/{subDetails.interval}
                   </p>
                 ) : null}
@@ -303,7 +306,7 @@ export default function BillingPage() {
               <PlanBadge status={plan.status} />
             </div>
 
-            <div className="grid grid-cols-2 gap-4 pt-3 border-t border-[#E8E8E4]">
+            <div className="grid grid-cols-2 gap-4 pt-3 border-t border-hairline">
               {plan.plan_type === 'standard' && (
                 <>
                   <div>
@@ -339,25 +342,25 @@ export default function BillingPage() {
             </div>
 
             {!isLifetimeFree && !teamWorkspace && plan.plan_type !== 'standard' && ['active','trialing','canceling'].includes(plan.status) && (
-              <a href="/settings" className="inline-flex items-center gap-1 mt-3 text-[12px] font-semibold text-[#737370] hover:text-[#D03839] transition-colors">
+              <a href="/settings" className="inline-flex items-center gap-1 mt-3 font-mono text-[11px] font-semibold uppercase tracking-[0.06em] text-muted hover:text-ink transition-colors duration-120">
                 Manage or cancel subscription →
               </a>
             )}
           </div>
         ) : teamWorkspace ? (
-          <div className="flex items-start gap-3 p-4 bg-[#F3F3F0] rounded border border-[#E8E8E4]">
-            <Check className="w-4 h-4 text-[#0F6E56] shrink-0 mt-0.5" />
+          <div className="flex items-start gap-3 p-4 bg-tint rounded-[12px] border-[1.5px] border-line">
+            <Check className="w-4 h-4 text-ink shrink-0 mt-0.5" />
             <div>
-              <p className="text-[14px] font-semibold text-[#1A1816]">Covered by {teamWorkspace.name}</p>
-              <p className="text-[13px] text-[#737370] mt-0.5">Your access is included under your team's Enterprise plan. Billing is managed by the team owner.</p>
+              <p className="text-[14px] font-semibold text-body">Covered by {teamWorkspace.name}</p>
+              <p className="text-[13px] text-muted mt-0.5">Your access is included under your team's Enterprise plan. Billing is managed by the team owner.</p>
             </div>
           </div>
         ) : (
           <div className="space-y-3">
-            <p className="text-[14px] text-[#737370]">No active plan found.</p>
+            <p className="text-[14px] text-muted">No active plan found.</p>
             <a
               href="/onboarding"
-              className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-[#D03839] hover:bg-[#E0493B] text-white text-[13px] font-semibold rounded transition-colors"
+              className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-ink hover:bg-smoke-2 text-white text-[13px] font-semibold border-[1.5px] border-ink rounded-[10px] shadow-soft-3 transition-all duration-120"
             >
               Choose a plan
             </a>
@@ -366,11 +369,11 @@ export default function BillingPage() {
       </div>
 
       {!teamWorkspace && isLifetimeFree && plan && (
-        <div className="flex items-start gap-3 p-4 bg-[#E4F5EC] border border-[#9FDBB8] rounded">
-          <Check className="w-4 h-4 text-[#0F6E56] shrink-0 mt-0.5" />
+        <div className="flex items-start gap-3 p-4 bg-tint border-[1.5px] border-ink rounded-[12px]">
+          <Check className="w-4 h-4 text-ink shrink-0 mt-0.5" />
           <div>
-            <p className="text-[14px] font-semibold text-[#0F6E56]">Lifetime Free Account</p>
-            <p className="text-[13px] text-[#737370] mt-0.5">This account has complimentary Enterprise access. No payment method or billing history applies.</p>
+            <p className="text-[14px] font-semibold text-ink">Lifetime Free Account</p>
+            <p className="text-[13px] text-muted mt-0.5">This account has complimentary Enterprise access. No payment method or billing history applies.</p>
           </div>
         </div>
       )}
@@ -378,42 +381,42 @@ export default function BillingPage() {
       {!teamWorkspace && !isLifetimeFree && (
         <>
           {/* Payment Method */}
-          <div className="bg-white border border-[#E8E8E4] rounded p-5">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.09em] text-[#A8A8A4] mb-4">Payment Method</p>
+          <div className="bg-white border-[1.5px] border-ink rounded-[14px] shadow-offset-4 p-5">
+            <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-ink mb-4">Payment Method</p>
             {pmLoading ? (
-              <div className="flex items-center gap-2 text-[#737370] text-[13px]">
+              <div className="flex items-center gap-2 text-muted text-[13px]">
                 <Loader2 className="w-4 h-4 animate-spin" /> Loading...
               </div>
             ) : paymentMethod ? (
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-7 bg-[#F3F3F0] border border-[#E8E8E4] rounded flex items-center justify-center">
-                    <CreditCard className="w-4 h-4 text-[#737370]" />
+                  <div className="w-10 h-7 bg-tint border-[1.5px] border-ink rounded-[6px] flex items-center justify-center">
+                    <CreditCard className="w-4 h-4 text-ink" />
                   </div>
                   <div>
-                    <p className="text-[14px] font-semibold text-[#1A1816] capitalize">
+                    <p className="font-mono text-[13.5px] font-semibold text-body capitalize">
                       {paymentMethod.brand} •••• {paymentMethod.last4}
                     </p>
-                    <p className="text-[12px] text-[#737370]">
+                    <p className="font-mono text-[11px] text-muted">
                       Expires {paymentMethod.exp_month}/{paymentMethod.exp_year}
                     </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="flex items-center gap-1 text-[11px] font-semibold text-[#0F6E56] bg-[#E4F5EC] px-2 py-0.5 rounded border border-[#9FDBB8]">
+                  <span className={`${pillBase} gap-1 bg-ink text-white border-[1.5px] border-ink`}>
                     <Check className="w-3 h-3" /> Default
                   </span>
                   <button onClick={openCardModal} disabled={cardModalLoading}
-                    className="text-[12px] font-semibold text-[#D03839] hover:underline disabled:opacity-50">
+                    className="font-mono text-[11px] font-semibold uppercase tracking-[0.06em] text-ink hover:underline disabled:opacity-50">
                     {cardModalLoading ? 'Opening…' : 'Update'}
                   </button>
                 </div>
               </div>
             ) : (
               <div className="flex items-center justify-between">
-                <p className="text-[13px] text-[#737370]">No payment method on file.</p>
+                <p className="text-[13px] text-muted">No payment method on file.</p>
                 <button onClick={openCardModal} disabled={cardModalLoading}
-                  className="text-[12px] font-semibold text-[#D03839] hover:underline disabled:opacity-50">
+                  className="font-mono text-[11px] font-semibold uppercase tracking-[0.06em] text-ink hover:underline disabled:opacity-50">
                   {cardModalLoading ? 'Opening…' : 'Add card'}
                 </button>
               </div>
@@ -421,52 +424,52 @@ export default function BillingPage() {
           </div>
 
           {/* Billing History */}
-          <div className="bg-white border border-[#E8E8E4] rounded p-5">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.09em] text-[#A8A8A4] mb-4">Billing History</p>
+          <div className="bg-white border-[1.5px] border-ink rounded-[14px] shadow-offset-4 p-5 overflow-hidden">
+            <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-ink mb-4">Billing History</p>
             {pmLoading ? (
-              <div className="flex items-center gap-2 text-[#737370] text-[13px]">
+              <div className="flex items-center gap-2 text-muted text-[13px]">
                 <Loader2 className="w-4 h-4 animate-spin" /> Loading…
               </div>
             ) : invoices.length === 0 ? (
               <div className="flex items-center gap-2 py-2">
-                <Receipt className="w-4 h-4 text-[#A8A8A4]" />
-                <p className="text-[13px] text-[#737370]">No billing history yet.</p>
+                <Receipt className="w-4 h-4 text-mist" />
+                <p className="text-[13px] text-muted">No billing history yet.</p>
               </div>
             ) : (
               <div className="-mx-5 -mb-5">
                 {invoices.map((inv, i) => (
                   <div
                     key={inv.id}
-                    className={`flex items-center justify-between px-5 py-3.5 ${i !== invoices.length - 1 ? 'border-b border-[#F3F3F0]' : ''} hover:bg-[#FAFAF8] transition-colors`}
+                    className={`flex items-center justify-between px-5 py-3.5 ${i !== invoices.length - 1 ? 'border-b border-hairline' : ''} hover:bg-tint transition-colors duration-120`}
                   >
                     <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-8 h-8 rounded bg-[#F3F3F0] flex items-center justify-center flex-shrink-0">
-                        <Receipt className="w-4 h-4 text-[#737370]" />
+                      <div className="w-8 h-8 rounded-[8px] bg-tint border-[1.5px] border-line flex items-center justify-center flex-shrink-0">
+                        <Receipt className="w-4 h-4 text-muted" />
                       </div>
                       <div className="min-w-0">
-                        <p className="text-[13px] font-semibold text-[#1A1816] truncate">{inv.description}</p>
-                        <p className="text-[11px] text-[#A8A8A4] mt-0.5">{formatDate(inv.created * 1000)}</p>
+                        <p className="text-[13px] font-semibold text-body truncate">{inv.description}</p>
+                        <p className="font-mono text-[11px] text-muted mt-0.5">{formatDate(inv.created * 1000)}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-3 flex-shrink-0 ml-4">
                       <div className="text-right">
                         {inv.discount_amount > 0 && (
-                          <p className="text-[11px] text-[#A8A8A4] line-through">{formatCents(inv.subtotal, { cents: 'always' })}</p>
+                          <p className="font-mono text-[11px] text-mist line-through">{formatCents(inv.subtotal, { cents: 'always' })}</p>
                         )}
-                        <p className="text-[13px] font-bold text-[#1A1816]">{formatCents(inv.amount_paid || inv.amount_due, { cents: 'always' })}</p>
+                        <p className="font-mono text-[13px] font-bold text-ink">{formatCents(inv.amount_paid || inv.amount_due, { cents: 'always' })}</p>
                         {inv.discount_amount > 0 && (
-                          <p className="text-[11px] text-[#0F6E56] font-medium">−{formatCents(inv.discount_amount, { cents: 'always' })} discount</p>
+                          <p className="font-mono text-[11px] font-semibold text-ink">−{formatCents(inv.discount_amount, { cents: 'always' })} discount</p>
                         )}
                       </div>
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold border ${
-                        inv.status === 'paid' ? 'bg-[#E4F5EC] text-[#0F6E56] border-[#9FDBB8]' : 'bg-[#F3F3F0] text-[#737370] border-[#E8E8E4]'
+                      <span className={`${pillBase} ${
+                        inv.status === 'paid' ? 'bg-ink text-white border-[1.5px] border-ink' : 'bg-white text-muted border-[1.5px] border-line-2'
                       }`}>
                         {inv.status === 'paid' ? 'Paid' : inv.status}
                       </span>
                       {(inv.invoice_pdf || inv.hosted_invoice_url) && (
                         <a href={inv.invoice_pdf || inv.hosted_invoice_url} target="_blank" rel="noopener noreferrer"
                           title="Download invoice"
-                          className="w-7 h-7 flex items-center justify-center rounded text-[#A8A8A4] hover:text-[#D03839] hover:bg-[#FAFAF8] transition-colors">
+                          className="w-7 h-7 flex items-center justify-center rounded-[8px] border-[1.5px] border-line text-mist hover:text-ink hover:border-ink transition-colors duration-120">
                           <Download className="w-3.5 h-3.5" />
                         </a>
                       )}
@@ -481,23 +484,23 @@ export default function BillingPage() {
 
       {showCardModal && cardClientSecret && stripePromise && (
         <div className="fixed inset-0 z-[95] flex items-center justify-center p-4">
-          <div className="fixed inset-0 bg-[#1A1816]/40" onClick={() => { setShowCardModal(false); setCardClientSecret(null); }} aria-hidden="true" />
-          <div className="relative bg-white rounded shadow-lg border border-[#E8E8E4] max-w-md w-full p-6 z-10">
+          <div className="fixed inset-0 bg-body/40" onClick={() => { setShowCardModal(false); setCardClientSecret(null); }} aria-hidden="true" />
+          <div className="relative bg-white border-[1.5px] border-ink rounded-[14px] shadow-offset-6 max-w-md w-full p-6 z-10">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-[16px] font-semibold text-[#1A1816]">Update payment method</h3>
-              <button onClick={() => { setShowCardModal(false); setCardClientSecret(null); }} className="p-1.5 rounded hover:bg-[#FAFAF8] text-[#737370]">
+              <h3 className="font-display text-[16.5px] font-semibold tracking-[-0.01em] text-body">Update payment method</h3>
+              <button onClick={() => { setShowCardModal(false); setCardClientSecret(null); }} className="p-1.5 rounded-[8px] hover:bg-tint text-muted">
                 <X className="w-4 h-4" />
               </button>
             </div>
-            <p className="text-[13px] text-[#737370] mb-4">Enter your new card details below. It becomes the default for future charges.</p>
+            <p className="text-[13px] text-muted mb-4">Enter your new card details below. It becomes the default for future charges.</p>
             <Elements stripe={stripePromise} options={{
               clientSecret: cardClientSecret,
               appearance: {
                 variables: {
                   borderRadius: '4px',
-                  colorPrimary: '#D03839',
-                  colorText: '#1A1816',
-                  colorDanger: '#D03839',
+                  colorPrimary: '#111111',
+                  colorText: '#171717',
+                  colorDanger: '#111111',
                   fontFamily: 'DM Sans, -apple-system, sans-serif',
                   fontSizeBase: '14px',
                 },
@@ -516,4 +519,3 @@ export default function BillingPage() {
     </div>
   )
 }
-

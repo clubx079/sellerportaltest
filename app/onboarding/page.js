@@ -1,20 +1,21 @@
 'use client'
 import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import Image from 'next/image'
 import { loadStripe } from '@stripe/stripe-js'
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js'
 import { Check, Eye, EyeOff, ChevronRight, Loader2, Phone, Mail } from 'lucide-react'
 import { pushEvent } from '@/lib/gtm'
+import { Logo } from '@/components/ui/Logo'
 
 const stripePromise = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
   ? loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY)
   : null
 
-// ─── Design tokens ────────────────────────────────────────────────────────────
-const inputCls = 'w-full h-[46px] px-4 border border-[#E8E8E4] rounded text-[14px] text-[#1A1816] placeholder:text-[#A8A8A4] focus:outline-none focus:border-[#1A1816] transition-colors bg-white'
-const labelCls = 'block text-[13px] font-semibold text-[#1A1816] mb-1.5'
-const errorCls = 'text-[13px] text-[#D03839] mt-1'
+// ─── Design tokens (BW-retro) ─────────────────────────────────────────────────
+const inputCls = 'w-full border-[1.5px] border-line rounded-[9px] px-3.5 py-3 text-[14px] text-body placeholder:text-mist focus:outline-none focus:border-ink focus:shadow-offset-3 transition-all duration-120 bg-white'
+const labelCls = 'block text-[13px] font-semibold text-body mb-1.5'
+const errorCls = 'text-[13px] font-semibold text-ink bg-tint border-[1.5px] border-ink rounded-[9px] px-3.5 py-2.5 mt-1'
+const btnPrimaryCls = 'w-full bg-ink text-white border-[1.5px] border-ink rounded-[10px] px-[22px] py-3 text-[15px] font-semibold shadow-soft-3 hover:bg-smoke-2 transition-all duration-120 disabled:opacity-50 flex items-center justify-center gap-2'
 
 // ─── Shared helpers ─────────────────────────────────────────────────────────────
 const formatPhone = (v) => {
@@ -40,28 +41,27 @@ const STEPS = ['Account', 'Verify', 'Choose Plan', 'Payment']
 
 function StepDots({ current }) {
   return (
-    <div className="flex items-center gap-2 mb-8">
-      {STEPS.map((label, i) => {
-        const done = i < current
-        const active = i === current
-        return (
-          <div key={i} className="flex items-center gap-2 flex-1 min-w-0">
-            <div className="flex flex-col items-center">
-              <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold flex-shrink-0 transition-all
-                ${done ? 'bg-[#1A1816] text-white' : active ? 'bg-[#D03839] text-white' : 'bg-[#F3F3F0] text-[#A8A8A4]'}`}>
-                {done ? <Check className="w-3.5 h-3.5" /> : i + 1}
-              </div>
-              <span className={`mt-1 text-[10px] font-semibold whitespace-nowrap hidden sm:block
-                ${active ? 'text-[#1A1816]' : done ? 'text-[#737370]' : 'text-[#A8A8A4]'}`}>
-                {label}
-              </span>
-            </div>
-            {i < STEPS.length - 1 && (
-              <div className={`flex-1 h-px mx-1 mb-4 transition-colors ${done ? 'bg-[#1A1816]' : 'bg-[#E8E8E4]'}`} />
-            )}
-          </div>
-        )
-      })}
+    <div className="mb-8">
+      {/* Segmented ink progress bars */}
+      <div className="flex gap-1.5">
+        {STEPS.map((_, i) => (
+          <span
+            key={i}
+            className={`flex-1 h-1.5 rounded-pill border-[1.5px] border-ink transition-colors duration-120 ${i <= current ? 'bg-ink' : 'bg-white'}`}
+          />
+        ))}
+      </div>
+      {/* Mono step labels */}
+      <div className="mt-2 flex gap-1.5">
+        {STEPS.map((label, i) => (
+          <span
+            key={label}
+            className={`flex-1 text-center font-mono text-[9.5px] font-semibold uppercase tracking-[0.08em] whitespace-nowrap hidden sm:block ${i === current ? 'text-ink' : i < current ? 'text-muted' : 'text-mist'}`}
+          >
+            {label}
+          </span>
+        ))}
+      </div>
     </div>
   )
 }
@@ -120,7 +120,7 @@ function StepAccount({ onNext }) {
       <div>
         <label className={labelCls}>Phone number</label>
         <input type="tel" className={inputCls} value={form.phone} onChange={e => set('phone', formatPhone(e.target.value))} placeholder="(555) 000-0000" required />
-        <p className="text-[12px] text-[#A8A8A4] mt-1.5">US number only. Used to verify your account.</p>
+        <p className="text-[12px] text-muted mt-1.5">US number only. Used to verify your account.</p>
       </div>
       <div>
         <label className={labelCls}>Password</label>
@@ -134,7 +134,7 @@ function StepAccount({ onNext }) {
             minLength={8}
             required
           />
-          <button type="button" onClick={() => setShowPw(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#A8A8A4] hover:text-[#737370]">
+          <button type="button" onClick={() => setShowPw(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-mist hover:text-smoke-2 transition-colors duration-120">
             {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
           </button>
         </div>
@@ -151,18 +151,18 @@ function StepAccount({ onNext }) {
             minLength={8}
             required
           />
-          <button type="button" onClick={() => setShowConfirm(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#A8A8A4] hover:text-[#737370]">
+          <button type="button" onClick={() => setShowConfirm(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-mist hover:text-smoke-2 transition-colors duration-120">
             {showConfirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
           </button>
         </div>
       </div>
       {error && <p className={errorCls}>{error}</p>}
-      <button type="submit" disabled={loading} className="w-full h-[46px] bg-[#D03839] hover:bg-[#E0493B] text-white text-[14px] font-semibold rounded transition-colors disabled:opacity-50 flex items-center justify-center gap-2 mt-2">
+      <button type="submit" disabled={loading} className={`${btnPrimaryCls} mt-2`}>
         {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <>Continue <ChevronRight className="w-4 h-4" /></>}
       </button>
-      <p className="text-center text-[13px] text-[#737370]">
+      <p className="text-center text-[13.5px] text-smoke-4">
         Already have an account?{' '}
-        <a href="/login" className="text-[#D03839] font-medium hover:underline">Log in</a>
+        <a href="/login" className="text-ink font-semibold underline hover:text-muted transition-colors duration-120">Log in</a>
       </p>
     </form>
   )
@@ -214,11 +214,11 @@ function StepVerify({ onNext }) {
 
   const OptionButton = ({ value, icon: Icon, label, sub }) => (
     <button type="button" onClick={() => setChannel(value)}
-      className={`w-full flex items-center gap-3 rounded border-2 p-3.5 text-left transition-all ${channel === value ? 'border-[#D03839] bg-[#FEF0EF]' : 'border-[#E8E8E4] hover:border-[#D4D4CF]'}`}>
-      <Icon className={`w-4 h-4 ${channel === value ? 'text-[#D03839]' : 'text-[#A8A8A4]'}`} />
+      className={`w-full flex items-center gap-3 rounded-[12px] border-[1.5px] border-ink p-3.5 text-left transition-all duration-120 ${channel === value ? 'bg-tint shadow-offset-3' : 'bg-white hover:bg-tint'}`}>
+      <Icon className={`w-4 h-4 ${channel === value ? 'text-ink' : 'text-mist'}`} />
       <div>
-        <p className="text-[14px] font-semibold text-[#1A1816]">{label}</p>
-        <p className="text-[12px] text-[#737370]">{sub}</p>
+        <p className="text-[14px] font-semibold text-body">{label}</p>
+        <p className="font-mono text-[11px] text-muted">{sub}</p>
       </div>
     </button>
   )
@@ -227,14 +227,13 @@ function StepVerify({ onNext }) {
     <div className="space-y-5">
       {!sent ? (
         <>
-          <p className="text-[13px] text-[#737370]">How would you like to receive your 6-digit verification code?</p>
+          <p className="text-[13px] text-smoke-4">How would you like to receive your 6-digit verification code?</p>
           <div className="space-y-2.5">
             <OptionButton value="sms" icon={Phone} label="Text message" sub={maskPhone(session.phone)} />
             <OptionButton value="email" icon={Mail} label="Email" sub={maskEmail(session.email)} />
           </div>
           {error && <p className={errorCls}>{error}</p>}
-          <button onClick={sendOtp} disabled={loading}
-            className="w-full h-[46px] bg-[#D03839] hover:bg-[#E0493B] text-white text-[14px] font-semibold rounded transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
+          <button onClick={sendOtp} disabled={loading} className={btnPrimaryCls}>
             {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Send verification code'}
           </button>
         </>
@@ -242,9 +241,9 @@ function StepVerify({ onNext }) {
         <>
           <div>
             <label className={labelCls}>Verification code</label>
-            <p className="text-[13px] text-[#737370] mb-3">Enter the 6-digit code sent to {destination}</p>
+            <p className="text-[13px] text-smoke-4 mb-3">Enter the 6-digit code sent to {destination}</p>
             <input
-              className={`${inputCls} text-center text-[20px] font-bold tracking-[0.3em]`}
+              className={`${inputCls} font-mono text-center text-[20px] font-bold tracking-[0.3em]`}
               value={otp}
               onChange={e => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
               placeholder="000000"
@@ -252,16 +251,15 @@ function StepVerify({ onNext }) {
             />
           </div>
           {error && <p className={errorCls}>{error}</p>}
-          <button onClick={verifyOtp} disabled={loading || otp.length < 6}
-            className="w-full h-[46px] bg-[#D03839] hover:bg-[#E0493B] text-white text-[14px] font-semibold rounded transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
+          <button onClick={verifyOtp} disabled={loading || otp.length < 6} className={btnPrimaryCls}>
             {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <>Verify <ChevronRight className="w-4 h-4" /></>}
           </button>
           <button onClick={sendOtp} disabled={loading}
-            className="w-full text-center text-[13px] text-[#D03839] font-medium hover:underline transition-colors disabled:opacity-50">
+            className="w-full text-center text-[13px] text-ink font-semibold underline hover:text-muted transition-colors duration-120 disabled:opacity-50">
             Resend code
           </button>
           <button onClick={() => { setSent(false); setOtp(''); setError('') }}
-            className="w-full text-center text-[13px] text-[#737370] hover:text-[#1A1816] transition-colors">
+            className="w-full text-center text-[13px] font-semibold text-smoke-4 underline hover:text-body transition-colors duration-120">
             Use a different method
           </button>
         </>
@@ -309,73 +307,69 @@ function OnboardingPlanCard({ id, selected, annual, onSelect }) {
     <button
       type="button"
       onClick={() => onSelect(id)}
-      className={`w-full text-left rounded p-5 flex flex-col border-2 transition-all ${
-        isSelected
-          ? (isPro ? 'border-[#D03839]' : 'border-[#1A1816]')
-          : 'border-[#E8E8E4] hover:border-[#D4D4CF]'
-      } bg-white`}
+      className={`w-full text-left rounded-[14px] p-5 flex flex-col border-[1.5px] transition-all duration-120 bg-white ${
+        isSelected ? 'border-ink shadow-offset-4' : 'border-line hover:border-ink'
+      }`}
     >
       {/* Badge row */}
-      <div className="min-h-[22px] mb-3">
+      <div className="min-h-[24px] mb-3">
         {isPro && !isSelected && (
-          <span className="inline-block text-[11px] font-semibold bg-[#FEF0EF] text-[#D03839] px-2.5 py-0.5 rounded">
+          <span className="inline-block font-mono text-[10.5px] font-semibold uppercase tracking-[0.05em] bg-tint text-ink border-[1.5px] border-ink px-2.5 py-0.5 rounded-pill">
             Most popular
           </span>
         )}
         {isSelected && (
-          <span className={`inline-block text-[11px] font-semibold px-2.5 py-0.5 rounded ${isPro ? 'bg-[#FEF0EF] text-[#D03839]' : 'bg-[#1A1816] text-white'}`}>
+          <span className="inline-block font-mono text-[10.5px] font-semibold uppercase tracking-[0.05em] bg-ink text-white border-[1.5px] border-ink px-2.5 py-0.5 rounded-pill">
             Selected
           </span>
         )}
       </div>
 
-      <p className="text-[11px] font-semibold tracking-[0.09em] uppercase text-[#A8A8A4] mb-1">Subscription</p>
-      <h2 className="text-2xl font-bold text-[#1A1816] tracking-tight mb-1">{isPro ? 'Pro Seller' : 'Enterprise'}</h2>
-      <p className="text-xs text-[#737370] leading-relaxed mb-4">
+      <p className="font-mono text-[10.5px] font-semibold tracking-[0.09em] uppercase text-muted mb-1">Subscription</p>
+      <h2 className="font-display text-2xl font-bold text-body tracking-[-0.025em] mb-1">{isPro ? 'Pro Seller' : 'Enterprise'}</h2>
+      <p className="text-xs text-smoke-4 leading-relaxed mb-4">
         {isPro ? 'For active investors and wholesalers moving deals consistently.' : 'For acquisition teams running high-volume pipelines.'}
       </p>
 
       {annual ? (
         <>
           <div className="flex items-end gap-1.5 leading-none mb-1">
-            <span className="text-[38px] font-bold text-[#1A1816] tracking-tight leading-none">
+            <span className="font-display text-[38px] font-bold text-body tracking-[-0.025em] leading-none">
               <sup className="text-lg font-normal align-super">$</sup>{isPro ? '948' : '2,868'}
             </span>
-            <span className="text-sm font-normal text-[#737370] mb-1">/ year</span>
+            <span className="text-sm font-normal text-smoke-4 mb-1">/ year</span>
           </div>
-          <p className="text-xs text-[#737370] mb-1">{isPro ? '$79/mo · billed as $948 upfront' : '$239/mo · billed as $2,868 upfront'}</p>
-          <p className="text-[11px] font-semibold text-[#0F6E56] mb-4">{isPro ? 'Save $240 vs monthly' : 'Save $720 vs monthly'}</p>
+          <p className="font-mono text-[11px] text-muted mb-1">{isPro ? '$79/mo · billed as $948 upfront' : '$239/mo · billed as $2,868 upfront'}</p>
+          <p className="font-mono text-[11px] font-semibold text-ink mb-4">{isPro ? 'Save $240 vs monthly' : 'Save $720 vs monthly'}</p>
         </>
       ) : (
         <>
           <div className="flex items-end gap-1.5 leading-none mb-1">
-            <span className="text-[38px] font-bold text-[#1A1816] tracking-tight leading-none">
+            <span className="font-display text-[38px] font-bold text-body tracking-[-0.025em] leading-none">
               <sup className="text-lg font-normal align-super">$</sup>{price}
             </span>
-            <span className="text-sm font-normal text-[#737370] mb-1">/ per month</span>
+            <span className="text-sm font-normal text-smoke-4 mb-1">/ per month</span>
           </div>
-          <p className="text-xs text-[#737370] mb-1">{billingNote}</p>
-          <p className="text-[11px] text-[#A8A8A4] mb-4">{savingsNote}</p>
+          <p className="font-mono text-[11px] text-muted mb-1">{billingNote}</p>
+          <p className="font-mono text-[11px] text-mist mb-4">{savingsNote}</p>
         </>
       )}
 
-      <div className={`w-full py-2 text-center text-xs font-semibold tracking-[0.05em] uppercase rounded mb-4 transition-colors ${
-        isSelected
-          ? (isPro ? 'bg-[#D03839] text-white' : 'bg-[#1A1816] text-white')
-          : 'border border-[#D4D4CF] text-[#1A1816]'
+      <div className={`w-full py-2 text-center font-mono text-[11px] font-semibold tracking-[0.05em] uppercase rounded-[10px] border-[1.5px] mb-4 transition-colors duration-120 ${
+        isSelected ? 'bg-ink text-white border-ink' : 'border-ink text-ink bg-white'
       }`}>
         {isSelected ? 'Selected' : 'Select plan'}
       </div>
 
-      <hr className="border-t border-[#E8E8E4] mb-4" />
-      <p className="text-[11px] font-semibold tracking-[0.09em] uppercase text-[#A8A8A4] mb-3">Includes</p>
+      <hr className="border-t border-hairline mb-4" />
+      <p className="font-mono text-[10.5px] font-semibold tracking-[0.09em] uppercase text-muted mb-3">Includes</p>
       <ul className="flex flex-col gap-1.5">
         {features.map(([on, label], i) => (
-          <li key={i} className={`flex items-start gap-2 text-xs leading-snug ${on ? 'text-[#1A1816]' : 'text-[#A8A8A4]'}`}>
-            <span className={`flex-shrink-0 mt-0.5 w-3.5 h-3.5 rounded-full flex items-center justify-center border ${on ? 'bg-[#1A1816] border-[#1A1816]' : 'border-[#E8E8E4]'}`}>
+          <li key={i} className={`flex items-start gap-2 text-xs leading-snug ${on ? 'text-body' : 'text-mist'}`}>
+            <span className={`flex-shrink-0 mt-0.5 w-3.5 h-3.5 rounded-full flex items-center justify-center border-[1.5px] ${on ? 'bg-ink border-ink' : 'border-line'}`}>
               {on && (
                 <svg width="7" height="5" viewBox="0 0 7 5" fill="none">
-                  <path d="M1 2.5L2.8 4.2L6 1" stroke="#FAFAF8" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                  <path d="M1 2.5L2.8 4.2L6 1" stroke="#ffffff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               )}
             </span>
@@ -411,16 +405,16 @@ function StepPlan({ onNext }) {
       {/* Billing toggle */}
       <div className="flex flex-col items-center gap-2">
         <div className="flex items-center gap-3">
-          <span className={`text-sm transition-colors ${!annual ? 'text-[#1A1816] font-medium' : 'text-[#737370]'}`}>Monthly</span>
+          <span className={`text-sm transition-colors duration-120 ${!annual ? 'text-body font-semibold' : 'text-smoke-4'}`}>Monthly</span>
           <button
             onClick={() => setAnnual(v => !v)}
-            className={`relative w-10 h-[22px] rounded-full flex-shrink-0 transition-colors ${annual ? 'bg-[#D03839]' : 'bg-[#1A1816]'}`}
+            className="relative w-10 h-[22px] rounded-pill flex-shrink-0 bg-ink border-[1.5px] border-ink transition-colors duration-120"
           >
-            <span className={`absolute top-[3px] left-[3px] w-4 h-4 rounded-full bg-white transition-transform ${annual ? 'translate-x-[18px]' : ''}`} />
+            <span className={`absolute top-[2px] left-[2px] w-[15px] h-[15px] rounded-pill bg-white transition-transform duration-120 ${annual ? 'translate-x-[18px]' : ''}`} />
           </button>
-          <span className={`text-sm transition-colors ${annual ? 'text-[#1A1816] font-medium' : 'text-[#737370]'}`}>Annual</span>
+          <span className={`text-sm transition-colors duration-120 ${annual ? 'text-body font-semibold' : 'text-smoke-4'}`}>Annual</span>
         </div>
-        <span className="text-[11px] font-semibold bg-[#E4F5EC] text-[#0F6E56] px-2.5 py-0.5 rounded-full">
+        <span className="font-mono text-[10.5px] font-semibold uppercase tracking-[0.05em] bg-tint text-ink border-[1.5px] border-ink px-2.5 py-0.5 rounded-pill">
           Save 20% on annual subscription
         </span>
       </div>
@@ -431,10 +425,7 @@ function StepPlan({ onNext }) {
         <OnboardingPlanCard id="enterprise" selected={selected} annual={annual} onSelect={setSelected} />
       </div>
 
-      <button
-        onClick={handleNext}
-        className="w-full h-[46px] bg-[#D03839] hover:bg-[#E0493B] text-white text-[14px] font-semibold rounded transition-colors flex items-center justify-center gap-2"
-      >
+      <button onClick={handleNext} className={btnPrimaryCls}>
         Continue to payment <ChevronRight className="w-4 h-4" />
       </button>
     </div>
@@ -508,42 +499,42 @@ function CheckoutForm({ session, intentType, appliedPromo, noTrial, onSuccess, p
     <form onSubmit={handlePay} className="space-y-4">
       {/* Trial banner — only shown when trial applies */}
       {!noTrial && (
-        <div className="flex items-center gap-2 bg-[#E4F5EC] border border-[#B3DFC5] rounded px-3 py-2.5">
-          <Check className="w-3.5 h-3.5 text-[#0F6E56] shrink-0" />
-          <p className="text-[12px] font-medium text-[#0F6E56]">
+        <div className="flex items-center gap-2 bg-tint border-[1.5px] border-ink rounded-[9px] px-3 py-2.5">
+          <Check className="w-3.5 h-3.5 text-ink shrink-0" />
+          <p className="text-[12px] font-semibold text-ink">
             7-day free trial · then {chargeLabel}{isAnnual ? ' — billed as one annual payment' : ''}
           </p>
         </div>
       )}
 
       {/* Order Summary */}
-      <div className="rounded border border-[#E8E8E4] overflow-hidden">
-        <div className="bg-[#FAFAF8] px-4 py-2.5 border-b border-[#E8E8E4]">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-[#A8A8A4]">Order Summary</p>
+      <div className="rounded-[10px] border-[1.5px] border-line overflow-hidden">
+        <div className="bg-tint-2 px-4 py-2.5 border-b-[1.5px] border-line">
+          <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.1em] text-muted">Order Summary</p>
         </div>
         <div className="bg-white px-4 py-4 space-y-3">
           <div className="flex justify-between items-start">
             <div>
-              <p className="text-[13px] font-semibold text-[#1A1816]">{planName}</p>
-              <p className="text-[11px] text-[#737370] mt-0.5">{isAnnual ? 'Annual billing' : 'Monthly billing'}</p>
+              <p className="text-[13px] font-semibold text-body">{planName}</p>
+              <p className="font-mono text-[10.5px] text-muted mt-0.5">{isAnnual ? 'Annual billing' : 'Monthly billing'}</p>
             </div>
-            <p className="text-[13px] font-semibold text-[#1A1816]">{chargeLabel}</p>
+            <p className="font-mono text-[13px] font-semibold text-body">{chargeLabel}</p>
           </div>
           {appliedPromo && (
             <div className="flex justify-between items-center">
-              <p className="text-[12px] text-[#0F6E56]">
+              <p className="text-[12px] text-ink">
                 {appliedPromo.name} · {appliedPromo.discount.type === 'percent' ? `${appliedPromo.discount.value}% off` : `$${appliedPromo.discount.value} off`}
                 {appliedPromo.duration === 'once' ? ' (first payment)' : appliedPromo.duration === 'repeating' ? ` (${appliedPromo.duration_in_months} months)` : ''}
               </p>
               <div className="text-right">
-                <p className="text-[11px] text-[#A8A8A4] line-through">${basePrice.toLocaleString()}</p>
-                <p className="text-[12px] font-semibold text-[#0F6E56]">${discountedPrice % 1 === 0 ? discountedPrice.toLocaleString() : discountedPrice.toFixed(2)} / {isAnnual ? 'year' : 'month'}</p>
+                <p className="font-mono text-[11px] text-mist line-through">${basePrice.toLocaleString()}</p>
+                <p className="font-mono text-[12px] font-semibold text-ink">${discountedPrice % 1 === 0 ? discountedPrice.toLocaleString() : discountedPrice.toFixed(2)} / {isAnnual ? 'year' : 'month'}</p>
               </div>
             </div>
           )}
-          <div className="border-t border-[#E8E8E4] pt-3 flex justify-between items-center">
-            <p className="text-[13px] font-bold text-[#1A1816]">Due today</p>
-            <p className={`text-[22px] font-bold ${noTrial ? 'text-[#1A1816]' : 'text-[#0F6E56]'}`}>
+          <div className="border-t border-hairline pt-3 flex justify-between items-center">
+            <p className="text-[13px] font-bold text-body">Due today</p>
+            <p className="font-display text-[22px] font-bold text-ink">
               {dueTodayLabel}
             </p>
           </div>
@@ -558,19 +549,19 @@ function CheckoutForm({ session, intentType, appliedPromo, noTrial, onSuccess, p
       }} />
 
       {error && (
-        <div className="p-3 bg-[#FEF0EF] border border-[#F5C0BF] rounded text-[13px] text-[#D03839]">{error}</div>
+        <div className="p-3 bg-tint border-[1.5px] border-ink rounded-[9px] text-[13px] font-semibold text-ink">{error}</div>
       )}
 
       <button
         type="submit"
         disabled={!stripe || processing}
-        className="w-full h-[46px] bg-[#D03839] hover:bg-[#E0493B] text-white text-[14px] font-semibold rounded transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+        className={btnPrimaryCls}
       >
         {processing ? <><Loader2 className="w-4 h-4 animate-spin" /> Processing…</> : btnLabel}
       </button>
       <div className="flex items-center justify-center gap-1.5">
-        <svg className="w-3 h-3 text-[#A8A8A4]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-        <p className="text-[12px] text-[#A8A8A4]">Secured by Stripe · Cancel anytime in settings</p>
+        <svg className="w-3 h-3 text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        <p className="font-mono text-[10.5px] font-semibold uppercase tracking-[0.05em] text-muted">Secured by Stripe · Cancel anytime</p>
       </div>
     </form>
   )
@@ -704,9 +695,9 @@ function StepPayment({ onSuccess }) {
 
   if (!clientSecret) return (
     <div className="space-y-4">
-      {error && <div className="p-3 bg-[#FEF0EF] border border-[#F5C0BF] rounded text-[13px] text-[#D03839]">{error}</div>}
+      {error && <div className="p-3 bg-tint border-[1.5px] border-ink rounded-[9px] text-[13px] font-semibold text-ink">{error}</div>}
       {loading && (
-        <div className="flex items-center justify-center gap-2 py-8 text-[#737370] text-[13px]">
+        <div className="flex items-center justify-center gap-2 py-8 text-muted font-mono text-[11px] font-semibold uppercase tracking-[0.08em]">
           <Loader2 className="w-4 h-4 animate-spin" /> Setting up payment…
         </div>
       )}
@@ -732,21 +723,21 @@ function StepPayment({ onSuccess }) {
             onSuccess()
           }}
           promoSection={
-            <div className="rounded border border-[#E8E8E4] overflow-hidden">
-              <div className="bg-[#FAFAF8] px-4 py-2.5 border-b border-[#E8E8E4]">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-[#A8A8A4]">Promo Code</p>
+            <div className="rounded-[10px] border-[1.5px] border-line overflow-hidden">
+              <div className="bg-tint-2 px-4 py-2.5 border-b-[1.5px] border-line">
+                <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.1em] text-muted">Promo Code</p>
               </div>
               <div className="bg-white px-4 py-4">
                 {appliedPromo ? (
-                  <div className="flex items-center justify-between p-3 rounded" style={{ background: '#E4F5EC', border: '1px solid #B3DFC5' }}>
+                  <div className="flex items-center justify-between p-3 rounded-[9px] bg-tint border-[1.5px] border-ink">
                     <div>
-                      <p className="text-[13px] font-semibold text-[#0F6E56]">{appliedPromo.name}</p>
-                      <p className="text-[11px] text-[#0F6E56] mt-0.5">
+                      <p className="text-[13px] font-semibold text-ink">{appliedPromo.name}</p>
+                      <p className="font-mono text-[10.5px] text-ink mt-0.5">
                         {appliedPromo.discount.type === 'percent' ? `${appliedPromo.discount.value}% off` : `$${appliedPromo.discount.value} off`}
                         {appliedPromo.duration === 'once' ? ' · first payment' : appliedPromo.duration === 'repeating' ? ` · ${appliedPromo.duration_in_months} months` : ' · forever'}
                       </p>
                     </div>
-                    <button onClick={() => setAppliedPromo(null)} className="text-[12px] text-[#0F6E56] font-medium hover:underline">Remove</button>
+                    <button onClick={() => setAppliedPromo(null)} className="text-[12px] text-ink font-semibold underline hover:text-muted">Remove</button>
                   </div>
                 ) : (
                   <div className="flex gap-2">
@@ -756,20 +747,20 @@ function StepPayment({ onSuccess }) {
                       onChange={e => { setPromoCode(e.target.value.toUpperCase()); setPromoError(null) }}
                       onKeyDown={e => e.key === 'Enter' && validatePromo()}
                       placeholder="Enter promo code"
-                      className="flex-1 h-[40px] px-3 rounded border border-[#E8E8E4] text-[13px] text-[#1A1816] bg-white outline-none focus:border-[#D03839]"
+                      className="flex-1 border-[1.5px] border-line rounded-[9px] px-3 py-2.5 font-mono text-[13px] text-body bg-white outline-none focus:border-ink focus:shadow-offset-3 transition-all duration-120"
                     />
                     <button
                       type="button"
                       onClick={validatePromo}
                       disabled={promoValidating || !promoCode.trim()}
-                      className="px-4 h-[40px] rounded text-[13px] font-semibold border border-[#E8E8E4] text-[#444441] bg-white hover:bg-[#FAFAF8] disabled:opacity-50 transition-colors flex items-center gap-1.5"
+                      className="px-4 rounded-[9px] text-[13px] font-semibold border-[1.5px] border-ink text-ink bg-white hover:bg-tint disabled:opacity-50 transition-colors duration-120 flex items-center gap-1.5"
                     >
                       {promoValidating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
                       Apply
                     </button>
                   </div>
                 )}
-                {promoError && <p className="text-[12px] text-[#D03839] mt-2">{promoError}</p>}
+                {promoError && <p className="text-[12px] font-semibold text-ink mt-2">{promoError}</p>}
               </div>
             </div>
           }
@@ -777,7 +768,7 @@ function StepPayment({ onSuccess }) {
       </Elements>
     </div>
   ) : (
-    <div className="p-4 bg-[#FEF3E2] border border-[#F5D9A0] rounded text-[13px] text-[#B5620A] text-center">
+    <div className="p-4 bg-tint border-[1.5px] border-ink rounded-[9px] text-[13px] font-semibold text-ink text-center">
       Stripe is not configured. Add <code className="font-mono">NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY</code> to env.
     </div>
   )
@@ -845,17 +836,14 @@ function StepSuccess() {
 
   return (
     <div className="flex flex-col items-center text-center py-4 space-y-4">
-      <div className="w-16 h-16 bg-[#E4F5EC] rounded-full flex items-center justify-center">
-        <Check className="w-8 h-8 text-[#0F6E56]" />
+      <div className="w-16 h-16 bg-ink rounded-full flex items-center justify-center">
+        <Check className="w-8 h-8 text-white" />
       </div>
       <div>
-        <h2 className="text-[20px] font-bold text-[#1A1816] mb-1">You're all set!</h2>
-        <p className="text-[14px] text-[#737370]">Your account is active. Start listing your deals on DeelMap.</p>
+        <h2 className="font-display font-bold text-[24px] tracking-[-0.025em] text-body mb-1">You're all set!</h2>
+        <p className="text-[14px] text-smoke-4">Your account is active. Start listing your deals on DeelMap.</p>
       </div>
-      <button
-        onClick={handleContinue}
-        className="w-full h-[46px] bg-[#D03839] hover:bg-[#E0493B] text-white text-[14px] font-semibold rounded transition-colors"
-      >
+      <button onClick={handleContinue} className={btnPrimaryCls}>
         Go to Dashboard
       </button>
     </div>
@@ -897,59 +885,69 @@ function OnboardingContent() {
   const { title, sub } = STEP_TITLES[step] || STEP_TITLES[0]
 
   return (
-    <div className="min-h-screen bg-[#FAFAF8] flex flex-col items-center justify-center px-4 py-12" style={{ fontFamily: 'var(--font-dm-sans), DM Sans, sans-serif' }}>
-      <div className={`w-full transition-all duration-300 ${step === 2 ? 'max-w-3xl' : 'max-w-xl'}`}>
+    <div className="min-h-screen relative flex flex-col items-center justify-center px-4 py-12">
+      {/* Striped brand backdrop */}
+      <div className="absolute inset-0 bg-stripes-backdrop" aria-hidden />
+      <div className="absolute inset-0 bg-[rgba(250,250,250,0.55)]" aria-hidden />
 
-        {/* Logo */}
-        <div className="flex justify-center mb-8">
-          <a href="/">
-            <img src="/assets/logo.svg" alt="DeelMap" className="h-14 w-auto object-contain" onError={e => { e.target.style.display = 'none' }} />
-          </a>
-        </div>
+      <div className={`w-full relative z-10 transition-all duration-120 ${step === 2 ? 'max-w-3xl' : 'max-w-[520px]'}`}>
 
         {/* Card */}
-        <div className="bg-white border border-[#E8E8E4] rounded p-10 shadow-sm">
+        <div className="bg-white border-[1.5px] border-ink rounded-2xl shadow-offset-6 overflow-hidden">
 
-          {/* Step indicator */}
-          {step < 4 && <StepDots current={step} />}
+          {/* Card header bar */}
+          <div className="flex items-center justify-between px-6 py-4 bg-tint-2 border-b-[1.5px] border-ink">
+            <a href="/" className="flex items-center gap-2.5 transition-opacity hover:opacity-80">
+              <Logo size="header" />
+              <span className="font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-muted">Seller Portal</span>
+            </a>
+            <span className="font-mono text-[10.5px] font-semibold uppercase tracking-[0.08em] text-muted">
+              {step < 4 ? `Step ${step + 1} of 4` : 'Done'}
+            </span>
+          </div>
 
-          {/* Heading */}
-          {step < 4 && (
-            <div className="mb-7">
-              {step === 1 && (
-                <button onClick={back} className="flex items-center gap-1.5 text-[13px] text-[#737370] hover:text-[#1A1816] transition-colors mb-4">
-                  <ChevronRight className="w-3.5 h-3.5 rotate-180" />
-                  Back to account
-                </button>
-              )}
-              {step === 2 && (
-                <button onClick={back} className="flex items-center gap-1.5 text-[13px] text-[#737370] hover:text-[#1A1816] transition-colors mb-4">
-                  <ChevronRight className="w-3.5 h-3.5 rotate-180" />
-                  Back to verification
-                </button>
-              )}
-              {step === 3 && (
-                <button onClick={back} className="flex items-center gap-1.5 text-[13px] text-[#737370] hover:text-[#1A1816] transition-colors mb-4">
-                  <ChevronRight className="w-3.5 h-3.5 rotate-180" />
-                  Back to plans
-                </button>
-              )}
-              <h1 className="text-[24px] font-bold text-[#1A1816] tracking-tight">{title}</h1>
-              <p className="text-[14px] text-[#737370] mt-1">{sub}</p>
-            </div>
-          )}
+          <div className="p-6 sm:p-8">
+            {/* Step indicator */}
+            {step < 4 && <StepDots current={step} />}
 
-          {step === 0 && <StepAccount onNext={next} />}
-          {step === 1 && <StepVerify onNext={next} />}
-          {step === 2 && <StepPlan onNext={next} />}
-          {step === 3 && <StepPayment onSuccess={next} />}
-          {step === 4 && <StepSuccess />}
+            {/* Heading */}
+            {step < 4 && (
+              <div className="mb-7">
+                {step === 1 && (
+                  <button onClick={back} className="flex items-center gap-1.5 text-[13px] font-semibold text-smoke-4 underline hover:text-body transition-colors duration-120 mb-4">
+                    <ChevronRight className="w-3.5 h-3.5 rotate-180" />
+                    Back to account
+                  </button>
+                )}
+                {step === 2 && (
+                  <button onClick={back} className="flex items-center gap-1.5 text-[13px] font-semibold text-smoke-4 underline hover:text-body transition-colors duration-120 mb-4">
+                    <ChevronRight className="w-3.5 h-3.5 rotate-180" />
+                    Back to verification
+                  </button>
+                )}
+                {step === 3 && (
+                  <button onClick={back} className="flex items-center gap-1.5 text-[13px] font-semibold text-smoke-4 underline hover:text-body transition-colors duration-120 mb-4">
+                    <ChevronRight className="w-3.5 h-3.5 rotate-180" />
+                    Back to plans
+                  </button>
+                )}
+                <h1 className="font-display font-bold text-[26px] tracking-[-0.025em] text-body">{title}</h1>
+                <p className="text-[14px] text-smoke-4 mt-1">{sub}</p>
+              </div>
+            )}
+
+            {step === 0 && <StepAccount onNext={next} />}
+            {step === 1 && <StepVerify onNext={next} />}
+            {step === 2 && <StepPlan onNext={next} />}
+            {step === 3 && <StepPayment onSuccess={next} />}
+            {step === 4 && <StepSuccess />}
+          </div>
         </div>
 
-        <p className="text-center text-[12px] text-[#A8A8A4] mt-6">
+        <p className="text-center text-[12px] text-muted mt-6">
           By continuing you agree to DeelMap's{' '}
-          <a href="/terms" className="hover:underline">Terms</a> &amp;{' '}
-          <a href="/privacy" className="hover:underline">Privacy Policy</a>
+          <a href="/terms" className="font-semibold text-ink underline hover:text-muted">Terms</a> &amp;{' '}
+          <a href="/privacy" className="font-semibold text-ink underline hover:text-muted">Privacy Policy</a>
         </p>
       </div>
     </div>

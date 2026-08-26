@@ -6,7 +6,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import Sidebar from '@/components/layout/Sidebar'
-import Image from 'next/image'
+import { Logo } from '@/components/ui/Logo'
 import Link from 'next/link'
 import { Menu, Bell } from 'lucide-react'
 
@@ -82,8 +82,8 @@ export default function DashboardLayout({ children }) {
 
   if (!user && loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-white" style={{ fontFamily: 'var(--font-dm-sans), sans-serif' }}>
-        <div className="animate-spin rounded-full h-10 w-10 border-2 border-[#E8E8E4] border-t-[#1A1816]"></div>
+      <div className="min-h-screen flex items-center justify-center bg-white" style={{ fontFamily: 'var(--font-instrument), sans-serif' }}>
+        <div className="motion-safe:animate-spin rounded-full h-10 w-10 border-2 border-hairline border-t-ink"></div>
       </div>
     )
   }
@@ -91,11 +91,12 @@ export default function DashboardLayout({ children }) {
   if (!user) return null
 
   return (
-    <div className="h-screen overflow-hidden bg-[#FAFAF8] flex flex-col" style={{ fontFamily: 'var(--font-dm-sans), sans-serif' }}>
+    <div className="h-screen overflow-hidden bg-tint-3 flex flex-col" style={{ fontFamily: 'var(--font-instrument), sans-serif' }}>
       {/* Mobile Header */}
-      <header className="lg:hidden fixed top-0 left-0 right-0 z-40 h-16 bg-white border-b border-[#E8E8E4] flex items-center justify-between px-4">
-        <Link href="/dashboard" className="block">
-          <Image src="/assets/logo.svg" alt="DeelMap" width={180} height={52} className="h-12 w-auto object-contain" priority />
+      <header className="lg:hidden fixed top-0 left-0 right-0 z-40 h-16 bg-white border-b-[1.5px] border-ink flex items-center justify-between px-4">
+        <Link href="/dashboard" className="flex flex-col items-start gap-0.5">
+          <Logo size="header" />
+          <span className="font-mono text-[9px] font-semibold uppercase tracking-[0.12em] text-muted">Seller Portal</span>
         </Link>
         <div className="flex items-center gap-1">
           {/* Notification Bell */}
@@ -103,20 +104,20 @@ export default function DashboardLayout({ children }) {
             <button
               type="button"
               onClick={() => setNotifOpen(prev => !prev)}
-              className="relative p-2 rounded hover:bg-[#FAFAF8] transition-colors duration-200"
+              className="relative p-2 rounded-[8px] hover:bg-tint transition-colors duration-[120ms]"
               aria-label="Notifications"
             >
-              <Bell className="w-5 h-5 text-[#444441]" />
+              <Bell className="w-5 h-5 text-smoke-2" />
               {notifUnread > 0 && (
-                <span className="absolute top-1 right-1 min-w-[15px] h-[15px] flex items-center justify-center px-0.5 text-[9px] font-bold text-white bg-[#D03839] rounded-full leading-none">
+                <span className="absolute top-1 right-1 min-w-[15px] h-[15px] flex items-center justify-center px-0.5 font-mono text-[9px] font-semibold text-white bg-ink rounded-pill leading-none">
                   {notifUnread > 99 ? '99+' : notifUnread}
                 </span>
               )}
             </button>
             {notifOpen && (
-              <div className="fixed top-16 left-0 right-0 bg-white border-b border-[#E8E8E4] shadow-xl z-[200] overflow-hidden">
-                <div className="flex items-center justify-between px-4 py-3 border-b border-[#E8E8E4]">
-                  <span className="text-[13px] font-semibold text-[#1A1816]">Notifications</span>
+              <div className="fixed top-16 left-0 right-0 bg-white border-b-[1.5px] border-ink z-[200] overflow-hidden">
+                <div className="flex items-center justify-between px-4 py-3 border-b border-hairline">
+                  <span className="font-mono text-[11px] font-semibold uppercase tracking-[0.12em] text-ink">Notifications</span>
                   {notifUnread > 0 && (
                     <button
                       onClick={async () => {
@@ -125,7 +126,7 @@ export default function DashboardLayout({ children }) {
                         setNotifUnread(0)
                         setNotifications(prev => prev.map(n => ({ ...n, is_read: true })))
                       }}
-                      className="text-[11px] text-[#D03839] font-medium hover:underline"
+                      className="font-mono text-[10.5px] font-semibold text-ink hover:underline"
                     >
                       Mark all read
                     </button>
@@ -133,7 +134,7 @@ export default function DashboardLayout({ children }) {
                 </div>
                 <div className="max-h-[320px] overflow-y-auto">
                   {notifications.length === 0 ? (
-                    <div className="flex items-center justify-center h-16 text-[13px] text-[#737370]">No notifications yet</div>
+                    <div className="flex items-center justify-center h-16 font-mono text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">No notifications yet</div>
                   ) : (
                     notifications.map(n => (
                       <Link
@@ -147,13 +148,13 @@ export default function DashboardLayout({ children }) {
                             setNotifUnread(prev => Math.max(0, prev - 1))
                           }
                         }}
-                        className={`flex items-start gap-3 px-4 py-3 border-l-2 transition-colors hover:bg-[#FAFAF8] ${n.is_read ? 'border-l-transparent bg-white' : 'border-l-[#D03839] bg-[#FAFAF8]'}`}
+                        className={`flex items-start gap-3 px-4 py-3 border-l-2 border-b border-b-hairline-2 transition-colors duration-[120ms] hover:bg-tint ${n.is_read ? 'border-l-transparent bg-white' : 'border-l-ink bg-tint-2'}`}
                       >
-                        <Bell className="w-4 h-4 text-[#737370] flex-shrink-0 mt-0.5" />
+                        <Bell className="w-4 h-4 text-muted flex-shrink-0 mt-0.5" />
                         <div className="flex-1 min-w-0">
-                          <p className={`text-[13px] truncate ${n.is_read ? 'text-[#444441]' : 'font-semibold text-[#1A1816]'}`}>{n.title}</p>
-                          <p className="text-[11px] text-[#737370] truncate mt-0.5">{n.body}</p>
-                          <p className="text-[10px] text-[#A8A8A4] mt-1">{n.created_at ? new Date(n.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : ''}</p>
+                          <p className={`text-[13px] truncate ${n.is_read ? 'text-smoke-2' : 'font-semibold text-ink'}`}>{n.title}</p>
+                          <p className="text-[11px] text-muted truncate mt-0.5">{n.body}</p>
+                          <p className="font-mono text-[10px] text-muted mt-1">{n.created_at ? new Date(n.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : ''}</p>
                         </div>
                       </Link>
                     ))
@@ -166,10 +167,10 @@ export default function DashboardLayout({ children }) {
           <button
             type="button"
             onClick={() => setIsSidebarOpen(true)}
-            className="p-2 rounded hover:bg-[#FAFAF8] transition-colors duration-200"
+            className="p-2 rounded-[8px] hover:bg-tint transition-colors duration-[120ms]"
             aria-label="Open menu"
           >
-            <Menu className="w-5 h-5 text-[#444441]" />
+            <Menu className="w-5 h-5 text-smoke-2" />
           </button>
         </div>
       </header>

@@ -1,13 +1,13 @@
 "use client"
 
 import React, { useState, useEffect, Suspense } from 'react'
-import Image from 'next/image'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { loadStripe } from '@stripe/stripe-js'
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js'
-import { User, Mail, Lock, Phone, CheckCircle, AlertCircle, Loader2, Building, FileText, Eye, EyeOff, MapPin, TrendingUp, Check, ChevronRight, ArrowLeft } from 'lucide-react'
+import { User, Mail, Lock, Phone, AlertCircle, Loader2, Building, FileText, Eye, EyeOff, MapPin, TrendingUp, Check, ChevronRight, ArrowLeft } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { pushEvent } from '@/lib/gtm'
+import { Logo } from '@/components/ui/Logo'
 
 const stripePromise = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
   ? loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY)
@@ -15,27 +15,33 @@ const stripePromise = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
 
 // ─── Brand tokens ────────────────────────────────────────────────────────────
 const T = {
-  primary:        '#D03839',
-  primaryHover:   '#E0493B',
-  primarySurface: '#FEF0EF',
-  primaryBorder:  '#F5C4C0',
-  textPrimary:    '#1A1816',
-  textBody:       '#444441',
-  textSecondary:  '#737370',
-  textMuted:      '#A8A8A4',
+  primary:        '#111111',
+  primaryHover:   '#444444',
+  primarySurface: '#f2f2f2',
+  primaryBorder:  '#111111',
+  textPrimary:    '#171717',
+  textBody:       '#444444',
+  textSecondary:  '#757575',
+  textMuted:      '#a3a3a3',
   bgWhite:        '#FFFFFF',
-  bgSurface:      '#FAFAF8',
-  borderLight:    '#E8E8E4',
-  success:        '#0F6E56',
-  successSurface: '#E4F5EC',
-  successBorder:  '#B3DFC5',
+  bgSurface:      '#fafafa',
+  borderLight:    '#cccccc',
+  success:        '#111111',
+  successSurface: '#f2f2f2',
+  successBorder:  '#111111',
+}
+const MONO = "var(--font-plex-mono), 'IBM Plex Mono', monospace"
+const DISPLAY = "var(--font-archivo), Archivo, sans-serif"
+const CARD_STYLE = {
+  background: '#ffffff', border: '1.5px solid #111111', borderRadius: '16px',
+  boxShadow: '6px 6px 0 #111111',
 }
 
 const inputStyle = {
   width: '100%', height: '48px', paddingLeft: '40px', paddingRight: '16px',
-  border: `1px solid ${T.borderLight}`, borderRadius: '4px', background: T.bgWhite,
+  border: `1.5px solid ${T.borderLight}`, borderRadius: '9px', background: T.bgWhite,
   color: T.textPrimary, fontSize: '14px', outline: 'none',
-  transition: 'border-color 0.15s ease, box-shadow 0.15s ease',
+  transition: 'border-color 0.12s ease, box-shadow 0.12s ease',
 }
 
 const readonlyInputStyle = {
@@ -47,26 +53,24 @@ const STEPS = ['Account', 'Choose Plan', 'Payment']
 
 function StepDots({ current }) {
   return (
-    <div className="flex items-center justify-center gap-2 mb-8">
-      {STEPS.map((label, i) => {
-        const done = i < current
-        const active = i === current
-        return (
-          <div key={i} className="flex items-center gap-2 flex-1 min-w-0">
-            <div className="flex flex-col items-center">
-              <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold flex-shrink-0 transition-all ${done ? 'bg-[#1A1816] text-white' : active ? 'bg-[#D03839] text-white' : 'bg-[#F3F3F0] text-[#A8A8A4]'}`}>
-                {done ? <Check className="w-3.5 h-3.5" /> : i + 1}
-              </div>
-              <span className={`mt-1 text-[10px] font-semibold whitespace-nowrap hidden sm:block ${active ? 'text-[#1A1816]' : done ? 'text-[#737370]' : 'text-[#A8A8A4]'}`}>
-                {label}
-              </span>
-            </div>
-            {i < STEPS.length - 1 && (
-              <div className={`flex-1 h-px mx-1 mb-4 transition-colors ${done ? 'bg-[#1A1816]' : 'bg-[#E8E8E4]'}`} />
-            )}
-          </div>
-        )
-      })}
+    <div className="mb-8">
+      <div className="flex items-center justify-between mb-2">
+        <span className="font-mono text-[10.5px] font-semibold uppercase tracking-[0.08em] text-muted">
+          Step {current + 1} of {STEPS.length}
+        </span>
+        <span className="font-mono text-[10.5px] font-semibold uppercase tracking-[0.08em] text-ink">
+          {STEPS[current]}
+        </span>
+      </div>
+      {/* Segmented ink progress bars */}
+      <div className="flex gap-1.5">
+        {STEPS.map((label, i) => (
+          <span
+            key={label}
+            className={`flex-1 h-1.5 rounded-pill border-[1.5px] border-ink transition-colors duration-120 ${i <= current ? 'bg-ink' : 'bg-white'}`}
+          />
+        ))}
+      </div>
     </div>
   )
 }
@@ -110,54 +114,54 @@ function PlanCard({ id, selected, annual, onSelect }) {
     <button
       type="button"
       onClick={() => onSelect(id)}
-      className={`w-full text-left rounded p-5 flex flex-col border-2 transition-all bg-white ${
-        isSelected ? (isPro ? 'border-[#D03839]' : 'border-[#1A1816]') : 'border-[#E8E8E4] hover:border-[#D4D4CF]'
+      className={`w-full text-left rounded-[14px] p-5 flex flex-col border-[1.5px] transition-all duration-120 bg-white ${
+        isSelected ? 'border-ink shadow-offset-4' : 'border-line hover:border-ink'
       }`}
     >
-      <div className="min-h-[22px] mb-3">
-        {isPro && !isSelected && <span className="inline-block text-[11px] font-semibold bg-[#FEF0EF] text-[#D03839] px-2.5 py-0.5 rounded">Most popular</span>}
-        {isSelected && <span className={`inline-block text-[11px] font-semibold px-2.5 py-0.5 rounded ${isPro ? 'bg-[#FEF0EF] text-[#D03839]' : 'bg-[#1A1816] text-white'}`}>Selected</span>}
+      <div className="min-h-[24px] mb-3">
+        {isPro && !isSelected && <span className="inline-block font-mono text-[10.5px] font-semibold uppercase tracking-[0.05em] bg-tint text-ink border-[1.5px] border-ink px-2.5 py-0.5 rounded-pill">Most popular</span>}
+        {isSelected && <span className="inline-block font-mono text-[10.5px] font-semibold uppercase tracking-[0.05em] bg-ink text-white border-[1.5px] border-ink px-2.5 py-0.5 rounded-pill">Selected</span>}
       </div>
-      <p className="text-[11px] font-semibold tracking-[0.09em] uppercase text-[#A8A8A4] mb-1">Subscription</p>
-      <h2 className="text-2xl font-bold text-[#1A1816] tracking-tight mb-1">{isPro ? 'Pro Seller' : 'Enterprise'}</h2>
-      <p className="text-xs text-[#737370] leading-relaxed mb-4">
+      <p className="font-mono text-[10.5px] font-semibold tracking-[0.09em] uppercase text-muted mb-1">Subscription</p>
+      <h2 className="font-display text-2xl font-bold text-body tracking-[-0.025em] mb-1">{isPro ? 'Pro Seller' : 'Enterprise'}</h2>
+      <p className="text-xs text-smoke-4 leading-relaxed mb-4">
         {isPro ? 'For active investors and wholesalers moving deals consistently.' : 'For acquisition teams running high-volume pipelines.'}
       </p>
       {annual ? (
         <>
           <div className="flex items-end gap-1.5 leading-none mb-1">
-            <span className="text-[38px] font-bold text-[#1A1816] tracking-tight leading-none">
+            <span className="font-display text-[38px] font-bold text-body tracking-[-0.025em] leading-none">
               <sup className="text-lg font-normal align-super">$</sup>{isPro ? '948' : '2,868'}
             </span>
-            <span className="text-sm font-normal text-[#737370] mb-1">/ year</span>
+            <span className="text-sm font-normal text-smoke-4 mb-1">/ year</span>
           </div>
-          <p className="text-xs text-[#737370] mb-1">{isPro ? '$79/mo · billed as $948 upfront' : '$239/mo · billed as $2,868 upfront'}</p>
-          <p className="text-[11px] font-semibold text-[#0F6E56] mb-4">{isPro ? 'Save $240 vs monthly' : 'Save $720 vs monthly'}</p>
+          <p className="font-mono text-[11px] text-muted mb-1">{isPro ? '$79/mo · billed as $948 upfront' : '$239/mo · billed as $2,868 upfront'}</p>
+          <p className="font-mono text-[11px] font-semibold text-ink mb-4">{isPro ? 'Save $240 vs monthly' : 'Save $720 vs monthly'}</p>
         </>
       ) : (
         <>
           <div className="flex items-end gap-1.5 leading-none mb-1">
-            <span className="text-[38px] font-bold text-[#1A1816] tracking-tight leading-none">
+            <span className="font-display text-[38px] font-bold text-body tracking-[-0.025em] leading-none">
               <sup className="text-lg font-normal align-super">$</sup>{price}
             </span>
-            <span className="text-sm font-normal text-[#737370] mb-1">/ per month</span>
+            <span className="text-sm font-normal text-smoke-4 mb-1">/ per month</span>
           </div>
-          <p className="text-xs text-[#737370] mb-1">{billingNote}</p>
-          <p className="text-[11px] text-[#A8A8A4] mb-4">{savingsNote}</p>
+          <p className="font-mono text-[11px] text-muted mb-1">{billingNote}</p>
+          <p className="font-mono text-[11px] text-mist mb-4">{savingsNote}</p>
         </>
       )}
-      <div className={`w-full py-2 text-center text-xs font-semibold tracking-[0.05em] uppercase rounded mb-4 transition-colors ${
-        isSelected ? (isPro ? 'bg-[#D03839] text-white' : 'bg-[#1A1816] text-white') : 'border border-[#D4D4CF] text-[#1A1816]'
+      <div className={`w-full py-2 text-center font-mono text-[11px] font-semibold tracking-[0.05em] uppercase rounded-[10px] border-[1.5px] mb-4 transition-colors duration-120 ${
+        isSelected ? 'bg-ink text-white border-ink' : 'border-ink text-ink bg-white'
       }`}>
         {isSelected ? 'Selected' : 'Select plan'}
       </div>
-      <hr className="border-t border-[#E8E8E4] mb-4" />
-      <p className="text-[11px] font-semibold tracking-[0.09em] uppercase text-[#A8A8A4] mb-3">Includes</p>
+      <hr className="border-t border-hairline mb-4" />
+      <p className="font-mono text-[10.5px] font-semibold tracking-[0.09em] uppercase text-muted mb-3">Includes</p>
       <ul className="flex flex-col gap-1.5">
         {features.map(([on, label], i) => (
-          <li key={i} className={`flex items-start gap-2 text-xs leading-snug ${on ? 'text-[#1A1816]' : 'text-[#A8A8A4]'}`}>
-            <span className={`flex-shrink-0 mt-0.5 w-3.5 h-3.5 rounded-full flex items-center justify-center border ${on ? 'bg-[#1A1816] border-[#1A1816]' : 'border-[#E8E8E4]'}`}>
-              {on && <svg width="7" height="5" viewBox="0 0 7 5" fill="none"><path d="M1 2.5L2.8 4.2L6 1" stroke="#FAFAF8" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>}
+          <li key={i} className={`flex items-start gap-2 text-xs leading-snug ${on ? 'text-body' : 'text-mist'}`}>
+            <span className={`flex-shrink-0 mt-0.5 w-3.5 h-3.5 rounded-full flex items-center justify-center border-[1.5px] ${on ? 'bg-ink border-ink' : 'border-line'}`}>
+              {on && <svg width="7" height="5" viewBox="0 0 7 5" fill="none"><path d="M1 2.5L2.8 4.2L6 1" stroke="#ffffff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>}
             </span>
             {label}
           </li>
@@ -211,48 +215,48 @@ function CheckoutForm({ planType, billingCycle, intentType, discount, onSuccess 
   return (
     <form onSubmit={handlePay} className="space-y-4">
       {/* Order Summary */}
-      <div className="rounded border border-[#E8E8E4] overflow-hidden">
-        <div className="bg-[#FAFAF8] px-4 py-2.5 border-b border-[#E8E8E4]">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-[#A8A8A4]">Order Summary</p>
+      <div className="rounded-[10px] border-[1.5px] border-line overflow-hidden">
+        <div className="bg-tint-2 px-4 py-2.5 border-b-[1.5px] border-line">
+          <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.1em] text-muted">Order Summary</p>
         </div>
         <div className="bg-white px-4 py-4 space-y-3">
           <div className="flex justify-between items-start">
             <div>
-              <p className="text-[13px] font-semibold text-[#1A1816]">{planName}</p>
-              <p className="text-[11px] text-[#737370] mt-0.5">{isAnnual ? 'Annual billing · billed as one payment' : 'Monthly billing · cancel anytime'}</p>
+              <p className="text-[13px] font-semibold text-body">{planName}</p>
+              <p className="font-mono text-[10.5px] text-muted mt-0.5">{isAnnual ? 'Annual billing · billed as one payment' : 'Monthly billing · cancel anytime'}</p>
             </div>
-            <p className="text-[13px] font-semibold text-[#1A1816]">{isAnnual ? `$${annualTotal.toLocaleString()}` : `$${monthlyPrice}`}</p>
+            <p className="font-mono text-[13px] font-semibold text-body">{isAnnual ? `$${annualTotal.toLocaleString()}` : `$${monthlyPrice}`}</p>
           </div>
           {discount && (
             <div className="flex justify-between items-center">
-              <p className="text-[12px] text-[#0F6E56]">
+              <p className="text-[12px] text-ink">
                 Promo: {discount.name} ({discount.type === 'percent' ? `${discount.value}% off` : `$${discount.value} off`})
               </p>
-              <p className="text-[12px] font-semibold text-[#0F6E56]">−${discountAmount % 1 === 0 ? discountAmount : discountAmount.toFixed(2)}</p>
+              <p className="font-mono text-[12px] font-semibold text-ink">−${discountAmount % 1 === 0 ? discountAmount : discountAmount.toFixed(2)}</p>
             </div>
           )}
-          <div className="border-t border-[#E8E8E4] pt-3 flex justify-between items-center">
-            <p className="text-[13px] font-bold text-[#1A1816]">Due today</p>
-            <p className="text-[22px] font-bold text-[#D03839]">{chargeLabel}</p>
+          <div className="border-t border-hairline pt-3 flex justify-between items-center">
+            <p className="text-[13px] font-bold text-body">Due today</p>
+            <p className="font-display text-[22px] font-bold text-ink">{chargeLabel}</p>
           </div>
         </div>
       </div>
 
       <PaymentElement />
 
-      {error && <div className="p-3 bg-[#FEF0EF] border border-[#F5C0BF] rounded text-[13px] text-[#D03839]">{error}</div>}
+      {error && <div className="p-3 bg-tint border-[1.5px] border-ink rounded-[9px] text-[13px] font-semibold text-ink">{error}</div>}
 
       <button
         type="submit"
         disabled={!stripe || processing}
-        className="w-full h-[46px] bg-[#D03839] hover:bg-[#E0493B] text-white text-[14px] font-semibold rounded transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+        className="w-full bg-ink text-white border-[1.5px] border-ink rounded-[10px] px-[22px] py-3 text-[15px] font-semibold shadow-soft-3 hover:bg-smoke-2 transition-all duration-120 disabled:opacity-50 flex items-center justify-center gap-2"
       >
         {processing ? <><Loader2 className="w-4 h-4 animate-spin" /> Processing…</> : 'Start Subscription'}
       </button>
 
       <div className="flex items-center justify-center gap-1.5">
-        <svg className="w-3 h-3 text-[#A8A8A4]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-        <p className="text-[12px] text-[#A8A8A4]">Secured by Stripe · Cancel anytime in settings</p>
+        <svg className="w-3 h-3 text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        <p className="font-mono text-[10.5px] font-semibold uppercase tracking-[0.05em] text-muted">Secured by Stripe · Cancel anytime</p>
       </div>
     </form>
   )
@@ -320,28 +324,28 @@ function PaymentStep({ sellerId, planType, billingCycle, onSuccess, onBack }) {
 
   return (
     <div className="space-y-4">
-      <button type="button" onClick={onBack} className="flex items-center gap-1.5 text-[13px] text-[#737370] hover:text-[#1A1816] transition-colors">
+      <button type="button" onClick={onBack} className="flex items-center gap-1.5 text-[13px] font-semibold text-smoke-4 underline hover:text-body transition-colors duration-120">
         <ArrowLeft className="w-4 h-4" /> Back to plans
       </button>
 
       {!clientSecret ? (
         <div className="space-y-4">
           {/* Promo code input */}
-          <div className="rounded border border-[#E8E8E4] overflow-hidden">
-            <div className="bg-[#FAFAF8] px-4 py-2.5 border-b border-[#E8E8E4]">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-[#A8A8A4]">Promo Code</p>
+          <div className="rounded-[10px] border-[1.5px] border-line overflow-hidden">
+            <div className="bg-tint-2 px-4 py-2.5 border-b-[1.5px] border-line">
+              <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.1em] text-muted">Promo Code</p>
             </div>
             <div className="bg-white px-4 py-4">
               {appliedPromo ? (
-                <div className="flex items-center justify-between p-3 rounded" style={{ background: '#E4F5EC', border: '1px solid #B3DFC5' }}>
+                <div className="flex items-center justify-between p-3 rounded-[9px] bg-tint border-[1.5px] border-ink">
                   <div>
-                    <p className="text-[13px] font-semibold text-[#0F6E56]">{appliedPromo.name}</p>
-                    <p className="text-[11px] text-[#0F6E56] mt-0.5">
+                    <p className="text-[13px] font-semibold text-ink">{appliedPromo.name}</p>
+                    <p className="font-mono text-[10.5px] text-ink mt-0.5">
                       {appliedPromo.discount.type === 'percent' ? `${appliedPromo.discount.value}% off` : `$${appliedPromo.discount.value} off`}
                       {appliedPromo.duration === 'once' ? ' · first payment' : appliedPromo.duration === 'repeating' ? ` · ${appliedPromo.duration_in_months} months` : ' · forever'}
                     </p>
                   </div>
-                  <button onClick={() => setAppliedPromo(null)} className="text-[12px] text-[#0F6E56] font-medium hover:underline">Remove</button>
+                  <button onClick={() => setAppliedPromo(null)} className="text-[12px] text-ink font-semibold underline hover:text-muted">Remove</button>
                 </div>
               ) : (
                 <div className="flex gap-2">
@@ -351,30 +355,30 @@ function PaymentStep({ sellerId, planType, billingCycle, onSuccess, onBack }) {
                     onChange={e => { setPromoCode(e.target.value.toUpperCase()); setPromoError(null) }}
                     onKeyDown={e => e.key === 'Enter' && validatePromo()}
                     placeholder="Enter promo code"
-                    className="flex-1 h-[40px] px-3 rounded border border-[#E8E8E4] text-[13px] text-[#1A1816] bg-white outline-none focus:border-[#D03839]"
+                    className="flex-1 border-[1.5px] border-line rounded-[9px] px-3 py-2.5 font-mono text-[13px] text-body bg-white outline-none focus:border-ink focus:shadow-offset-3 transition-all duration-120"
                   />
                   <button
                     type="button"
                     onClick={validatePromo}
                     disabled={promoValidating || !promoCode.trim()}
-                    className="px-4 h-[40px] rounded text-[13px] font-semibold border border-[#E8E8E4] text-[#444441] bg-white hover:bg-[#FAFAF8] disabled:opacity-50 transition-colors flex items-center gap-1.5"
+                    className="px-4 rounded-[9px] text-[13px] font-semibold border-[1.5px] border-ink text-ink bg-white hover:bg-tint disabled:opacity-50 transition-colors duration-120 flex items-center gap-1.5"
                   >
                     {promoValidating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
                     Apply
                   </button>
                 </div>
               )}
-              {promoError && <p className="text-[12px] text-[#D03839] mt-2">{promoError}</p>}
+              {promoError && <p className="text-[12px] font-semibold text-ink mt-2">{promoError}</p>}
             </div>
           </div>
 
-          {error && <div className="p-3 bg-[#FEF0EF] border border-[#F5C0BF] rounded text-[13px] text-[#D03839]">{error}</div>}
+          {error && <div className="p-3 bg-tint border-[1.5px] border-ink rounded-[9px] text-[13px] font-semibold text-ink">{error}</div>}
 
           <button
             type="button"
             onClick={createIntent}
             disabled={loading}
-            className="w-full h-[46px] bg-[#D03839] hover:bg-[#E0493B] text-white text-[14px] font-semibold rounded transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+            className="w-full bg-ink text-white border-[1.5px] border-ink rounded-[10px] px-[22px] py-3 text-[15px] font-semibold shadow-soft-3 hover:bg-smoke-2 transition-all duration-120 disabled:opacity-50 flex items-center justify-center gap-2"
           >
             {loading ? <><Loader2 className="w-4 h-4 animate-spin" /> Loading…</> : 'Continue to Payment'}
           </button>
@@ -390,7 +394,7 @@ function PaymentStep({ sellerId, planType, billingCycle, onSuccess, onBack }) {
           />
         </Elements>
       ) : (
-        <div className="p-4 bg-[#FEF3E2] border border-[#F5D9A0] rounded text-[13px] text-[#B5620A] text-center">
+        <div className="p-4 bg-tint border-[1.5px] border-ink rounded-[9px] text-[13px] font-semibold text-ink text-center">
           Stripe is not configured. Add <code className="font-mono">NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY</code> to env.
         </div>
       )}
@@ -402,8 +406,8 @@ function PaymentStep({ sellerId, planType, billingCycle, onSuccess, onBack }) {
 function InputField({ icon: Icon, label, required, hint, children, textarea }) {
   return (
     <div>
-      <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, color: T.textBody, marginBottom: '6px' }}>
-        {label}{required && <span style={{ color: T.primary, marginLeft: '3px' }}>*</span>}
+      <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: T.textPrimary, marginBottom: '6px' }}>
+        {label}{required && <span style={{ color: T.textSecondary, marginLeft: '3px' }}>*</span>}
       </label>
       <div style={{ position: 'relative' }}>
         <Icon style={{ position: 'absolute', left: '12px', top: textarea ? '14px' : '50%', transform: textarea ? 'none' : 'translateY(-50%)', width: '16px', height: '16px', color: T.textMuted, pointerEvents: 'none' }} />
@@ -425,7 +429,6 @@ function MagicLinkRegisterContent() {
   const [tokenValid, setTokenValid] = useState(false)
   const [tokenData, setTokenData] = useState(null)
   const [tokenError, setTokenError] = useState('')
-  const [logoError, setLogoError] = useState(false)
 
   // Multi-step state: 0=form, 1=plan, 2=payment, 3=success
   const [step, setStep] = useState(0)
@@ -479,7 +482,7 @@ function MagicLinkRegisterContent() {
     })
     if (formError) setFormError('')
   }
-  const handleFocus = (e) => { e.target.style.borderColor = T.primary; e.target.style.boxShadow = `0 0 0 3px rgba(208, 56, 57, 0.12)` }
+  const handleFocus = (e) => { e.target.style.borderColor = T.primary; e.target.style.boxShadow = '3px 3px 0 #111111' }
   const handleBlur = (e) => { e.target.style.borderColor = T.borderLight; e.target.style.boxShadow = 'none' }
 
   // Step 0: Create account → move to plan selection
@@ -567,14 +570,14 @@ function MagicLinkRegisterContent() {
 
   // ── Invalid token ──
   if (!tokenValid) return (
-    <div style={{ minHeight: '100vh', background: T.bgWhite, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
-      <div style={{ background: T.bgWhite, border: `1px solid ${T.borderLight}`, borderRadius: '4px', padding: '40px 32px', maxWidth: '420px', width: '100%', textAlign: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.04), 0 8px 24px rgba(0,0,0,0.06)' }}>
-        <div style={{ width: '52px', height: '52px', background: T.primarySurface, borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
+    <div className="bg-stripes-backdrop" style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
+      <div style={{ ...CARD_STYLE, padding: '40px 32px', maxWidth: '420px', width: '100%', textAlign: 'center' }}>
+        <div style={{ width: '52px', height: '52px', background: T.primarySurface, border: '1.5px solid #111111', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
           <AlertCircle style={{ width: '24px', height: '24px', color: T.primary }} />
         </div>
-        <h2 style={{ fontSize: '20px', fontWeight: 700, color: T.textPrimary, marginBottom: '8px' }}>Link Invalid</h2>
-        <p style={{ fontSize: '14px', color: T.textBody, marginBottom: '24px', lineHeight: '1.5' }}>{tokenError || 'This registration link is invalid or has expired.'}</p>
-        <button onClick={() => router.push('/login')} style={{ width: '100%', height: '44px', background: T.primary, color: '#fff', border: 'none', borderRadius: '4px', fontSize: '14px', fontWeight: 600, cursor: 'pointer' }}>Go to Login</button>
+        <h2 style={{ fontFamily: DISPLAY, fontSize: '20px', fontWeight: 700, letterSpacing: '-0.025em', color: T.textPrimary, marginBottom: '8px' }}>Link Invalid</h2>
+        <p style={{ fontSize: '14px', fontWeight: 600, color: T.primary, marginBottom: '24px', lineHeight: '1.5' }}>{tokenError || 'This registration link is invalid or has expired.'}</p>
+        <button onClick={() => router.push('/login')} style={{ width: '100%', height: '46px', background: T.primary, color: '#fff', border: '1.5px solid #111111', borderRadius: '10px', fontSize: '15px', fontWeight: 600, cursor: 'pointer', boxShadow: '3px 3px 0 rgba(17,17,17,.3)' }}>Go to Login</button>
       </div>
     </div>
   )
@@ -582,26 +585,18 @@ function MagicLinkRegisterContent() {
   const maxWidth = step === 1 ? '840px' : '680px'
 
   return (
-    <div style={{ minHeight: '100vh', background: T.bgWhite, paddingTop: '48px', paddingBottom: '40px' }}>
-      <div style={{ maxWidth, margin: '0 auto', padding: '0 16px', transition: 'max-width 0.3s ease' }}>
+    <div className="bg-stripes-backdrop" style={{ minHeight: '100vh', paddingTop: '48px', paddingBottom: '40px' }}>
+      <div style={{ maxWidth, margin: '0 auto', padding: '0 16px', transition: 'max-width 0.12s ease' }}>
 
         {/* Logo + heading */}
         <div style={{ textAlign: 'center', marginBottom: '28px' }}>
-          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '20px' }}>
-            {!logoError ? (
-              <Image src="/assets/logo.svg" alt="DeelMap" width={220} height={72} style={{ height: '72px', width: 'auto', objectFit: 'contain' }} priority onError={() => setLogoError(true)} />
-            ) : (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <div style={{ width: '36px', height: '36px', background: T.textPrimary, borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <MapPin style={{ width: '18px', height: '18px', color: '#fff' }} />
-                </div>
-                <span style={{ fontWeight: 700, fontSize: '20px', color: T.textPrimary }}>DeelMap</span>
-              </div>
-            )}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', marginBottom: '20px' }}>
+            <Logo size="header" />
+            <span className="font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-muted">Seller Portal</span>
           </div>
           {step < 3 && (
             <>
-              <h1 style={{ fontSize: '26px', fontWeight: 700, color: T.textPrimary, marginBottom: '6px' }}>
+              <h1 style={{ fontFamily: DISPLAY, fontSize: '26px', fontWeight: 700, letterSpacing: '-0.025em', color: T.textPrimary, marginBottom: '6px' }}>
                 {step === 0 ? 'Complete Your Registration' : step === 1 ? 'Choose Your Plan' : 'Payment Details'}
               </h1>
               <p style={{ fontSize: '14px', color: T.textBody }}>
@@ -620,30 +615,28 @@ function MagicLinkRegisterContent() {
 
         {/* Property banner (step 0 only) */}
         {step === 0 && (
-          <div style={{ background: T.bgSurface, border: `1px solid ${T.borderLight}`, borderRadius: '4px', padding: '14px 16px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{ width: '36px', height: '36px', background: T.primarySurface, borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <MapPin style={{ width: '16px', height: '16px', color: T.primary }} />
+          <div style={{ background: '#f7f7f7', border: '1.5px solid #111111', borderRadius: '12px', padding: '14px 16px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '12px', boxShadow: '3px 3px 0 #111111' }}>
+            <div style={{ width: '36px', height: '36px', background: '#111111', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <MapPin style={{ width: '16px', height: '16px', color: '#ffffff' }} />
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <p style={{ fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', color: T.textSecondary, marginBottom: '2px' }}>Your Property</p>
+              <p style={{ fontFamily: MONO, fontSize: '10px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.12em', color: T.textSecondary, marginBottom: '2px' }}>Your Property</p>
               <p style={{ fontSize: '13px', fontWeight: 600, color: T.textPrimary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tokenData?.property_address}</p>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0, background: T.primarySurface, border: `1px solid ${T.primaryBorder}`, borderRadius: '100px', padding: '4px 10px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0, background: T.primarySurface, border: '1.5px solid #111111', borderRadius: '999px', padding: '4px 10px' }}>
               <TrendingUp style={{ width: '12px', height: '12px', color: T.primary }} />
-              <span style={{ fontSize: '12px', fontWeight: 700, color: T.primary }}>{tokenData?.views_count} views</span>
+              <span style={{ fontFamily: MONO, fontSize: '11px', fontWeight: 700, color: T.primary }}>{tokenData?.views_count} views</span>
             </div>
           </div>
         )}
 
         {/* ── Step 0: Registration form ── */}
         {step === 0 && (
-          <div style={{ background: T.bgWhite, border: `1px solid ${T.borderLight}`, borderRadius: '4px', padding: '28px', boxShadow: '0 0 0 1px rgba(0,0,0,0.02), 0 2px 4px rgba(0,0,0,0.04), 0 8px 24px rgba(0,0,0,0.06)', position: 'relative', overflow: 'hidden' }}>
-            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '3px', background: `linear-gradient(90deg, ${T.primary} 0%, ${T.primaryHover} 50%, ${T.primary} 100%)` }} />
-
+          <div style={{ ...CARD_STYLE, padding: '28px', position: 'relative', overflow: 'hidden' }}>
             {formError && (
-              <div style={{ marginBottom: '16px', padding: '12px 14px', borderRadius: '4px', display: 'flex', alignItems: 'flex-start', gap: '10px', background: T.primarySurface, border: `1px solid ${T.primaryBorder}` }}>
+              <div style={{ marginBottom: '16px', padding: '12px 14px', borderRadius: '9px', display: 'flex', alignItems: 'flex-start', gap: '10px', background: T.primarySurface, border: '1.5px solid #111111' }}>
                 <AlertCircle style={{ width: '16px', height: '16px', color: T.primary, flexShrink: 0, marginTop: '1px' }} />
-                <span style={{ fontSize: '13px', fontWeight: 500, color: T.primary, lineHeight: '1.4' }}>{formError}</span>
+                <span style={{ fontSize: '13px', fontWeight: 600, color: T.primary, lineHeight: '1.4' }}>{formError}</span>
               </div>
             )}
 
@@ -682,7 +675,7 @@ function MagicLinkRegisterContent() {
               <button
                 type="submit"
                 disabled={submitting}
-                style={{ marginTop: '22px', width: '100%', height: '48px', background: submitting ? T.borderLight : T.primary, color: submitting ? T.textSecondary : '#FFFFFF', border: 'none', borderRadius: '4px', fontSize: '14px', fontWeight: 600, cursor: submitting ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: 'background 0.15s ease' }}
+                style={{ marginTop: '22px', width: '100%', height: '48px', background: submitting ? T.borderLight : T.primary, color: submitting ? T.textSecondary : '#FFFFFF', border: '1.5px solid #111111', borderRadius: '10px', fontSize: '15px', fontWeight: 600, cursor: submitting ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: 'background 0.12s ease', boxShadow: '3px 3px 0 rgba(17,17,17,.3)' }}
                 onMouseEnter={e => { if (!submitting) e.currentTarget.style.background = T.primaryHover }}
                 onMouseLeave={e => { if (!submitting) e.currentTarget.style.background = T.primary }}
               >
@@ -692,7 +685,7 @@ function MagicLinkRegisterContent() {
               </button>
               <p style={{ marginTop: '16px', textAlign: 'center', fontSize: '13px', color: T.textSecondary }}>
                 Already have an account?{' '}
-                <button type="button" onClick={() => router.push('/login')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: T.primary, fontWeight: 600, fontSize: '13px', padding: 0 }}>Sign in here</button>
+                <button type="button" onClick={() => router.push('/login')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: T.primary, fontWeight: 600, fontSize: '13px', padding: 0, textDecoration: 'underline' }}>Sign in here</button>
               </p>
             </form>
           </div>
@@ -701,21 +694,21 @@ function MagicLinkRegisterContent() {
         {/* ── Step 1: Plan selection ── */}
         {step === 1 && (
           <div className="space-y-5">
-            <button type="button" onClick={() => setStep(0)} className="flex items-center gap-1.5 text-[13px] text-[#737370] hover:text-[#1A1816] transition-colors">
+            <button type="button" onClick={() => setStep(0)} className="flex items-center gap-1.5 text-[13px] font-semibold text-smoke-4 underline hover:text-body transition-colors duration-120">
               <ArrowLeft className="w-4 h-4" /> Back to account
             </button>
             <div className="flex flex-col items-center gap-2">
               <div className="flex items-center gap-3">
-                <span className={`text-sm transition-colors ${billingCycle === 'monthly' ? 'text-[#1A1816] font-medium' : 'text-[#737370]'}`}>Monthly</span>
+                <span className={`text-sm transition-colors duration-120 ${billingCycle === 'monthly' ? 'text-body font-semibold' : 'text-smoke-4'}`}>Monthly</span>
                 <button
                   onClick={() => setBillingCycle(v => v === 'monthly' ? 'annual' : 'monthly')}
-                  className={`relative w-10 h-[22px] rounded-full flex-shrink-0 transition-colors ${billingCycle === 'annual' ? 'bg-[#D03839]' : 'bg-[#1A1816]'}`}
+                  className="relative w-10 h-[22px] rounded-pill flex-shrink-0 bg-ink border-[1.5px] border-ink transition-colors duration-120"
                 >
-                  <span className={`absolute top-[3px] left-[3px] w-4 h-4 rounded-full bg-white transition-transform ${billingCycle === 'annual' ? 'translate-x-[18px]' : ''}`} />
+                  <span className={`absolute top-[2px] left-[2px] w-[15px] h-[15px] rounded-pill bg-white transition-transform duration-120 ${billingCycle === 'annual' ? 'translate-x-[18px]' : ''}`} />
                 </button>
-                <span className={`text-sm transition-colors ${billingCycle === 'annual' ? 'text-[#1A1816] font-medium' : 'text-[#737370]'}`}>Annual</span>
+                <span className={`text-sm transition-colors duration-120 ${billingCycle === 'annual' ? 'text-body font-semibold' : 'text-smoke-4'}`}>Annual</span>
               </div>
-              <span className="text-[11px] font-semibold bg-[#E4F5EC] text-[#0F6E56] px-2.5 py-0.5 rounded-full">Save 20% on annual subscription</span>
+              <span className="font-mono text-[10.5px] font-semibold uppercase tracking-[0.05em] bg-tint text-ink border-[1.5px] border-ink px-2.5 py-0.5 rounded-pill">Save 20% on annual subscription</span>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
               <PlanCard id="pro" selected={planType} annual={billingCycle === 'annual'} onSelect={setPlanType} />
@@ -723,7 +716,7 @@ function MagicLinkRegisterContent() {
             </div>
             <button
               onClick={() => setStep(2)}
-              className="w-full h-[46px] bg-[#D03839] hover:bg-[#E0493B] text-white text-[14px] font-semibold rounded transition-colors flex items-center justify-center gap-2"
+              className="w-full bg-ink text-white border-[1.5px] border-ink rounded-[10px] px-[22px] py-3 text-[15px] font-semibold shadow-soft-3 hover:bg-smoke-2 transition-all duration-120 flex items-center justify-center gap-2"
             >
               Continue to payment <ChevronRight className="w-4 h-4" />
             </button>
@@ -732,7 +725,7 @@ function MagicLinkRegisterContent() {
 
         {/* ── Step 2: Payment ── */}
         {step === 2 && (
-          <div style={{ background: T.bgWhite, border: `1px solid ${T.borderLight}`, borderRadius: '4px', padding: '28px', boxShadow: '0 0 0 1px rgba(0,0,0,0.02), 0 2px 4px rgba(0,0,0,0.04), 0 8px 24px rgba(0,0,0,0.06)' }}>
+          <div style={{ ...CARD_STYLE, padding: '28px' }}>
             <PaymentStep
               sellerId={sellerId}
               planType={planType}
@@ -745,16 +738,16 @@ function MagicLinkRegisterContent() {
 
         {/* ── Step 3: Success ── */}
         {step === 3 && (
-          <div style={{ background: T.bgWhite, border: `1px solid ${T.borderLight}`, borderRadius: '4px', padding: '48px 32px', textAlign: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.04), 0 8px 24px rgba(0,0,0,0.06)' }}>
-            <div style={{ width: '64px', height: '64px', background: T.successSurface, border: `1px solid ${T.successBorder}`, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
-              <CheckCircle style={{ width: '32px', height: '32px', color: T.success }} />
+          <div style={{ ...CARD_STYLE, padding: '48px 32px', textAlign: 'center' }}>
+            <div style={{ width: '64px', height: '64px', background: '#111111', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
+              <Check style={{ width: '32px', height: '32px', color: '#ffffff' }} />
             </div>
-            <h2 style={{ fontSize: '24px', fontWeight: 700, color: T.textPrimary, marginBottom: '8px' }}>You're all set!</h2>
+            <h2 style={{ fontFamily: DISPLAY, fontSize: '24px', fontWeight: 700, letterSpacing: '-0.025em', color: T.textPrimary, marginBottom: '8px' }}>You're all set!</h2>
             <p style={{ fontSize: '15px', color: T.textBody, marginBottom: '8px' }}>Your account is active and your plan is live.</p>
             <p style={{ fontSize: '13px', color: T.textSecondary, marginBottom: '32px' }}>Your existing listings are already published and linked to your account.</p>
             <button
               onClick={() => router.push('/dashboard')}
-              style={{ height: '48px', padding: '0 32px', background: T.primary, color: '#fff', border: 'none', borderRadius: '4px', fontSize: '14px', fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '8px' }}
+              style={{ height: '48px', padding: '0 32px', background: T.primary, color: '#fff', border: '1.5px solid #111111', borderRadius: '10px', fontSize: '15px', fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '8px', boxShadow: '3px 3px 0 rgba(17,17,17,.3)' }}
               onMouseEnter={e => e.currentTarget.style.background = T.primaryHover}
               onMouseLeave={e => e.currentTarget.style.background = T.primary}
             >
@@ -763,8 +756,8 @@ function MagicLinkRegisterContent() {
           </div>
         )}
 
-        <p style={{ textAlign: 'center', fontSize: '11px', color: T.textMuted, marginTop: '20px' }}>
-          © {new Date().getFullYear()} DeelMap. All rights reserved.
+        <p style={{ textAlign: 'center', fontFamily: MONO, fontSize: '10.5px', fontWeight: 500, letterSpacing: '0.05em', color: T.textSecondary, marginTop: '20px' }}>
+          © {new Date().getFullYear()} DEELMAP. ALL RIGHTS RESERVED.
         </p>
       </div>
     </div>
@@ -775,7 +768,7 @@ export default function MagicLinkRegisterPage() {
   return (
     <Suspense fallback={
       <div style={{ minHeight: '100vh', background: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <Loader2 style={{ width: '40px', height: '40px', color: '#D03839', animation: 'spin 1s linear infinite' }} />
+        <Loader2 style={{ width: '40px', height: '40px', color: '#111111', animation: 'spin 1s linear infinite' }} />
       </div>
     }>
       <MagicLinkRegisterContent />

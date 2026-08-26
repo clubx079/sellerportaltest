@@ -41,7 +41,7 @@ const ViewForm = ({ isOpen, onClose, roomType, amenities, currency = '$' }) => {
             className="fixed right-0 top-0 h-screen w-full md:w-[600px] lg:w-[700px] bg-white shadow-2xl z-[60] flex flex-col"
           >
             {/* Header */}
-            <div className="bg-[#472F97] px-4 sm:px-6 py-4 flex items-center justify-between">
+            <div className="bg-[#111111] px-4 sm:px-6 py-4 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-white/10 flex items-center justify-center">
                   <BedDouble className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
@@ -136,7 +136,7 @@ const ViewForm = ({ isOpen, onClose, roomType, amenities, currency = '$' }) => {
                   </div>
                   <div className="mt-4 pt-4 border-t border-neutral-200">
                     <div className="flex items-center gap-2">
-                      <div className={`w-5 h-5 rounded flex items-center justify-center ${roomType.extra_bed ? 'bg-[#472F97]' : 'bg-neutral-300'}`}>
+                      <div className={`w-5 h-5 rounded flex items-center justify-center ${roomType.extra_bed ? 'bg-[#111111]' : 'bg-neutral-300'}`}>
                         {roomType.extra_bed && <Check className="w-3.5 h-3.5 text-white" />}
                       </div>
                       <span className="text-sm text-neutral-700">Extra Bed Available</span>
@@ -182,7 +182,7 @@ const ViewForm = ({ isOpen, onClose, roomType, amenities, currency = '$' }) => {
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       {selectedAmenities.map(amenity => (
                         <div key={amenity.id} className="flex items-center gap-2 bg-white rounded-lg p-2 border border-neutral-200">
-                          <div className="w-5 h-5 rounded bg-[#472F97] flex items-center justify-center flex-shrink-0">
+                          <div className="w-5 h-5 rounded bg-[#111111] flex items-center justify-center flex-shrink-0">
                             <Check className="w-3.5 h-3.5 text-white" />
                           </div>
                           <span className="text-sm text-neutral-700">{amenity.name}</span>
@@ -199,7 +199,7 @@ const ViewForm = ({ isOpen, onClose, roomType, amenities, currency = '$' }) => {
               <div className="sticky bottom-0 bg-white border-t border-neutral-200 px-4 sm:px-6 py-4">
                 <button
                   onClick={onClose}
-                  className="w-full px-4 py-2.5 bg-[#472F97] hover:bg-[#3a2578] text-white text-sm font-medium rounded-xl transition-colors"
+                  className="w-full px-4 py-2.5 bg-[#111111] hover:bg-[#444444] text-white text-sm font-medium rounded-xl transition-colors"
                 >
                   Close
                 </button>
