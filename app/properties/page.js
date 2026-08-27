@@ -538,38 +538,36 @@ const PropertiesManagement = () => {
     }
   };
 
+  // Status is value-encoded, never hue: active=ink, draft/review=muted, sold/expired=mist.
   const getStatusColor = (status) => {
     switch (status?.toLowerCase()) {
       case 'active':
       case 'published':
-        return 'bg-green-50 text-green-700 border-green-200';
+        return 'bg-ink text-white border-ink';
       case 'draft':
       case 'pending':
-        return 'bg-yellow-50 text-yellow-700 border-yellow-200';
       case 'under_review':
-        return 'bg-orange-50 text-orange-700 border-orange-200';
       case 'rejected':
-        return 'bg-[#FEF3E2] text-[#B5620A] border-[#F3C97D]';
+        return 'bg-muted text-white border-muted';
       case 'archived':
       case 'inactive':
-        return 'bg-[#E8E8E4] text-[#737370] border-[#E8E8E4]';
+        return 'bg-mist text-white border-mist';
       default:
-        return 'bg-[#E8E8E4] text-[#444441] border-[#E8E8E4]';
+        return 'bg-muted text-white border-muted';
     }
   };
 
   const getPropertyStatusColor = (status) => {
     switch (status?.toLowerCase()) {
       case 'available':
-        return 'bg-green-50 text-green-700 border-green-200';
-      case 'sold':
-        return 'bg-blue-50 text-blue-700 border-blue-200';
+        return 'bg-ink text-white border-ink';
       case 'pending':
-        return 'bg-yellow-50 text-yellow-700 border-yellow-200';
       case 'under_contract':
-        return 'bg-purple-50 text-purple-700 border-purple-200';
+        return 'bg-muted text-white border-muted';
+      case 'sold':
+        return 'bg-mist text-white border-mist';
       default:
-        return 'bg-[#E8E8E4] text-[#444441] border-[#E8E8E4]';
+        return 'bg-muted text-white border-muted';
     }
   };
 
@@ -602,22 +600,22 @@ const PropertiesManagement = () => {
     const tags = []
     if (isBundle) {
       const days = daysLeft(property.highlight_ends_at || property.boost_ends_at)
-      tags.push({ label: days != null ? `Bundle · ${days}d` : 'Bundle', cls: 'bg-purple-50 text-purple-700 border-purple-200' })
+      tags.push({ label: days != null ? `Bundle · ${days}d` : 'Bundle', cls: 'bg-tint text-ink border-ink' })
     } else {
       if (property.is_highlighted) {
         const days = daysLeft(property.highlight_ends_at)
-        tags.push({ label: days != null ? `Highlighted · ${days}d` : 'Highlighted', cls: 'bg-[#FEF0EF] text-[#D03839] border-[#F5C0BF]' })
+        tags.push({ label: days != null ? `Highlighted · ${days}d` : 'Highlighted', cls: 'bg-tint text-ink border-ink' })
       }
       if (property.is_boosted) {
         const days = daysLeft(property.boost_ends_at)
-        tags.push({ label: days != null ? `Boosted · ${days}d` : 'Boosted', cls: 'bg-[#EEF2FF] text-[#4F46E5] border-[#C7D2FE]' })
+        tags.push({ label: days != null ? `Boosted · ${days}d` : 'Boosted', cls: 'bg-tint text-ink border-line' })
       }
     }
     if (property.is_homepage_featured) {
       const days = daysLeft(property.homepage_feature_ends_at)
-      tags.push({ label: days != null ? `Featured · ${days}d` : 'Featured', cls: 'bg-[#E4F5EC] text-[#0F6E56] border-[#B6E4CE]' })
+      tags.push({ label: days != null ? `Featured · ${days}d` : 'Featured', cls: 'bg-tint text-ink border-line-2' })
     }
-    if (!tags.length) return <span className="text-[10px] text-[#A8A8A4]">—</span>
+    if (!tags.length) return <span className="font-mono text-[10px] text-mist">—</span>
     // Surface a Renew link when any active add-on expires within 7 days.
     const soonDays = [property.highlight_ends_at, property.boost_ends_at, property.homepage_feature_ends_at]
       .map(d => daysLeft(d)).filter(d => d != null);
@@ -625,13 +623,13 @@ const PropertiesManagement = () => {
     return (
       <div className="flex flex-wrap items-center gap-1">
         {tags.map(t => (
-          <span key={t.label} className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium border ${t.cls}`}>
+          <span key={t.label} className={`inline-flex items-center px-2 py-0.5 rounded-pill font-mono text-[10px] font-semibold uppercase tracking-[0.05em] border ${t.cls}`}>
             {t.label}
           </span>
         ))}
         {expiringSoon && (
           <button onClick={() => router.push(`/properties/enhance?id=${property.id}`)}
-            className="text-[10px] font-semibold text-[#D03839] hover:underline">
+            className="font-mono text-[10px] font-semibold uppercase tracking-[0.05em] text-ink hover:underline">
             Renew
           </button>
         )}
@@ -694,26 +692,26 @@ const PropertiesManagement = () => {
       {/* Top row: Title (left) | Active/Trash (center) | Add Property (right) — same on mobile and desktop */}
       <div className="grid grid-cols-3 items-center gap-3 md:gap-4">
         <div className="min-w-0">
-          <h1 className="text-lg md:text-xl font-semibold tracking-tight text-[#1A1816] truncate">Properties</h1>
+          <h1 className="font-display font-bold text-lg md:text-xl tracking-[-0.01em] text-body truncate">Properties</h1>
         </div>
         <div className="flex justify-center">
-          <div className="flex items-center gap-0.5 p-1 rounded bg-[#E8E8E4] border border-[#E8E8E4]/80">
+          <div className="flex items-center gap-1.5">
             <button
               onClick={() => setViewModeAndUrl('active')}
-              className={`px-3 py-1.5 text-xs font-semibold rounded transition-all duration-200 ${
+              className={`px-3.5 py-2 font-mono text-[11px] font-semibold tracking-[0.06em] uppercase border-[1.5px] border-ink rounded-pill transition-colors duration-120 ${
                 viewMode === 'active'
-                  ? 'bg-white text-primary shadow-sm border border-[#E8E8E4]/80'
-                  : 'text-[#444441] hover:text-[#1A1816] hover:bg-[#FAFAF8]/80'
+                  ? 'bg-ink text-white'
+                  : 'bg-white text-ink hover:bg-tint'
               }`}
             >
               Active
             </button>
             <button
               onClick={() => setViewModeAndUrl('trash')}
-              className={`px-3 py-1.5 text-xs font-semibold rounded transition-all duration-200 ${
+              className={`px-3.5 py-2 font-mono text-[11px] font-semibold tracking-[0.06em] uppercase border-[1.5px] border-ink rounded-pill transition-colors duration-120 ${
                 viewMode === 'trash'
-                  ? 'bg-white text-brandRed shadow-sm border border-[#E8E8E4]/80'
-                  : 'text-[#444441] hover:text-[#1A1816] hover:bg-[#FAFAF8]/80'
+                  ? 'bg-ink text-white'
+                  : 'bg-white text-ink hover:bg-tint'
               }`}
             >
               Trash
@@ -724,7 +722,7 @@ const PropertiesManagement = () => {
           <div className="flex justify-end">
             <button
               onClick={() => router.push('/properties/new')}
-              className="flex items-center gap-1.5 bg-[#D03839] hover:bg-[#E0493B] text-white px-3 py-2 rounded text-[13px] font-semibold transition-colors shrink-0"
+              className="flex items-center gap-1.5 bg-ink hover:bg-smoke-2 text-white border-[1.5px] border-ink px-3.5 py-2 rounded-[10px] text-[13px] font-semibold shadow-soft-3 transition-all duration-120 shrink-0"
             >
               <Plus size={14} />
               <span className="hidden sm:inline">Post a Deal</span>
@@ -737,77 +735,77 @@ const PropertiesManagement = () => {
       {/* Stats: only on Active view; minimal and professional. Trash view shows a single summary line. */}
       {viewMode === 'active' ? (
         <div className="grid grid-cols-3 gap-3">
-          <div className="bg-white rounded border border-[#E8E8E4] px-4 py-5 flex flex-col">
+          <div className="bg-white rounded-[12px] border-[1.5px] border-ink shadow-offset-3 px-4 py-5 flex flex-col">
             <div className="flex items-start justify-between mb-5">
-              <p className="text-[13px] font-medium text-[#737370]">Total listings</p>
-              <div className="w-8 h-8 rounded-full bg-[#EBF3FC] flex items-center justify-center flex-shrink-0">
-                <Home className="w-4 h-4 text-[#4A90E2]" />
+              <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-muted">Total listings</p>
+              <div className="w-8 h-8 rounded-[8px] bg-tint border-[1.5px] border-ink flex items-center justify-center flex-shrink-0">
+                <Home className="w-4 h-4 text-ink" />
               </div>
             </div>
-            <p className="text-[36px] font-bold text-[#1A1816] leading-none tracking-tight">{totalProperties}</p>
+            <p className="font-display text-[36px] font-bold text-body leading-none tracking-[-0.025em]">{totalProperties}</p>
           </div>
-          <div className="bg-white rounded border border-[#E8E8E4] px-4 py-5 flex flex-col">
+          <div className="bg-white rounded-[12px] border-[1.5px] border-ink shadow-offset-3 px-4 py-5 flex flex-col">
             <div className="flex items-start justify-between mb-5">
-              <p className="text-[13px] font-medium text-[#737370]">Active</p>
-              <div className="w-8 h-8 rounded-full bg-[#E4F5EC] flex items-center justify-center flex-shrink-0">
-                <BarChart2 className="w-4 h-4 text-[#0F6E56]" />
+              <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-muted">Active</p>
+              <div className="w-8 h-8 rounded-[8px] bg-tint border-[1.5px] border-ink flex items-center justify-center flex-shrink-0">
+                <BarChart2 className="w-4 h-4 text-ink" />
               </div>
             </div>
-            <p className="text-[36px] font-bold text-[#1A1816] leading-none tracking-tight">{activeProperties}</p>
+            <p className="font-display text-[36px] font-bold text-body leading-none tracking-[-0.025em]">{activeProperties}</p>
           </div>
           <button
             type="button"
             onClick={() => setFilterStatus('draft')}
-            className="bg-white rounded border border-[#E8E8E4] px-4 py-5 flex flex-col text-left hover:bg-[#FAFAF8] transition-colors"
+            className="bg-white rounded-[12px] border-[1.5px] border-ink shadow-offset-3 px-4 py-5 flex flex-col text-left hover:bg-tint transition-colors duration-120"
           >
             <div className="flex items-start justify-between mb-5">
-              <p className="text-[13px] font-medium text-[#737370]">Draft</p>
-              <div className="w-8 h-8 rounded-full bg-[#FEF3E2] flex items-center justify-center flex-shrink-0">
-                <FileEdit className="w-4 h-4 text-[#B5620A]" />
+              <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-muted">Draft</p>
+              <div className="w-8 h-8 rounded-[8px] bg-tint border-[1.5px] border-ink flex items-center justify-center flex-shrink-0">
+                <FileEdit className="w-4 h-4 text-ink" />
               </div>
             </div>
-            <p className="text-[36px] font-bold text-[#1A1816] leading-none tracking-tight">{draftProperties}</p>
+            <p className="font-display text-[36px] font-bold text-body leading-none tracking-[-0.025em]">{draftProperties}</p>
           </button>
         </div>
       ) : (
-        <div className="bg-white rounded border border-[#E8E8E4] px-4 py-3">
-          <p className="text-sm text-[#444441]"><span className="font-semibold text-[#1A1816]">{totalProperties}</span> {totalProperties === 1 ? 'listing' : 'listings'} in trash</p>
+        <div className="bg-white rounded-[12px] border-[1.5px] border-ink px-4 py-3">
+          <p className="text-sm text-smoke-2"><span className="font-display font-bold text-body">{totalProperties}</span> {totalProperties === 1 ? 'listing' : 'listings'} in trash</p>
         </div>
       )}
 
       {/* Publish success banner */}
       {successMsg && (
-        <div className="flex items-center justify-between p-3 bg-[#E4F5EC] border border-[#A3D9B8] rounded text-[13px] text-[#0F6E56]">
+        <div className="flex items-center justify-between p-3 bg-tint border-[1.5px] border-ink rounded-[10px] text-[13px] font-semibold text-ink">
           <span>{successMsg}</span>
-          <button onClick={() => setSuccessMsg('')} className="ml-3 text-[#0F6E56] hover:opacity-70"><X size={14} /></button>
+          <button onClick={() => setSuccessMsg('')} className="ml-3 text-ink hover:opacity-70"><X size={14} /></button>
         </div>
       )}
 
       {/* Subscription block message */}
       {subBlockMsg && (
-        <div className="p-3 bg-[#FEF3E2] border border-[#F3C97D] rounded text-[13px] text-[#B5620A]">
+        <div className="p-3 bg-tint border-[1.5px] border-ink rounded-[10px] text-[13px] font-semibold text-ink">
           {subBlockMsg}
         </div>
       )}
 
       {/* Table Card */}
-      <div className="bg-white rounded border border-[#E8E8E4] overflow-hidden shadow-card">
+      <div className="bg-white rounded-[12px] border-[1.5px] border-ink overflow-hidden shadow-offset-4">
         {/* Controls */}
-        <div className="px-4 py-3 border-b border-[#E8E8E4] flex flex-col md:flex-row md:items-center gap-2">
+        <div className="px-4 py-3 border-b border-hairline flex flex-col md:flex-row md:items-center gap-2">
           {/* Search — full width on mobile */}
           <div className="relative w-full md:flex-1 md:min-w-[160px]">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#A8A8A4]" />
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-mist" />
             <input
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-8 pr-8 py-1.5 text-xs border border-[#E8E8E4] rounded focus:outline-none focus:ring-1 focus:ring-[#D4D4CF] bg-white"
+              className="w-full pl-8 pr-8 py-1.5 text-xs border-[1.5px] border-line rounded-[9px] focus:outline-none focus:border-ink focus:shadow-offset-2 bg-white"
               placeholder="Search by title or location..."
             />
             {searchTerm && (
               <button
                 onClick={() => setSearchTerm('')}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#A8A8A4] hover:text-[#444441]"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-mist hover:text-smoke-2"
               >
                 <X className="w-3.5 h-3.5" />
               </button>
@@ -818,7 +816,7 @@ const PropertiesManagement = () => {
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
-              className="text-xs border border-[#E8E8E4] rounded px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-[#D03839]/20 focus:border-[#D03839] bg-white text-[#1A1816] shrink-0"
+              className="text-xs border-[1.5px] border-line rounded-[9px] px-2 py-1.5 focus:outline-none focus:border-ink bg-white text-body shrink-0"
             >
               <option value="">Status</option>
               <option value="active">Active</option>
@@ -830,7 +828,7 @@ const PropertiesManagement = () => {
             <select
               value={filterPropertyStatus}
               onChange={(e) => setFilterPropertyStatus(e.target.value)}
-              className="text-xs border border-[#E8E8E4] rounded px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-[#D03839]/20 focus:border-[#D03839] bg-white text-[#1A1816] shrink-0"
+              className="text-xs border-[1.5px] border-line rounded-[9px] px-2 py-1.5 focus:outline-none focus:border-ink bg-white text-body shrink-0"
             >
               <option value="">Property Status</option>
               <option value="available">Available</option>
@@ -840,7 +838,7 @@ const PropertiesManagement = () => {
             </select>
             <button
               onClick={clearFilters}
-              className="text-xs bg-[#FEF0EF] hover:bg-[#FEE4E3] text-[#D03839] rounded px-3 py-1.5 transition-colors font-medium shrink-0"
+              className="text-xs bg-white hover:bg-tint text-ink border-[1.5px] border-ink rounded-[9px] px-3 py-1.5 transition-colors duration-120 font-semibold shrink-0"
             >
               Clear
             </button>
@@ -850,42 +848,42 @@ const PropertiesManagement = () => {
         {/* Desktop: Table */}
         <div className="hidden md:block overflow-x-auto scrollbar-thin">
           <table className="w-full min-w-[800px] table-auto">
-            <thead className="bg-[#FAFAF8] border-b border-[#E8E8E4]">
+            <thead className="bg-tint-3 border-b-[1.5px] border-ink">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-[#444441] uppercase tracking-wider whitespace-nowrap w-[44px]">#</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-[#444441] uppercase tracking-wider whitespace-nowrap">Property</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-[#444441] uppercase tracking-wider whitespace-nowrap">Price</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-[#444441] uppercase tracking-wider whitespace-nowrap">Type</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-[#444441] uppercase tracking-wider whitespace-nowrap">Status</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-[#444441] uppercase tracking-wider whitespace-nowrap">Source</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-[#444441] uppercase tracking-wider whitespace-nowrap">Enhancements</th>
-                <th className="px-4 py-3 text-right text-xs font-semibold text-[#444441] uppercase tracking-wider whitespace-nowrap">Actions</th>
+                <th className="px-4 py-3 text-left font-mono text-[11px] font-semibold text-muted uppercase tracking-[0.12em] whitespace-nowrap w-[44px]">#</th>
+                <th className="px-4 py-3 text-left font-mono text-[11px] font-semibold text-muted uppercase tracking-[0.12em] whitespace-nowrap">Property</th>
+                <th className="px-4 py-3 text-left font-mono text-[11px] font-semibold text-muted uppercase tracking-[0.12em] whitespace-nowrap">Price</th>
+                <th className="px-4 py-3 text-left font-mono text-[11px] font-semibold text-muted uppercase tracking-[0.12em] whitespace-nowrap">Type</th>
+                <th className="px-4 py-3 text-left font-mono text-[11px] font-semibold text-muted uppercase tracking-[0.12em] whitespace-nowrap">Status</th>
+                <th className="px-4 py-3 text-left font-mono text-[11px] font-semibold text-muted uppercase tracking-[0.12em] whitespace-nowrap">Source</th>
+                <th className="px-4 py-3 text-left font-mono text-[11px] font-semibold text-muted uppercase tracking-[0.12em] whitespace-nowrap">Enhancements</th>
+                <th className="px-4 py-3 text-right font-mono text-[11px] font-semibold text-muted uppercase tracking-[0.12em] whitespace-nowrap">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#E8E8E4] bg-white">
+            <tbody className="divide-y divide-hairline bg-white">
               {loading ? (
                 [...Array(3)].map((_, i) => (
-                  <tr key={i} className="animate-pulse">
-                    <td className="px-4 py-3"><div className="h-4 w-5 bg-[#E8E8E4] rounded" /></td>
+                  <tr key={i} className="motion-safe:animate-pulse">
+                    <td className="px-4 py-3"><div className="h-4 w-5 bg-tint rounded" /></td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
-                        <div className="w-10 h-10 rounded bg-[#E8E8E4] shrink-0" />
+                        <div className="w-10 h-10 rounded-[8px] bg-stripes shrink-0" />
                         <div className="space-y-1.5 flex-1">
-                          <div className="h-3 w-3/4 bg-[#E8E8E4] rounded" />
-                          <div className="h-2.5 w-1/2 bg-[#E8E8E4] rounded" />
+                          <div className="h-3 w-3/4 bg-tint rounded" />
+                          <div className="h-2.5 w-1/2 bg-tint rounded" />
                         </div>
                       </div>
                     </td>
-                    <td className="px-4 py-3"><div className="h-5 w-16 bg-[#E8E8E4] rounded" /></td>
-                    <td className="px-4 py-3"><div className="h-3 w-3/4 bg-[#E8E8E4] rounded" /></td>
-                    <td className="px-4 py-3"><div className="h-3 w-3/4 bg-[#E8E8E4] rounded" /></td>
-                    <td className="px-4 py-3"><div className="h-3 w-3/4 bg-[#E8E8E4] rounded" /></td>
-                    <td className="px-4 py-3"><div className="h-5 w-16 bg-[#E8E8E4] rounded" /></td>
-                    <td className="px-4 py-3"><div className="h-5 w-20 bg-[#E8E8E4] rounded" /></td>
+                    <td className="px-4 py-3"><div className="h-5 w-16 bg-tint rounded" /></td>
+                    <td className="px-4 py-3"><div className="h-3 w-3/4 bg-tint rounded" /></td>
+                    <td className="px-4 py-3"><div className="h-3 w-3/4 bg-tint rounded" /></td>
+                    <td className="px-4 py-3"><div className="h-3 w-3/4 bg-tint rounded" /></td>
+                    <td className="px-4 py-3"><div className="h-5 w-16 bg-tint rounded" /></td>
+                    <td className="px-4 py-3"><div className="h-5 w-20 bg-tint rounded" /></td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-0.5">
                         {[...Array(5)].map((_, j) => (
-                          <div key={j} className="w-8 h-8 rounded bg-[#E8E8E4]" />
+                          <div key={j} className="w-8 h-8 rounded bg-tint" />
                         ))}
                       </div>
                     </td>
@@ -894,39 +892,39 @@ const PropertiesManagement = () => {
               ) : currentEntries.length === 0 ? (
                 <tr>
                   <td colSpan="10" className="px-6 py-10 text-center">
-                    <Building2 className="w-10 h-10 text-[#D4D4CF] mx-auto mb-2" />
-                    <p className="text-[#737370] text-sm font-medium">
+                    <Building2 className="w-10 h-10 text-line-2 mx-auto mb-2" />
+                    <p className="text-muted text-sm font-medium">
                       {viewMode === 'active' ? 'No properties found' : 'No properties in trash'}
                     </p>
-                    <p className="text-xs text-[#A8A8A4] mt-1">
+                    <p className="text-xs text-mist mt-1">
                       {viewMode === 'active' ? 'Try adjusting your search or add a new property' : 'Deleted properties will appear here'}
                     </p>
                   </td>
                 </tr>
               ) : (
                 currentEntries.map((property, index) => (
-                  <tr key={`${property._source}-${property.id}`} className="hover:bg-[#FAFAF8] transition-colors">
+                  <tr key={`${property._source}-${property.id}`} className="hover:bg-tint-3 transition-colors duration-120">
                     <td className="px-4 py-3 whitespace-nowrap">
-                      <span className="text-xs font-medium text-[#A8A8A4]">{indexOfFirstEntry + index + 1}</span>
+                      <span className="font-mono text-xs font-medium text-mist">{indexOfFirstEntry + index + 1}</span>
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
                         {getFeaturedImage(property) && (
-                          <div className="w-10 h-10 rounded bg-[#E8E8E4] overflow-hidden shrink-0">
+                          <div className="w-10 h-10 rounded-[8px] bg-stripes overflow-hidden shrink-0">
                             <img src={getFeaturedImage(property)} alt={property.full_address || property.address} className="w-full h-full object-cover" />
                           </div>
                         )}
                         <div>
-                          <p className="text-xs font-medium text-[#1A1816] line-clamp-1">{property.full_address || property.address || property.slug?.replace(/-/g, ' ') || 'N/A'}</p>
-                          <p className="text-[10px] text-[#A8A8A4]">ID: {String(property.id).split('-')[0]}</p>
+                          <p className="text-xs font-medium text-body line-clamp-1">{property.full_address || property.address || property.slug?.replace(/-/g, ' ') || 'N/A'}</p>
+                          <p className="font-mono text-[10px] text-mist">ID: {String(property.id).split('-')[0]}</p>
                         </div>
                       </div>
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
-                      <span className="text-xs font-semibold text-[#1A1816]">${parseFloat(property.price || 0).toLocaleString()}</span>
+                      <span className="font-display text-[15px] font-bold text-body">${parseFloat(property.price || 0).toLocaleString()}</span>
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
-                      <span className="text-xs text-[#444441]">{property.property_type || 'N/A'}</span>
+                      <span className="font-mono text-xs text-smoke-2">{property.property_type || 'N/A'}</span>
                     </td>
                     <td className={`px-4 py-3 ${property._source === 'manual' && property.status === 'rejected' ? '' : 'whitespace-nowrap'}`}>
                       {viewMode === 'active' && ['active', 'inactive'].includes((property.status || '').toLowerCase()) ? (
@@ -939,18 +937,18 @@ const PropertiesManagement = () => {
                           offLabel="Inactive"
                         />
                       ) : (
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium border ${getStatusColor(property.status)}`}>
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-pill font-mono text-[10px] font-semibold uppercase tracking-[0.05em] border ${getStatusColor(property.status)}`}>
                           {property.status === 'under_review' ? 'Under Review' : property.status === 'rejected' ? 'Update Required' : (property.status || 'draft')?.charAt(0).toUpperCase() + (property.status || '').slice(1) || 'Draft'}
                         </span>
                       )}
                       {property._source === 'manual' && property.status === 'rejected' && property.rejection_reason && (
-                        <p className="text-[10px] text-[#B5620A] mt-1 max-w-[140px] leading-tight line-clamp-2">
+                        <p className="text-[10px] text-smoke-3 mt-1 max-w-[140px] leading-tight line-clamp-2">
                           {property.rejection_reason.length > 70 ? property.rejection_reason.slice(0, 70) + '…' : property.rejection_reason}
                         </p>
                       )}
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium border ${property._source === 'manual' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-amber-50 text-amber-700 border-amber-200'}`}>
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-pill font-mono text-[10px] font-semibold uppercase tracking-[0.05em] border border-ink bg-tint text-ink">
                         {property._source === 'manual' ? 'Manual' : 'DeelScout'}
                       </span>
                     </td>
@@ -961,11 +959,11 @@ const PropertiesManagement = () => {
                       <div className="flex items-center justify-end gap-2">
                         {viewMode === 'trash' ? (
                           <>
-                            <button onClick={() => handleRestore(property)} className="flex items-center justify-center w-8 h-8 rounded text-[#A8A8A4] hover:text-primary hover:bg-[#E8E8E4] transition-colors" title="Restore">
+                            <button onClick={() => handleRestore(property)} className="flex items-center justify-center w-8 h-8 rounded-[8px] text-mist hover:text-ink hover:bg-tint transition-colors duration-120" title="Restore">
                               <RotateCcw className="w-4 h-4" strokeWidth={2} />
                             </button>
                             {(workspaceRole === 'admin' || workspacePerms?.listings_delete) && (
-                              <button onClick={() => handleDeleteClick(property)} className="flex items-center justify-center w-8 h-8 rounded text-[#A8A8A4] hover:text-red-600 hover:bg-red-50 transition-colors" title="Delete Permanently">
+                              <button onClick={() => handleDeleteClick(property)} className="flex items-center justify-center w-8 h-8 rounded-[8px] text-mist hover:text-ink hover:bg-tint transition-colors duration-120" title="Delete Permanently">
                                 <Trash2 className="w-4 h-4" strokeWidth={2} />
                               </button>
                             )}
@@ -975,7 +973,7 @@ const PropertiesManagement = () => {
                             {(workspaceRole === 'admin' || workspacePerms?.listings_create) && property._source === 'manual' && property.status === 'draft' && (
                               <button
                                 onClick={() => router.push(`/properties/new?draft_id=${property.id}`)}
-                                className="h-7 px-3 text-[11px] font-semibold bg-[#D03839] hover:bg-[#E0493B] text-white rounded transition-colors"
+                                className="h-7 px-3 text-[11px] font-semibold bg-ink hover:bg-smoke-2 text-white border border-ink rounded-[8px] transition-colors duration-120"
                               >
                                 Complete
                               </button>
@@ -983,7 +981,7 @@ const PropertiesManagement = () => {
                             {(workspaceRole === 'admin' || workspacePerms?.listings_update) && property._source === 'manual' && property.status === 'rejected' && (
                               <button
                                 onClick={() => router.push(`/properties/edit/${property.id}`)}
-                                className="h-7 px-3 text-[11px] font-semibold bg-[#D03839] hover:bg-[#E0493B] text-white rounded transition-colors"
+                                className="h-7 px-3 text-[11px] font-semibold bg-ink hover:bg-smoke-2 text-white border border-ink rounded-[8px] transition-colors duration-120"
                               >
                                 Fix Issues
                               </button>
@@ -991,32 +989,32 @@ const PropertiesManagement = () => {
                             {workspaceRole === 'admin' && property._source === 'manual' && ['active', 'published'].includes((property.status || '').toLowerCase()) && (
                               <button
                                 onClick={() => router.push(`/properties/enhance?id=${property.id}`)}
-                                className="h-7 px-3 text-[11px] font-semibold bg-[#D03839] hover:bg-[#E0493B] text-white rounded transition-colors"
+                                className="h-7 px-3 text-[11px] font-semibold bg-ink hover:bg-smoke-2 text-white border border-ink rounded-[8px] transition-colors duration-120"
                               >
                                 Enhance
                               </button>
                             )}
-                            <button onClick={() => router.push(`/properties/preview/${property.id}`)} className="flex items-center justify-center w-8 h-8 rounded text-[#A8A8A4] hover:text-primary hover:bg-[#E8E8E4] transition-colors" title="View">
+                            <button onClick={() => router.push(`/properties/preview/${property.id}`)} className="flex items-center justify-center w-8 h-8 rounded-[8px] text-mist hover:text-ink hover:bg-tint transition-colors duration-120" title="View">
                               <Eye className="w-4 h-4" strokeWidth={2} />
                             </button>
-                            <button onClick={() => { setPropertyForUTM({ ...property, slug: property.slug || property.id, id: property.id }); setShowUTMModal(true); }} className="flex items-center justify-center w-8 h-8 rounded text-[#A8A8A4] hover:text-primary hover:bg-[#E8E8E4] transition-colors" title="Share links (UTM)">
+                            <button onClick={() => { setPropertyForUTM({ ...property, slug: property.slug || property.id, id: property.id }); setShowUTMModal(true); }} className="flex items-center justify-center w-8 h-8 rounded-[8px] text-mist hover:text-ink hover:bg-tint transition-colors duration-120" title="Share links (UTM)">
                               <Link2 className="w-4 h-4" strokeWidth={2} />
                             </button>
                             {(workspaceRole === 'admin' || workspacePerms?.listings_update) && property.status !== 'rejected' && property.status !== 'draft' && (
-                              <button onClick={() => router.push(`/properties/edit/${property.id}`)} className="flex items-center justify-center w-8 h-8 rounded text-[#A8A8A4] hover:text-primary hover:bg-[#E8E8E4] transition-colors" title="Edit">
+                              <button onClick={() => router.push(`/properties/edit/${property.id}`)} className="flex items-center justify-center w-8 h-8 rounded-[8px] text-mist hover:text-ink hover:bg-tint transition-colors duration-120" title="Edit">
                                 <Edit2 className="w-4 h-4" strokeWidth={2} />
                               </button>
                             )}
                             {(workspaceRole === 'admin' || workspacePerms?.listings_update) && property._source === 'manual' && ['active','published'].includes((property.status||'').toLowerCase()) && (property.property_status||'').toLowerCase() !== 'sold' && (
-                              <button onClick={() => handleMarkSoldClick(property)} className="flex items-center justify-center w-8 h-8 rounded text-[#A8A8A4] hover:text-[#0F6E56] hover:bg-[#E4F5EC] transition-colors" title="Mark as Sold">
+                              <button onClick={() => handleMarkSoldClick(property)} className="flex items-center justify-center w-8 h-8 rounded-[8px] text-mist hover:text-ink hover:bg-tint transition-colors duration-120" title="Mark as Sold">
                                 <CheckCircle className="w-4 h-4" strokeWidth={2} />
                               </button>
                             )}
-                            <button onClick={() => { setPropertyForAnalytics(property); setShowAnalyticsSidebar(true); }} className="flex items-center justify-center w-8 h-8 rounded text-[#A8A8A4] hover:text-primary hover:bg-[#E8E8E4] transition-colors" title="Analytics">
+                            <button onClick={() => { setPropertyForAnalytics(property); setShowAnalyticsSidebar(true); }} className="flex items-center justify-center w-8 h-8 rounded-[8px] text-mist hover:text-ink hover:bg-tint transition-colors duration-120" title="Analytics">
                               <BarChart2 className="w-4 h-4" strokeWidth={2} />
                             </button>
                             {(workspaceRole === 'admin' || workspacePerms?.listings_delete) && (
-                              <button onClick={() => handleArchiveClick(property)} className="flex items-center justify-center w-8 h-8 rounded text-[#A8A8A4] hover:text-red-600 hover:bg-red-50 transition-colors" title="Move to Trash">
+                              <button onClick={() => handleArchiveClick(property)} className="flex items-center justify-center w-8 h-8 rounded-[8px] text-mist hover:text-ink hover:bg-tint transition-colors duration-120" title="Move to Trash">
                                 <Trash2 className="w-4 h-4" strokeWidth={2} />
                               </button>
                             )}
@@ -1032,53 +1030,53 @@ const PropertiesManagement = () => {
         </div>
 
         {/* Mobile: Property cards */}
-        <div className="md:hidden divide-y divide-[#E8E8E4]">
+        <div className="md:hidden divide-y divide-hairline">
           {loading ? (
             [...Array(3)].map((_, i) => (
-              <div key={i} className="p-4 animate-pulse">
+              <div key={i} className="p-4 motion-safe:animate-pulse">
                 <div className="flex gap-3">
-                  <div className="w-20 h-20 rounded bg-[#E8E8E4] shrink-0" />
+                  <div className="w-20 h-20 rounded-[8px] bg-stripes shrink-0" />
                   <div className="flex-1 space-y-2">
-                    <div className="h-4 w-3/4 bg-[#E8E8E4] rounded" />
-                    <div className="h-3 w-1/2 bg-[#E8E8E4] rounded" />
-                    <div className="h-4 w-16 bg-[#E8E8E4] rounded" />
-                    <div className="h-3 w-1/3 bg-[#E8E8E4] rounded" />
+                    <div className="h-4 w-3/4 bg-tint rounded" />
+                    <div className="h-3 w-1/2 bg-tint rounded" />
+                    <div className="h-4 w-16 bg-tint rounded" />
+                    <div className="h-3 w-1/3 bg-tint rounded" />
                   </div>
                 </div>
-                <div className="flex items-center justify-end gap-1 mt-3 pt-3 border-t border-[#E8E8E4]">
+                <div className="flex items-center justify-end gap-1 mt-3 pt-3 border-t border-hairline">
                   {[...Array(5)].map((_, j) => (
-                    <div key={j} className="w-9 h-9 rounded bg-[#E8E8E4]" />
+                    <div key={j} className="w-9 h-9 rounded bg-tint" />
                   ))}
                 </div>
               </div>
             ))
           ) : currentEntries.length === 0 ? (
             <div className="px-4 py-10 text-center">
-              <Building2 className="w-10 h-10 text-[#D4D4CF] mx-auto mb-2" />
-              <p className="text-[#737370] text-sm font-medium">
+              <Building2 className="w-10 h-10 text-line-2 mx-auto mb-2" />
+              <p className="text-muted text-sm font-medium">
                 {viewMode === 'active' ? 'No properties found' : 'No properties in trash'}
               </p>
-              <p className="text-xs text-[#A8A8A4] mt-1">
+              <p className="text-xs text-mist mt-1">
                 {viewMode === 'active' ? 'Try adjusting your search or add a new property' : 'Deleted properties will appear here'}
               </p>
             </div>
           ) : (
             currentEntries.map((property, index) => (
-              <div key={`${property._source}-${property.id}`} className="p-4 hover:bg-[#FAFAF8]/50 transition-colors">
+              <div key={`${property._source}-${property.id}`} className="p-4 hover:bg-tint-3 transition-colors duration-120">
                 <div className="flex gap-3">
                   {getFeaturedImage(property) ? (
-                    <div className="w-20 h-20 rounded bg-[#E8E8E4] overflow-hidden shrink-0">
+                    <div className="w-20 h-20 rounded-[8px] bg-stripes overflow-hidden shrink-0">
                       <img src={getFeaturedImage(property)} alt={property.full_address || property.address} className="w-full h-full object-cover" />
                     </div>
                   ) : (
-                    <div className="w-20 h-20 rounded bg-[#E8E8E4] shrink-0 flex items-center justify-center">
-                      <Building2 className="w-8 h-8 text-[#A8A8A4]" />
+                    <div className="w-20 h-20 rounded-[8px] bg-stripes shrink-0 flex items-center justify-center">
+                      <Building2 className="w-8 h-8 text-mist" />
                     </div>
                   )}
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-[#1A1816] line-clamp-2">{property.full_address || property.address || property.slug?.replace(/-/g, ' ') || 'N/A'}</p>
+                    <p className="text-sm font-medium text-body line-clamp-2">{property.full_address || property.address || property.slug?.replace(/-/g, ' ') || 'N/A'}</p>
                     <div className="flex flex-wrap items-center gap-1.5 mt-1">
-                      <span className={`inline-flex px-2 py-0.5 rounded text-[10px] font-medium border ${property._source === 'manual' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-amber-50 text-amber-700 border-amber-200'}`}>
+                      <span className="inline-flex px-2 py-0.5 rounded-pill font-mono text-[10px] font-semibold uppercase tracking-[0.05em] border border-ink bg-tint text-ink">
                         {property._source === 'manual' ? 'Manual' : 'DeelScout'}
                       </span>
                       {viewMode === 'active' && ['active', 'inactive'].includes((property.status || '').toLowerCase()) ? (
@@ -1092,38 +1090,38 @@ const PropertiesManagement = () => {
                           size="sm"
                         />
                       ) : (
-                        <span className={`inline-flex px-2 py-0.5 rounded text-[10px] font-medium border ${getStatusColor(property.status)}`}>
+                        <span className={`inline-flex px-2 py-0.5 rounded-pill font-mono text-[10px] font-semibold uppercase tracking-[0.05em] border ${getStatusColor(property.status)}`}>
                           {property.status === 'under_review' ? 'Under Review' : property.status === 'rejected' ? 'Update Required' : (property.status || 'draft')?.charAt(0).toUpperCase() + (property.status || '').slice(1) || 'Draft'}
                         </span>
                       )}
                       <AddonTags property={property} />
                     </div>
-                    <p className="text-xs text-[#444441] mt-1 flex items-center gap-1">
-                      <MapPin className="w-3 h-3 text-[#A8A8A4] shrink-0" />
+                    <p className="font-mono text-xs text-smoke-2 mt-1 flex items-center gap-1">
+                      <MapPin className="w-3 h-3 text-mist shrink-0" />
                       <span className="truncate">{property.city && property.state ? `${property.city}, ${property.state}` : property.address || 'N/A'}</span>
                     </p>
-                    <p className="text-sm font-semibold text-[#1A1816] mt-0.5">
+                    <p className="font-display text-[15px] font-bold text-body mt-0.5">
                       ${parseFloat(property.price || 0).toLocaleString()}
-                      {property.property_type && <span className="text-[#737370] font-normal text-xs ml-1">· {property.property_type}</span>}
+                      {property.property_type && <span className="font-mono text-muted font-normal text-xs ml-1">· {property.property_type}</span>}
                     </p>
                   </div>
                 </div>
                 {property._source === 'manual' && property.status === 'rejected' && property.rejection_reason && (
-                  <div className="mb-3 px-3 py-2.5 bg-[#FEF3E2] border border-[#F3C97D] rounded">
-                    <p className="text-[10px] font-semibold text-[#B5620A] uppercase tracking-wide mb-1">Issues to fix</p>
-                    <p className="text-[11px] text-[#B5620A] leading-relaxed">
+                  <div className="mb-3 px-3 py-2.5 bg-tint border-[1.5px] border-ink rounded-[10px]">
+                    <p className="font-mono text-[10px] font-semibold text-ink uppercase tracking-[0.08em] mb-1">Issues to fix</p>
+                    <p className="text-[11px] text-smoke-3 leading-relaxed">
                       {property.rejection_reason.length > 140 ? property.rejection_reason.slice(0, 140) + '…' : property.rejection_reason}
                     </p>
                   </div>
                 )}
-                <div className="flex items-center justify-around mt-3 pt-3 border-t border-[#E8E8E4]">
+                <div className="flex items-center justify-around mt-3 pt-3 border-t border-hairline">
                   {viewMode === 'trash' ? (
                     <>
-                      <button onClick={() => handleRestore(property)} className="flex-1 flex items-center justify-center h-9 rounded text-[#737370] hover:text-primary hover:bg-[#E8E8E4] transition-colors" title="Restore">
+                      <button onClick={() => handleRestore(property)} className="flex-1 flex items-center justify-center h-9 rounded-[8px] text-muted hover:text-ink hover:bg-tint transition-colors duration-120" title="Restore">
                         <RotateCcw className="w-4 h-4" strokeWidth={2} />
                       </button>
                       {(workspaceRole === 'admin' || workspacePerms?.listings_delete) && (
-                        <button onClick={() => handleDeleteClick(property)} className="flex-1 flex items-center justify-center h-9 rounded text-[#737370] hover:text-red-600 hover:bg-red-50 transition-colors" title="Delete Permanently">
+                        <button onClick={() => handleDeleteClick(property)} className="flex-1 flex items-center justify-center h-9 rounded-[8px] text-muted hover:text-ink hover:bg-tint transition-colors duration-120" title="Delete Permanently">
                           <Trash2 className="w-4 h-4" strokeWidth={2} />
                         </button>
                       )}
@@ -1133,7 +1131,7 @@ const PropertiesManagement = () => {
                       {(workspaceRole === 'admin' || workspacePerms?.listings_create) && property._source === 'manual' && property.status === 'draft' && (
                         <button
                           onClick={() => router.push(`/properties/new?draft_id=${property.id}`)}
-                          className="flex-1 flex flex-col items-center gap-1 py-1 text-white bg-[#D03839] hover:bg-[#E0493B] rounded transition-colors"
+                          className="flex-1 flex flex-col items-center gap-1 py-1 text-white bg-ink hover:bg-smoke-2 border border-ink rounded-[8px] transition-colors duration-120"
                         >
                           <span className="text-[10px] font-semibold">Complete</span>
                         </button>
@@ -1141,33 +1139,33 @@ const PropertiesManagement = () => {
                       {(workspaceRole === 'admin' || workspacePerms?.listings_update) && property._source === 'manual' && property.status === 'rejected' && (
                         <button
                           onClick={() => router.push(`/properties/edit/${property.id}`)}
-                          className="flex-1 flex flex-col items-center gap-1 py-1 text-[#D03839] bg-[#FEF0EF] hover:bg-[#FCDEDE] rounded transition-colors"
+                          className="flex-1 flex flex-col items-center gap-1 py-1 text-ink bg-white hover:bg-tint border border-ink rounded-[8px] transition-colors duration-120"
                         >
                           <Edit2 className="w-4 h-4" />
                           <span className="text-[10px] font-medium">Fix Issues</span>
                         </button>
                       )}
                       {workspaceRole === 'admin' && property._source === 'manual' && ['active', 'published'].includes((property.status || '').toLowerCase()) && (
-                        <button onClick={() => router.push(`/properties/enhance?id=${property.id}`)} className="flex-1 flex items-center justify-center h-9 rounded text-[#737370] hover:text-[#D03839] hover:bg-[#FEF0EF] transition-colors" title="Enhance listing">
+                        <button onClick={() => router.push(`/properties/enhance?id=${property.id}`)} className="flex-1 flex items-center justify-center h-9 rounded-[8px] text-muted hover:text-ink hover:bg-tint transition-colors duration-120" title="Enhance listing">
                           <Zap className="w-4 h-4" strokeWidth={2} />
                         </button>
                       )}
-                      <button onClick={() => router.push(`/properties/preview/${property.id}`)} className="flex-1 flex items-center justify-center h-9 rounded text-[#737370] hover:text-primary hover:bg-[#E8E8E4] transition-colors" title="View">
+                      <button onClick={() => router.push(`/properties/preview/${property.id}`)} className="flex-1 flex items-center justify-center h-9 rounded-[8px] text-muted hover:text-ink hover:bg-tint transition-colors duration-120" title="View">
                         <Eye className="w-4 h-4" strokeWidth={2} />
                       </button>
-                      <button onClick={() => { setPropertyForUTM({ ...property, slug: property.slug || property.id, id: property.id }); setShowUTMModal(true); }} className="flex-1 flex items-center justify-center h-9 rounded text-[#737370] hover:text-primary hover:bg-[#E8E8E4] transition-colors" title="Share links">
+                      <button onClick={() => { setPropertyForUTM({ ...property, slug: property.slug || property.id, id: property.id }); setShowUTMModal(true); }} className="flex-1 flex items-center justify-center h-9 rounded-[8px] text-muted hover:text-ink hover:bg-tint transition-colors duration-120" title="Share links">
                         <Link2 className="w-4 h-4" strokeWidth={2} />
                       </button>
                       {(workspaceRole === 'admin' || workspacePerms?.listings_update) && property.status !== 'rejected' && property.status !== 'draft' && (
-                        <button onClick={() => router.push(`/properties/edit/${property.id}`)} className="flex-1 flex items-center justify-center h-9 rounded text-[#737370] hover:text-primary hover:bg-[#E8E8E4] transition-colors" title="Edit">
+                        <button onClick={() => router.push(`/properties/edit/${property.id}`)} className="flex-1 flex items-center justify-center h-9 rounded-[8px] text-muted hover:text-ink hover:bg-tint transition-colors duration-120" title="Edit">
                           <Edit2 className="w-4 h-4" strokeWidth={2} />
                         </button>
                       )}
-                      <button onClick={() => { setPropertyForAnalytics(property); setShowAnalyticsSidebar(true); }} className="flex-1 flex items-center justify-center h-9 rounded text-[#737370] hover:text-primary hover:bg-[#E8E8E4] transition-colors" title="Analytics">
+                      <button onClick={() => { setPropertyForAnalytics(property); setShowAnalyticsSidebar(true); }} className="flex-1 flex items-center justify-center h-9 rounded-[8px] text-muted hover:text-ink hover:bg-tint transition-colors duration-120" title="Analytics">
                         <BarChart2 className="w-4 h-4" strokeWidth={2} />
                       </button>
                       {(workspaceRole === 'admin' || workspacePerms?.listings_delete) && (
-                        <button onClick={() => handleArchiveClick(property)} className="flex-1 flex items-center justify-center h-9 rounded text-[#737370] hover:text-red-600 hover:bg-red-50 transition-colors" title="Move to Trash">
+                        <button onClick={() => handleArchiveClick(property)} className="flex-1 flex items-center justify-center h-9 rounded-[8px] text-muted hover:text-ink hover:bg-tint transition-colors duration-120" title="Move to Trash">
                           <Trash2 className="w-4 h-4" strokeWidth={2} />
                         </button>
                       )}
@@ -1180,11 +1178,11 @@ const PropertiesManagement = () => {
         </div>
 
         {/* Footer - Pagination */}
-        <div className="px-4 py-3 bg-[#FAFAF8] border-t border-[#E8E8E4] flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-          <div className="text-xs text-[#737370]">
-            Showing <span className="font-medium text-[#444441]">{filteredProperties.length > 0 ? indexOfFirstEntry + 1 : 0}</span> to{' '}
-            <span className="font-medium text-[#444441]">{Math.min(indexOfLastEntry, filteredProperties.length)}</span> of{' '}
-            <span className="font-medium text-[#444441]">{filteredProperties.length}</span> entries
+        <div className="px-4 py-3 bg-tint-3 border-t-[1.5px] border-ink flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div className="font-mono text-xs text-muted">
+            Showing <span className="font-semibold text-ink">{filteredProperties.length > 0 ? indexOfFirstEntry + 1 : 0}</span> to{' '}
+            <span className="font-semibold text-ink">{Math.min(indexOfLastEntry, filteredProperties.length)}</span> of{' '}
+            <span className="font-semibold text-ink">{filteredProperties.length}</span> entries
           </div>
 
           {totalPages > 1 && (
@@ -1192,7 +1190,7 @@ const PropertiesManagement = () => {
               <button
                 onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                 disabled={currentPage === 1}
-                className="p-1.5 rounded border border-[#E8E8E4] hover:bg-[#E8E8E4] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                className="p-1.5 rounded-[8px] border-[1.5px] border-ink bg-white hover:bg-tint disabled:opacity-30 disabled:cursor-not-allowed transition-colors duration-120"
                 title="Previous"
               >
                 <ChevronLeft className="w-3.5 h-3.5" />
@@ -1214,9 +1212,9 @@ const PropertiesManagement = () => {
                   <button
                     key={pageNum}
                     onClick={() => setCurrentPage(pageNum)}
-                    className={`min-w-[28px] h-7 px-2 text-xs font-medium rounded transition-colors ${currentPage === pageNum
-                      ? 'bg-primary text-white'
-                      : 'border border-[#E8E8E4] text-[#444441] hover:bg-[#E8E8E4]'
+                    className={`min-w-[28px] h-7 px-2 font-mono text-xs font-semibold rounded-[8px] transition-colors duration-120 ${currentPage === pageNum
+                      ? 'bg-ink text-white border-[1.5px] border-ink'
+                      : 'border-[1.5px] border-ink bg-white text-ink hover:bg-tint'
                       }`}
                   >
                     {pageNum}
@@ -1227,7 +1225,7 @@ const PropertiesManagement = () => {
               <button
                 onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                 disabled={currentPage === totalPages}
-                className="p-1.5 rounded border border-[#E8E8E4] hover:bg-[#E8E8E4] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                className="p-1.5 rounded-[8px] border-[1.5px] border-ink bg-white hover:bg-tint disabled:opacity-30 disabled:cursor-not-allowed transition-colors duration-120"
                 title="Next"
               >
                 <ChevronRight className="w-3.5 h-3.5" />
@@ -1263,19 +1261,19 @@ const PropertiesManagement = () => {
       {showMarkSoldModal && propertyToMarkSold && (
         <div className="fixed inset-0 z-50 overflow-y-auto">
           <div className="flex min-h-screen items-center justify-center p-4">
-            <div className="fixed inset-0 bg-[#1A1816]/40 transition-opacity" onClick={() => { if (!markingSold) { setShowMarkSoldModal(false); setPropertyToMarkSold(null) } }} aria-hidden="true" />
-            <div className="relative bg-white rounded shadow-lg border border-[#E8E8E4] max-w-md w-full p-6 z-10">
+            <div className="fixed inset-0 bg-ink/40 transition-opacity" onClick={() => { if (!markingSold) { setShowMarkSoldModal(false); setPropertyToMarkSold(null) } }} aria-hidden="true" />
+            <div className="relative bg-white rounded-[14px] border-[1.5px] border-ink shadow-offset-6 max-w-md w-full p-6 z-10">
               <div className="flex items-start gap-3 mb-4">
-                <div className="w-10 h-10 rounded bg-[#E4F5EC] flex items-center justify-center flex-shrink-0">
-                  <CheckCircle className="w-5 h-5 text-[#0F6E56]" strokeWidth={2} />
+                <div className="w-10 h-10 rounded-[10px] bg-tint border-[1.5px] border-ink flex items-center justify-center flex-shrink-0">
+                  <CheckCircle className="w-5 h-5 text-ink" strokeWidth={2} />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h3 className="text-[16px] font-semibold text-[#1A1816] mb-1">Mark as sold?</h3>
-                  <p className="text-[13px] text-[#737370]">This listing will display a Sold badge. You can change it back from the edit page anytime.</p>
+                  <h3 className="font-display text-[16.5px] font-semibold tracking-[-0.01em] text-body mb-1">Mark as sold?</h3>
+                  <p className="text-[13px] text-muted">This listing will display a Sold badge. You can change it back from the edit page anytime.</p>
                 </div>
               </div>
-              <div className="py-2.5 px-3 mb-5 bg-[#FAFAF8] border border-[#E8E8E4] rounded">
-                <p className="text-[13px] text-[#1A1816] font-medium break-words">
+              <div className="py-2.5 px-3 mb-5 bg-tint-3 border border-hairline rounded-[10px]">
+                <p className="text-[13px] text-body font-medium break-words">
                   {propertyToMarkSold.full_address || propertyToMarkSold.address || propertyToMarkSold.slug || 'this property'}
                 </p>
               </div>
@@ -1284,13 +1282,13 @@ const PropertiesManagement = () => {
                   type="button"
                   onClick={() => { setShowMarkSoldModal(false); setPropertyToMarkSold(null) }}
                   disabled={markingSold}
-                  className="flex-1 h-10 px-4 text-[13px] font-semibold text-[#1A1816] bg-white border border-[#E8E8E4] rounded hover:bg-[#FAFAF8] transition-colors disabled:opacity-50"
+                  className="flex-1 h-10 px-4 text-[13px] font-semibold text-ink bg-white border-[1.5px] border-ink rounded-[10px] shadow-offset-3 hover:bg-tint transition-all duration-120 disabled:opacity-50"
                 >Cancel</button>
                 <button
                   type="button"
                   onClick={handleMarkSoldConfirm}
                   disabled={markingSold}
-                  className="flex-1 h-10 px-4 text-[13px] font-semibold text-white bg-[#0F6E56] hover:bg-[#0C5A47] rounded transition-colors disabled:opacity-50"
+                  className="flex-1 h-10 px-4 text-[13px] font-semibold text-white bg-ink border-[1.5px] border-ink rounded-[10px] shadow-soft-3 hover:bg-smoke-2 transition-all duration-120 disabled:opacity-50"
                 >{markingSold ? 'Marking…' : 'Mark as Sold'}</button>
               </div>
             </div>

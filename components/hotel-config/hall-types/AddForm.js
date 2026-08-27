@@ -155,7 +155,7 @@ const AddForm = ({ isOpen, onClose, onSuccess, amenities, userId }) => {
             className="fixed right-0 top-0 h-screen w-full md:w-[600px] lg:w-[700px] bg-white shadow-2xl z-[60] flex flex-col"
           >
             {/* Header */}
-            <div className="bg-[#472F97] px-6 py-4 flex items-center justify-between">
+            <div className="bg-[#111111] px-6 py-4 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center">
                   <Building2 className="w-5 h-5 text-white" />
@@ -178,20 +178,20 @@ const AddForm = ({ isOpen, onClose, onSuccess, amenities, userId }) => {
               <div className="p-6 space-y-6">
                 {/* Basic Info Section */}
                 <div className="bg-neutral-50 rounded-xl p-4 border border-neutral-200">
-                  <h3 className="text-sm font-semibold text-[#472F97] mb-4 flex items-center gap-2">
+                  <h3 className="text-sm font-semibold text-[#111111] mb-4 flex items-center gap-2">
                     <Building2 className="w-4 h-4" />
                     Basic Information
                   </h3>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="col-span-2">
                       <label className="block text-xs font-medium text-neutral-600 mb-1.5">
-                        Title <span className="text-red-500">*</span>
+                        Title <span className="text-neutral-500">*</span>
                       </label>
                       <input
                         type="text"
                         value={formData.title}
                         onChange={(e) => handleTitleChange(e.target.value)}
-                        className="w-full border border-neutral-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#472F97] focus:border-transparent"
+                        className="w-full border border-neutral-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#111111] focus:border-transparent"
                         placeholder="e.g., Grand Banquet Hall"
                         required
                       />
@@ -212,7 +212,7 @@ const AddForm = ({ isOpen, onClose, onSuccess, amenities, userId }) => {
                         type="text"
                         value={formData.short_code}
                         onChange={(e) => setFormData(prev => ({ ...prev, short_code: e.target.value.toUpperCase() }))}
-                        className="w-full border border-neutral-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#472F97] focus:border-transparent"
+                        className="w-full border border-neutral-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#111111] focus:border-transparent"
                         placeholder="e.g., GBH"
                       />
                     </div>
@@ -221,7 +221,7 @@ const AddForm = ({ isOpen, onClose, onSuccess, amenities, userId }) => {
 
                 {/* Occupancy Section */}
                 <div className="bg-neutral-50 rounded-xl p-4 border border-neutral-200">
-                  <h3 className="text-sm font-semibold text-[#472F97] mb-4 flex items-center gap-2">
+                  <h3 className="text-sm font-semibold text-[#111111] mb-4 flex items-center gap-2">
                     <Users className="w-4 h-4" />
                     Occupancy Details
                   </h3>
@@ -232,7 +232,7 @@ const AddForm = ({ isOpen, onClose, onSuccess, amenities, userId }) => {
                         type="number"
                         value={formData.best_occupancy}
                         onChange={(e) => setFormData(prev => ({ ...prev, best_occupancy: e.target.value }))}
-                        className="w-full border border-neutral-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#472F97] focus:border-transparent"
+                        className="w-full border border-neutral-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#111111] focus:border-transparent"
                         placeholder="50"
                         min="1"
                       />
@@ -243,7 +243,7 @@ const AddForm = ({ isOpen, onClose, onSuccess, amenities, userId }) => {
                         type="number"
                         value={formData.higher_occupancy}
                         onChange={(e) => setFormData(prev => ({ ...prev, higher_occupancy: e.target.value }))}
-                        className="w-full border border-neutral-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#472F97] focus:border-transparent"
+                        className="w-full border border-neutral-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#111111] focus:border-transparent"
                         placeholder="100"
                         min="1"
                       />
@@ -253,7 +253,7 @@ const AddForm = ({ isOpen, onClose, onSuccess, amenities, userId }) => {
 
                 {/* Pricing Section */}
                 <div className="bg-neutral-50 rounded-xl p-4 border border-neutral-200">
-                  <h3 className="text-sm font-semibold text-[#472F97] mb-4 flex items-center gap-2">
+                  <h3 className="text-sm font-semibold text-[#111111] mb-4 flex items-center gap-2">
                     <DollarSign className="w-4 h-4" />
                     Pricing
                   </h3>
@@ -264,7 +264,7 @@ const AddForm = ({ isOpen, onClose, onSuccess, amenities, userId }) => {
                       step="0.01"
                       value={formData.best_price}
                       onChange={(e) => setFormData(prev => ({ ...prev, best_price: e.target.value }))}
-                      className="w-full border border-neutral-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#472F97] focus:border-transparent"
+                      className="w-full border border-neutral-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#111111] focus:border-transparent"
                       placeholder="500.00"
                       min="0"
                     />
@@ -273,7 +273,7 @@ const AddForm = ({ isOpen, onClose, onSuccess, amenities, userId }) => {
 
                 {/* Image Upload Section */}
                 <div className="bg-neutral-50 rounded-xl p-4 border border-neutral-200">
-                  <h3 className="text-sm font-semibold text-[#472F97] mb-4 flex items-center gap-2">
+                  <h3 className="text-sm font-semibold text-[#111111] mb-4 flex items-center gap-2">
                     <ImageIcon className="w-4 h-4" />
                     Hall Image
                   </h3>
@@ -311,7 +311,7 @@ const AddForm = ({ isOpen, onClose, onSuccess, amenities, userId }) => {
                             setImageFile(null);
                             setImagePreview(null);
                           }}
-                          className="absolute top-2 right-2 p-1.5 bg-[#472F97] hover:bg-[#3a2578] text-white rounded-lg transition-colors"
+                          className="absolute top-2 right-2 p-1.5 bg-[#111111] hover:bg-[#444444] text-white rounded-lg transition-colors"
                         >
                           <X className="w-4 h-4" />
                         </button>
@@ -327,14 +327,14 @@ const AddForm = ({ isOpen, onClose, onSuccess, amenities, userId }) => {
                     value={formData.description}
                     onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
                     rows={3}
-                    className="w-full border border-neutral-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#472F97] focus:border-transparent resize-none"
+                    className="w-full border border-neutral-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#111111] focus:border-transparent resize-none"
                     placeholder="Describe the hall type..."
                   />
                 </div>
 
                 {/* Amenities */}
                 <div className="bg-neutral-50 rounded-xl p-4 border border-neutral-200">
-                  <h3 className="text-sm font-semibold text-[#472F97] mb-4 flex items-center gap-2">
+                  <h3 className="text-sm font-semibold text-[#111111] mb-4 flex items-center gap-2">
                     <Sparkles className="w-4 h-4" />
                     Amenities ({formData.amenities.length} selected)
                   </h3>
@@ -350,7 +350,7 @@ const AddForm = ({ isOpen, onClose, onSuccess, amenities, userId }) => {
                             type="checkbox"
                             checked={formData.amenities.includes(amenity.id)}
                             onChange={() => handleAmenityToggle(amenity.id)}
-                            className="w-4 h-4 text-[#472F97] rounded focus:ring-[#472F97] border-neutral-300"
+                            className="w-4 h-4 text-[#111111] rounded focus:ring-[#111111] border-neutral-300"
                           />
                           <span className="text-sm text-neutral-700">{amenity.name}</span>
                         </label>
@@ -372,7 +372,7 @@ const AddForm = ({ isOpen, onClose, onSuccess, amenities, userId }) => {
                 <button
                   type="submit"
                   disabled={saving}
-                  className="flex-1 px-4 py-2.5 bg-[#472F97] hover:bg-[#3a2578] text-white font-medium rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  className="flex-1 px-4 py-2.5 bg-[#111111] hover:bg-[#444444] text-white font-medium rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
                   <Save className="w-4 h-4" />
                   {saving ? 'Saving...' : 'Save Hall Type'}

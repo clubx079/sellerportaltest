@@ -269,7 +269,7 @@ export default function SettingsPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-2 border-[#E8E8E4] border-t-[#1A1816]"></div>
+        <div className="motion-safe:animate-spin rounded-full h-8 w-8 border-2 border-hairline border-t-ink"></div>
       </div>
     );
   }
@@ -282,28 +282,28 @@ export default function SettingsPage() {
   ];
 
   return (
-    <div className="space-y-5" style={{ fontFamily: 'var(--font-dm-sans), sans-serif' }}>
+    <div className="space-y-5 font-sans">
       {/* Header */}
       <div>
-        <h1 className="text-[20px] font-normal text-[#1A1816]">Settings</h1>
-        <p className="text-[13px] text-[#737370] mt-0.5">Manage your account settings and preferences</p>
+        <h1 className="font-display font-bold text-[22px] tracking-[-0.02em] text-body">Settings</h1>
+        <p className="text-[13px] text-muted mt-0.5">Manage your account settings and preferences</p>
       </div>
 
       {/* Message */}
       {message.text && (
-        <div className={`p-3 rounded text-[13px] ${message.type === 'success' ? 'bg-[#E4F5EC] text-[#0F6E56] border border-[#9FDBB8]' : 'bg-[#FEF0EF] text-[#D03839] border border-[#F5C4C0]'}`}>
+        <div className={`p-3 rounded-[9px] text-[13px] font-semibold text-ink bg-tint border-[1.5px] ${message.type === 'success' ? 'border-line' : 'border-ink'}`}>
           {message.text}
         </div>
       )}
 
       {/* Tabs */}
-      <div className="border-b border-[#E8E8E4]">
-        <div className="flex gap-4">
+      <div className="border-b border-hairline pb-4">
+        <div className="flex gap-2 flex-wrap">
           {tabs.map(tab => (
             <button key={tab.id}
               onClick={() => { setActiveTab(tab.id); router.replace(tab.url); }}
-              className={`pb-3 px-1 text-[13px] font-medium border-b-2 transition-colors duration-200 ${
-                activeTab === tab.id ? 'border-[#D03839] text-[#1A1816]' : 'border-transparent text-[#737370] hover:text-[#444441]'
+              className={`font-mono text-[11px] font-semibold uppercase tracking-[0.06em] border-[1.5px] border-ink rounded-pill px-3.5 py-2 transition-colors duration-120 ${
+                activeTab === tab.id ? 'bg-ink text-white' : 'bg-white text-ink hover:bg-tint'
               }`}>
               {tab.label}
             </button>
@@ -313,117 +313,117 @@ export default function SettingsPage() {
 
       {/* Profile Tab */}
       {activeTab === 'profile' && (
-        <div className="bg-white rounded border border-[#E8E8E4] overflow-hidden">
+        <div className="bg-white rounded-[12px] border-[1.5px] border-ink shadow-offset-4 overflow-hidden">
           <form onSubmit={handleProfileSubmit}>
-            <div className="px-5 py-3 border-b border-[#E8E8E4] bg-[#FAFAF8]">
+            <div className="px-5 py-3 border-b border-hairline bg-tint-3">
               <div className="flex items-center gap-2">
-                <User className="w-4 h-4 text-[#737370]" />
-                <h2 className="text-[14px] font-normal text-[#1A1816]">Personal Information</h2>
+                <User className="w-4 h-4 text-muted" />
+                <h2 className="font-mono font-semibold text-[11px] uppercase tracking-[0.14em] text-ink">Personal Information</h2>
               </div>
             </div>
             <div className="px-5 py-5 space-y-5">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div>
-                  <label className="block text-[12px] font-medium text-[#444441] mb-1.5">Full Name <span className="text-[#D03839]">*</span></label>
+                  <label className="block text-[13px] font-semibold text-body mb-1.5">Full Name <span className="text-ink">*</span></label>
                   <input type="text" value={profileForm.contact_person_name} onChange={(e) => setProfileForm({ ...profileForm, contact_person_name: e.target.value })}
-                    className="w-full px-4 py-2.5 border border-[#E8E8E4] rounded text-[14px] text-[#1A1816] placeholder-[#A8A8A4] focus:outline-none focus:border-[#D03839] focus:ring-1 focus:ring-[rgba(208,56,57,.12)] transition-all duration-200" placeholder="John Smith" />
+                    className="w-full px-4 py-2.5 border-[1.5px] border-line rounded-[9px] text-[14px] text-body placeholder-mist focus:outline-none focus:border-ink focus:shadow-offset-3 transition-all duration-200" placeholder="John Smith" />
                 </div>
                 <div>
-                  <label className="block text-[12px] font-medium text-[#444441] mb-1.5">Email Address</label>
+                  <label className="block text-[13px] font-semibold text-body mb-1.5">Email Address</label>
                   <div className="flex items-center gap-2">
-                    <input type="email" readOnly value={profileForm.email} className="flex-1 px-4 py-2.5 border border-[#E8E8E4] rounded bg-[#FAFAF8] text-[14px] text-[#737370]" />
+                    <input type="email" readOnly value={profileForm.email} className="flex-1 px-4 py-2.5 border-[1.5px] border-line rounded-[9px] bg-tint-3 text-[14px] text-muted" />
                     <button type="button" onClick={() => setEmailChange({ step: 'form', newEmail: '', password: '', otp: '', error: '', loading: false })}
-                      className="px-4 py-2.5 text-[13px] font-semibold text-[#D03839] border border-[#E8E8E4] rounded hover:bg-[#FAFAF8] transition-colors whitespace-nowrap">
+                      className="px-4 py-2.5 text-[13px] font-semibold text-ink bg-white border-[1.5px] border-ink rounded-[9px] shadow-offset-2 hover:bg-tint transition-colors whitespace-nowrap">
                       Change
                     </button>
                   </div>
-                  <p className="text-[11px] text-[#A8A8A4] mt-1">We'll verify your new email before changing it.</p>
+                  <p className="text-[11px] text-mist mt-1">We'll verify your new email before changing it.</p>
                 </div>
                 <div>
-                  <label className="block text-[12px] font-medium text-[#444441] mb-1.5">Phone Number</label>
+                  <label className="block text-[13px] font-semibold text-body mb-1.5">Phone Number</label>
                   <div className="flex items-center gap-2">
-                    <input type="tel" readOnly value={profileForm.phone} className="flex-1 px-4 py-2.5 border border-[#E8E8E4] rounded bg-[#FAFAF8] text-[14px] text-[#737370]" />
+                    <input type="tel" readOnly value={profileForm.phone} className="flex-1 px-4 py-2.5 border-[1.5px] border-line rounded-[9px] bg-tint-3 text-[14px] text-muted" />
                     <button type="button" onClick={() => setPhoneChange({ step: 'form', newPhone: '', password: '', otp: '', error: '', loading: false })}
-                      className="px-4 py-2.5 text-[13px] font-semibold text-[#D03839] border border-[#E8E8E4] rounded hover:bg-[#FAFAF8] transition-colors whitespace-nowrap">
+                      className="px-4 py-2.5 text-[13px] font-semibold text-ink bg-white border-[1.5px] border-ink rounded-[9px] shadow-offset-2 hover:bg-tint transition-colors whitespace-nowrap">
                       Change
                     </button>
                   </div>
-                  <p className="text-[11px] text-[#A8A8A4] mt-1">We'll text a code to your new number to verify it.</p>
+                  <p className="text-[11px] text-mist mt-1">We'll text a code to your new number to verify it.</p>
                 </div>
               </div>
             </div>
 
-            <div className="px-5 py-3 border-y border-[#E8E8E4] bg-[#FAFAF8]">
+            <div className="px-5 py-3 border-y border-hairline bg-tint-3">
               <div className="flex items-center gap-2">
-                <Building className="w-4 h-4 text-[#737370]" />
-                <h2 className="text-[14px] font-normal text-[#1A1816]">Business Information</h2>
+                <Building className="w-4 h-4 text-muted" />
+                <h2 className="font-mono font-semibold text-[11px] uppercase tracking-[0.14em] text-ink">Business Information</h2>
               </div>
             </div>
             <div className="px-5 py-5 space-y-5">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div>
-                  <label className="block text-[12px] font-medium text-[#444441] mb-1.5">Business/Company Name</label>
+                  <label className="block text-[13px] font-semibold text-body mb-1.5">Business/Company Name</label>
                   <input type="text" value={profileForm.business_name} onChange={(e) => setProfileForm({ ...profileForm, business_name: e.target.value })}
-                    className="w-full px-4 py-2.5 border border-[#E8E8E4] rounded text-[14px] text-[#1A1816] placeholder-[#A8A8A4] focus:outline-none focus:border-[#D03839] focus:ring-1 focus:ring-[rgba(208,56,57,.12)] transition-all duration-200" placeholder="ABC Real Estate" />
+                    className="w-full px-4 py-2.5 border-[1.5px] border-line rounded-[9px] text-[14px] text-body placeholder-mist focus:outline-none focus:border-ink focus:shadow-offset-3 transition-all duration-200" placeholder="ABC Real Estate" />
                 </div>
                 <div>
-                  <label className="block text-[12px] font-medium text-[#444441] mb-1.5">Business Type</label>
+                  <label className="block text-[13px] font-semibold text-body mb-1.5">Business Type</label>
                   <select value={profileForm.business_type} onChange={(e) => setProfileForm({ ...profileForm, business_type: e.target.value })}
-                    className="w-full px-4 py-2.5 border border-[#E8E8E4] rounded text-[14px] text-[#1A1816] focus:outline-none focus:border-[#D03839] focus:ring-1 focus:ring-[rgba(208,56,57,.12)] transition-all duration-200">
+                    className="w-full px-4 py-2.5 border-[1.5px] border-line rounded-[9px] text-[14px] text-body focus:outline-none focus:border-ink focus:shadow-offset-3 transition-all duration-200">
                     {businessTypes.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-[12px] font-medium text-[#444441] mb-1.5">Average Deals Per Month</label>
+                  <label className="block text-[13px] font-semibold text-body mb-1.5">Average Deals Per Month</label>
                   <select value={profileForm.deals_per_month} onChange={(e) => setProfileForm({ ...profileForm, deals_per_month: e.target.value })}
-                    className="w-full px-4 py-2.5 border border-[#E8E8E4] rounded text-[14px] text-[#1A1816] focus:outline-none focus:border-[#D03839] focus:ring-1 focus:ring-[rgba(208,56,57,.12)] transition-all duration-200">
+                    className="w-full px-4 py-2.5 border-[1.5px] border-line rounded-[9px] text-[14px] text-body focus:outline-none focus:border-ink focus:shadow-offset-3 transition-all duration-200">
                     {dealsPerMonth.map(d => <option key={d.value} value={d.value}>{d.label}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-[12px] font-medium text-[#444441] mb-1.5">Primary Markets/Locations</label>
+                  <label className="block text-[13px] font-semibold text-body mb-1.5">Primary Markets/Locations</label>
                   <input type="text" value={profileForm.primary_markets} onChange={(e) => setProfileForm({ ...profileForm, primary_markets: e.target.value })}
-                    className="w-full px-4 py-2.5 border border-[#E8E8E4] rounded text-[14px] text-[#1A1816] placeholder-[#A8A8A4] focus:outline-none focus:border-[#D03839] focus:ring-1 focus:ring-[rgba(208,56,57,.12)] transition-all duration-200" placeholder="Miami, FL; Orlando, FL" />
+                    className="w-full px-4 py-2.5 border-[1.5px] border-line rounded-[9px] text-[14px] text-body placeholder-mist focus:outline-none focus:border-ink focus:shadow-offset-3 transition-all duration-200" placeholder="Miami, FL; Orlando, FL" />
                 </div>
               </div>
               <div>
-                <label className="block text-[12px] font-medium text-[#444441] mb-2">Property Types</label>
+                <label className="block text-[13px] font-semibold text-body mb-2">Property Types</label>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                   {propertyTypesList.map(type => (
                     <button key={type} type="button" onClick={() => togglePropertyType(type)}
-                      className={`px-3 py-2 rounded border text-[13px] font-medium transition-all duration-200 ${
-                        profileForm.property_types.includes(type) ? 'border-[#D03839] bg-[#D03839] text-white' : 'border-[#E8E8E4] bg-white text-[#444441] hover:border-[#D4D4CF]'
+                      className={`font-mono text-[11px] font-semibold tracking-[0.06em] px-3.5 py-2 rounded-pill border-[1.5px] border-ink transition-colors duration-120 ${
+                        profileForm.property_types.includes(type) ? 'bg-ink text-white' : 'bg-white text-ink hover:bg-tint'
                       }`}>{type}</button>
                   ))}
                 </div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div>
-                  <label className="block text-[12px] font-medium text-[#444441] mb-1.5">Website</label>
+                  <label className="block text-[13px] font-semibold text-body mb-1.5">Website</label>
                   <div className="relative">
-                    <Globe className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#A8A8A4]" />
+                    <Globe className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-mist" />
                     <input type="url" value={profileForm.website} onChange={(e) => setProfileForm({ ...profileForm, website: e.target.value })}
-                      className="w-full pl-10 pr-4 py-2.5 border border-[#E8E8E4] rounded text-[14px] text-[#1A1816] placeholder-[#A8A8A4] focus:outline-none focus:border-[#D03839] focus:ring-1 focus:ring-[rgba(208,56,57,.12)] transition-all duration-200" placeholder="https://example.com" />
+                      className="w-full pl-10 pr-4 py-2.5 border-[1.5px] border-line rounded-[9px] text-[14px] text-body placeholder-mist focus:outline-none focus:border-ink focus:shadow-offset-3 transition-all duration-200" placeholder="https://example.com" />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-[12px] font-medium text-[#444441] mb-1.5">LinkedIn Profile</label>
+                  <label className="block text-[13px] font-semibold text-body mb-1.5">LinkedIn Profile</label>
                   <div className="relative">
-                    <Linkedin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#A8A8A4]" />
+                    <Linkedin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-mist" />
                     <input type="url" value={profileForm.linkedin} onChange={(e) => setProfileForm({ ...profileForm, linkedin: e.target.value })}
-                      className="w-full pl-10 pr-4 py-2.5 border border-[#E8E8E4] rounded text-[14px] text-[#1A1816] placeholder-[#A8A8A4] focus:outline-none focus:border-[#D03839] focus:ring-1 focus:ring-[rgba(208,56,57,.12)] transition-all duration-200" placeholder="https://linkedin.com/in/..." />
+                      className="w-full pl-10 pr-4 py-2.5 border-[1.5px] border-line rounded-[9px] text-[14px] text-body placeholder-mist focus:outline-none focus:border-ink focus:shadow-offset-3 transition-all duration-200" placeholder="https://linkedin.com/in/..." />
                   </div>
                 </div>
               </div>
               <div>
-                <label className="block text-[12px] font-medium text-[#444441] mb-1.5">About Your Business</label>
+                <label className="block text-[13px] font-semibold text-body mb-1.5">About Your Business</label>
                 <textarea value={profileForm.description} onChange={(e) => setProfileForm({ ...profileForm, description: e.target.value })} rows={4}
-                  className="w-full px-4 py-3 border border-[#E8E8E4] rounded text-[14px] text-[#1A1816] placeholder-[#A8A8A4] focus:outline-none focus:border-[#D03839] focus:ring-1 focus:ring-[rgba(208,56,57,.12)] transition-all duration-200" placeholder="Tell us about your real estate business..." />
+                  className="w-full px-4 py-3 border-[1.5px] border-line rounded-[9px] text-[14px] text-body placeholder-mist focus:outline-none focus:border-ink focus:shadow-offset-3 transition-all duration-200" placeholder="Tell us about your real estate business..." />
               </div>
             </div>
-            <div className="px-5 py-4 bg-[#FAFAF8] border-t border-[#E8E8E4]">
+            <div className="px-5 py-4 bg-tint-3 border-t border-hairline">
               <button type="submit" disabled={saving}
-                className="w-full flex items-center justify-center gap-2 px-6 py-3 rounded text-[14px] font-semibold bg-[#D03839] text-white hover:bg-[#E0493B] disabled:bg-[#F5C4C0] disabled:cursor-not-allowed transition-colors duration-200">
+                className="w-full flex items-center justify-center gap-2 px-6 py-3 rounded-[10px] text-[14px] font-semibold bg-ink text-white border-[1.5px] border-ink shadow-soft-3 hover:bg-smoke-2 disabled:bg-hairline disabled:border-hairline disabled:text-muted disabled:cursor-not-allowed transition-all duration-120">
                 {saving ? 'Saving...' : <><Save className="w-4 h-4" /> Save Profile</>}
               </button>
             </div>
@@ -434,33 +434,33 @@ export default function SettingsPage() {
       {/* Security Tab */}
       {activeTab === 'security' && (
         <>
-        <div className="bg-white rounded border border-[#E8E8E4] p-6">
+        <div className="bg-white rounded-[12px] border-[1.5px] border-ink shadow-offset-4 p-6">
           <form onSubmit={handlePasswordSubmit} className="space-y-5">
-            <h2 className="text-[14px] font-normal text-[#1A1816] mb-4">Change Password</h2>
+            <h2 className="font-display font-semibold text-[16.5px] tracking-[-0.01em] text-body mb-4">Change Password</h2>
             <div className="space-y-4 max-w-md">
               {[{ key: 'current_password', label: 'Current Password', placeholder: 'Enter current password', show: showPasswords.current, toggle: 'current' },
                 { key: 'new_password', label: 'New Password', placeholder: 'Enter new password', show: showPasswords.new, toggle: 'new', hint: 'Must be at least 6 characters' },
                 { key: 'confirm_password', label: 'Confirm New Password', placeholder: 'Confirm new password', show: showPasswords.confirm, toggle: 'confirm' }
               ].map(field => (
                 <div key={field.key}>
-                  <label className="block text-[12px] font-medium text-[#444441] mb-1.5">{field.label}</label>
+                  <label className="block text-[13px] font-semibold text-body mb-1.5">{field.label}</label>
                   <div className="relative">
                     <input type={field.show ? 'text' : 'password'} value={passwordForm[field.key]}
                       onChange={(e) => setPasswordForm({ ...passwordForm, [field.key]: e.target.value })}
-                      className="w-full px-4 py-2.5 border border-[#E8E8E4] rounded text-[14px] text-[#1A1816] placeholder-[#A8A8A4] focus:outline-none focus:border-[#D03839] focus:ring-1 focus:ring-[rgba(208,56,57,.12)] pr-10 transition-all duration-200"
+                      className="w-full px-4 py-2.5 border-[1.5px] border-line rounded-[9px] text-[14px] text-body placeholder-mist focus:outline-none focus:border-ink focus:shadow-offset-3 pr-10 transition-all duration-200"
                       placeholder={field.placeholder} required />
                     <button type="button" onClick={() => setShowPasswords({ ...showPasswords, [field.toggle]: !field.show })}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-[#A8A8A4] hover:text-[#444441]">
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-mist hover:text-smoke-2">
                       {field.show ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
                   </div>
-                  {field.hint && <p className="text-[11px] text-[#A8A8A4] mt-1">{field.hint}</p>}
+                  {field.hint && <p className="text-[11px] text-mist mt-1">{field.hint}</p>}
                 </div>
               ))}
             </div>
-            <div className="flex justify-end pt-4 border-t border-[#E8E8E4]">
+            <div className="flex justify-end pt-4 border-t border-hairline">
               <button type="submit" disabled={saving}
-                className="px-4 py-2.5 bg-[#D03839] text-white rounded text-[13px] font-semibold hover:bg-[#E0493B] disabled:bg-[#F5C4C0] disabled:cursor-not-allowed transition-colors duration-200">
+                className="px-4 py-2.5 bg-ink text-white border-[1.5px] border-ink rounded-[10px] text-[13px] font-semibold shadow-soft-3 hover:bg-smoke-2 disabled:bg-hairline disabled:border-hairline disabled:text-muted disabled:cursor-not-allowed transition-all duration-120">
                 {saving ? 'Updating...' : 'Update Password'}
               </button>
             </div>
@@ -469,31 +469,31 @@ export default function SettingsPage() {
 
         {/* Subscription management — buried at bottom of security tab */}
         {planInfo && ['trialing', 'active', 'canceling'].includes(planInfo.status) && (
-          <div className="bg-white rounded border border-[#E8E8E4] overflow-hidden">
+          <div className="bg-white rounded-[12px] border-[1.5px] border-ink shadow-offset-4 overflow-hidden">
             <button
               type="button"
               onClick={() => setShowCancelSection(v => !v)}
-              className="w-full flex items-center justify-between px-5 py-3 text-left hover:bg-[#FAFAF8] transition-colors"
+              className="w-full flex items-center justify-between px-5 py-3 text-left hover:bg-tint-3 transition-colors"
             >
-              <span className="text-[14px] font-normal text-[#1A1816]">Subscription management</span>
-              {showCancelSection ? <ChevronUp className="w-4 h-4 text-[#737370]" /> : <ChevronDown className="w-4 h-4 text-[#737370]" />}
+              <span className="font-display font-semibold text-[15px] tracking-[-0.01em] text-body">Subscription management</span>
+              {showCancelSection ? <ChevronUp className="w-4 h-4 text-muted" /> : <ChevronDown className="w-4 h-4 text-muted" />}
             </button>
 
             {showCancelSection && (
-              <div className="px-5 pb-5 pt-1 border-t border-[#E8E8E4] space-y-3">
+              <div className="px-5 pb-5 pt-1 border-t border-hairline space-y-3">
                 {planInfo.status === 'canceling' ? (
-                  <div className="p-3 bg-[#FEF3E2] border border-[#F3C97D] rounded text-[13px] text-[#B5620A]">
+                  <div className="p-3 bg-tint border-[1.5px] border-line rounded-[9px] text-[13px] text-smoke-3">
                     Cancellation pending — your subscription remains active until{' '}
                     <strong>{planInfo.current_period_end ? new Date(planInfo.current_period_end).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'your next billing date'}</strong>.
                     After that, all your listings will be deactivated.
                   </div>
                 ) : (
                   <>
-                    <p className="text-[13px] text-[#737370]">
+                    <p className="text-[13px] text-muted">
                       Canceling will keep your account active until the end of the current billing period. After that, all listings will be deactivated and you won&apos;t be charged again.
                     </p>
                     {cancelDone ? (
-                      <div className="p-3 bg-[#FEF3E2] border border-[#F3C97D] rounded text-[13px] text-[#B5620A]">
+                      <div className="p-3 bg-tint border-[1.5px] border-line rounded-[9px] text-[13px] text-smoke-3">
                         Subscription scheduled for cancellation. Your access continues until{' '}
                         <strong>{planInfo.current_period_end ? new Date(planInfo.current_period_end).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'your next billing date'}</strong>.
                       </div>
@@ -501,7 +501,7 @@ export default function SettingsPage() {
                       <button
                         type="button"
                         onClick={() => { setShowCancelConfirm(true); setCancelError(''); }}
-                        className="px-4 py-2 rounded border border-[#E8E8E4] text-[13px] font-medium text-[#D03839] hover:bg-[#FEF0EF] hover:border-[#F5C4C0] transition-colors duration-200"
+                        className="px-4 py-2 rounded-[9px] bg-white border-[1.5px] border-ink shadow-offset-2 text-[13px] font-semibold text-ink hover:bg-tint transition-colors duration-120"
                       >
                         Cancel subscription
                       </button>
@@ -516,24 +516,24 @@ export default function SettingsPage() {
         {/* Cancel confirmation modal */}
         {showCancelConfirm && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
-            <div className="bg-white rounded shadow-2xl w-full max-w-sm p-6 space-y-4">
+            <div className="bg-white rounded-[14px] border-[1.5px] border-ink shadow-offset-6 w-full max-w-sm p-6 space-y-4">
               <div className="flex items-center gap-2 mb-1">
-                <AlertTriangle className="w-5 h-5 text-[#B5620A] flex-shrink-0" />
-                <h3 className="text-[15px] font-semibold text-[#1A1816]">Cancel subscription?</h3>
+                <AlertTriangle className="w-5 h-5 text-smoke-3 flex-shrink-0" />
+                <h3 className="font-display font-semibold text-[16.5px] tracking-[-0.01em] text-body">Cancel subscription?</h3>
               </div>
-              <p className="text-[13px] text-[#737370]">
+              <p className="text-[13px] text-muted">
                 Your subscription will remain active until{' '}
-                <strong className="text-[#1A1816]">{planInfo?.current_period_end ? new Date(planInfo.current_period_end).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'the end of your billing period'}</strong>.
+                <strong className="text-body">{planInfo?.current_period_end ? new Date(planInfo.current_period_end).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'the end of your billing period'}</strong>.
                 After that date, all your listings will be automatically deactivated and you will not be able to publish new listings without an active subscription.
               </p>
               {cancelError && (
-                <p className="text-[12px] text-[#D03839]">{cancelError}</p>
+                <p className="text-[12px] text-ink font-semibold">{cancelError}</p>
               )}
               <div className="flex gap-3 pt-1">
                 <button
                   type="button"
                   onClick={() => { setShowCancelConfirm(false); setCancelError(''); }}
-                  className="flex-1 h-[40px] border border-[#E8E8E4] rounded text-[13px] font-medium text-[#1A1816] hover:border-[#1A1816] transition-colors"
+                  className="flex-1 h-[40px] bg-white border-[1.5px] border-ink rounded-[9px] shadow-offset-2 text-[13px] font-semibold text-ink hover:bg-tint transition-colors"
                 >
                   Keep subscription
                 </button>
@@ -560,7 +560,7 @@ export default function SettingsPage() {
                       setCancelLoading(false);
                     }
                   }}
-                  className="flex-1 h-[40px] border border-[#E8E8E4] rounded text-[13px] font-medium text-[#737370] hover:border-[#D03839] hover:text-[#D03839] transition-colors disabled:opacity-50"
+                  className="flex-1 h-[40px] bg-ink text-white border-[1.5px] border-ink rounded-[9px] text-[13px] font-semibold hover:bg-smoke-2 transition-colors disabled:opacity-50"
                 >
                   {cancelLoading ? 'Processing…' : 'Yes, cancel'}
                 </button>
@@ -573,33 +573,33 @@ export default function SettingsPage() {
 
       {/* Activities Tab */}
       {activeTab === 'activities' && (
-        <div className="bg-white rounded border border-[#E8E8E4] overflow-hidden">
-          <div className="px-4 py-3 border-b border-[#E8E8E4] bg-[#FAFAF8]">
-            <h2 className="text-[13px] font-normal text-[#1A1816]">Activity timeline</h2>
-            <p className="text-[11px] text-[#A8A8A4] mt-0.5">Property updates and new listings</p>
+        <div className="bg-white rounded-[12px] border-[1.5px] border-ink shadow-offset-4 overflow-hidden">
+          <div className="px-4 py-3 border-b border-hairline bg-tint-3">
+            <h2 className="font-mono font-semibold text-[11px] uppercase tracking-[0.14em] text-ink">Activity timeline</h2>
+            <p className="text-[11px] text-mist mt-0.5">Property updates and new listings</p>
           </div>
-          <div className="divide-y divide-[#E8E8E4] max-h-[60vh] overflow-y-auto">
+          <div className="divide-y divide-hairline max-h-[60vh] overflow-y-auto">
             {activitiesLoading ? (
-              [...Array(5)].map((_, i) => <div key={i} className="flex items-center gap-4 px-4 py-4 animate-pulse"><div className="w-10 h-10 rounded bg-[#FAFAF8]" /><div className="flex-1"><div className="h-4 w-48 bg-[#FAFAF8] rounded mb-2" /><div className="h-3 w-24 bg-[#FAFAF8] rounded" /></div></div>)
+              [...Array(5)].map((_, i) => <div key={i} className="flex items-center gap-4 px-4 py-4 motion-safe:animate-pulse"><div className="w-10 h-10 rounded bg-tint-3" /><div className="flex-1"><div className="h-4 w-48 bg-tint-3 rounded mb-2" /><div className="h-3 w-24 bg-tint-3 rounded" /></div></div>)
             ) : activities.length === 0 ? (
               <div className="px-4 py-12 text-center">
-                <Building2 className="w-10 h-10 text-[#A8A8A4] mx-auto mb-3" />
-                <p className="text-[13px] text-[#737370]">No activities yet</p>
-                <Link href="/properties/new" className="inline-block mt-2 text-[13px] font-medium text-[#D03839] hover:text-[#E0493B]">Add your first property</Link>
+                <Building2 className="w-10 h-10 text-mist mx-auto mb-3" />
+                <p className="text-[13px] text-muted">No activities yet</p>
+                <Link href="/properties/new" className="inline-block mt-2 text-[13px] font-medium text-ink hover:text-smoke-2">Add your first property</Link>
               </div>
             ) : (
               activities.map(activity => (
-                <div key={activity.id} className="flex items-start gap-3 px-4 py-3 hover:bg-[#FAFAF8] transition-colors duration-200">
-                  <div className="w-9 h-9 rounded bg-[#FEF0EF] flex items-center justify-center shrink-0">
-                    <Building2 className="w-4 h-4 text-[#D03839]" />
+                <div key={activity.id} className="flex items-start gap-3 px-4 py-3 hover:bg-tint-3 transition-colors duration-200">
+                  <div className="w-9 h-9 rounded-[9px] bg-tint border border-hairline flex items-center justify-center shrink-0">
+                    <Building2 className="w-4 h-4 text-ink" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-[13px] text-[#1A1816]">
+                    <p className="text-[13px] text-body">
                       {activity.type === 'published' ? 'Added' : 'Edited'}{' '}
-                      <Link href={`/properties/edit/${activity.id}`} className="font-medium text-[#D03839] hover:text-[#E0493B]">{activity.title}</Link>
+                      <Link href={`/properties/edit/${activity.id}`} className="font-medium text-ink hover:text-smoke-2">{activity.title}</Link>
                     </p>
-                    <p className="text-[11px] text-[#737370] truncate">{activity.address}</p>
-                    <p className="text-[11px] text-[#A8A8A4] mt-0.5">{activity.time} · {activity.price}</p>
+                    <p className="font-mono text-[11px] text-muted truncate">{activity.address}</p>
+                    <p className="font-mono text-[11px] text-mist mt-0.5">{activity.time} · {activity.price}</p>
                   </div>
                 </div>
               ))
@@ -609,16 +609,16 @@ export default function SettingsPage() {
       )}
 
       {/* Logout — profile tab only */}
-      {activeTab === 'profile' && <div className="bg-white rounded border border-[#E8E8E4] p-5">
+      {activeTab === 'profile' && <div className="bg-white rounded-[12px] border-[1.5px] border-ink shadow-offset-4 p-5">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-[14px] font-medium text-[#1A1816]">Sign out</p>
-            <p className="text-[12px] text-[#737370] mt-0.5">You will be returned to the login page</p>
+            <p className="text-[14px] font-semibold text-body">Sign out</p>
+            <p className="text-[12px] text-muted mt-0.5">You will be returned to the login page</p>
           </div>
           <button
             type="button"
             onClick={() => { localStorage.removeItem('seller_user'); router.push('/login'); }}
-            className="flex items-center gap-2 px-4 py-2.5 rounded border border-[#E8E8E4] text-[13px] font-medium text-[#D03839] hover:bg-[#FEF0EF] hover:border-[#F5C4C0] transition-colors duration-200"
+            className="flex items-center gap-2 px-4 py-2.5 rounded-[9px] bg-white border-[1.5px] border-ink shadow-offset-2 text-[13px] font-semibold text-ink hover:bg-tint transition-colors duration-120"
           >
             <LogOut className="w-4 h-4" />
             Sign out
@@ -628,28 +628,28 @@ export default function SettingsPage() {
 
       {/* Blocked Tab */}
       {activeTab === 'blocked' && (
-        <div className="bg-white rounded border border-[#E8E8E4] overflow-hidden">
-          <div className="px-4 py-3 border-b border-[#E8E8E4] bg-[#FAFAF8]">
-            <h2 className="text-[13px] font-normal text-[#1A1816]">Blocked users</h2>
-            <p className="text-[11px] text-[#A8A8A4] mt-0.5">Manage users you blocked from chats</p>
+        <div className="bg-white rounded-[12px] border-[1.5px] border-ink shadow-offset-4 overflow-hidden">
+          <div className="px-4 py-3 border-b border-hairline bg-tint-3">
+            <h2 className="font-mono font-semibold text-[11px] uppercase tracking-[0.14em] text-ink">Blocked users</h2>
+            <p className="text-[11px] text-mist mt-0.5">Manage users you blocked from chats</p>
           </div>
-          <div className="divide-y divide-[#E8E8E4]">
+          <div className="divide-y divide-hairline">
             {blockedLoading ? (
-              <div className="px-4 py-8 text-[13px] text-[#737370]">Loading...</div>
+              <div className="px-4 py-8 text-[13px] text-muted">Loading...</div>
             ) : blockedUsers.length === 0 ? (
               <div className="px-4 py-12 text-center">
-                <ShieldBan className="w-10 h-10 text-[#A8A8A4] mx-auto mb-2" />
-                <p className="text-[13px] text-[#737370]">No blocked users</p>
+                <ShieldBan className="w-10 h-10 text-mist mx-auto mb-2" />
+                <p className="text-[13px] text-muted">No blocked users</p>
               </div>
             ) : (
               blockedUsers.map(row => (
                 <div key={row.conversation_id} className="px-4 py-3 flex items-center justify-between gap-4">
                   <div className="min-w-0">
-                    <p className="text-[13px] font-medium text-[#1A1816] truncate">{row.buyer_name || 'Buyer'}</p>
-                    <p className="text-[11px] text-[#A8A8A4] truncate">Blocked {row.blocked_at ? new Date(row.blocked_at).toLocaleString() : ''}</p>
+                    <p className="text-[13px] font-medium text-body truncate">{row.buyer_name || 'Buyer'}</p>
+                    <p className="font-mono text-[11px] text-mist truncate">Blocked {row.blocked_at ? new Date(row.blocked_at).toLocaleString() : ''}</p>
                   </div>
                   <button type="button" onClick={() => unblockConversation(row.conversation_id)}
-                    className="px-3 py-1.5 text-[12px] font-medium rounded border border-[#E8E8E4] text-[#444441] hover:bg-[#FAFAF8] transition-colors duration-200">
+                    className="px-3 py-1.5 text-[12px] font-semibold rounded-[8px] bg-white border-[1.5px] border-ink shadow-offset-2 text-ink hover:bg-tint transition-colors duration-120">
                     Unblock
                   </button>
                 </div>
@@ -661,48 +661,48 @@ export default function SettingsPage() {
 
       {emailChange.step !== 'idle' && (
         <div className="fixed inset-0 z-[95] flex items-center justify-center p-4">
-          <div className="fixed inset-0 bg-[#1A1816]/40" onClick={() => emailChange.loading ? null : setEmailChange({ step: 'idle', newEmail: '', password: '', otp: '', error: '', loading: false })} aria-hidden="true" />
-          <div className="relative bg-white rounded shadow-lg border border-[#E8E8E4] max-w-md w-full p-6 z-10">
+          <div className="fixed inset-0 bg-body/40" onClick={() => emailChange.loading ? null : setEmailChange({ step: 'idle', newEmail: '', password: '', otp: '', error: '', loading: false })} aria-hidden="true" />
+          <div className="relative bg-white rounded-[14px] border-[1.5px] border-ink shadow-offset-6 max-w-md w-full p-6 z-10">
             {emailChange.step === 'form' ? (
               <>
-                <h3 className="text-[16px] font-semibold text-[#1A1816] mb-1">Change email address</h3>
-                <p className="text-[13px] text-[#737370] mb-4">Enter your new email and current password. We'll send a verification code to the new address.</p>
+                <h3 className="font-display font-semibold text-[16.5px] tracking-[-0.01em] text-body mb-1">Change email address</h3>
+                <p className="text-[13px] text-muted mb-4">Enter your new email and current password. We'll send a verification code to the new address.</p>
                 <div className="space-y-3">
                   <div>
-                    <label className="block text-[12px] font-medium text-[#444441] mb-1.5">New email address</label>
+                    <label className="block text-[13px] font-semibold text-body mb-1.5">New email address</label>
                     <input type="email" value={emailChange.newEmail} onChange={e => setEmailChange(s => ({ ...s, newEmail: e.target.value, error: '' }))}
                       placeholder="you@example.com"
-                      className="w-full px-4 py-2.5 border border-[#E8E8E4] rounded text-[14px] text-[#1A1816] focus:outline-none focus:border-[#D03839]" />
+                      className="w-full px-4 py-2.5 border-[1.5px] border-line rounded-[9px] text-[14px] text-body focus:outline-none focus:border-ink focus:shadow-offset-3" />
                   </div>
                   <div>
-                    <label className="block text-[12px] font-medium text-[#444441] mb-1.5">Current password</label>
+                    <label className="block text-[13px] font-semibold text-body mb-1.5">Current password</label>
                     <input type="password" value={emailChange.password} onChange={e => setEmailChange(s => ({ ...s, password: e.target.value, error: '' }))}
                       placeholder="••••••••"
-                      className="w-full px-4 py-2.5 border border-[#E8E8E4] rounded text-[14px] text-[#1A1816] focus:outline-none focus:border-[#D03839]" />
+                      className="w-full px-4 py-2.5 border-[1.5px] border-line rounded-[9px] text-[14px] text-body focus:outline-none focus:border-ink focus:shadow-offset-3" />
                   </div>
                 </div>
-                {emailChange.error && <p className="text-[12px] text-[#D03839] mt-2">{emailChange.error}</p>}
+                {emailChange.error && <p className="text-[12px] text-ink font-semibold mt-2">{emailChange.error}</p>}
                 <div className="flex items-center gap-3 mt-5">
                   <button type="button" onClick={() => setEmailChange({ step: 'idle', newEmail: '', password: '', otp: '', error: '', loading: false })}
-                    className="flex-1 h-10 px-4 text-[13px] font-semibold text-[#1A1816] bg-white border border-[#E8E8E4] rounded hover:bg-[#FAFAF8] transition-colors">Cancel</button>
+                    className="flex-1 h-10 px-4 text-[13px] font-semibold text-ink bg-white border-[1.5px] border-ink rounded-[9px] shadow-offset-2 hover:bg-tint transition-colors">Cancel</button>
                   <button type="button" onClick={requestEmailChange} disabled={emailChange.loading || !emailChange.newEmail || !emailChange.password}
-                    className="flex-1 h-10 px-4 text-[13px] font-semibold text-white bg-[#D03839] hover:bg-[#E0493B] rounded transition-colors disabled:opacity-50">
+                    className="flex-1 h-10 px-4 text-[13px] font-semibold text-white bg-ink border-[1.5px] border-ink hover:bg-smoke-2 rounded-[10px] shadow-soft-3 transition-colors disabled:opacity-50">
                     {emailChange.loading ? 'Sending…' : 'Send code'}</button>
                 </div>
               </>
             ) : (
               <>
-                <h3 className="text-[16px] font-semibold text-[#1A1816] mb-1">Enter verification code</h3>
-                <p className="text-[13px] text-[#737370] mb-4">We sent a 6-digit code to <strong className="text-[#1A1816]">{emailChange.newEmail}</strong>. Enter it below to confirm.</p>
+                <h3 className="font-display font-semibold text-[16.5px] tracking-[-0.01em] text-body mb-1">Enter verification code</h3>
+                <p className="text-[13px] text-muted mb-4">We sent a 6-digit code to <strong className="text-body">{emailChange.newEmail}</strong>. Enter it below to confirm.</p>
                 <input type="text" inputMode="numeric" maxLength={6} value={emailChange.otp} onChange={e => setEmailChange(s => ({ ...s, otp: e.target.value.replace(/\D/g, ''), error: '' }))}
                   placeholder="000000"
-                  className="w-full px-4 py-2.5 border border-[#E8E8E4] rounded text-[18px] tracking-[8px] text-center text-[#1A1816] focus:outline-none focus:border-[#D03839]" />
-                {emailChange.error && <p className="text-[12px] text-[#D03839] mt-2">{emailChange.error}</p>}
+                  className="w-full px-4 py-2.5 border-[1.5px] border-line rounded-[9px] font-mono text-[18px] tracking-[8px] text-center text-body focus:outline-none focus:border-ink focus:shadow-offset-3" />
+                {emailChange.error && <p className="text-[12px] text-ink font-semibold mt-2">{emailChange.error}</p>}
                 <div className="flex items-center gap-3 mt-5">
                   <button type="button" onClick={() => setEmailChange(s => ({ ...s, step: 'form', otp: '', error: '' }))}
-                    className="flex-1 h-10 px-4 text-[13px] font-semibold text-[#1A1816] bg-white border border-[#E8E8E4] rounded hover:bg-[#FAFAF8] transition-colors">Back</button>
+                    className="flex-1 h-10 px-4 text-[13px] font-semibold text-ink bg-white border-[1.5px] border-ink rounded-[9px] shadow-offset-2 hover:bg-tint transition-colors">Back</button>
                   <button type="button" onClick={verifyEmailChange} disabled={emailChange.loading || emailChange.otp.length !== 6}
-                    className="flex-1 h-10 px-4 text-[13px] font-semibold text-white bg-[#D03839] hover:bg-[#E0493B] rounded transition-colors disabled:opacity-50">
+                    className="flex-1 h-10 px-4 text-[13px] font-semibold text-white bg-ink border-[1.5px] border-ink hover:bg-smoke-2 rounded-[10px] shadow-soft-3 transition-colors disabled:opacity-50">
                     {emailChange.loading ? 'Verifying…' : 'Confirm email'}</button>
                 </div>
               </>
@@ -713,48 +713,48 @@ export default function SettingsPage() {
 
       {phoneChange.step !== 'idle' && (
         <div className="fixed inset-0 z-[95] flex items-center justify-center p-4">
-          <div className="fixed inset-0 bg-[#1A1816]/40" onClick={() => phoneChange.loading ? null : setPhoneChange({ step: 'idle', newPhone: '', password: '', otp: '', error: '', loading: false })} aria-hidden="true" />
-          <div className="relative bg-white rounded shadow-lg border border-[#E8E8E4] max-w-md w-full p-6 z-10">
+          <div className="fixed inset-0 bg-body/40" onClick={() => phoneChange.loading ? null : setPhoneChange({ step: 'idle', newPhone: '', password: '', otp: '', error: '', loading: false })} aria-hidden="true" />
+          <div className="relative bg-white rounded-[14px] border-[1.5px] border-ink shadow-offset-6 max-w-md w-full p-6 z-10">
             {phoneChange.step === 'form' ? (
               <>
-                <h3 className="text-[16px] font-semibold text-[#1A1816] mb-1">Change phone number</h3>
-                <p className="text-[13px] text-[#737370] mb-4">Enter your new number and current password. We'll text a verification code to the new number.</p>
+                <h3 className="font-display font-semibold text-[16.5px] tracking-[-0.01em] text-body mb-1">Change phone number</h3>
+                <p className="text-[13px] text-muted mb-4">Enter your new number and current password. We'll text a verification code to the new number.</p>
                 <div className="space-y-3">
                   <div>
-                    <label className="block text-[12px] font-medium text-[#444441] mb-1.5">New phone number</label>
+                    <label className="block text-[13px] font-semibold text-body mb-1.5">New phone number</label>
                     <input type="tel" value={phoneChange.newPhone} onChange={e => setPhoneChange(s => ({ ...s, newPhone: e.target.value, error: '' }))}
                       placeholder="(555) 123-4567"
-                      className="w-full px-4 py-2.5 border border-[#E8E8E4] rounded text-[14px] text-[#1A1816] focus:outline-none focus:border-[#D03839]" />
+                      className="w-full px-4 py-2.5 border-[1.5px] border-line rounded-[9px] text-[14px] text-body focus:outline-none focus:border-ink focus:shadow-offset-3" />
                   </div>
                   <div>
-                    <label className="block text-[12px] font-medium text-[#444441] mb-1.5">Current password</label>
+                    <label className="block text-[13px] font-semibold text-body mb-1.5">Current password</label>
                     <input type="password" value={phoneChange.password} onChange={e => setPhoneChange(s => ({ ...s, password: e.target.value, error: '' }))}
                       placeholder="••••••••"
-                      className="w-full px-4 py-2.5 border border-[#E8E8E4] rounded text-[14px] text-[#1A1816] focus:outline-none focus:border-[#D03839]" />
+                      className="w-full px-4 py-2.5 border-[1.5px] border-line rounded-[9px] text-[14px] text-body focus:outline-none focus:border-ink focus:shadow-offset-3" />
                   </div>
                 </div>
-                {phoneChange.error && <p className="text-[12px] text-[#D03839] mt-2">{phoneChange.error}</p>}
+                {phoneChange.error && <p className="text-[12px] text-ink font-semibold mt-2">{phoneChange.error}</p>}
                 <div className="flex items-center gap-3 mt-5">
                   <button type="button" onClick={() => setPhoneChange({ step: 'idle', newPhone: '', password: '', otp: '', error: '', loading: false })}
-                    className="flex-1 h-10 px-4 text-[13px] font-semibold text-[#1A1816] bg-white border border-[#E8E8E4] rounded hover:bg-[#FAFAF8] transition-colors">Cancel</button>
+                    className="flex-1 h-10 px-4 text-[13px] font-semibold text-ink bg-white border-[1.5px] border-ink rounded-[9px] shadow-offset-2 hover:bg-tint transition-colors">Cancel</button>
                   <button type="button" onClick={requestPhoneChange} disabled={phoneChange.loading || !phoneChange.newPhone || !phoneChange.password}
-                    className="flex-1 h-10 px-4 text-[13px] font-semibold text-white bg-[#D03839] hover:bg-[#E0493B] rounded transition-colors disabled:opacity-50">
+                    className="flex-1 h-10 px-4 text-[13px] font-semibold text-white bg-ink border-[1.5px] border-ink hover:bg-smoke-2 rounded-[10px] shadow-soft-3 transition-colors disabled:opacity-50">
                     {phoneChange.loading ? 'Sending…' : 'Send code'}</button>
                 </div>
               </>
             ) : (
               <>
-                <h3 className="text-[16px] font-semibold text-[#1A1816] mb-1">Enter verification code</h3>
-                <p className="text-[13px] text-[#737370] mb-4">We texted a 6-digit code to <strong className="text-[#1A1816]">{phoneChange.newPhone}</strong>. Enter it below to confirm.</p>
+                <h3 className="font-display font-semibold text-[16.5px] tracking-[-0.01em] text-body mb-1">Enter verification code</h3>
+                <p className="text-[13px] text-muted mb-4">We texted a 6-digit code to <strong className="text-body">{phoneChange.newPhone}</strong>. Enter it below to confirm.</p>
                 <input type="text" inputMode="numeric" maxLength={6} value={phoneChange.otp} onChange={e => setPhoneChange(s => ({ ...s, otp: e.target.value.replace(/\D/g, ''), error: '' }))}
                   placeholder="000000"
-                  className="w-full px-4 py-2.5 border border-[#E8E8E4] rounded text-[18px] tracking-[8px] text-center text-[#1A1816] focus:outline-none focus:border-[#D03839]" />
-                {phoneChange.error && <p className="text-[12px] text-[#D03839] mt-2">{phoneChange.error}</p>}
+                  className="w-full px-4 py-2.5 border-[1.5px] border-line rounded-[9px] font-mono text-[18px] tracking-[8px] text-center text-body focus:outline-none focus:border-ink focus:shadow-offset-3" />
+                {phoneChange.error && <p className="text-[12px] text-ink font-semibold mt-2">{phoneChange.error}</p>}
                 <div className="flex items-center gap-3 mt-5">
                   <button type="button" onClick={() => setPhoneChange(s => ({ ...s, step: 'form', otp: '', error: '' }))}
-                    className="flex-1 h-10 px-4 text-[13px] font-semibold text-[#1A1816] bg-white border border-[#E8E8E4] rounded hover:bg-[#FAFAF8] transition-colors">Back</button>
+                    className="flex-1 h-10 px-4 text-[13px] font-semibold text-ink bg-white border-[1.5px] border-ink rounded-[9px] shadow-offset-2 hover:bg-tint transition-colors">Back</button>
                   <button type="button" onClick={verifyPhoneChange} disabled={phoneChange.loading || phoneChange.otp.length !== 6}
-                    className="flex-1 h-10 px-4 text-[13px] font-semibold text-white bg-[#D03839] hover:bg-[#E0493B] rounded transition-colors disabled:opacity-50">
+                    className="flex-1 h-10 px-4 text-[13px] font-semibold text-white bg-ink border-[1.5px] border-ink hover:bg-smoke-2 rounded-[10px] shadow-soft-3 transition-colors disabled:opacity-50">
                     {phoneChange.loading ? 'Verifying…' : 'Confirm phone'}</button>
                 </div>
               </>

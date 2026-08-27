@@ -36,7 +36,7 @@ const ViewForm = ({ isOpen, onClose, employee }) => {
             className="fixed right-0 top-0 h-screen w-full sm:w-[90%] md:w-[600px] lg:w-[700px] bg-white shadow-2xl z-[60] flex flex-col"
           >
             {/* Header */}
-            <div className="bg-[#472F97] px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between">
+            <div className="bg-[#111111] px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between">
               <div className="flex items-center gap-2 sm:gap-3">
                 <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-white/10 flex items-center justify-center">
                   <Users className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
@@ -203,7 +203,7 @@ const ViewForm = ({ isOpen, onClose, employee }) => {
               <div className="sticky bottom-0 bg-white border-t border-neutral-200 px-4 sm:px-6 py-3 sm:py-4">
                 <button
                   onClick={onClose}
-                  className="w-full px-3 sm:px-4 py-2 sm:py-2.5 text-sm sm:text-base bg-[#472F97] hover:bg-[#3a2578] text-white font-medium rounded-lg sm:rounded-xl transition-colors"
+                  className="w-full px-3 sm:px-4 py-2 sm:py-2.5 text-sm sm:text-base bg-[#111111] hover:bg-[#444444] text-white font-medium rounded-lg sm:rounded-xl transition-colors"
                 >
                   Close
                 </button>

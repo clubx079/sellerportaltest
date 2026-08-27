@@ -138,7 +138,7 @@ const AddForm = ({ isOpen, onClose, onSuccess, userId }) => {
             className="fixed right-0 top-0 h-screen w-full md:w-[500px] lg:w-[550px] bg-white shadow-2xl z-[60] flex flex-col"
           >
             {/* Header */}
-            <div className="bg-[#472F97] px-4 sm:px-6 py-4 flex items-center justify-between">
+            <div className="bg-[#111111] px-4 sm:px-6 py-4 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-white/10 flex items-center justify-center">
                   <Users className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
@@ -160,21 +160,21 @@ const AddForm = ({ isOpen, onClose, onSuccess, userId }) => {
             <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto">
               <div className="p-4 sm:p-6 space-y-4 sm:space-y-5">
                 {/* Head Guest Section */}
-                <div className="bg-gradient-to-br from-[#F5F3FF] to-white rounded-xl p-4 border-2 border-[#472F97]/20">
-                  <h3 className="text-sm font-semibold text-[#472F97] mb-4 flex items-center gap-2">
+                <div className="bg-gradient-to-br from-[#f7f7f7] to-white rounded-xl p-4 border-2 border-[#111111]/20">
+                  <h3 className="text-sm font-semibold text-[#111111] mb-4 flex items-center gap-2">
                     <User className="w-4 h-4" />
-                    Head Guest <span className="text-red-500">*</span>
+                    Head Guest <span className="text-neutral-500">*</span>
                   </h3>
                   <div className="space-y-4">
                     <div>
                       <label className="block text-xs font-medium text-neutral-600 mb-1.5">
-                        Full Name <span className="text-red-500">*</span>
+                        Full Name <span className="text-neutral-500">*</span>
                       </label>
                       <input
                         type="text"
                         value={headGuest.full_name}
                         onChange={(e) => setHeadGuest(prev => ({ ...prev, full_name: e.target.value }))}
-                        className="w-full border border-neutral-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#472F97] focus:border-transparent bg-white"
+                        className="w-full border border-neutral-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#111111] focus:border-transparent bg-white"
                         placeholder="Enter head guest's full name"
                         required
                       />
@@ -191,7 +191,7 @@ const AddForm = ({ isOpen, onClose, onSuccess, userId }) => {
                           type="tel"
                           value={headGuest.phone}
                           onChange={(e) => setHeadGuest(prev => ({ ...prev, phone: e.target.value }))}
-                          className="w-full border border-neutral-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#472F97] focus:border-transparent bg-white"
+                          className="w-full border border-neutral-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#111111] focus:border-transparent bg-white"
                           placeholder="e.g., +1 234 567 8900"
                         />
                       </div>
@@ -206,21 +206,21 @@ const AddForm = ({ isOpen, onClose, onSuccess, userId }) => {
                           type="text"
                           value={headGuest.cnic}
                           onChange={(e) => setHeadGuest(prev => ({ ...prev, cnic: e.target.value }))}
-                          className="w-full border border-neutral-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#472F97] focus:border-transparent bg-white"
+                          className="w-full border border-neutral-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#111111] focus:border-transparent bg-white"
                           placeholder="e.g., 12345-1234567-1"
                         />
                       </div>
                     </div>
-                    <label className="flex items-center gap-3 cursor-pointer p-3 bg-white rounded-lg border border-neutral-200 hover:border-[#472F97]/30 transition-colors">
+                    <label className="flex items-center gap-3 cursor-pointer p-3 bg-white rounded-lg border border-neutral-200 hover:border-[#111111]/30 transition-colors">
                       <input
                         type="checkbox"
                         checked={headGuest.is_vip}
                         onChange={(e) => setHeadGuest(prev => ({ ...prev, is_vip: e.target.checked }))}
-                        className="w-4 h-4 text-[#472F97] rounded focus:ring-[#472F97] border-neutral-300"
+                        className="w-4 h-4 text-[#111111] rounded focus:ring-[#111111] border-neutral-300"
                       />
                       <div className="flex-1">
                         <span className="text-sm font-medium text-neutral-700 flex items-center gap-1.5">
-                          <Star className="w-3.5 h-3.5 text-amber-500" />
+                          <Star className="w-3.5 h-3.5 text-neutral-500" />
                           Mark as VIP Guest
                         </span>
                       </div>
@@ -238,7 +238,7 @@ const AddForm = ({ isOpen, onClose, onSuccess, userId }) => {
                     <button
                       type="button"
                       onClick={addAdditionalGuest}
-                      className="flex items-center gap-1.5 px-3 py-1.5 bg-[#472F97] hover:bg-[#3a2578] text-white text-xs font-medium rounded-lg transition-colors"
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-[#111111] hover:bg-[#444444] text-white text-xs font-medium rounded-lg transition-colors"
                     >
                       <Plus className="w-3.5 h-3.5" />
                       Add Guest
@@ -260,7 +260,7 @@ const AddForm = ({ isOpen, onClose, onSuccess, userId }) => {
                             <button
                               type="button"
                               onClick={() => removeAdditionalGuest(guest.id)}
-                              className="p-1 hover:bg-red-50 text-red-500 rounded transition-colors"
+                              className="p-1 hover:bg-neutral-50 text-neutral-500 rounded transition-colors"
                               title="Remove guest"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
@@ -275,7 +275,7 @@ const AddForm = ({ isOpen, onClose, onSuccess, userId }) => {
                                 type="text"
                                 value={guest.full_name}
                                 onChange={(e) => updateAdditionalGuest(guest.id, 'full_name', e.target.value)}
-                                className="w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#472F97] focus:border-transparent"
+                                className="w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#111111] focus:border-transparent"
                                 placeholder="Enter guest's full name"
                               />
                             </div>
@@ -288,7 +288,7 @@ const AddForm = ({ isOpen, onClose, onSuccess, userId }) => {
                                   type="tel"
                                   value={guest.phone}
                                   onChange={(e) => updateAdditionalGuest(guest.id, 'phone', e.target.value)}
-                                  className="w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#472F97] focus:border-transparent"
+                                  className="w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#111111] focus:border-transparent"
                                   placeholder="Phone number"
                                 />
                               </div>
@@ -300,7 +300,7 @@ const AddForm = ({ isOpen, onClose, onSuccess, userId }) => {
                                   type="text"
                                   value={guest.cnic}
                                   onChange={(e) => updateAdditionalGuest(guest.id, 'cnic', e.target.value)}
-                                  className="w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#472F97] focus:border-transparent"
+                                  className="w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#111111] focus:border-transparent"
                                   placeholder="CNIC number"
                                 />
                               </div>
@@ -310,10 +310,10 @@ const AddForm = ({ isOpen, onClose, onSuccess, userId }) => {
                                 type="checkbox"
                                 checked={guest.is_vip}
                                 onChange={(e) => updateAdditionalGuest(guest.id, 'is_vip', e.target.checked)}
-                                className="w-3.5 h-3.5 text-[#472F97] rounded focus:ring-[#472F97] border-neutral-300"
+                                className="w-3.5 h-3.5 text-[#111111] rounded focus:ring-[#111111] border-neutral-300"
                               />
                               <span className="text-xs text-neutral-700 flex items-center gap-1">
-                                <Star className="w-3 h-3 text-amber-500" />
+                                <Star className="w-3 h-3 text-neutral-500" />
                                 VIP Guest
                               </span>
                             </label>
@@ -326,8 +326,8 @@ const AddForm = ({ isOpen, onClose, onSuccess, userId }) => {
 
                 {/* Summary */}
                 {additionalGuests.length > 0 && (
-                  <div className="bg-[#472F97]/5 rounded-lg p-3 border border-[#472F97]/20">
-                    <p className="text-xs text-[#472F97] font-medium">
+                  <div className="bg-[#111111]/5 rounded-lg p-3 border border-[#111111]/20">
+                    <p className="text-xs text-[#111111] font-medium">
                       Total guests to add: <span className="font-bold">{1 + additionalGuests.filter(g => g.full_name.trim()).length}</span>
                       {' '}(1 head guest + {additionalGuests.filter(g => g.full_name.trim()).length} additional)
                     </p>
@@ -347,7 +347,7 @@ const AddForm = ({ isOpen, onClose, onSuccess, userId }) => {
                 <button
                   type="submit"
                   disabled={saving}
-                  className="flex-1 px-3 sm:px-4 py-2.5 bg-[#472F97] hover:bg-[#3a2578] text-white text-sm font-medium rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  className="flex-1 px-3 sm:px-4 py-2.5 bg-[#111111] hover:bg-[#444444] text-white text-sm font-medium rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
                   <Save className="w-4 h-4" />
                   <span className="hidden sm:inline">{saving ? 'Saving...' : `Save ${1 + additionalGuests.filter(g => g.full_name.trim()).length} Guest${1 + additionalGuests.filter(g => g.full_name.trim()).length > 1 ? 's' : ''}`}</span>

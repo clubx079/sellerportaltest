@@ -95,7 +95,7 @@ const EditForm = ({ isOpen, onClose, onSuccess, guest, userId }) => {
             className="fixed right-0 top-0 h-screen w-full md:w-[500px] lg:w-[550px] bg-white shadow-2xl z-[60] flex flex-col"
           >
             {/* Header */}
-            <div className="bg-[#472F97] px-4 sm:px-6 py-4 flex items-center justify-between">
+            <div className="bg-[#111111] px-4 sm:px-6 py-4 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-white/10 flex items-center justify-center">
                   <User className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
@@ -118,20 +118,20 @@ const EditForm = ({ isOpen, onClose, onSuccess, guest, userId }) => {
               <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
                 {/* Basic Info Section */}
                 <div className="bg-neutral-50 rounded-xl p-4 border border-neutral-200">
-                  <h3 className="text-sm font-semibold text-[#472F97] mb-4 flex items-center gap-2">
+                  <h3 className="text-sm font-semibold text-[#111111] mb-4 flex items-center gap-2">
                     <User className="w-4 h-4" />
                     Guest Information
                   </h3>
                   <div className="space-y-4">
                     <div>
                       <label className="block text-xs font-medium text-neutral-600 mb-1.5">
-                        Full Name <span className="text-red-500">*</span>
+                        Full Name <span className="text-neutral-500">*</span>
                       </label>
                       <input
                         type="text"
                         value={formData.full_name}
                         onChange={(e) => setFormData(prev => ({ ...prev, full_name: e.target.value }))}
-                        className="w-full border border-neutral-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#472F97] focus:border-transparent"
+                        className="w-full border border-neutral-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#111111] focus:border-transparent"
                         placeholder="Enter guest's full name"
                         required
                       />
@@ -148,7 +148,7 @@ const EditForm = ({ isOpen, onClose, onSuccess, guest, userId }) => {
                           type="tel"
                           value={formData.phone}
                           onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
-                          className="w-full border border-neutral-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#472F97] focus:border-transparent"
+                          className="w-full border border-neutral-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#111111] focus:border-transparent"
                           placeholder="e.g., +1 234 567 8900"
                         />
                       </div>
@@ -163,7 +163,7 @@ const EditForm = ({ isOpen, onClose, onSuccess, guest, userId }) => {
                           type="text"
                           value={formData.cnic}
                           onChange={(e) => setFormData(prev => ({ ...prev, cnic: e.target.value }))}
-                          className="w-full border border-neutral-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#472F97] focus:border-transparent"
+                          className="w-full border border-neutral-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#111111] focus:border-transparent"
                           placeholder="e.g., 12345-1234567-1"
                         />
                       </div>
@@ -173,7 +173,7 @@ const EditForm = ({ isOpen, onClose, onSuccess, guest, userId }) => {
 
                 {/* VIP Status Section */}
                 <div className="bg-neutral-50 rounded-xl p-4 border border-neutral-200">
-                  <h3 className="text-sm font-semibold text-[#472F97] mb-4 flex items-center gap-2">
+                  <h3 className="text-sm font-semibold text-[#111111] mb-4 flex items-center gap-2">
                     <Star className="w-4 h-4" />
                     VIP Status
                   </h3>
@@ -182,7 +182,7 @@ const EditForm = ({ isOpen, onClose, onSuccess, guest, userId }) => {
                       type="checkbox"
                       checked={formData.is_vip}
                       onChange={(e) => setFormData(prev => ({ ...prev, is_vip: e.target.checked }))}
-                      className="w-4 h-4 text-[#472F97] rounded focus:ring-[#472F97] border-neutral-300"
+                      className="w-4 h-4 text-[#111111] rounded focus:ring-[#111111] border-neutral-300"
                     />
                     <div className="flex-1">
                       <span className="text-sm font-medium text-neutral-700">Mark as VIP Guest</span>
@@ -204,7 +204,7 @@ const EditForm = ({ isOpen, onClose, onSuccess, guest, userId }) => {
                 <button
                   type="submit"
                   disabled={saving}
-                  className="flex-1 px-3 sm:px-4 py-2.5 bg-[#472F97] hover:bg-[#3a2578] text-white text-sm font-medium rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  className="flex-1 px-3 sm:px-4 py-2.5 bg-[#111111] hover:bg-[#444444] text-white text-sm font-medium rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
                   <Save className="w-4 h-4" />
                   <span className="hidden sm:inline">{saving ? 'Saving...' : 'Update Guest'}</span>

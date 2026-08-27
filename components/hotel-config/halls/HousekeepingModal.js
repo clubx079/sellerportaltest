@@ -31,7 +31,7 @@ const SearchableSelect = ({ label, value, onChange, options, placeholder, requir
   return (
     <div ref={dropdownRef} className="relative">
       <label className="block text-xs font-medium text-neutral-600 mb-1.5">
-        {label} {required && <span className="text-red-500">*</span>}
+        {label} {required && <span className="text-neutral-500">*</span>}
       </label>
       <div
         onClick={() => setIsOpen(!isOpen)}
@@ -52,7 +52,7 @@ const SearchableSelect = ({ label, value, onChange, options, placeholder, requir
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search..."
-                className="w-full pl-9 pr-3 py-2 text-sm border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#472F97] focus:border-transparent"
+                className="w-full pl-9 pr-3 py-2 text-sm border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#111111] focus:border-transparent"
                 onClick={(e) => e.stopPropagation()}
               />
             </div>
@@ -111,9 +111,9 @@ const HousekeepingModal = ({ isOpen, onClose, onSuccess, hall, employees }) => {
   }, [hall]);
 
   const housekeepingStatuses = [
-    { value: 'clean', label: 'Clean', color: 'bg-green-100 text-green-700' },
-    { value: 'dirty', label: 'Dirty', color: 'bg-red-100 text-red-700' },
-    { value: 'inspected', label: 'Inspected', color: 'bg-blue-100 text-blue-700' },
+    { value: 'clean', label: 'Clean', color: 'bg-neutral-100 text-neutral-700' },
+    { value: 'dirty', label: 'Dirty', color: 'bg-neutral-100 text-neutral-700' },
+    { value: 'inspected', label: 'Inspected', color: 'bg-neutral-100 text-neutral-700' },
     { value: 'out of service', label: 'Out of Service', color: 'bg-gray-100 text-gray-700' }
   ];
 
@@ -187,7 +187,7 @@ const HousekeepingModal = ({ isOpen, onClose, onSuccess, hall, employees }) => {
             className="fixed right-0 top-0 h-screen w-full md:w-[600px] lg:w-[700px] bg-white shadow-2xl z-[60] flex flex-col"
           >
             {/* Header */}
-            <div className="bg-[#472F97] px-6 py-4 flex items-center justify-between">
+            <div className="bg-[#111111] px-6 py-4 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center">
                   <ShieldCheck className="w-5 h-5 text-white" />
@@ -210,7 +210,7 @@ const HousekeepingModal = ({ isOpen, onClose, onSuccess, hall, employees }) => {
               <div className="p-6 space-y-6">
                 {/* Hall Info */}
                 <div className="bg-neutral-50 rounded-xl p-4 border border-neutral-200">
-                  <h3 className="text-sm font-semibold text-[#472F97] mb-4">Hall Information</h3>
+                  <h3 className="text-sm font-semibold text-[#111111] mb-4">Hall Information</h3>
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-xs font-medium text-neutral-600 mb-1.5">Hall Number</p>
@@ -225,9 +225,9 @@ const HousekeepingModal = ({ isOpen, onClose, onSuccess, hall, employees }) => {
 
                 {/* Housekeeping Status */}
                 <div className="bg-neutral-50 rounded-xl p-4 border border-neutral-200">
-                  <h3 className="text-sm font-semibold text-[#472F97] mb-4 flex items-center gap-2">
+                  <h3 className="text-sm font-semibold text-[#111111] mb-4 flex items-center gap-2">
                     <ShieldCheck className="w-4 h-4" />
-                    Housekeeping Status <span className="text-red-500">*</span>
+                    Housekeeping Status <span className="text-neutral-500">*</span>
                   </h3>
                   <div className="grid grid-cols-2 gap-3">
                     {housekeepingStatuses.map(status => (
@@ -237,7 +237,7 @@ const HousekeepingModal = ({ isOpen, onClose, onSuccess, hall, employees }) => {
                         onClick={() => setFormData(prev => ({ ...prev, housekeeping_status: status.value }))}
                         className={`p-3 rounded-lg border-2 font-medium text-sm transition-all ${
                           formData.housekeeping_status === status.value
-                            ? 'border-[#472F97] bg-[#472F97] text-white'
+                            ? 'border-[#111111] bg-[#111111] text-white'
                             : 'border-neutral-200 hover:border-neutral-300 text-neutral-700 bg-white'
                         }`}
                       >
@@ -249,7 +249,7 @@ const HousekeepingModal = ({ isOpen, onClose, onSuccess, hall, employees }) => {
 
                 {/* Assigned To */}
                 <div className="bg-neutral-50 rounded-xl p-4 border border-neutral-200">
-                  <h3 className="text-sm font-semibold text-[#472F97] mb-4 flex items-center gap-2">
+                  <h3 className="text-sm font-semibold text-[#111111] mb-4 flex items-center gap-2">
                     <Users className="w-4 h-4" />
                     Assigned To
                   </h3>
@@ -277,7 +277,7 @@ const HousekeepingModal = ({ isOpen, onClose, onSuccess, hall, employees }) => {
                 <button
                   type="submit"
                   disabled={saving}
-                  className="flex-1 px-4 py-2.5 bg-[#472F97] hover:bg-[#3a2578] text-white font-medium rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  className="flex-1 px-4 py-2.5 bg-[#111111] hover:bg-[#444444] text-white font-medium rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
                   <Save className="w-4 h-4" />
                   {saving ? 'Saving...' : 'Save Changes'}

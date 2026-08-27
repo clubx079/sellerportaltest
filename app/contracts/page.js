@@ -4,13 +4,16 @@ import { useRouter } from 'next/navigation'
 import { FileText, CheckCircle, Plus, Download, Trash2, ChevronLeft, PenLine, Pencil } from 'lucide-react'
 import { DocusealForm } from '@docuseal/react'
 
+// Status is value-encoded, never hue: signed/complete = ink fill, pending/sent
+// = muted fill, declined = white + ink outline, draft = line-2 outline.
+const CHIP_BASE = 'inline-flex items-center h-5 px-2.5 rounded-pill font-mono text-[10.5px] font-semibold uppercase tracking-[0.05em] shrink-0'
 const STATUS = {
-  completed:    { label: 'Completed',         cls: 'text-[#16A34A] bg-[#DCFCE7]' },
-  awaiting_you: { label: 'Needs your signature', cls: 'text-[#D03839] bg-[#FEF0EF]' },
-  viewed:       { label: 'Viewed · not signed', cls: 'text-[#D97706] bg-[#FEF3C7]' },
-  awaiting:     { label: 'Awaiting signature', cls: 'text-[#D97706] bg-[#FEF3C7]' },
-  sent:         { label: 'Sent',              cls: 'text-[#2563EB] bg-[#DBEAFE]' },
-  declined:     { label: 'Declined',          cls: 'text-[#D03839] bg-[#FEF0EF]' },
+  completed:    { label: 'Completed',            cls: 'bg-ink text-white border-[1.5px] border-ink' },
+  awaiting_you: { label: 'Needs your signature', cls: 'bg-muted text-white border-[1.5px] border-muted' },
+  viewed:       { label: 'Viewed · not signed',  cls: 'bg-muted text-white border-[1.5px] border-muted' },
+  awaiting:     { label: 'Awaiting signature',   cls: 'bg-muted text-white border-[1.5px] border-muted' },
+  sent:         { label: 'Sent',                 cls: 'bg-muted text-white border-[1.5px] border-muted' },
+  declined:     { label: 'Declined',             cls: 'bg-white text-ink border-[1.5px] border-ink' },
 }
 
 const isPlaceholder = e => !e || e.includes('@noreply.deelmap.com')
@@ -37,7 +40,7 @@ function deriveStatus(c, myEmail) {
 }
 
 function badge(key) {
-  return STATUS[key] || { label: key ?? 'Unknown', cls: 'text-[#737370] bg-[#F5F5F3]' }
+  return STATUS[key] || { label: key ?? 'Unknown', cls: 'bg-white text-muted border-[1.5px] border-line-2' }
 }
 
 function fmtDate(d) {
@@ -161,30 +164,30 @@ export default function ContractsPage() {
         <div className="flex items-center gap-3 mb-6">
           <button
             onClick={() => { setSigningEmbedSrc(null); fetchContracts() }}
-            className="flex items-center gap-1.5 text-[13px] text-[#737370] hover:text-[#1A1816] transition-colors"
+            className="flex items-center gap-1.5 font-mono text-[11px] font-semibold uppercase tracking-[0.08em] text-muted hover:text-ink transition-colors duration-120"
           >
             <ChevronLeft className="w-4 h-4" /> Back to Contracts
           </button>
         </div>
         <div className="flex items-center gap-3 mb-5">
-          <div className="w-9 h-9 bg-[#D03839]/10 rounded flex items-center justify-center shrink-0">
-            <PenLine className="w-4 h-4 text-[#D03839]" />
+          <div className="w-9 h-9 bg-tint border-[1.5px] border-ink rounded-[10px] flex items-center justify-center shrink-0">
+            <PenLine className="w-4 h-4 text-ink" />
           </div>
           <div>
-            <h1 className="text-[18px] font-bold text-[#1A1816] leading-tight">{signingTitle}</h1>
-            <p className="text-[13px] text-[#737370]">Review and sign below</p>
+            <h1 className="font-display text-[18px] font-bold text-body tracking-[-0.01em] leading-tight">{signingTitle}</h1>
+            <p className="text-[13px] text-muted">Review and sign below</p>
           </div>
         </div>
-        <div className="bg-white border border-[#E8E8E4] rounded overflow-hidden">
+        <div className="bg-white border-[1.5px] border-ink rounded-[12px] shadow-offset-4 overflow-hidden">
           <DocusealForm
             src={signingEmbedSrc}
             email={email}
             withTitle={false}
             withDownloadButton={false}
             customCss={`
-              body { font-family: 'DM Sans', -apple-system, sans-serif !important; }
-              .base-button { background: #D03839 !important; border-color: #D03839 !important; border-radius: 4px !important; }
-              .base-button:hover { background: #E0493B !important; }
+              body { font-family: 'Instrument Sans', -apple-system, sans-serif !important; }
+              .base-button { background: #111111 !important; border-color: #111111 !important; border-radius: 4px !important; }
+              .base-button:hover { background: #444444 !important; }
             `}
             onComplete={handleSigningComplete}
           />
@@ -197,9 +200,9 @@ export default function ContractsPage() {
   if (loading) {
     return (
       <div className="p-4 lg:p-6 space-y-3 animate-pulse">
-        <div className="h-7 bg-[#E8E8E4] rounded w-36" />
-        <div className="h-4 bg-[#E8E8E4] rounded w-56" />
-        {[1, 2, 3].map(i => <div key={i} className="h-16 bg-[#E8E8E4] rounded" />)}
+        <div className="h-7 bg-hairline rounded-[8px] w-36" />
+        <div className="h-4 bg-hairline rounded-[8px] w-56" />
+        {[1, 2, 3].map(i => <div key={i} className="h-16 bg-hairline rounded-[12px]" />)}
       </div>
     )
   }
@@ -208,39 +211,39 @@ export default function ContractsPage() {
     <div className="p-4 lg:p-6">
       {showBetaPopup && (
         <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={dismissBeta}>
-          <div className="bg-white rounded-lg w-full max-w-md shadow-xl overflow-hidden" onClick={e => e.stopPropagation()}>
+          <div className="bg-white border-[1.5px] border-ink rounded-[14px] shadow-offset-6 w-full max-w-md overflow-hidden" onClick={e => e.stopPropagation()}>
             <div className="px-6 pt-6 pb-2 flex items-start gap-3">
-              <div className="w-10 h-10 bg-[#FEF3E2] rounded-full flex items-center justify-center shrink-0"><FileText className="w-5 h-5 text-[#B5620A]" /></div>
+              <div className="w-10 h-10 bg-tint border-[1.5px] border-ink rounded-[10px] flex items-center justify-center shrink-0"><FileText className="w-5 h-5 text-ink" /></div>
               <div>
                 <div className="flex items-center gap-2 mb-1">
-                  <h2 className="text-[17px] font-bold text-[#1A1816]">Contracts is in beta</h2>
-                  <span className="text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded bg-[#FEF3E2] text-[#B5620A]">Beta</span>
+                  <h2 className="font-display text-[17px] font-bold text-body tracking-[-0.01em]">Contracts is in beta</h2>
+                  <span className={`${CHIP_BASE} bg-white text-ink border-[1.5px] border-line-2`}>Beta</span>
                 </div>
-                <p className="text-[13px] text-[#737370] leading-relaxed">We're beta-testing contract sharing. Try it out and let us know what you think — your feedback shapes it.</p>
+                <p className="text-[13px] text-muted leading-relaxed">We're beta-testing contract sharing. Try it out and let us know what you think — your feedback shapes it.</p>
               </div>
             </div>
-            <div className="px-4 py-3 mx-6 my-3 bg-[#FAFAF8] border border-[#E8E8E4] rounded flex items-center justify-between">
-              <span className="text-[13px] text-[#444441]">Cost per contract</span>
-              <span className="text-[15px] font-bold text-[#1A1816]">$2.99</span>
+            <div className="px-4 py-3 mx-6 my-3 bg-tint-3 border-[1.5px] border-line rounded-[10px] flex items-center justify-between">
+              <span className="font-mono text-[11px] font-semibold uppercase tracking-[0.08em] text-smoke-2">Cost per contract</span>
+              <span className="font-mono text-[15px] font-bold text-ink">$2.99</span>
             </div>
             <div className="px-6 pb-6 pt-2">
-              <button onClick={dismissBeta} className="w-full h-10 bg-[#D03839] hover:bg-[#E0493B] text-white text-[14px] font-semibold rounded transition-colors">Got it</button>
+              <button onClick={dismissBeta} className="w-full h-10 bg-ink hover:bg-smoke-2 text-white text-[14px] font-semibold border-[1.5px] border-ink rounded-[10px] shadow-soft-3 transition-all duration-120">Got it</button>
             </div>
           </div>
         </div>
       )}
       <div className="flex items-start justify-between mb-6">
         <div>
-          <h1 className="text-[24px] font-bold text-[#1A1816] mb-1 flex items-center gap-2">
+          <h1 className="font-display text-[24px] font-bold text-body tracking-[-0.02em] mb-1 flex items-center gap-2">
             Contracts
-            <span className="text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded bg-[#FEF3E2] text-[#B5620A]">Beta</span>
+            <span className={`${CHIP_BASE} bg-white text-ink border-[1.5px] border-line-2`}>Beta</span>
           </h1>
-          <p className="text-[14px] text-[#737370]">Send and manage e-signature contracts with buyers.</p>
+          <p className="text-[14px] text-muted">Send and manage e-signature contracts with buyers.</p>
         </div>
         {canCreateContract && (
           <button
             onClick={() => router.push('/contracts/new')}
-            className="flex items-center gap-1.5 h-9 px-4 bg-[#D03839] hover:bg-[#E0493B] text-white text-[13px] font-semibold rounded transition-colors shrink-0"
+            className="flex items-center gap-1.5 h-9 px-4 bg-ink hover:bg-smoke-2 text-white text-[13px] font-semibold border-[1.5px] border-ink rounded-[10px] shadow-soft-3 transition-all duration-120 shrink-0"
           >
             <Plus className="w-4 h-4" /> New Contract
           </button>
@@ -261,11 +264,11 @@ export default function ContractsPage() {
           { key: 'completed', label: 'Completed' },
         ]
         return (
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-6">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
             {cards.map(card => (
-              <div key={card.key} className="bg-white border border-[#E8E8E4] rounded p-3">
-                <div className="text-[22px] font-bold text-[#1A1816] leading-none">{counts[card.key] || 0}</div>
-                <div className="text-[12px] text-[#737370] mt-1">{card.label}</div>
+              <div key={card.key} className="bg-white border-[1.5px] border-ink rounded-[12px] shadow-offset-3 p-3">
+                <div className="font-display text-[22px] font-bold text-body leading-none">{counts[card.key] || 0}</div>
+                <div className="font-mono text-[10.5px] font-semibold uppercase tracking-[0.08em] text-muted mt-1.5">{card.label}</div>
               </div>
             ))}
           </div>
@@ -276,8 +279,8 @@ export default function ContractsPage() {
       {drafts.length > 0 && (
         <div className="mb-6">
           <div className="flex items-center justify-between mb-2">
-            <h2 className="text-[13px] font-bold text-[#1A1816] uppercase tracking-wide">In Progress</h2>
-            <span className="text-[12px] text-[#A8A8A4]">{drafts.length} draft{drafts.length === 1 ? '' : 's'}</span>
+            <h2 className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-ink">In Progress</h2>
+            <span className="font-mono text-[11px] text-mist">{drafts.length} draft{drafts.length === 1 ? '' : 's'}</span>
           </div>
           <div className="space-y-2">
             {drafts.map(d => {
@@ -291,20 +294,20 @@ export default function ContractsPage() {
                 ? (d.field_values?.__seller_name || d.field_values?.__seller_email || 'Other party not set')
                 : (d.buyer_name || d.buyer_email || 'Other party not set')
               return (
-                <div key={d.id} className="bg-white border border-dashed border-[#E8E8E4] rounded p-4 flex items-center gap-4">
-                  <div className="w-9 h-9 bg-[#FAFAF8] border border-[#E8E8E4] rounded flex items-center justify-center shrink-0">
-                    <Pencil className="w-4 h-4 text-[#A8A8A4]" />
+                <div key={d.id} className="bg-white border-[1.5px] border-dashed border-line rounded-[12px] p-4 flex items-center gap-4">
+                  <div className="w-9 h-9 bg-tint-3 border-[1.5px] border-line rounded-[10px] flex items-center justify-center shrink-0">
+                    <Pencil className="w-4 h-4 text-mist" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-0.5 flex-wrap">
-                      <span className="text-[14px] font-semibold text-[#1A1816] truncate">
+                      <span className="text-[14px] font-semibold text-body truncate">
                         {address}
                       </span>
-                      <span className="inline-flex h-5 px-2 rounded text-[11px] font-semibold shrink-0 items-center text-[#737370] bg-[#F5F5F3]">
+                      <span className={`${CHIP_BASE} bg-white text-muted border-[1.5px] border-line-2`}>
                         Draft
                       </span>
                     </div>
-                    <div className="flex items-center gap-3 text-[12px] text-[#737370] flex-wrap">
+                    <div className="flex items-center gap-3 font-mono text-[11.5px] text-muted flex-wrap">
                       <span>Last updated {fmtDate(d.updated_at)}</span>
                       <span>Other party: {counterparty}</span>
                     </div>
@@ -312,17 +315,17 @@ export default function ContractsPage() {
                   <div className="shrink-0 flex items-center gap-2">
                     <button
                       onClick={() => router.push(`/contracts/new?draft_id=${d.id}`)}
-                      className="h-8 px-4 bg-[#1A1816] hover:bg-[#000] text-white text-[13px] font-semibold rounded transition-colors"
+                      className="h-8 px-4 bg-ink hover:bg-smoke-2 text-white text-[13px] font-semibold border-[1.5px] border-ink rounded-[10px] shadow-soft-3 transition-all duration-120"
                     >
                       Resume
                     </button>
                     <button
                       onClick={() => handleDeleteDraft(d.id)}
                       disabled={deletingDraftId === d.id}
-                      className="h-8 w-8 flex items-center justify-center border border-[#E8E8E4] hover:border-[#D03839] hover:text-[#D03839] text-[#A8A8A4] rounded transition-colors disabled:opacity-50"
+                      className="h-8 w-8 flex items-center justify-center bg-white border-[1.5px] border-line hover:border-ink hover:text-ink text-mist rounded-[8px] transition-colors duration-120 disabled:opacity-50"
                     >
                       {deletingDraftId === d.id
-                        ? <span className="w-3.5 h-3.5 border-2 border-[#A8A8A4] border-t-transparent rounded-full animate-spin" />
+                        ? <span className="w-3.5 h-3.5 border-2 border-mist border-t-transparent rounded-full animate-spin" />
                         : <Trash2 className="w-3.5 h-3.5" />}
                     </button>
                   </div>
@@ -334,17 +337,17 @@ export default function ContractsPage() {
       )}
 
       {contracts.length === 0 && drafts.length === 0 ? (
-        <div className="border border-[#E8E8E4] rounded bg-white p-12 text-center">
-          <div className="w-12 h-12 bg-[#D03839]/10 rounded flex items-center justify-center mx-auto mb-4">
-            <FileText className="w-6 h-6 text-[#D03839]" />
+        <div className="bg-white border-[1.5px] border-ink rounded-[14px] shadow-offset-4 p-12 text-center">
+          <div className="w-12 h-12 bg-tint border-[1.5px] border-ink rounded-[10px] flex items-center justify-center mx-auto mb-4">
+            <FileText className="w-6 h-6 text-ink" />
           </div>
-          <h3 className="text-[15px] font-semibold text-[#1A1816] mb-1">No contracts yet</h3>
-          <p className="text-[13px] text-[#737370] max-w-[300px] mx-auto leading-relaxed mb-4">
+          <h3 className="font-display text-[16.5px] font-semibold tracking-[-0.01em] text-body mb-1">No contracts yet</h3>
+          <p className="text-[13px] text-muted max-w-[300px] mx-auto leading-relaxed mb-4">
             Send your first contract to a buyer to get started.
           </p>
           {canCreateContract && (
             <button onClick={() => router.push('/contracts/new')}
-              className="inline-flex items-center gap-1.5 h-9 px-4 bg-[#D03839] hover:bg-[#E0493B] text-white text-[13px] font-semibold rounded transition-colors">
+              className="inline-flex items-center gap-1.5 h-9 px-4 bg-ink hover:bg-smoke-2 text-white text-[13px] font-semibold border-[1.5px] border-ink rounded-[10px] shadow-soft-3 transition-all duration-120">
               <Plus className="w-4 h-4" /> New Contract
             </button>
           )}
@@ -352,7 +355,7 @@ export default function ContractsPage() {
       ) : (
         <div className="space-y-2">
           {contracts.length > 0 && (
-            <h2 className="text-[13px] font-bold text-[#1A1816] uppercase tracking-wide mb-1">Sent</h2>
+            <h2 className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-ink mb-2">Sent</h2>
           )}
           {contracts.map(c => {
             const statusKey = deriveStatus(c, email)
@@ -363,21 +366,21 @@ export default function ContractsPage() {
             const property = c.name
 
             return (
-              <div key={c.id} className="bg-white border border-[#E8E8E4] rounded p-4 flex items-center gap-4">
-                <div className="w-9 h-9 bg-[#FAFAF8] border border-[#E8E8E4] rounded flex items-center justify-center shrink-0">
-                  <FileText className="w-4 h-4 text-[#737370]" />
+              <div key={c.id} className="bg-white border-[1.5px] border-ink rounded-[12px] shadow-offset-3 p-4 flex items-center gap-4">
+                <div className="w-9 h-9 bg-tint-3 border-[1.5px] border-line rounded-[10px] flex items-center justify-center shrink-0">
+                  <FileText className="w-4 h-4 text-muted" />
                 </div>
 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-0.5 flex-wrap">
-                    <span className="text-[14px] font-semibold text-[#1A1816] truncate">
+                    <span className="text-[14px] font-semibold text-body truncate">
                       {property || c.template?.name || `Contract #${c.id}`}
                     </span>
-                    <span className={`inline-flex h-5 px-2 rounded text-[11px] font-semibold shrink-0 items-center ${cls}`}>
+                    <span className={`${CHIP_BASE} ${cls}`}>
                       {label}
                     </span>
                   </div>
-                  <div className="flex items-center gap-3 text-[12px] text-[#737370] flex-wrap">
+                  <div className="flex items-center gap-3 font-mono text-[11.5px] text-muted flex-wrap">
                     <span>{fmtDate(c.created_at)}</span>
                     {others.length > 0 && (
                       <span>Other party: {others.map(s => s.name || s.email).join(', ')}</span>
@@ -388,16 +391,16 @@ export default function ContractsPage() {
                 <div className="shrink-0 flex items-center gap-2">
                   {c.status === 'completed' ? (
                     <>
-                      <span className="text-[12px] text-[#16A34A] font-medium flex items-center gap-1">
+                      <span className="font-mono text-[10.5px] font-semibold uppercase tracking-[0.05em] text-ink flex items-center gap-1">
                         <CheckCircle className="w-3.5 h-3.5" /> Signed
                       </span>
                       <button
                         onClick={() => handleDownload(c.id)}
                         disabled={downloadingId === c.id}
-                        className="h-8 px-3 border border-[#E8E8E4] hover:bg-[#FAFAF8] text-[#444441] text-[12px] font-semibold rounded transition-colors flex items-center gap-1.5 disabled:opacity-50"
+                        className="h-8 px-3 bg-white border-[1.5px] border-ink hover:bg-tint text-ink text-[12px] font-semibold rounded-[10px] shadow-offset-2 transition-colors duration-120 flex items-center gap-1.5 disabled:opacity-50"
                       >
                         {downloadingId === c.id
-                          ? <span className="w-3.5 h-3.5 border-2 border-[#A8A8A4] border-t-transparent rounded-full animate-spin" />
+                          ? <span className="w-3.5 h-3.5 border-2 border-mist border-t-transparent rounded-full animate-spin" />
                           : <Download className="w-3.5 h-3.5" />}
                         Download
                       </button>
@@ -405,22 +408,22 @@ export default function ContractsPage() {
                   ) : canSign ? (
                     <button
                       onClick={() => handleSignInline(c)}
-                      className="h-8 px-4 bg-[#D03839] hover:bg-[#E0493B] text-white text-[13px] font-semibold rounded transition-colors flex items-center gap-1.5"
+                      className="h-8 px-4 bg-ink hover:bg-smoke-2 text-white text-[13px] font-semibold border-[1.5px] border-ink rounded-[10px] shadow-soft-3 transition-all duration-120 flex items-center gap-1.5"
                     >
                       <PenLine className="w-3.5 h-3.5" /> Sign Now
                     </button>
                   ) : (
-                    <span className="text-[12px] text-[#737370]">
+                    <span className="font-mono text-[11px] text-muted">
                       {statusKey === 'viewed' ? 'Viewed · not signed' : 'Awaiting other party'}
                     </span>
                   )}
                   <button
                     onClick={() => setConfirmDelete({ id: c.id, title: property || c.template?.name || `Contract #${c.id}`, completed: statusKey === 'completed' })}
                     disabled={deletingId === c.id}
-                    className="h-8 w-8 flex items-center justify-center border border-[#E8E8E4] hover:border-[#D03839] hover:text-[#D03839] text-[#A8A8A4] rounded transition-colors disabled:opacity-50"
+                    className="h-8 w-8 flex items-center justify-center bg-white border-[1.5px] border-line hover:border-ink hover:text-ink text-mist rounded-[8px] transition-colors duration-120 disabled:opacity-50"
                   >
                     {deletingId === c.id
-                      ? <span className="w-3.5 h-3.5 border-2 border-[#A8A8A4] border-t-transparent rounded-full animate-spin" />
+                      ? <span className="w-3.5 h-3.5 border-2 border-mist border-t-transparent rounded-full animate-spin" />
                       : <Trash2 className="w-3.5 h-3.5" />}
                   </button>
                 </div>
@@ -433,19 +436,19 @@ export default function ContractsPage() {
       {/* Delete confirmation */}
       {confirmDelete && (
         <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/40 px-4" onClick={() => deletingId == null && setConfirmDelete(null)}>
-          <div className="w-full max-w-[420px] bg-white border border-[#E8E8E4] rounded-lg shadow-xl overflow-hidden" onClick={e => e.stopPropagation()}>
+          <div className="w-full max-w-[420px] bg-white border-[1.5px] border-ink rounded-[14px] shadow-offset-6 overflow-hidden" onClick={e => e.stopPropagation()}>
             <div className="px-6 pt-6 pb-2">
-              <div className="w-10 h-10 rounded-full bg-[#FEF0EF] flex items-center justify-center mb-4">
-                <Trash2 className="w-5 h-5 text-[#D03839]" />
+              <div className="w-10 h-10 bg-tint border-[1.5px] border-ink rounded-[10px] flex items-center justify-center mb-4">
+                <Trash2 className="w-5 h-5 text-ink" />
               </div>
-              <h3 className="text-[17px] font-bold text-[#1A1816] tracking-[-0.2px]">Delete this contract?</h3>
-              <p className="text-[13px] text-[#737370] mt-2 leading-relaxed">
-                You're about to delete <span className="font-semibold text-[#444441]">{confirmDelete.title}</span>. This permanently removes it from your contracts and can't be undone.
+              <h3 className="font-display text-[17px] font-bold text-body tracking-[-0.01em]">Delete this contract?</h3>
+              <p className="text-[13px] text-muted mt-2 leading-relaxed">
+                You're about to delete <span className="font-semibold text-smoke-2">{confirmDelete.title}</span>. This permanently removes it from your contracts and can't be undone.
               </p>
               {confirmDelete.completed && (
-                <div className="mt-3 flex items-start gap-2 px-3 py-2.5 bg-[#FEF0EF] border border-[#F5C4C0] rounded">
-                  <span className="text-[13px] text-[#D03839] leading-snug">
-                    This contract is <span className="font-semibold">completed and signed</span>. Deleting it removes the signed PDF — make sure you've downloaded a copy first.
+                <div className="mt-3 flex items-start gap-2 px-3 py-2.5 bg-tint border-[1.5px] border-ink rounded-[10px]">
+                  <span className="text-[13px] text-ink font-semibold leading-snug">
+                    This contract is completed and signed. Deleting it removes the signed PDF — make sure you've downloaded a copy first.
                   </span>
                 </div>
               )}
@@ -454,14 +457,14 @@ export default function ContractsPage() {
               <button
                 onClick={() => setConfirmDelete(null)}
                 disabled={deletingId != null}
-                className="h-9 px-4 border border-[#E8E8E4] hover:bg-[#FAFAF8] text-[#444441] text-[13px] font-semibold rounded transition-colors disabled:opacity-50"
+                className="h-9 px-4 bg-white border-[1.5px] border-ink hover:bg-tint text-ink text-[13px] font-semibold rounded-[10px] shadow-offset-2 transition-colors duration-120 disabled:opacity-50"
               >
                 Cancel
               </button>
               <button
                 onClick={() => handleDelete(confirmDelete.id)}
                 disabled={deletingId != null}
-                className="h-9 px-4 bg-[#D03839] hover:bg-[#E0493B] text-white text-[13px] font-semibold rounded transition-colors flex items-center gap-1.5 disabled:opacity-60"
+                className="h-9 px-4 bg-ink hover:bg-smoke-2 text-white text-[13px] font-semibold border-[1.5px] border-ink rounded-[10px] shadow-soft-3 transition-all duration-120 flex items-center gap-1.5 disabled:opacity-60"
               >
                 {deletingId != null
                   ? <><span className="w-3.5 h-3.5 border-2 border-white/60 border-t-transparent rounded-full animate-spin" /> Deleting…</>

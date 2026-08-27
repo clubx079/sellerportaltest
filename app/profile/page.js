@@ -10,7 +10,7 @@ export default function ProfilePage() {
   }, [router])
   return (
     <div className="flex items-center justify-center min-h-[40vh]">
-      <p className="text-sm text-gray-500">Redirecting to Settings...</p>
+      <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-muted">Redirecting to Settings...</p>
     </div>
   )
 }

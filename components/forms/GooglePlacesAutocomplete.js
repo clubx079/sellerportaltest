@@ -127,7 +127,7 @@ export default function GooglePlacesAutocomplete({ onAddressSelect, onInputChang
       value={value}
       onChange={(e) => { setValue(e.target.value); onInputChange?.(e.target.value); }}
       placeholder={placeholder}
-      className={className || "w-full px-4 py-3 border border-[#E8E8E4] rounded focus:border-[#D03839] focus:outline-none transition-colors text-[13px] text-[#1A1816] placeholder:text-[#A8A8A4]"}
+      className={className || "w-full bg-white border-[1.5px] border-line rounded-[9px] px-3.5 py-3 text-[14px] text-body placeholder:text-mist focus:border-ink focus:shadow-offset-3 focus:outline-none transition-all duration-120"}
     />
   );
 }

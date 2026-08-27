@@ -83,7 +83,7 @@ const AddForm = ({ isOpen, onClose, onSuccess, userId }) => {
             className="fixed right-0 top-0 h-screen w-full md:w-[600px] lg:w-[700px] bg-white shadow-2xl z-[60] flex flex-col"
           >
             {/* Header */}
-            <div className="bg-[#472F97] px-6 py-4 flex items-center justify-between">
+            <div className="bg-[#111111] px-6 py-4 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center">
                   <Building2 className="w-5 h-5 text-white" />
@@ -113,26 +113,26 @@ const AddForm = ({ isOpen, onClose, onSuccess, userId }) => {
                   <div className="space-y-4">
                     <div>
                       <label className="block text-xs font-medium text-neutral-600 mb-1.5">
-                        Floor Name <span className="text-red-500">*</span>
+                        Floor Name <span className="text-neutral-500">*</span>
                       </label>
                       <input
                         type="text"
                         value={formData.name}
                         onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                        className="w-full border border-neutral-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#472F97] focus:border-transparent"
+                        className="w-full border border-neutral-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#111111] focus:border-transparent"
                         placeholder="e.g., Ground Floor"
                         required
                       />
                     </div>
                     <div>
                       <label className="block text-xs font-medium text-neutral-600 mb-1.5">
-                        Floor Number <span className="text-red-500">*</span>
+                        Floor Number <span className="text-neutral-500">*</span>
                       </label>
                       <input
                         type="number"
                         value={formData.floor_number}
                         onChange={(e) => setFormData(prev => ({ ...prev, floor_number: e.target.value }))}
-                        className="w-full border border-neutral-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#472F97] focus:border-transparent"
+                        className="w-full border border-neutral-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#111111] focus:border-transparent"
                         placeholder="e.g., 1"
                         required
                       />
@@ -152,7 +152,7 @@ const AddForm = ({ isOpen, onClose, onSuccess, userId }) => {
                       value={formData.description}
                       onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
                       rows="4"
-                      className="w-full border border-neutral-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#472F97] focus:border-transparent"
+                      className="w-full border border-neutral-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#111111] focus:border-transparent"
                       placeholder="Enter floor description..."
                     />
                   </div>
@@ -167,7 +167,7 @@ const AddForm = ({ isOpen, onClose, onSuccess, userId }) => {
                       id="add-active"
                       checked={formData.is_active}
                       onChange={(e) => setFormData(prev => ({ ...prev, is_active: e.target.checked }))}
-                      className="w-5 h-5 text-neutral-900 border-neutral-300 rounded focus:ring-[#472F97]"
+                      className="w-5 h-5 text-neutral-900 border-neutral-300 rounded focus:ring-[#111111]"
                     />
                     <label htmlFor="add-active" className="text-sm font-semibold text-neutral-700">
                       Set as Active
@@ -188,7 +188,7 @@ const AddForm = ({ isOpen, onClose, onSuccess, userId }) => {
                 <button
                   type="submit"
                   disabled={saving}
-                  className="flex-1 px-4 py-2.5 bg-[#472F97] hover:bg-[#3a2578] text-white font-medium rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  className="flex-1 px-4 py-2.5 bg-[#111111] hover:bg-[#444444] text-white font-medium rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
                   <Save className="w-4 h-4" />
                   {saving ? 'Saving...' : 'Save Floor'}

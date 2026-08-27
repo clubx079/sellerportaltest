@@ -11,8 +11,8 @@ const PLAN_CONFIG = {
   pro: {
     name:      'Pro Seller',
     Icon:      Zap,
-    iconBg:    'bg-[#FEF0EF]',
-    iconColor: 'text-[#D03839]',
+    iconBg:    'bg-tint',
+    iconColor: 'text-ink',
     prices:    { monthly: 99, annual: 79, annualTotal: 948 },
     features: [
       'Verified seller badge',
@@ -26,7 +26,7 @@ const PLAN_CONFIG = {
   enterprise: {
     name:      'Enterprise',
     Icon:      Building2,
-    iconBg:    'bg-[#1A1816]',
+    iconBg:    'bg-ink',
     iconColor: 'text-white',
     prices:    { monthly: 299, annual: 239, annualTotal: 2868 },
     features: [
@@ -168,7 +168,7 @@ function UpgradeContent() {
   if (!targetCfg) {
     return (
       <div className="min-h-[50vh] flex items-center justify-center">
-        <p className="text-[13px] text-[#737370]">Invalid plan type.</p>
+        <p className="text-[13px] text-muted">Invalid plan type.</p>
       </div>
     )
   }
@@ -176,7 +176,7 @@ function UpgradeContent() {
   if (loading) {
     return (
       <div className="min-h-[50vh] flex items-center justify-center">
-        <Loader2 className="w-6 h-6 animate-spin text-[#737370]" />
+        <Loader2 className="w-6 h-6 animate-spin text-muted" />
       </div>
     )
   }
@@ -206,12 +206,12 @@ function UpgradeContent() {
   if (isCycleSwitch) ctaLabel = `Switch to ${isAnnual ? 'Annual' : 'Monthly'}`
 
   return (
-    <div className="space-y-5" style={{ fontFamily: 'var(--font-dm-sans), sans-serif' }}>
+    <div className="space-y-5">
 
       {/* Back */}
       <button
         onClick={() => router.push('/plans')}
-        className="flex items-center gap-1.5 text-[13px] text-[#737370] hover:text-[#1A1816] transition-colors"
+        className="flex items-center gap-1.5 font-mono text-[11px] font-semibold uppercase tracking-[0.08em] text-muted hover:text-ink transition-colors duration-120"
       >
         <ArrowLeft className="w-4 h-4" />
         Back to Plans
@@ -219,25 +219,25 @@ function UpgradeContent() {
 
       {/* Header */}
       <div>
-        <h1 className="text-[20px] font-bold text-[#1A1816] tracking-tight">{pageTitle}</h1>
-        <p className="text-[13px] text-[#737370] mt-0.5">Review your plan change before confirming.</p>
+        <h1 className="font-display text-[22px] font-bold text-body tracking-[-0.02em]">{pageTitle}</h1>
+        <p className="text-[13px] text-muted mt-0.5">Review your plan change before confirming.</p>
       </div>
 
       {/* Property block warning */}
       {propBlock && (
-        <div className="flex items-start gap-3 p-4 bg-[#FEF0EF] border border-[#F5C4C0] rounded">
-          <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5 text-[#D03839]" />
+        <div className="flex items-start gap-3 p-4 bg-tint border-[1.5px] border-ink rounded-[12px]">
+          <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5 text-ink" />
           <div className="flex-1">
-            <p className="text-[13px] font-semibold text-[#B82F30] mb-1">
+            <p className="text-[13px] font-semibold text-ink mb-1">
               {propBlock.count} active listings detected
             </p>
-            <p className="text-[12px] text-[#B82F30] leading-relaxed">
+            <p className="text-[12px] font-semibold text-ink leading-relaxed">
               Pro allows a max 5 listings. Please deactivate {propBlock.count - 5} listing{propBlock.count - 5 > 1 ? 's' : ''} before switching.
             </p>
           </div>
           <a
             href="/properties"
-            className="flex-shrink-0 text-[12px] font-semibold text-[#D03839] underline underline-offset-2 hover:no-underline whitespace-nowrap"
+            className="flex-shrink-0 font-mono text-[11px] font-semibold uppercase tracking-[0.05em] text-ink underline underline-offset-2 hover:no-underline whitespace-nowrap"
           >
             Manage listings
           </a>
@@ -251,9 +251,9 @@ function UpgradeContent() {
         <div className="space-y-5">
 
           {/* Plan transition card */}
-          <div className="bg-white border border-[#E8E8E4] rounded overflow-hidden">
-            <div className="px-5 py-4 border-b border-[#E8E8E4]">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.09em] text-[#A8A8A4]">Plan change</p>
+          <div className="bg-white border-[1.5px] border-ink rounded-[14px] shadow-offset-4 overflow-hidden">
+            <div className="px-5 py-4 border-b-[1.5px] border-ink">
+              <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-ink">Plan change</p>
             </div>
             <div className="p-5 flex items-center gap-4">
 
@@ -262,12 +262,12 @@ function UpgradeContent() {
                 const CurrIcon = currentCfg.Icon
                 return (
                   <div className="flex items-center gap-3 flex-1 min-w-0">
-                    <div className={`w-10 h-10 rounded flex items-center justify-center flex-shrink-0 ${currentCfg.iconBg}`}>
+                    <div className={`w-10 h-10 rounded-[10px] border-[1.5px] border-ink flex items-center justify-center flex-shrink-0 ${currentCfg.iconBg}`}>
                       <CurrIcon className={`w-5 h-5 ${currentCfg.iconColor}`} />
                     </div>
                     <div className="min-w-0">
-                      <p className="text-[14px] font-semibold text-[#1A1816] leading-tight">{currentCfg.name}</p>
-                      <p className="text-[12px] text-[#A8A8A4] mt-0.5">
+                      <p className="font-display text-[14.5px] font-semibold text-body tracking-[-0.01em] leading-tight">{currentCfg.name}</p>
+                      <p className="font-mono text-[11px] text-muted mt-0.5">
                         {plan?.billing_cycle === 'annual' ? 'Annual' : 'Monthly'}
                         {isTrialing && ' · Trial'}
                       </p>
@@ -277,20 +277,20 @@ function UpgradeContent() {
               })()}
 
               {/* Arrow */}
-              <div className="w-8 h-8 rounded-full bg-[#F3F3F0] flex items-center justify-center flex-shrink-0">
+              <div className="w-8 h-8 rounded-pill bg-tint border-[1.5px] border-ink flex items-center justify-center flex-shrink-0">
                 <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                  <path d="M3 7h8M7 3l4 4-4 4" stroke="#737370" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                  <path d="M3 7h8M7 3l4 4-4 4" stroke="#111111" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               </div>
 
               {/* Target plan */}
               <div className="flex items-center gap-3 flex-1 min-w-0">
-                <div className={`w-10 h-10 rounded flex items-center justify-center flex-shrink-0 ${targetCfg.iconBg}`}>
+                <div className={`w-10 h-10 rounded-[10px] border-[1.5px] border-ink flex items-center justify-center flex-shrink-0 ${targetCfg.iconBg}`}>
                   <TargetIcon className={`w-5 h-5 ${targetCfg.iconColor}`} />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-[14px] font-semibold text-[#1A1816] leading-tight">{targetCfg.name}</p>
-                  <p className="text-[12px] text-[#A8A8A4] mt-0.5">{isAnnual ? 'Annual' : 'Monthly'}</p>
+                  <p className="font-display text-[14.5px] font-semibold text-body tracking-[-0.01em] leading-tight">{targetCfg.name}</p>
+                  <p className="font-mono text-[11px] text-muted mt-0.5">{isAnnual ? 'Annual' : 'Monthly'}</p>
                 </div>
               </div>
 
@@ -298,19 +298,17 @@ function UpgradeContent() {
           </div>
 
           {/* Features card */}
-          <div className="bg-white border border-[#E8E8E4] rounded overflow-hidden">
-            <div className="px-5 py-4 border-b border-[#E8E8E4]">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.09em] text-[#A8A8A4]">
+          <div className="bg-white border-[1.5px] border-ink rounded-[14px] shadow-offset-4 overflow-hidden">
+            <div className="px-5 py-4 border-b-[1.5px] border-ink">
+              <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-ink">
                 {isCycleSwitch ? `What's included` : `What you're getting`}
               </p>
             </div>
             <div className="p-5">
               <ul className="space-y-3">
                 {targetCfg.features.map((feat, i) => (
-                  <li key={i} className="flex items-center gap-2.5 text-[13px] text-[#1A1816]">
-                    <span className="w-4 h-4 rounded-full bg-[#E4F5EC] border border-[#9FDBB8] flex items-center justify-center flex-shrink-0">
-                      <Check className="w-2.5 h-2.5 text-[#0F6E56]" />
-                    </span>
+                  <li key={i} className="flex items-center gap-2.5 text-[13.5px] text-body">
+                    <span className="font-mono text-[12px] font-bold text-ink flex-shrink-0">✓</span>
                     {feat}
                   </li>
                 ))}
@@ -321,10 +319,10 @@ function UpgradeContent() {
         </div>
 
         {/* ── Right: order summary ── */}
-        <div className="bg-white border border-[#E8E8E4] rounded overflow-hidden sticky top-6">
+        <div className="bg-white border-[1.5px] border-ink rounded-[14px] shadow-offset-5 overflow-hidden sticky top-6">
 
-          <div className="px-5 py-4 border-b border-[#E8E8E4]">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.09em] text-[#A8A8A4]">Order Summary</p>
+          <div className="px-5 py-4 border-b-[1.5px] border-ink">
+            <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-ink">Order Summary</p>
           </div>
 
           <div className="p-5 space-y-4">
@@ -332,35 +330,35 @@ function UpgradeContent() {
             {/* Plan name + price */}
             <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="text-[17px] font-bold text-[#1A1816] leading-tight">{targetCfg.name}</p>
-                <p className="text-[12px] text-[#737370] mt-0.5">{isAnnual ? 'Annual billing' : 'Monthly billing'}</p>
+                <p className="font-display text-[17px] font-bold text-body tracking-[-0.01em] leading-tight">{targetCfg.name}</p>
+                <p className="font-mono text-[11px] text-muted mt-0.5">{isAnnual ? 'Annual billing' : 'Monthly billing'}</p>
               </div>
               <div className="text-right flex-shrink-0">
                 <div className="flex items-end gap-1 leading-none">
-                  <span className="text-[32px] font-bold text-[#1A1816] tracking-tight leading-none">
+                  <span className="font-display text-[32px] font-bold text-body tracking-[-0.02em] leading-none">
                     <sup className="text-[14px] font-normal align-super">$</sup>{isAnnual ? annualTotal.toLocaleString() : price}
                   </span>
-                  <span className="text-[12px] text-[#737370] mb-0.5">{isAnnual ? '/yr' : '/mo'}</span>
+                  <span className="font-mono text-[11px] text-muted mb-0.5">{isAnnual ? '/yr' : '/mo'}</span>
                 </div>
                 {isAnnual && (
-                  <p className="text-[11px] text-[#A8A8A4] mt-1">${price}/mo · billed upfront</p>
+                  <p className="font-mono text-[10.5px] text-mist mt-1">${price}/mo · billed upfront</p>
                 )}
               </div>
             </div>
 
             {isAnnual && (
-              <div className="flex items-center justify-between px-3 py-2 bg-[#E4F5EC] border border-[#9FDBB8] rounded">
-                <p className="text-[12px] font-semibold text-[#0F6E56]">Annual discount</p>
-                <p className="text-[12px] font-semibold text-[#0F6E56]">Save 20%</p>
+              <div className="flex items-center justify-between px-3 py-2 bg-tint border-[1.5px] border-ink rounded-[10px]">
+                <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.05em] text-ink">Annual discount</p>
+                <p className="font-mono text-[11px] font-semibold text-ink">Save 20%</p>
               </div>
             )}
 
             {/* Promo code */}
             {appliedPromo ? (
-              <div className="flex items-center justify-between px-3 py-2 bg-[#E4F5EC] border border-[#9FDBB8] rounded">
+              <div className="flex items-center justify-between px-3 py-2 bg-tint border-[1.5px] border-ink rounded-[10px]">
                 <div>
-                  <p className="text-[12px] font-semibold text-[#0F6E56]">{appliedPromo.name || promoCode.toUpperCase()} applied</p>
-                  <p className="text-[11px] text-[#0F6E56]">
+                  <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.05em] text-ink">{appliedPromo.name || promoCode.toUpperCase()} applied</p>
+                  <p className="font-mono text-[10.5px] text-ink">
                     {appliedPromo.discount.type === 'percent'
                       ? `${appliedPromo.discount.value}% off your next charge`
                       : `$${appliedPromo.discount.value.toFixed(2)} off your next charge`}
@@ -368,12 +366,12 @@ function UpgradeContent() {
                 </div>
                 <button
                   onClick={() => { setAppliedPromo(null); setPromoCode('') }}
-                  className="text-[11px] text-[#0F6E56] underline hover:no-underline"
+                  className="font-mono text-[10.5px] font-semibold text-ink underline hover:no-underline"
                 >Remove</button>
               </div>
             ) : (
               <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#A8A8A4] mb-2">Promo Code</p>
+                <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.08em] text-muted mb-2">Promo Code</p>
                 <div className="flex gap-2">
                   <input
                     type="text"
@@ -381,18 +379,18 @@ function UpgradeContent() {
                     onChange={e => { setPromoCode(e.target.value.toUpperCase()); setPromoError(null) }}
                     onKeyDown={e => e.key === 'Enter' && validatePromo()}
                     placeholder="Enter promo code"
-                    className="flex-1 h-[36px] px-3 text-[13px] border border-[#E8E8E4] rounded bg-white focus:outline-none focus:border-[#D03839]"
+                    className="flex-1 h-[38px] px-3.5 font-mono text-[12.5px] bg-white border-[1.5px] border-line rounded-[9px] placeholder:text-mist focus:outline-none focus:border-ink focus:shadow-offset-3 transition-all duration-120"
                   />
                   <button
                     type="button"
                     onClick={validatePromo}
                     disabled={promoValidating || !promoCode.trim()}
-                    className="px-3 h-[36px] text-[13px] font-semibold border border-[#E8E8E4] rounded bg-white hover:bg-[#FAFAF8] disabled:opacity-50 flex items-center gap-1.5"
+                    className="px-3.5 h-[38px] text-[13px] font-semibold bg-white text-ink border-[1.5px] border-ink rounded-[10px] shadow-offset-2 hover:bg-tint transition-colors duration-120 disabled:opacity-50 flex items-center gap-1.5"
                   >
                     {promoValidating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Apply'}
                   </button>
                 </div>
-                {promoError && <p className="text-[12px] text-[#D03839] mt-1.5">{promoError}</p>}
+                {promoError && <p className="text-[12px] font-semibold text-ink mt-1.5">{promoError}</p>}
               </div>
             )}
 
@@ -405,60 +403,60 @@ function UpgradeContent() {
               const total = Math.max(0, base - disc)
               return (
                 <div className="space-y-1.5">
-                  <div className="flex items-center justify-between text-[12px] text-[#737370]">
+                  <div className="flex items-center justify-between font-mono text-[11.5px] text-muted">
                     <span>Subtotal</span>
                     <span>${base.toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
                   </div>
-                  <div className="flex items-center justify-between text-[12px] text-[#0F6E56]">
+                  <div className="flex items-center justify-between font-mono text-[11.5px] text-ink">
                     <span>Promo discount</span>
                     <span>−${disc.toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
                   </div>
-                  <div className="flex items-center justify-between pt-1.5 border-t border-[#F3F3F0]">
-                    <span className="text-[13px] font-semibold text-[#1A1816]">Total {isAnnual ? '/ year' : '/ month'}</span>
-                    <span className="text-[15px] font-bold text-[#1A1816]">${total.toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
+                  <div className="flex items-center justify-between pt-1.5 border-t border-hairline">
+                    <span className="font-mono text-[11px] font-semibold uppercase tracking-[0.05em] text-body">Total {isAnnual ? '/ year' : '/ month'}</span>
+                    <span className="font-mono text-[15px] font-bold text-ink">${total.toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
                   </div>
                 </div>
               )
             })()}
 
-            <div className="border-t border-[#F3F3F0]" />
+            <div className="border-t border-hairline" />
 
             {/* When it takes effect */}
-            <div className="flex items-start gap-2.5 p-3 bg-[#FAFAF8] border border-[#E8E8E4] rounded">
-              <Calendar className="w-3.5 h-3.5 flex-shrink-0 mt-0.5 text-[#737370]" />
-              <p className="text-[12px] text-[#737370] leading-relaxed">{effectNote}</p>
+            <div className="flex items-start gap-2.5 p-3 bg-tint-3 border-[1.5px] border-line rounded-[10px]">
+              <Calendar className="w-3.5 h-3.5 flex-shrink-0 mt-0.5 text-muted" />
+              <p className="text-[12px] text-muted leading-relaxed">{effectNote}</p>
             </div>
 
             {/* Payment method */}
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#A8A8A4] mb-2">Payment method</p>
+              <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.08em] text-muted mb-2">Payment method</p>
               {paymentMethod ? (
-                <div className="flex items-center gap-3 p-3 bg-[#FAFAF8] border border-[#E8E8E4] rounded">
-                  <div className="w-10 h-7 bg-[#1A1816] rounded text-white text-[8px] font-bold flex items-center justify-center tracking-wider uppercase flex-shrink-0">
+                <div className="flex items-center gap-3 p-3 bg-tint-3 border-[1.5px] border-line rounded-[10px]">
+                  <div className="w-10 h-7 bg-ink rounded-[6px] text-white font-mono text-[8px] font-bold flex items-center justify-center tracking-wider uppercase flex-shrink-0">
                     {(paymentMethod.brand || 'Card').slice(0, 4)}
                   </div>
                   <div>
-                    <p className="text-[13px] font-semibold text-[#1A1816] capitalize">
+                    <p className="font-mono text-[13px] font-semibold text-body capitalize">
                       {paymentMethod.brand} •••• {paymentMethod.last4}
                     </p>
-                    <p className="text-[11px] text-[#A8A8A4] mt-0.5">
+                    <p className="font-mono text-[10.5px] text-mist mt-0.5">
                       Expires {String(paymentMethod.exp_month).padStart(2, '0')} / {paymentMethod.exp_year}
                     </p>
                   </div>
                 </div>
               ) : (
-                <div className="flex items-center gap-3 p-3 bg-[#FAFAF8] border border-[#E8E8E4] rounded">
-                  <CreditCard className="w-4 h-4 text-[#A8A8A4] flex-shrink-0" />
-                  <p className="text-[13px] text-[#A8A8A4]">No card on file</p>
+                <div className="flex items-center gap-3 p-3 bg-tint-3 border-[1.5px] border-line rounded-[10px]">
+                  <CreditCard className="w-4 h-4 text-mist flex-shrink-0" />
+                  <p className="font-mono text-[12px] text-mist">No card on file</p>
                 </div>
               )}
             </div>
 
             {/* Error */}
             {error && (
-              <div className="flex items-start gap-2 p-3 bg-[#FEF0EF] border border-[#F5C4C0] rounded">
-                <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5 text-[#D03839]" />
-                <p className="text-[12px] text-[#B82F30] leading-relaxed">{error}</p>
+              <div className="flex items-start gap-2 p-3 bg-tint border-[1.5px] border-ink rounded-[10px]">
+                <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5 text-ink" />
+                <p className="text-[12px] font-semibold text-ink leading-relaxed">{error}</p>
               </div>
             )}
 
@@ -466,11 +464,7 @@ function UpgradeContent() {
             <button
               onClick={handleConfirm}
               disabled={confirming}
-              className={`w-full flex items-center justify-center gap-2 py-3 text-[13px] font-semibold rounded transition-all active:scale-[0.98] disabled:opacity-50 ${
-                isDowngrade
-                  ? 'bg-[#1A1816] text-white hover:bg-[#2A2A26]'
-                  : 'bg-[#D03839] text-white hover:bg-[#E0493B] active:bg-[#C73022]'
-              }`}
+              className="w-full flex items-center justify-center gap-2 py-3 text-[13px] font-semibold bg-ink text-white border-[1.5px] border-ink rounded-[10px] shadow-soft-3 hover:bg-smoke-2 transition-all duration-120 disabled:opacity-50"
             >
               {confirming
                 ? <><Loader2 className="w-4 h-4 animate-spin" /> Processing…</>
@@ -481,15 +475,15 @@ function UpgradeContent() {
             <button
               onClick={() => router.push('/plans')}
               disabled={confirming}
-              className="w-full text-[12px] font-medium text-[#737370] hover:text-[#1A1816] transition-colors text-center disabled:opacity-50"
+              className="w-full text-[12px] font-medium text-muted hover:text-ink transition-colors duration-120 text-center disabled:opacity-50"
             >
               Cancel
             </button>
 
             {/* Stripe badge */}
             <div className="flex items-center justify-center gap-1.5">
-              <Lock className="w-3 h-3 text-[#A8A8A4]" />
-              <p className="text-[11px] text-[#A8A8A4]">Secured by Stripe</p>
+              <Lock className="w-3 h-3 text-mist" />
+              <p className="font-mono text-[10.5px] uppercase tracking-[0.06em] text-mist">Secured by Stripe</p>
             </div>
 
           </div>
@@ -505,7 +499,7 @@ export default function UpgradePage() {
   return (
     <Suspense fallback={
       <div className="min-h-[50vh] flex items-center justify-center">
-        <Loader2 className="w-6 h-6 animate-spin text-[#737370]" />
+        <Loader2 className="w-6 h-6 animate-spin text-muted" />
       </div>
     }>
       <UpgradeContent />

@@ -56,13 +56,13 @@ const DayView = ({ currentDate, bookings, rooms, halls, isRoomView }) => {
   const getStatusColor = (status) => {
     switch (status?.toLowerCase()) {
       case 'booked':
-        return 'bg-red-100 border-red-300 text-red-700';
+        return 'bg-neutral-100 border-neutral-300 text-neutral-700';
       case 'checked_in':
-        return 'bg-yellow-100 border-yellow-300 text-yellow-700';
+        return 'bg-neutral-100 border-neutral-300 text-neutral-700';
       case 'checked_out':
         return 'bg-neutral-200 border-neutral-300 text-neutral-600';
       default:
-        return 'bg-green-100 border-green-300 text-green-700';
+        return 'bg-neutral-100 border-neutral-300 text-neutral-700';
     }
   };
 
@@ -100,7 +100,7 @@ const DayView = ({ currentDate, bookings, rooms, halls, isRoomView }) => {
               className={`rounded-xl border p-4 ${
                 booking
                   ? getStatusColor(booking.status)
-                  : 'bg-green-50 border-green-200'
+                  : 'bg-neutral-50 border-neutral-200'
               }`}
             >
               <div className="flex items-center justify-between mb-2">
@@ -108,7 +108,7 @@ const DayView = ({ currentDate, bookings, rooms, halls, isRoomView }) => {
                 <span className={`text-xs font-semibold px-2 py-1 rounded-full ${
                   booking
                     ? 'bg-white/50'
-                    : 'bg-green-200 text-green-800'
+                    : 'bg-neutral-200 text-neutral-800'
                 }`}>
                   {booking ? booking.status?.replace('_', ' ').toUpperCase() : 'AVAILABLE'}
                 </span>
@@ -127,7 +127,7 @@ const DayView = ({ currentDate, bookings, rooms, halls, isRoomView }) => {
                 </div>
               )}
               {!booking && (
-                <p className="text-sm text-green-700">Available all day</p>
+                <p className="text-sm text-neutral-700">Available all day</p>
               )}
             </div>
           );
@@ -185,7 +185,7 @@ const DayView = ({ currentDate, bookings, rooms, halls, isRoomView }) => {
                           {booking.status?.charAt(0).toUpperCase()}
                         </div>
                       ) : (
-                        <div className="h-full rounded border border-dashed border-green-200 bg-green-50"></div>
+                        <div className="h-full rounded border border-dashed border-neutral-200 bg-neutral-50"></div>
                       )}
                     </td>
                   );

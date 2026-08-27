@@ -190,7 +190,7 @@ const CheckoutModal = ({ isOpen, onClose, bookedHall, onSuccess }) => {
           >
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden">
               {/* Header */}
-              <div className="bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-500 px-6 py-4 flex items-center justify-between shadow-lg relative overflow-hidden">
+              <div className="bg-gradient-to-r from-neutral-500 via-neutral-500 to-neutral-500 px-6 py-4 flex items-center justify-between shadow-lg relative overflow-hidden">
                 <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent"></div>
                 <div className="flex items-center gap-3 relative z-10">
                   <div className="w-12 h-12 rounded-lg bg-white/20 backdrop-blur-sm flex items-center justify-center ring-4 ring-white/30">
@@ -198,7 +198,7 @@ const CheckoutModal = ({ isOpen, onClose, bookedHall, onSuccess }) => {
                   </div>
                   <div>
                     <h2 className="text-xl font-bold text-white">Checkout</h2>
-                    <p className="text-xs text-indigo-100">Hall: {bookedHall.halls?.hall_number}</p>
+                    <p className="text-xs text-neutral-100">Hall: {bookedHall.halls?.hall_number}</p>
                   </div>
                 </div>
                 <button
@@ -212,8 +212,8 @@ const CheckoutModal = ({ isOpen, onClose, bookedHall, onSuccess }) => {
               {/* Content */}
               <div className="p-6 space-y-5 max-h-[70vh] overflow-y-auto">
                 {/* Guest Information */}
-                <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-xl p-4 border border-indigo-200">
-                  <h3 className="text-sm font-bold text-indigo-900 mb-3">Guest Information</h3>
+                <div className="bg-gradient-to-br from-neutral-50 to-neutral-50 rounded-xl p-4 border border-neutral-200">
+                  <h3 className="text-sm font-bold text-neutral-900 mb-3">Guest Information</h3>
                   <div className="space-y-2">
                     <div className="flex justify-between">
                       <span className="text-sm text-slate-600">Name:</span>
@@ -231,8 +231,8 @@ const CheckoutModal = ({ isOpen, onClose, bookedHall, onSuccess }) => {
                 </div>
 
                 {/* Billing Summary */}
-                <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-4 border border-green-200">
-                  <h3 className="text-sm font-bold text-green-900 mb-3 flex items-center gap-2">
+                <div className="bg-gradient-to-br from-neutral-50 to-neutral-50 rounded-xl p-4 border border-neutral-200">
+                  <h3 className="text-sm font-bold text-neutral-900 mb-3 flex items-center gap-2">
                     <DollarSign className="w-4 h-4" />
                     Billing Summary
                   </h3>
@@ -247,14 +247,14 @@ const CheckoutModal = ({ isOpen, onClose, bookedHall, onSuccess }) => {
                     </div>
                     <div className="flex justify-between">
                       <span className="text-sm text-slate-600">Pending Amount:</span>
-                      <span className="text-sm font-semibold text-red-600">${pendingAmount.toFixed(2)}</span>
+                      <span className="text-sm font-semibold text-neutral-600">${pendingAmount.toFixed(2)}</span>
                     </div>
                   </div>
                 </div>
 
                 {/* Extra Charges */}
-                <div className="bg-gradient-to-br from-amber-50 to-yellow-50 rounded-xl p-4 border border-amber-200">
-                  <h3 className="text-sm font-bold text-amber-900 mb-3">Extra Charges (Optional)</h3>
+                <div className="bg-gradient-to-br from-neutral-50 to-neutral-50 rounded-xl p-4 border border-neutral-200">
+                  <h3 className="text-sm font-bold text-neutral-900 mb-3">Extra Charges (Optional)</h3>
                   <input
                     type="number"
                     min="0"
@@ -262,21 +262,21 @@ const CheckoutModal = ({ isOpen, onClose, bookedHall, onSuccess }) => {
                     value={extraCharges}
                     onChange={(e) => setExtraCharges(e.target.value)}
                     placeholder="Enter any extra charges"
-                    className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent"
+                    className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-neutral-400 focus:border-transparent"
                   />
                   <p className="text-xs text-slate-600 mt-2">Add charges for unpaid services, damages, or other extras</p>
                 </div>
 
                 {/* Payment Method */}
-                <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-xl p-4 border border-blue-200">
-                  <h3 className="text-sm font-bold text-blue-900 mb-3 flex items-center gap-2">
+                <div className="bg-gradient-to-br from-neutral-50 to-neutral-50 rounded-xl p-4 border border-neutral-200">
+                  <h3 className="text-sm font-bold text-neutral-900 mb-3 flex items-center gap-2">
                     <CreditCard className="w-4 h-4" />
                     Payment Method
                   </h3>
                   <select
                     value={paymentMethod}
                     onChange={(e) => setPaymentMethod(e.target.value)}
-                    className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
+                    className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-neutral-400 focus:border-transparent"
                   >
                     <option value="cash">Cash</option>
                     <option value="card">Credit/Debit Card</option>
@@ -286,22 +286,22 @@ const CheckoutModal = ({ isOpen, onClose, bookedHall, onSuccess }) => {
                 </div>
 
                 {/* Notes */}
-                <div className="bg-gradient-to-br from-pink-50 to-rose-50 rounded-xl p-4 border border-pink-200">
-                  <h3 className="text-sm font-bold text-pink-900 mb-3">Notes (Optional)</h3>
+                <div className="bg-gradient-to-br from-neutral-50 to-neutral-50 rounded-xl p-4 border border-neutral-200">
+                  <h3 className="text-sm font-bold text-neutral-900 mb-3">Notes (Optional)</h3>
                   <textarea
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
                     placeholder="Add any notes or remarks"
                     rows="3"
-                    className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-400 focus:border-transparent resize-none"
+                    className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-neutral-400 focus:border-transparent resize-none"
                   />
                 </div>
 
                 {/* Final Amount */}
-                <div className="bg-gradient-to-br from-purple-50 to-violet-50 rounded-xl p-4 border-2 border-purple-300">
+                <div className="bg-gradient-to-br from-neutral-50 to-neutral-50 rounded-xl p-4 border-2 border-neutral-300">
                   <div className="flex justify-between items-center">
-                    <span className="text-lg font-bold text-purple-900">Total Amount to Collect:</span>
-                    <span className="text-2xl font-bold text-purple-900">${grandTotal.toFixed(2)}</span>
+                    <span className="text-lg font-bold text-neutral-900">Total Amount to Collect:</span>
+                    <span className="text-2xl font-bold text-neutral-900">${grandTotal.toFixed(2)}</span>
                   </div>
                 </div>
               </div>
@@ -326,7 +326,7 @@ const CheckoutModal = ({ isOpen, onClose, bookedHall, onSuccess }) => {
                 <button
                   onClick={handleCheckout}
                   disabled={processing}
-                  className="flex-1 px-4 py-2.5 bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white font-bold rounded-xl transition-all duration-300 shadow-lg shadow-indigo-500/30 hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  className="flex-1 px-4 py-2.5 bg-gradient-to-r from-neutral-500 to-neutral-500 hover:from-neutral-600 hover:to-neutral-600 text-white font-bold rounded-xl transition-all duration-300 shadow-lg shadow-neutral-500/30 hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
                   <LogOut className="w-4 h-4" />
                   {processing ? 'Processing...' : 'Complete Checkout'}

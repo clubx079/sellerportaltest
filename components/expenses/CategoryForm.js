@@ -112,7 +112,7 @@ const CategoryForm = ({ isOpen, onClose, onSuccess, mode = 'add', category = nul
             className="fixed right-0 top-0 h-screen w-full md:w-[500px] lg:w-[600px] bg-white shadow-2xl z-[60] flex flex-col"
           >
             {/* Header */}
-            <div className="bg-[#472F97] px-4 sm:px-6 py-4 flex items-center justify-between">
+            <div className="bg-[#111111] px-4 sm:px-6 py-4 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-white/10 flex items-center justify-center">
                   <Tags className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
@@ -147,7 +147,7 @@ const CategoryForm = ({ isOpen, onClose, onSuccess, mode = 'add', category = nul
                     {/* Category Name Field */}
                     <div>
                       <label className="block text-xs font-medium text-neutral-600 mb-1.5">
-                        Category Name <span className="text-red-500">*</span>
+                        Category Name <span className="text-neutral-500">*</span>
                       </label>
                       <input
                         type="text"
@@ -176,7 +176,7 @@ const CategoryForm = ({ isOpen, onClose, onSuccess, mode = 'add', category = nul
                 <button
                   type="submit"
                   disabled={saving}
-                  className="w-full sm:flex-1 px-4 py-2.5 sm:py-3 bg-[#472F97] hover:bg-[#3a2578] text-white text-sm font-semibold rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  className="w-full sm:flex-1 px-4 py-2.5 sm:py-3 bg-[#111111] hover:bg-[#444444] text-white text-sm font-semibold rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
                   <Save className="w-4 h-4" />
                   {saving ? 'Saving...' : (mode === 'add' ? 'Create Category' : 'Update Category')}

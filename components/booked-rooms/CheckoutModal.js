@@ -190,7 +190,7 @@ const CheckoutModal = ({ isOpen, onClose, bookedRoom, onSuccess, userId, currenc
           >
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
               {/* Header */}
-              <div className="bg-[#472F97] px-4 sm:px-6 py-4 flex items-center justify-between">
+              <div className="bg-[#111111] px-4 sm:px-6 py-4 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-white/10 flex items-center justify-center">
                     <LogOut className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
@@ -241,11 +241,11 @@ const CheckoutModal = ({ isOpen, onClose, bookedRoom, onSuccess, userId, currenc
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-xs text-neutral-500">Already Paid</span>
-                      <span className="text-sm font-medium text-green-600">{currency}{paidAmount.toFixed(2)}</span>
+                      <span className="text-sm font-medium text-neutral-600">{currency}{paidAmount.toFixed(2)}</span>
                     </div>
                     <div className="flex items-center justify-between pt-2 border-t border-neutral-200">
                       <span className="text-xs font-medium text-neutral-700">Pending Amount</span>
-                      <span className="text-sm font-semibold text-red-600">{currency}{pendingAmount.toFixed(2)}</span>
+                      <span className="text-sm font-semibold text-neutral-600">{currency}{pendingAmount.toFixed(2)}</span>
                     </div>
                   </div>
                 </div>
@@ -296,7 +296,7 @@ const CheckoutModal = ({ isOpen, onClose, bookedRoom, onSuccess, userId, currenc
                 </div>
 
                 {/* Final Amount */}
-                <div className="bg-[#472F97] rounded-xl p-4 border border-neutral-800">
+                <div className="bg-[#111111] rounded-xl p-4 border border-neutral-800">
                   <div className="flex items-center justify-between">
                     <span className="text-sm sm:text-base font-semibold text-white">Total Amount to Collect</span>
                     <span className="text-xl sm:text-2xl font-bold text-white">{currency}{grandTotal.toFixed(2)}</span>
@@ -324,7 +324,7 @@ const CheckoutModal = ({ isOpen, onClose, bookedRoom, onSuccess, userId, currenc
                 <button
                   onClick={handleCheckout}
                   disabled={processing}
-                  className="w-full sm:flex-1 px-4 py-2.5 bg-[#472F97] hover:bg-[#3a2578] text-white text-sm font-semibold rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  className="w-full sm:flex-1 px-4 py-2.5 bg-[#111111] hover:bg-[#444444] text-white text-sm font-semibold rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
                   <LogOut className="w-4 h-4" />
                   {processing ? 'Processing...' : 'Complete Checkout'}

@@ -1,9 +1,9 @@
 'use client'
 import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
-import Image from 'next/image'
 import Link from 'next/link'
-import { CheckCircle, Loader2, AlertCircle, Eye, EyeOff } from 'lucide-react'
+import { AlertCircle, Loader2, Eye, EyeOff } from 'lucide-react'
+import { Logo } from '@/components/ui/Logo'
 
 function AcceptContent() {
   const searchParams = useSearchParams()
@@ -65,143 +65,163 @@ function AcceptContent() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="w-6 h-6 text-[#737370] animate-spin" />
+        <Loader2 className="w-6 h-6 text-muted animate-spin" />
       </div>
     )
   }
 
   const isLogin = info?.hasExistingAccount
 
+  const inputCls = 'w-full border-[1.5px] border-line rounded-[9px] px-3.5 py-3 bg-white text-[14px] text-body placeholder:text-mist focus:outline-none focus:border-ink focus:shadow-offset-3 transition-all duration-120'
+  const labelCls = 'block text-[13px] font-semibold text-body mb-1.5'
+
   return (
-    <div className="min-h-screen bg-[#FAFAF8] flex items-center justify-center p-4">
-      <div className="w-full max-w-[420px]">
-        <div className="mb-8 text-center">
-          <Image src="/assets/logo-seller-portal.svg" alt="DeelMap Seller Portal" width={140} height={66} className="mx-auto mb-6" />
-        </div>
+    <div className="min-h-screen relative flex items-center justify-center p-4">
+      {/* Striped brand backdrop */}
+      <div className="absolute inset-0 bg-stripes-backdrop" aria-hidden />
+      <div className="absolute inset-0 bg-[rgba(250,250,250,0.55)]" aria-hidden />
 
-        <div className="bg-white border border-[#E8E8E4] rounded-lg p-8 shadow-sm">
-          {done ? (
-            <div className="text-center py-4">
-              <CheckCircle className="w-10 h-10 text-[#16A34A] mx-auto mb-3" />
-              <h2 className="text-[18px] font-bold text-[#1A1816] mb-1">You're in!</h2>
-              <p className="text-[13px] text-[#737370]">Redirecting you to the dashboard…</p>
+      <div className="w-full max-w-[520px] relative z-10">
+        <div className="bg-white border-[1.5px] border-ink rounded-2xl shadow-offset-6 overflow-hidden">
+          {/* Card header bar */}
+          <div className="flex items-center justify-between px-6 py-4 bg-tint-2 border-b-[1.5px] border-ink">
+            <div className="flex items-center gap-2.5">
+              <Logo size="header" />
+              <span className="font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-muted">Seller Portal</span>
             </div>
-          ) : error && !info ? (
-            <div className="text-center py-4">
-              <AlertCircle className="w-10 h-10 text-[#D03839] mx-auto mb-3" />
-              <h2 className="text-[16px] font-bold text-[#1A1816] mb-1">Invalid Invitation</h2>
-              <p className="text-[13px] text-[#737370]">{error}</p>
-            </div>
-          ) : (
-            <>
-              <div className="mb-6">
-                <h1 className="text-[20px] font-bold text-[#1A1816] mb-1">
-                  {isLogin ? 'Join Team' : 'Accept Invitation'}
-                </h1>
-                <p className="text-[13px] text-[#737370]">
-                  You've been invited to join <strong>{info?.orgName || 'a team'}</strong> on DeelMap.
-                  {isLogin && ' Log in with your existing account to accept.'}
-                </p>
+            <span className="font-mono text-[10.5px] font-semibold uppercase tracking-[0.08em] text-muted">Team invite</span>
+          </div>
+
+          <div className="p-6 sm:p-7">
+            {done ? (
+              <div className="text-center py-4">
+                <span className="inline-flex w-14 h-14 rounded-full bg-ink text-white items-center justify-center mx-auto mb-4" aria-hidden>
+                  <svg width="20" height="15" viewBox="0 0 20 15" fill="none"><path d="M2 7.5L7.4 12.7L18 2" stroke="#ffffff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                </span>
+                <h2 className="font-display font-bold text-[22px] tracking-[-0.025em] text-body mb-1">You&apos;re in!</h2>
+                <p className="text-[13px] text-smoke-4">Redirecting you to the dashboard…</p>
               </div>
-
-              <form onSubmit={handleSubmit} className="space-y-4">
-                {!isLogin && (
-                  <div>
-                    <label className="block text-[12px] font-semibold text-[#444441] mb-1.5">Your Name</label>
-                    <input
-                      type="text"
-                      placeholder="Jane Smith"
-                      value={form.name}
-                      onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-                      className="w-full h-9 px-3 border border-[#E8E8E4] rounded text-[13px] text-[#1A1816] placeholder:text-[#A8A8A4] focus:outline-none focus:border-[#1A1816]"
-                    />
-                  </div>
-                )}
-
-                <div>
-                  <label className="block text-[12px] font-semibold text-[#444441] mb-1.5">Email</label>
-                  <input
-                    type="email"
-                    value={info?.member?.email || ''}
-                    disabled
-                    className="w-full h-9 px-3 border border-[#E8E8E4] rounded text-[13px] text-[#A8A8A4] bg-[#FAFAF8]"
-                  />
+            ) : error && !info ? (
+              <div className="text-center py-4">
+                <AlertCircle className="w-10 h-10 text-ink mx-auto mb-3" />
+                <h2 className="font-display font-bold text-[20px] tracking-[-0.025em] text-body mb-1">Invalid Invitation</h2>
+                <p className="text-[13px] font-semibold text-ink">{error}</p>
+              </div>
+            ) : (
+              <>
+                <div className="mb-6">
+                  <h1 className="font-display font-bold text-[26px] tracking-[-0.025em] text-body mb-1.5">
+                    {isLogin ? 'Join Team' : 'Accept Invitation'}
+                  </h1>
+                  <p className="text-[13.5px] text-smoke-4">
+                    You&apos;ve been invited to join <strong className="text-body">{info?.orgName || 'a team'}</strong> on DeelMap.
+                    {isLogin && ' Log in with your existing account to accept.'}
+                  </p>
                 </div>
 
-                <div>
-                  <label className="block text-[12px] font-semibold text-[#444441] mb-1.5">
-                    Password <span className="text-[#D03839]">*</span>
-                  </label>
-                  <div className="relative">
-                    <input
-                      type={showPassword ? 'text' : 'password'}
-                      placeholder={isLogin ? 'Your account password' : 'Min. 8 characters'}
-                      value={form.password}
-                      onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
-                      className="w-full h-9 px-3 pr-9 border border-[#E8E8E4] rounded text-[13px] text-[#1A1816] placeholder:text-[#A8A8A4] focus:outline-none focus:border-[#1A1816]"
-                      required
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(s => !s)}
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#A8A8A4] hover:text-[#444441] transition-colors"
-                      aria-label={showPassword ? 'Hide password' : 'Show password'}
-                    >
-                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
-                  </div>
-                  {isLogin && (
-                    <div className="mt-1.5 text-right">
-                      <Link
-                        href={`/forgot-password${info?.member?.email ? `?email=${encodeURIComponent(info.member.email)}` : ''}`}
-                        className="text-[12px] font-medium text-[#444441] hover:text-[#1A1816] transition-colors"
-                      >
-                        Forgot password?
-                      </Link>
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  {!isLogin && (
+                    <div>
+                      <label className={labelCls}>Your Name</label>
+                      <input
+                        type="text"
+                        placeholder="Jane Smith"
+                        value={form.name}
+                        onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+                        className={inputCls}
+                      />
                     </div>
                   )}
-                </div>
 
-                {!isLogin && (
                   <div>
-                    <label className="block text-[12px] font-semibold text-[#444441] mb-1.5">
-                      Confirm Password <span className="text-[#D03839]">*</span>
+                    <label className={labelCls}>Email</label>
+                    <input
+                      type="email"
+                      value={info?.member?.email || ''}
+                      disabled
+                      className="w-full border-[1.5px] border-line rounded-[9px] px-3.5 py-3 text-[14px] text-mist bg-tint-3"
+                    />
+                  </div>
+
+                  <div>
+                    <label className={labelCls}>
+                      Password <span className="text-muted">*</span>
                     </label>
                     <div className="relative">
                       <input
-                        type={showConfirm ? 'text' : 'password'}
-                        placeholder="Repeat password"
-                        value={form.confirm}
-                        onChange={e => setForm(f => ({ ...f, confirm: e.target.value }))}
-                        className="w-full h-9 px-3 pr-9 border border-[#E8E8E4] rounded text-[13px] text-[#1A1816] placeholder:text-[#A8A8A4] focus:outline-none focus:border-[#1A1816]"
+                        type={showPassword ? 'text' : 'password'}
+                        placeholder={isLogin ? 'Your account password' : 'Min. 8 characters'}
+                        value={form.password}
+                        onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
+                        className={`${inputCls} pr-11`}
                         required
                       />
                       <button
                         type="button"
-                        onClick={() => setShowConfirm(s => !s)}
-                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#A8A8A4] hover:text-[#444441] transition-colors"
-                        aria-label={showConfirm ? 'Hide password' : 'Show password'}
+                        onClick={() => setShowPassword(s => !s)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-mist hover:text-smoke-2 transition-colors duration-120"
+                        aria-label={showPassword ? 'Hide password' : 'Show password'}
                       >
-                        {showConfirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                       </button>
                     </div>
+                    {isLogin && (
+                      <div className="mt-1.5 text-right">
+                        <Link
+                          href={`/forgot-password${info?.member?.email ? `?email=${encodeURIComponent(info.member.email)}` : ''}`}
+                          className="text-[12px] font-semibold text-ink underline hover:text-muted transition-colors duration-120"
+                        >
+                          Forgot password?
+                        </Link>
+                      </div>
+                    )}
                   </div>
-                )}
 
-                {error && <p className="text-[12px] text-[#D03839]">{error}</p>}
+                  {!isLogin && (
+                    <div>
+                      <label className={labelCls}>
+                        Confirm Password <span className="text-muted">*</span>
+                      </label>
+                      <div className="relative">
+                        <input
+                          type={showConfirm ? 'text' : 'password'}
+                          placeholder="Repeat password"
+                          value={form.confirm}
+                          onChange={e => setForm(f => ({ ...f, confirm: e.target.value }))}
+                          className={`${inputCls} pr-11`}
+                          required
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowConfirm(s => !s)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-mist hover:text-smoke-2 transition-colors duration-120"
+                          aria-label={showConfirm ? 'Hide password' : 'Show password'}
+                        >
+                          {showConfirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
+                      </div>
+                    </div>
+                  )}
 
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="w-full h-9 bg-[#D03839] hover:bg-[#E0493B] text-white text-[13px] font-semibold rounded disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {submitting
-                    ? (isLogin ? 'Joining team…' : 'Creating account…')
-                    : (isLogin ? 'Log In & Join Team' : 'Create Account & Join Team')}
-                </button>
-              </form>
-            </>
-          )}
+                  {error && (
+                    <div className="bg-tint border-[1.5px] border-ink rounded-[9px] px-3.5 py-2.5 text-[13px] font-semibold text-ink">
+                      {error}
+                    </div>
+                  )}
+
+                  <button
+                    type="submit"
+                    disabled={submitting}
+                    className="w-full bg-ink text-white border-[1.5px] border-ink rounded-[10px] px-[22px] py-3 text-[15px] font-semibold shadow-soft-3 hover:bg-smoke-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-120"
+                  >
+                    {submitting
+                      ? (isLogin ? 'Joining team…' : 'Creating account…')
+                      : (isLogin ? 'Log In & Join Team' : 'Create Account & Join Team')}
+                  </button>
+                </form>
+              </>
+            )}
+          </div>
         </div>
       </div>
     </div>

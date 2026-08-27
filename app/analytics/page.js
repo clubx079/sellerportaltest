@@ -62,15 +62,16 @@ const PERIOD_OPTIONS = [
   { value: 'all', label: 'All time' },
 ];
 
+// Monochrome source icons — BW-retro system allows no hue, ever.
 const UTM_ICONS = {
-  facebook: 'https://cdn.simpleicons.org/facebook/1877F2',
-  fb: 'https://cdn.simpleicons.org/facebook/1877F2',
-  mailchimp: 'https://cdn.simpleicons.org/mailchimp/FFE01B',
-  mc: 'https://cdn.simpleicons.org/mailchimp/FFE01B',
-  twitter: 'https://cdn.simpleicons.org/x/000000',
-  x: 'https://cdn.simpleicons.org/x/000000',
-  instagram: 'https://cdn.simpleicons.org/instagram/E4405F',
-  ig: 'https://cdn.simpleicons.org/instagram/E4405F',
+  facebook: 'https://cdn.simpleicons.org/facebook/111111',
+  fb: 'https://cdn.simpleicons.org/facebook/111111',
+  mailchimp: 'https://cdn.simpleicons.org/mailchimp/111111',
+  mc: 'https://cdn.simpleicons.org/mailchimp/111111',
+  twitter: 'https://cdn.simpleicons.org/x/111111',
+  x: 'https://cdn.simpleicons.org/x/111111',
+  instagram: 'https://cdn.simpleicons.org/instagram/111111',
+  ig: 'https://cdn.simpleicons.org/instagram/111111',
 };
 
 function BarChart({ data, valueKey = 'count', labelKey = 'date', height = 120 }) {
@@ -83,11 +84,11 @@ function BarChart({ data, valueKey = 'count', labelKey = 'date', height = 120 })
         return (
           <div key={i} className="flex-1 h-full flex flex-col justify-end group relative">
             <div
-              className={`w-full rounded-t transition-all ${isToday ? 'bg-[#D03839]' : 'bg-[#E8E8E4] group-hover:bg-[#D03839]/50'}`}
+              className={`w-full rounded-t transition-all duration-[120ms] ${isToday ? 'bg-ink' : 'bg-hairline group-hover:bg-smoke-4'}`}
               style={{ height: `${Math.max(pct, 2)}%` }}
             />
             {/* Tooltip */}
-            <div className="absolute bottom-full mb-1 left-1/2 -translate-x-1/2 bg-[#1A1816] text-white text-[10px] px-1.5 py-0.5 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none z-10">
+            <div className="absolute bottom-full mb-1 left-1/2 -translate-x-1/2 bg-ink text-white font-mono text-[10px] px-1.5 py-0.5 rounded-[6px] whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none z-10">
               {d[valueKey]} views · {d[labelKey]}
             </div>
           </div>
@@ -99,20 +100,20 @@ function BarChart({ data, valueKey = 'count', labelKey = 'date', height = 120 })
 
 function StatCard({ title, value, sub, subUp, icon, iconBg, loading }) {
   return (
-    <div className="bg-white border border-[#E8E8E4] rounded px-4 py-5 flex flex-col">
+    <div className="bg-white border-[1.5px] border-ink rounded-[12px] shadow-offset-4 px-4 py-5 flex flex-col">
       <div className="flex items-start justify-between mb-5">
-        <p className="text-[13px] font-medium text-[#737370]">{title}</p>
-        <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0" style={{ backgroundColor: iconBg }}>
+        <p className="font-mono text-[11px] font-semibold text-muted uppercase tracking-[0.12em]">{title}</p>
+        <div className="w-8 h-8 rounded-[8px] bg-tint flex items-center justify-center flex-shrink-0">
           {icon}
         </div>
       </div>
       {loading ? (
-        <div className="h-9 w-20 bg-[#F0F0EE] rounded animate-pulse" />
+        <div className="h-9 w-20 bg-tint rounded motion-safe:animate-pulse" />
       ) : (
         <>
-          <p className="text-[36px] font-bold text-[#1A1816] leading-none tracking-tight">{value}</p>
+          <p className="font-display font-bold text-[34px] text-ink leading-none tracking-[-0.02em]">{value}</p>
           {sub != null && (
-            <p className={`text-[12px] font-medium mt-2 flex items-center gap-1 ${subUp === true ? 'text-[#0F6E56]' : subUp === false ? 'text-[#D03839]' : 'text-[#737370]'}`}>
+            <p className={`font-mono text-[11px] font-semibold mt-2 flex items-center gap-1 ${subUp === true ? 'text-ink' : subUp === false ? 'text-ink' : 'text-muted'}`}>
               {subUp === true ? <TrendingUp className="w-3 h-3" /> : subUp === false ? <TrendingDown className="w-3 h-3" /> : <Minus className="w-3 h-3" />}
               {sub}
             </p>
@@ -128,12 +129,12 @@ function EngagementBar({ label, pct, icon }) {
     <div className="flex items-center gap-3">
       <div className="flex items-center gap-1.5 w-36 shrink-0">
         {icon}
-        <span className="text-[12px] text-[#737370]">{label}</span>
+        <span className="text-[12px] text-muted">{label}</span>
       </div>
-      <div className="flex-1 h-2 bg-[#F0F0EE] rounded-full overflow-hidden">
-        <div className="h-full bg-[#D03839] rounded-full" style={{ width: `${pct}%` }} />
+      <div className="flex-1 h-2 bg-hairline-2 rounded-pill overflow-hidden">
+        <div className="h-full bg-ink rounded-pill" style={{ width: `${pct}%` }} />
       </div>
-      <span className="text-[12px] font-semibold text-[#1A1816] w-9 text-right shrink-0">{pct}%</span>
+      <span className="font-mono text-[11px] font-semibold text-ink w-9 text-right shrink-0">{pct}%</span>
     </div>
   );
 }
@@ -264,51 +265,51 @@ export default function SellerAnalyticsPage() {
 
   if (accessDenied) {
     return (
-      <div className="min-h-screen bg-[#FAFAF8] flex items-center justify-center p-6">
-        <div className="bg-white border border-[#E8E8E4] rounded p-10 text-center max-w-sm">
-          <div className="w-12 h-12 bg-[#F3F3F0] rounded flex items-center justify-center mx-auto mb-4">
-            <BarChart2 className="w-6 h-6 text-[#A8A8A4]" />
+      <div className="min-h-screen bg-tint-3 flex items-center justify-center p-6">
+        <div className="bg-white border-[1.5px] border-ink rounded-[12px] shadow-offset-4 p-10 text-center max-w-sm">
+          <div className="w-12 h-12 bg-tint rounded-[10px] flex items-center justify-center mx-auto mb-4">
+            <BarChart2 className="w-6 h-6 text-mist" />
           </div>
-          <h2 className="text-[16px] font-bold text-[#1A1816] mb-2">Admin access required</h2>
-          <p className="text-[13px] text-[#737370] leading-relaxed">Analytics is only available to workspace admins. Contact your team admin for access.</p>
+          <h2 className="font-display font-bold text-[17px] tracking-[-0.01em] text-ink mb-2">Admin access required</h2>
+          <p className="text-[13px] text-muted leading-relaxed">Analytics is only available to workspace admins. Contact your team admin for access.</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-[#FAFAF8] p-4 lg:p-6" style={{ fontFamily: 'var(--font-dm-sans), sans-serif' }}>
+    <div className="min-h-screen bg-tint-3 p-4 lg:p-6" style={{ fontFamily: 'var(--font-instrument), sans-serif' }}>
 
       {/* Header */}
       <div className="flex items-start justify-between gap-4 mb-6">
         <div>
-          <div className="flex items-center gap-1.5 text-[#737370] mb-0.5">
+          <div className="flex items-center gap-1.5 text-ink mb-1">
             <BarChart2 className="w-3.5 h-3.5" />
-            <span className="text-[11px] font-semibold uppercase tracking-[1px]">Reporting</span>
+            <span className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em]">Reporting</span>
           </div>
-          <h1 className="text-[22px] font-bold text-[#1A1816] tracking-tight">Analytics</h1>
-          <p className="text-[13px] text-[#737370] mt-0.5">Buyer engagement across all your listings</p>
+          <h1 className="font-display font-bold text-[26px] md:text-[29px] leading-[1.1] tracking-[-0.025em] text-ink">Analytics</h1>
+          <p className="text-[13px] text-muted mt-0.5">Buyer engagement across all your listings</p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          {loading && <Loader2 className="w-4 h-4 text-[#A8A8A4] animate-spin" />}
+          {loading && <Loader2 className="w-4 h-4 text-mist motion-safe:animate-spin" />}
           {/* Export controls */}
           <div className="flex items-center gap-1.5">
             <button
               type="button"
               onClick={handleExportCSV}
               disabled={loading || !data}
-              className="flex items-center gap-1.5 px-3 py-2 bg-white border border-[#E8E8E4] rounded text-[13px] font-semibold text-[#1A1816] hover:bg-[#FAFAF8] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center gap-1.5 px-3 py-2 bg-white border-[1.5px] border-ink rounded-[10px] shadow-offset-2 text-[13px] font-semibold text-ink hover:bg-tint transition-all duration-[120ms] disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <Download className="w-3.5 h-3.5 text-[#737370]" />
+              <Download className="w-3.5 h-3.5 text-muted" />
               CSV
             </button>
             <button
               type="button"
               onClick={handleExportPDF}
               disabled={loading || !data}
-              className="flex items-center gap-1.5 px-3 py-2 bg-white border border-[#E8E8E4] rounded text-[13px] font-semibold text-[#1A1816] hover:bg-[#FAFAF8] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center gap-1.5 px-3 py-2 bg-white border-[1.5px] border-ink rounded-[10px] shadow-offset-2 text-[13px] font-semibold text-ink hover:bg-tint transition-all duration-[120ms] disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <Download className="w-3.5 h-3.5 text-[#737370]" />
+              <Download className="w-3.5 h-3.5 text-muted" />
               PDF
             </button>
           </div>
@@ -317,22 +318,22 @@ export default function SellerAnalyticsPage() {
             <button
               type="button"
               onClick={() => setPeriodOpen(v => !v)}
-              className="flex items-center gap-2 px-3 py-2 bg-white border border-[#E8E8E4] rounded text-left hover:bg-[#FAFAF8] transition-colors"
+              className="flex items-center gap-2 px-3 py-2 bg-white border-[1.5px] border-ink rounded-[10px] shadow-offset-2 text-left hover:bg-tint transition-all duration-[120ms]"
             >
               <div className="flex-1">
-                <p className="text-[13px] font-semibold text-[#1A1816] leading-tight whitespace-nowrap">
+                <p className="text-[13px] font-semibold text-ink leading-tight whitespace-nowrap">
                   {PERIOD_OPTIONS.find(o => o.value === period)?.label || 'Last 30 days'}
                 </p>
                 {getPeriodDateRange(period) && (
-                  <p className="text-[11px] text-[#A8A8A4] leading-tight whitespace-nowrap mt-0.5">
+                  <p className="font-mono text-[10px] text-muted leading-tight whitespace-nowrap mt-0.5">
                     {getPeriodDateRange(period)}
                   </p>
                 )}
               </div>
-              <ChevronDown className={`w-3.5 h-3.5 text-[#A8A8A4] shrink-0 transition-transform ${periodOpen ? 'rotate-180' : ''}`} />
+              <ChevronDown className={`w-3.5 h-3.5 text-mist shrink-0 transition-transform ${periodOpen ? 'rotate-180' : ''}`} />
             </button>
             {periodOpen && (
-              <div className="absolute right-0 top-full mt-1 bg-white border border-[#E8E8E4] rounded shadow-lg z-20 overflow-hidden min-w-[180px]">
+              <div className="absolute right-0 top-full mt-1.5 bg-white border-[1.5px] border-ink rounded-[10px] shadow-offset-4 z-20 overflow-hidden min-w-[180px]">
                 {PERIOD_OPTIONS.map(o => {
                   const range = getPeriodDateRange(o.value);
                   return (
@@ -340,15 +341,15 @@ export default function SellerAnalyticsPage() {
                       key={o.value}
                       type="button"
                       onClick={() => { setPeriod(o.value); setPeriodOpen(false); }}
-                      className={`w-full flex items-center justify-between gap-3 px-3 py-2.5 text-left transition-colors ${
+                      className={`w-full flex items-center justify-between gap-3 px-3 py-2.5 text-left transition-colors duration-[120ms] ${
                         period === o.value
-                          ? 'bg-[#FEF0EF] text-[#D03839]'
-                          : 'text-[#1A1816] hover:bg-[#FAFAF8]'
+                          ? 'bg-hairline-2 text-ink'
+                          : 'text-ink hover:bg-tint'
                       }`}
                     >
                       <div>
                         <p className={`text-[13px] leading-tight ${period === o.value ? 'font-semibold' : 'font-medium'}`}>{o.label}</p>
-                        {range && <p className={`text-[11px] leading-tight mt-0.5 ${period === o.value ? 'text-[#D03839]/70' : 'text-[#A8A8A4]'}`}>{range}</p>}
+                        {range && <p className={`font-mono text-[10px] leading-tight mt-0.5 ${period === o.value ? 'text-smoke-3' : 'text-muted'}`}>{range}</p>}
                       </div>
                       {period === o.value && <Check className="w-3.5 h-3.5 shrink-0" />}
                     </button>
@@ -367,8 +368,8 @@ export default function SellerAnalyticsPage() {
           value={loading ? '—' : (s.totalViews || 0).toLocaleString()}
           sub={trendLabel}
           subUp={trendUp}
-          icon={<Eye className="w-4 h-4 text-[#D03839]" />}
-          iconBg="#FEF0EF"
+          icon={<Eye className="w-4 h-4 text-ink" />}
+          iconBg="#f2f2f2"
           loading={loading}
         />
         <StatCard
@@ -376,8 +377,8 @@ export default function SellerAnalyticsPage() {
           value={loading ? '—' : (s.uniqueViewers || 0).toLocaleString()}
           sub={`${s.totalSessions || 0} total sessions`}
           subUp={null}
-          icon={<Users className="w-4 h-4 text-[#4A90E2]" />}
-          iconBg="#EBF3FC"
+          icon={<Users className="w-4 h-4 text-muted" />}
+          iconBg="#f2f2f2"
           loading={loading}
         />
         <StatCard
@@ -385,8 +386,8 @@ export default function SellerAnalyticsPage() {
           value={loading ? '—' : formatDuration(s.avgDuration)}
           sub="Per session"
           subUp={null}
-          icon={<Clock className="w-4 h-4 text-[#B5620A]" />}
-          iconBg="#FEF3E2"
+          icon={<Clock className="w-4 h-4 text-smoke-3" />}
+          iconBg="#f2f2f2"
           loading={loading}
         />
         <StatCard
@@ -394,8 +395,8 @@ export default function SellerAnalyticsPage() {
           value={loading ? '—' : (data?.totalListings || 0).toLocaleString()}
           sub={`${topProps.length} with view activity`}
           subUp={null}
-          icon={<Activity className="w-4 h-4 text-[#0F6E56]" />}
-          iconBg="#E4F5EC"
+          icon={<Activity className="w-4 h-4 text-ink" />}
+          iconBg="#f2f2f2"
           loading={loading}
         />
       </div>
@@ -404,23 +405,23 @@ export default function SellerAnalyticsPage() {
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 mb-4">
 
         {/* Daily views chart */}
-        <div className="lg:col-span-3 bg-white border border-[#E8E8E4] rounded overflow-hidden">
-          <div className="px-4 py-3 border-b border-[#E8E8E4] flex items-center justify-between">
+        <div className="lg:col-span-3 bg-white border-[1.5px] border-ink rounded-[12px] shadow-offset-4 overflow-hidden">
+          <div className="px-4 py-3 border-b border-hairline flex items-center justify-between">
             <div>
-              <h2 className="text-[13px] font-semibold text-[#1A1816]">Views over time</h2>
-              <p className="text-[11px] text-[#A8A8A4]">
+              <h2 className="font-display font-semibold text-[15px] tracking-[-0.01em] text-ink">Views over time</h2>
+              <p className="font-mono text-[10.5px] text-muted uppercase tracking-[0.06em]">
                 {PERIOD_OPTIONS.find(o => o.value === period)?.label || 'Last 30 days'}
               </p>
             </div>
             <div className="text-right">
-              <p className="text-[22px] font-bold text-[#1A1816] leading-none">{(s.totalViews || 0).toLocaleString()}</p>
+              <p className="font-display font-bold text-[22px] text-ink leading-none">{(s.totalViews || 0).toLocaleString()}</p>
               {s.viewTrend != null ? (
-                <p className={`text-[11px] font-medium flex items-center gap-0.5 justify-end mt-0.5 ${trendUp ? 'text-[#0F6E56]' : 'text-[#D03839]'}`}>
+                <p className="font-mono text-[11px] font-semibold flex items-center gap-0.5 justify-end mt-0.5 text-ink">
                   {trendUp ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
                   {trendUp ? '+' : ''}{s.viewTrend}%
                 </p>
               ) : isNewTrend ? (
-                <p className="text-[11px] font-medium flex items-center gap-0.5 justify-end mt-0.5 text-[#0F6E56]">
+                <p className="font-mono text-[11px] font-semibold flex items-center gap-0.5 justify-end mt-0.5 text-ink">
                   <TrendingUp className="w-3 h-3" />
                   New
                 </p>
@@ -429,17 +430,17 @@ export default function SellerAnalyticsPage() {
           </div>
           <div className="p-4">
             {loading ? (
-              <div className="h-[120px] bg-[#F0F0EE] rounded animate-pulse" />
+              <div className="h-[120px] bg-tint rounded motion-safe:animate-pulse" />
             ) : daily.length === 0 || daily.every(d => d.count === 0) ? (
               <div className="h-[120px] flex items-center justify-center">
-                <p className="text-[13px] text-[#A8A8A4]">No views recorded for this period</p>
+                <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">No views recorded for this period</p>
               </div>
             ) : (
               <>
                 <BarChart data={daily} valueKey="count" labelKey="date" height={120} />
                 <div className="flex items-center justify-between mt-2">
-                  <p className="text-[11px] text-[#A8A8A4]">{formatDateShort(daily[0]?.date)}</p>
-                  <p className="text-[11px] text-[#A8A8A4]">Today</p>
+                  <p className="font-mono text-[10.5px] text-muted">{formatDateShort(daily[0]?.date)}</p>
+                  <p className="font-mono text-[10.5px] text-muted">Today</p>
                 </div>
               </>
             )}
@@ -447,40 +448,40 @@ export default function SellerAnalyticsPage() {
         </div>
 
         {/* Top properties */}
-        <div className="lg:col-span-2 bg-white border border-[#E8E8E4] rounded overflow-hidden">
-          <div className="px-4 py-3 border-b border-[#E8E8E4]">
-            <h2 className="text-[13px] font-semibold text-[#1A1816]">Top listings</h2>
-            <p className="text-[11px] text-[#A8A8A4]">By views this period</p>
+        <div className="lg:col-span-2 bg-white border-[1.5px] border-ink rounded-[12px] shadow-offset-4 overflow-hidden">
+          <div className="px-4 py-3 border-b border-hairline">
+            <h2 className="font-display font-semibold text-[15px] tracking-[-0.01em] text-ink">Top listings</h2>
+            <p className="font-mono text-[10.5px] text-muted uppercase tracking-[0.06em]">By views this period</p>
           </div>
           <div className="p-4 space-y-3">
             {loading ? (
               [...Array(4)].map((_, i) => (
-                <div key={i} className="h-10 bg-[#F0F0EE] rounded animate-pulse" />
+                <div key={i} className="h-10 bg-tint rounded motion-safe:animate-pulse" />
               ))
             ) : topProps.length === 0 ? (
-              <p className="text-[13px] text-[#A8A8A4] py-6 text-center">No data yet</p>
+              <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.12em] text-muted py-6 text-center">No data yet</p>
             ) : (showAllTop ? topProps : topProps.slice(0, TOP_VISIBLE)).map((p, i) => {
               const pct = Math.round((p.views / maxPropViews) * 100);
               return (
                 <a
                   key={p.id}
                   href={`/properties?analytics=${encodeURIComponent(p.id)}`}
-                  className="block -mx-2 px-2 py-1 rounded group cursor-pointer hover:bg-[#FAFAF8] transition-colors"
+                  className="block -mx-2 px-2 py-1 rounded-[8px] group cursor-pointer hover:bg-tint transition-colors duration-[120ms]"
                   title={`View analytics for ${p.name}`}
                 >
                   <div className="flex items-start justify-between gap-2 mb-1">
                     <div className="flex items-center gap-1.5 min-w-0">
-                      <span className="text-[11px] font-bold text-[#A8A8A4] w-4 shrink-0">{i + 1}</span>
-                      <p className="text-[12px] font-medium text-[#1A1816] truncate group-hover:text-[#D03839] transition-colors" title={p.name}>{truncate(p.name, 28)}</p>
-                      <ArrowUpRight className="w-3 h-3 text-[#A8A8A4] shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
+                      <span className="font-mono text-[11px] font-semibold text-muted w-4 shrink-0">{i + 1}</span>
+                      <p className="text-[12px] font-medium text-ink truncate transition-colors duration-[120ms]" title={p.name}>{truncate(p.name, 28)}</p>
+                      <ArrowUpRight className="w-3 h-3 text-mist shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
                     </div>
-                    <span className="text-[12px] font-bold text-[#1A1816] shrink-0">{p.views}</span>
+                    <span className="font-mono text-[12px] font-semibold text-ink shrink-0">{p.views}</span>
                   </div>
                   <div className="flex items-center gap-2 ml-5">
-                    <div className="flex-1 h-1.5 bg-[#F0F0EE] rounded-full overflow-hidden">
-                      <div className="h-full bg-[#D03839] rounded-full" style={{ width: `${pct}%` }} />
+                    <div className="flex-1 h-1.5 bg-hairline-2 rounded-pill overflow-hidden">
+                      <div className="h-full bg-ink rounded-pill" style={{ width: `${pct}%` }} />
                     </div>
-                    <span className="text-[10px] text-[#A8A8A4] shrink-0">{p.uniqueViewers} buyers</span>
+                    <span className="font-mono text-[10px] text-muted shrink-0">{p.uniqueViewers} buyers</span>
                   </div>
                 </a>
               );
@@ -489,7 +490,7 @@ export default function SellerAnalyticsPage() {
               <button
                 type="button"
                 onClick={() => setShowAllTop(v => !v)}
-                className="w-full flex items-center justify-center gap-1 pt-1 text-[12px] font-semibold text-[#D03839] hover:text-[#E0493B] transition-colors"
+                className="w-full flex items-center justify-center gap-1 pt-1 font-mono text-[11px] font-semibold uppercase tracking-[0.06em] text-ink hover:text-smoke-2 transition-colors duration-[120ms]"
               >
                 {showAllTop ? 'Show less' : `Show ${topProps.length - TOP_VISIBLE} more`}
                 <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showAllTop ? 'rotate-180' : ''}`} />
@@ -503,32 +504,32 @@ export default function SellerAnalyticsPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
 
         {/* Device breakdown */}
-        <div className="bg-white border border-[#E8E8E4] rounded overflow-hidden">
-          <div className="px-4 py-3 border-b border-[#E8E8E4]">
-            <h2 className="text-[13px] font-semibold text-[#1A1816]">Devices</h2>
+        <div className="bg-white border-[1.5px] border-ink rounded-[12px] shadow-offset-4 overflow-hidden">
+          <div className="px-4 py-3 border-b border-hairline">
+            <h2 className="font-display font-semibold text-[15px] tracking-[-0.01em] text-ink">Devices</h2>
           </div>
           <div className="p-4 space-y-4">
             {loading ? (
-              <div className="h-24 bg-[#F0F0EE] rounded animate-pulse" />
+              <div className="h-24 bg-tint rounded motion-safe:animate-pulse" />
             ) : totalDevice === 0 ? (
-              <p className="text-[13px] text-[#A8A8A4] text-center py-4">No data</p>
+              <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.12em] text-muted text-center py-4">No data</p>
             ) : (
               <>
                 {[
-                  { label: 'Mobile', count: mobileCount, icon: <Smartphone className="w-3.5 h-3.5 text-[#737370]" /> },
-                  { label: 'Desktop', count: devices.desktop || 0, icon: <Monitor className="w-3.5 h-3.5 text-[#737370]" /> },
+                  { label: 'Mobile', count: mobileCount, icon: <Smartphone className="w-3.5 h-3.5 text-muted" /> },
+                  { label: 'Desktop', count: devices.desktop || 0, icon: <Monitor className="w-3.5 h-3.5 text-muted" /> },
                 ].map(({ label, count, icon }) => (
                   <div key={label} className="flex items-center gap-3">
                     <div className="flex items-center gap-1.5 w-20 shrink-0">
                       {icon}
-                      <span className="text-[12px] text-[#737370]">{label}</span>
+                      <span className="text-[12px] text-muted">{label}</span>
                     </div>
-                    <div className="flex-1 h-2 bg-[#F0F0EE] rounded-full overflow-hidden">
-                      <div className="h-full bg-[#D03839] rounded-full" style={{ width: `${devicePct(count)}%` }} />
+                    <div className="flex-1 h-2 bg-hairline-2 rounded-pill overflow-hidden">
+                      <div className="h-full bg-ink rounded-pill" style={{ width: `${devicePct(count)}%` }} />
                     </div>
                     <div className="text-right shrink-0 w-14">
-                      <span className="text-[12px] font-semibold text-[#1A1816]">{devicePct(count)}%</span>
-                      <span className="text-[11px] text-[#A8A8A4] ml-1">({count})</span>
+                      <span className="font-mono text-[11px] font-semibold text-ink">{devicePct(count)}%</span>
+                      <span className="font-mono text-[10px] text-muted ml-1">({count})</span>
                     </div>
                   </div>
                 ))}
@@ -538,16 +539,16 @@ export default function SellerAnalyticsPage() {
         </div>
 
         {/* UTM sources */}
-        <div className="bg-white border border-[#E8E8E4] rounded overflow-hidden">
-          <div className="px-4 py-3 border-b border-[#E8E8E4] flex items-center gap-2">
-            <Link2 className="w-3.5 h-3.5 text-[#D03839]" />
-            <h2 className="text-[13px] font-semibold text-[#1A1816]">Traffic sources</h2>
+        <div className="bg-white border-[1.5px] border-ink rounded-[12px] shadow-offset-4 overflow-hidden">
+          <div className="px-4 py-3 border-b border-hairline flex items-center gap-2">
+            <Link2 className="w-3.5 h-3.5 text-ink" />
+            <h2 className="font-display font-semibold text-[15px] tracking-[-0.01em] text-ink">Traffic sources</h2>
           </div>
           <div className="p-4">
             {loading ? (
-              <div className="h-24 bg-[#F0F0EE] rounded animate-pulse" />
+              <div className="h-24 bg-tint rounded motion-safe:animate-pulse" />
             ) : utms.length === 0 ? (
-              <p className="text-[13px] text-[#A8A8A4] text-center py-4">No UTM traffic tracked yet</p>
+              <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.12em] text-muted text-center py-4">No UTM traffic tracked yet</p>
             ) : (
               <div className="space-y-3">
                 {utms.map(({ source, count }) => {
@@ -557,12 +558,12 @@ export default function SellerAnalyticsPage() {
                     <div key={source} className="flex items-center gap-2">
                       <div className="flex items-center gap-1.5 w-24 shrink-0">
                         {icon && <img src={icon} alt="" className="w-3.5 h-3.5 shrink-0" />}
-                        <span className="text-[12px] text-[#737370] capitalize">{source}</span>
+                        <span className="text-[12px] text-muted capitalize">{source}</span>
                       </div>
-                      <div className="flex-1 h-2 bg-[#F0F0EE] rounded-full overflow-hidden">
-                        <div className="h-full bg-[#D03839] rounded-full" style={{ width: `${Math.round((count / maxUtm) * 100)}%` }} />
+                      <div className="flex-1 h-2 bg-hairline-2 rounded-pill overflow-hidden">
+                        <div className="h-full bg-ink rounded-pill" style={{ width: `${Math.round((count / maxUtm) * 100)}%` }} />
                       </div>
-                      <span className="text-[12px] font-semibold text-[#1A1816] w-6 text-right shrink-0">{count}</span>
+                      <span className="font-mono text-[11px] font-semibold text-ink w-6 text-right shrink-0">{count}</span>
                     </div>
                   );
                 })}
@@ -572,22 +573,22 @@ export default function SellerAnalyticsPage() {
         </div>
 
         {/* Buyer engagement */}
-        <div className="bg-white border border-[#E8E8E4] rounded overflow-hidden">
-          <div className="px-4 py-3 border-b border-[#E8E8E4]">
-            <h2 className="text-[13px] font-semibold text-[#1A1816]">Buyer engagement</h2>
-            <p className="text-[11px] text-[#A8A8A4]">% of sessions where buyers</p>
+        <div className="bg-white border-[1.5px] border-ink rounded-[12px] shadow-offset-4 overflow-hidden">
+          <div className="px-4 py-3 border-b border-hairline">
+            <h2 className="font-display font-semibold text-[15px] tracking-[-0.01em] text-ink">Buyer engagement</h2>
+            <p className="font-mono text-[10.5px] text-muted uppercase tracking-[0.06em]">% of sessions where buyers</p>
           </div>
           <div className="p-4 space-y-4">
             {loading ? (
-              <div className="h-24 bg-[#F0F0EE] rounded animate-pulse" />
+              <div className="h-24 bg-tint rounded motion-safe:animate-pulse" />
             ) : !hasEngagement ? (
-              <p className="text-[13px] text-[#A8A8A4] text-center py-4">No engagement yet</p>
+              <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.12em] text-muted text-center py-4">No engagement yet</p>
             ) : (
               <>
-                <EngagementBar label="Scrolled" pct={eng.scrolled || 0} icon={<ChevronDown className="w-3.5 h-3.5 text-[#A8A8A4]" />} />
-                <EngagementBar label="Viewed photos" pct={eng.viewedPhotos || 0} icon={<Image className="w-3.5 h-3.5 text-[#A8A8A4]" />} />
-                <EngagementBar label="Read description" pct={eng.viewedDescription || 0} icon={<FileText className="w-3.5 h-3.5 text-[#A8A8A4]" />} />
-                <EngagementBar label="Viewed repairs" pct={eng.viewedRepairs || 0} icon={<Activity className="w-3.5 h-3.5 text-[#A8A8A4]" />} />
+                <EngagementBar label="Scrolled" pct={eng.scrolled || 0} icon={<ChevronDown className="w-3.5 h-3.5 text-mist" />} />
+                <EngagementBar label="Viewed photos" pct={eng.viewedPhotos || 0} icon={<Image className="w-3.5 h-3.5 text-mist" />} />
+                <EngagementBar label="Read description" pct={eng.viewedDescription || 0} icon={<FileText className="w-3.5 h-3.5 text-mist" />} />
+                <EngagementBar label="Viewed repairs" pct={eng.viewedRepairs || 0} icon={<Activity className="w-3.5 h-3.5 text-mist" />} />
               </>
             )}
           </div>
@@ -595,22 +596,22 @@ export default function SellerAnalyticsPage() {
       </div>
 
       {/* Recent viewers table */}
-      <div className="bg-white border border-[#E8E8E4] rounded overflow-hidden">
-        <div className="px-4 py-3 border-b border-[#E8E8E4]">
-          <h2 className="text-[13px] font-semibold text-[#1A1816]">Recent buyer activity</h2>
-          <p className="text-[11px] text-[#A8A8A4]">Most recent sessions across all listings</p>
+      <div className="bg-white border-[1.5px] border-ink rounded-[12px] shadow-offset-4 overflow-hidden">
+        <div className="px-4 py-3 border-b border-hairline">
+          <h2 className="font-display font-semibold text-[15px] tracking-[-0.01em] text-ink">Recent buyer activity</h2>
+          <p className="font-mono text-[10.5px] text-muted uppercase tracking-[0.06em]">Most recent sessions across all listings</p>
         </div>
 
         {loading ? (
           <div className="p-4 space-y-3">
-            {[...Array(5)].map((_, i) => <div key={i} className="h-10 bg-[#F0F0EE] rounded animate-pulse" />)}
+            {[...Array(5)].map((_, i) => <div key={i} className="h-10 bg-tint rounded motion-safe:animate-pulse" />)}
           </div>
         ) : recent.length === 0 ? (
           <div className="py-16 text-center">
-            <Eye className="w-8 h-8 text-[#D4D4CF] mx-auto mb-2" />
-            <p className="text-[13px] font-semibold text-[#444441]">No activity yet</p>
-            <p className="text-[12px] text-[#737370] mt-1 mb-4">Share your listings to start getting buyer views.</p>
-            <a href="/properties" className="inline-flex items-center gap-1.5 h-9 px-4 bg-[#D03839] hover:bg-[#E0493B] text-white text-[13px] font-semibold rounded transition-colors">
+            <Eye className="w-8 h-8 text-line-2 mx-auto mb-2" />
+            <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">No activity yet</p>
+            <p className="text-[12px] text-muted mt-1 mb-4">Share your listings to start getting buyer views.</p>
+            <a href="/properties" className="inline-flex items-center gap-1.5 h-9 px-4 bg-ink hover:bg-smoke-2 text-white text-[13px] font-semibold border-[1.5px] border-ink rounded-[10px] shadow-soft-3 transition-all duration-[120ms]">
               Go to My Listings
             </a>
           </div>
@@ -618,43 +619,43 @@ export default function SellerAnalyticsPage() {
           <div className="overflow-x-auto">
             <table className="w-full min-w-[700px]">
               <thead>
-                <tr className="border-b border-[#E8E8E4] bg-[#FAFAF8]">
+                <tr className="border-b border-hairline bg-tint-2">
                   {['Buyer', 'Listing', 'Views', 'Time spent', 'Device', 'Source', 'Last seen'].map(h => (
-                    <th key={h} className="px-4 py-2.5 text-left text-[11px] font-semibold text-[#A8A8A4] uppercase tracking-[0.8px] whitespace-nowrap">{h}</th>
+                    <th key={h} className="px-4 py-2.5 text-left font-mono text-[10px] font-semibold text-muted uppercase tracking-[0.12em] whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#E8E8E4]">
+              <tbody className="divide-y divide-hairline-2">
                 {recent.map((r, i) => {
                   const name = [r.firstName, r.lastName].filter(Boolean).join(' ') || r.email || 'Guest';
                   const initial = name.charAt(0).toUpperCase();
                   const utmIcon = r.utmSource ? UTM_ICONS[r.utmSource.toLowerCase()] : null;
                   return (
-                    <tr key={i} className="hover:bg-[#FAFAF8] transition-colors">
+                    <tr key={i} className="hover:bg-tint transition-colors duration-[120ms]">
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2">
-                          <div className="w-7 h-7 rounded-full bg-[#FEF0EF] flex items-center justify-center flex-shrink-0">
-                            <span className="text-[11px] font-bold text-[#D03839]">{initial}</span>
+                          <div className="w-7 h-7 rounded-full bg-tint flex items-center justify-center flex-shrink-0">
+                            <span className="font-mono text-[11px] font-semibold text-ink">{initial}</span>
                           </div>
                           <div className="min-w-0">
-                            <p className="text-[12px] font-semibold text-[#1A1816] truncate capitalize">{name}</p>
+                            <p className="text-[12px] font-semibold text-ink truncate capitalize">{name}</p>
                             {r.email && name !== r.email && (
-                              <p className="text-[10px] text-[#A8A8A4] truncate">{r.email}</p>
+                              <p className="font-mono text-[10px] text-muted truncate">{r.email}</p>
                             )}
                           </div>
                         </div>
                       </td>
                       <td className="px-4 py-3">
-                        <p className="text-[12px] text-[#444441] truncate max-w-[160px]" title={r.propertyName}>{truncate(r.propertyName, 24)}</p>
+                        <p className="text-[12px] text-smoke-2 truncate max-w-[160px]" title={r.propertyName}>{truncate(r.propertyName, 24)}</p>
                       </td>
                       <td className="px-4 py-3">
-                        <span className="text-[12px] font-semibold text-[#1A1816]">{r.views}</span>
+                        <span className="font-mono text-[12px] font-semibold text-ink">{r.views}</span>
                       </td>
                       <td className="px-4 py-3">
-                        <span className="text-[12px] text-[#737370]">{formatDuration(r.duration)}</span>
+                        <span className="font-mono text-[11px] text-muted">{formatDuration(r.duration)}</span>
                       </td>
                       <td className="px-4 py-3">
-                        <div className="flex items-center gap-1 text-[12px] text-[#737370]">
+                        <div className="flex items-center gap-1 text-[12px] text-muted">
                           {(r.device?.toLowerCase() === 'mobile' || r.device?.toLowerCase() === 'tablet') && <Smartphone className="w-3 h-3" />}
                           {r.device?.toLowerCase() === 'desktop' && <Monitor className="w-3 h-3" />}
                           <span className="capitalize">{r.device?.toLowerCase() === 'tablet' ? 'Mobile' : (r.device || '—')}</span>
@@ -664,14 +665,14 @@ export default function SellerAnalyticsPage() {
                         {r.utmSource ? (
                           <div className="flex items-center gap-1">
                             {utmIcon && <img src={utmIcon} alt="" className="w-3.5 h-3.5" />}
-                            <span className="text-[12px] text-[#737370] capitalize">{r.utmSource}</span>
+                            <span className="text-[12px] text-muted capitalize">{r.utmSource}</span>
                           </div>
                         ) : (
-                          <span className="text-[12px] text-[#A8A8A4]">Direct</span>
+                          <span className="font-mono text-[11px] text-mist">Direct</span>
                         )}
                       </td>
                       <td className="px-4 py-3">
-                        <span className="text-[12px] text-[#737370]">{formatDate(r.lastSeen)}</span>
+                        <span className="font-mono text-[11px] text-muted">{formatDate(r.lastSeen)}</span>
                       </td>
                     </tr>
                   );

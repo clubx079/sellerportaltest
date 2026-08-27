@@ -31,7 +31,7 @@ const SearchableSelect = ({ label, value, onChange, options, placeholder, requir
   return (
     <div ref={dropdownRef} className="relative">
       <label className="block text-xs font-medium text-neutral-600 mb-1.5">
-        {label} {required && <span className="text-red-500">*</span>}
+        {label} {required && <span className="text-neutral-500">*</span>}
       </label>
       <div
         onClick={() => setIsOpen(!isOpen)}
@@ -53,7 +53,7 @@ const SearchableSelect = ({ label, value, onChange, options, placeholder, requir
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search..."
-                className="w-full pl-9 pr-3 py-2 text-sm border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#472F97] focus:border-transparent"
+                className="w-full pl-9 pr-3 py-2 text-sm border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#111111] focus:border-transparent"
                 onClick={(e) => e.stopPropagation()}
               />
             </div>
@@ -247,7 +247,7 @@ const AddForm = ({ isOpen, onClose, onSuccess, userId }) => {
           {/* Side Panel */}
           <div className="fixed right-0 top-0 h-screen w-full sm:w-[90%] md:w-[600px] lg:w-[700px] bg-white shadow-2xl z-[60] flex flex-col">
             {/* Header */}
-            <div className="bg-[#472F97] px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between">
+            <div className="bg-[#111111] px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between">
               <div className="flex items-center gap-2 sm:gap-3">
                 <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-white/10 flex items-center justify-center">
                   <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
@@ -279,7 +279,7 @@ const AddForm = ({ isOpen, onClose, onSuccess, userId }) => {
                         <button
                           type="button"
                           onClick={() => removeAmenity(index)}
-                          className="p-1 sm:p-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg transition-colors"
+                          className="p-1 sm:p-1.5 bg-neutral-50 hover:bg-neutral-100 text-neutral-600 rounded-lg transition-colors"
                         >
                           <X className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                         </button>
@@ -290,13 +290,13 @@ const AddForm = ({ isOpen, onClose, onSuccess, userId }) => {
                       {/* Amenity Name Field */}
                       <div>
                         <label className="block text-[11px] sm:text-xs font-medium text-neutral-600 mb-1 sm:mb-1.5">
-                          Amenity Name <span className="text-red-500">*</span>
+                          Amenity Name <span className="text-neutral-500">*</span>
                         </label>
                         <input
                           type="text"
                           value={entry.name}
                           onChange={(e) => updateAmenityEntry(index, 'name', e.target.value)}
-                          className="w-full border border-neutral-200 rounded-lg px-2.5 sm:px-3 py-2 sm:py-2.5 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#472F97] focus:border-transparent"
+                          className="w-full border border-neutral-200 rounded-lg px-2.5 sm:px-3 py-2 sm:py-2.5 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#111111] focus:border-transparent"
                           placeholder="e.g., Swimming Pool"
                           required
                         />
@@ -311,7 +311,7 @@ const AddForm = ({ isOpen, onClose, onSuccess, userId }) => {
                           value={entry.description}
                           onChange={(e) => updateAmenityEntry(index, 'description', e.target.value)}
                           rows="3"
-                          className="w-full border border-neutral-200 rounded-lg px-2.5 sm:px-3 py-2 sm:py-2.5 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#472F97] focus:border-transparent"
+                          className="w-full border border-neutral-200 rounded-lg px-2.5 sm:px-3 py-2 sm:py-2.5 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#111111] focus:border-transparent"
                           placeholder="Enter amenity description..."
                         />
                       </div>
@@ -385,7 +385,7 @@ const AddForm = ({ isOpen, onClose, onSuccess, userId }) => {
                 <button
                   type="submit"
                   disabled={saving}
-                  className="flex-1 px-3 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm bg-[#472F97] hover:bg-[#3a2578] text-white font-medium rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1.5 sm:gap-2"
+                  className="flex-1 px-3 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm bg-[#111111] hover:bg-[#444444] text-white font-medium rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1.5 sm:gap-2"
                 >
                   <Save className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                   {saving ? 'Saving...' : `Save Amenity${amenityEntries.length > 1 ? 's' : ''}`}

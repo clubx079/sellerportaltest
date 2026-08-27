@@ -31,7 +31,7 @@ const SearchableSelect = ({ label, value, onChange, options, placeholder, requir
   return (
     <div ref={dropdownRef} className="relative">
       <label className="block text-xs font-medium text-neutral-600 mb-1.5">
-        {label} {required && <span className="text-red-500">*</span>}
+        {label} {required && <span className="text-neutral-500">*</span>}
       </label>
       <div
         onClick={() => setIsOpen(!isOpen)}
@@ -52,7 +52,7 @@ const SearchableSelect = ({ label, value, onChange, options, placeholder, requir
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search..."
-                className="w-full pl-9 pr-3 py-2 text-sm border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#472F97] focus:border-transparent"
+                className="w-full pl-9 pr-3 py-2 text-sm border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#111111] focus:border-transparent"
                 onClick={(e) => e.stopPropagation()}
               />
             </div>
@@ -144,7 +144,7 @@ const MultiSelect = ({ label, value, onChange, options, placeholder, getOptionLa
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search..."
-                className="w-full pl-9 pr-3 py-2 text-sm border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#472F97] focus:border-transparent"
+                className="w-full pl-9 pr-3 py-2 text-sm border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#111111] focus:border-transparent"
                 onClick={(e) => e.stopPropagation()}
               />
             </div>
@@ -167,7 +167,7 @@ const MultiSelect = ({ label, value, onChange, options, placeholder, getOptionLa
                     type="checkbox"
                     checked={value.includes(getOptionValue(option))}
                     onChange={() => {}}
-                    className="w-4 h-4 text-neutral-900 border-neutral-300 rounded focus:ring-[#472F97]"
+                    className="w-4 h-4 text-neutral-900 border-neutral-300 rounded focus:ring-[#111111]"
                   />
                   {getOptionLabel(option)}
                 </div>
@@ -289,7 +289,7 @@ const AddForm = ({ isOpen, onClose, onSuccess, roomTypes, paidServices, userId }
             className="fixed right-0 top-0 h-screen w-full md:w-[600px] lg:w-[700px] bg-white shadow-2xl z-[60] flex flex-col"
           >
             {/* Header */}
-            <div className="bg-[#472F97] px-6 py-4 flex items-center justify-between">
+            <div className="bg-[#111111] px-6 py-4 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center">
                   <Tag className="w-5 h-5 text-white" />
@@ -319,13 +319,13 @@ const AddForm = ({ isOpen, onClose, onSuccess, roomTypes, paidServices, userId }
                   <div className="space-y-4">
                     <div>
                       <label className="block text-xs font-medium text-neutral-600 mb-1.5">
-                        Offer Title <span className="text-red-500">*</span>
+                        Offer Title <span className="text-neutral-500">*</span>
                       </label>
                       <input
                         type="text"
                         value={formData.offer_title}
                         onChange={(e) => setFormData(prev => ({ ...prev, offer_title: e.target.value }))}
-                        className="w-full border border-neutral-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#472F97] focus:border-transparent"
+                        className="w-full border border-neutral-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#111111] focus:border-transparent"
                         placeholder="e.g., Summer Sale 2024"
                         required
                       />
@@ -342,13 +342,13 @@ const AddForm = ({ isOpen, onClose, onSuccess, roomTypes, paidServices, userId }
                   <div className="space-y-4">
                     <div>
                       <label className="block text-xs font-medium text-neutral-600 mb-1.5">
-                        Coupon Code <span className="text-red-500">*</span>
+                        Coupon Code <span className="text-neutral-500">*</span>
                       </label>
                       <input
                         type="text"
                         value={formData.coupon_code}
                         onChange={(e) => setFormData(prev => ({ ...prev, coupon_code: e.target.value.toUpperCase() }))}
-                        className="w-full border border-neutral-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#472F97] focus:border-transparent uppercase"
+                        className="w-full border border-neutral-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#111111] focus:border-transparent uppercase"
                         placeholder="SAVE20"
                         required
                       />
@@ -370,7 +370,7 @@ const AddForm = ({ isOpen, onClose, onSuccess, roomTypes, paidServices, userId }
                           step="0.01"
                           value={formData.coupon_value}
                           onChange={(e) => setFormData(prev => ({ ...prev, coupon_value: e.target.value }))}
-                          className="w-full border border-neutral-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#472F97] focus:border-transparent"
+                          className="w-full border border-neutral-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#111111] focus:border-transparent"
                           placeholder="20"
                           min="0"
                         />
@@ -392,7 +392,7 @@ const AddForm = ({ isOpen, onClose, onSuccess, roomTypes, paidServices, userId }
                         type="date"
                         value={formData.coupon_period_start}
                         onChange={(e) => setFormData(prev => ({ ...prev, coupon_period_start: e.target.value }))}
-                        className="w-full border border-neutral-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#472F97] focus:border-transparent"
+                        className="w-full border border-neutral-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#111111] focus:border-transparent"
                       />
                     </div>
                     <div>
@@ -401,7 +401,7 @@ const AddForm = ({ isOpen, onClose, onSuccess, roomTypes, paidServices, userId }
                         type="date"
                         value={formData.coupon_period_end}
                         onChange={(e) => setFormData(prev => ({ ...prev, coupon_period_end: e.target.value }))}
-                        className="w-full border border-neutral-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#472F97] focus:border-transparent"
+                        className="w-full border border-neutral-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#111111] focus:border-transparent"
                       />
                     </div>
                   </div>
@@ -465,7 +465,7 @@ const AddForm = ({ isOpen, onClose, onSuccess, roomTypes, paidServices, userId }
                 <button
                   type="submit"
                   disabled={saving}
-                  className="flex-1 px-4 py-2.5 bg-[#472F97] hover:bg-[#3a2578] text-white font-medium rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  className="flex-1 px-4 py-2.5 bg-[#111111] hover:bg-[#444444] text-white font-medium rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
                   <Save className="w-4 h-4" />
                   {saving ? 'Saving...' : 'Save Coupon'}

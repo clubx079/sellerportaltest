@@ -35,14 +35,14 @@ const ViewForm = ({ isOpen, onClose, archivedBooking, currency = '$' }) => {
     switch (status?.toLowerCase()) {
       case 'completed':
       case 'success':
-        return 'bg-green-100 text-green-700 border-green-200';
+        return 'bg-neutral-100 text-neutral-700 border-neutral-200';
       case 'confirmed':
-        return 'bg-blue-100 text-blue-700 border-blue-200';
+        return 'bg-neutral-100 text-neutral-700 border-neutral-200';
       case 'pending':
-        return 'bg-yellow-100 text-yellow-700 border-yellow-200';
+        return 'bg-neutral-100 text-neutral-700 border-neutral-200';
       case 'cancelled':
       case 'failed':
-        return 'bg-red-100 text-red-700 border-red-200';
+        return 'bg-neutral-100 text-neutral-700 border-neutral-200';
       default:
         return 'bg-neutral-100 text-neutral-700 border-neutral-200';
     }
@@ -70,7 +70,7 @@ const ViewForm = ({ isOpen, onClose, archivedBooking, currency = '$' }) => {
             className="fixed right-0 top-0 h-full w-full md:w-[600px] lg:w-[800px] bg-white shadow-2xl z-50 flex flex-col"
           >
             {/* Header */}
-            <div className="bg-[#472F97] px-6 py-4 flex items-center justify-between shadow-lg">
+            <div className="bg-[#111111] px-6 py-4 flex items-center justify-between shadow-lg">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-lg bg-white/10 flex items-center justify-center">
                   <Archive className="w-5 h-5 text-white" />
@@ -138,7 +138,7 @@ const ViewForm = ({ isOpen, onClose, archivedBooking, currency = '$' }) => {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-sm text-neutral-600">VIP Status:</span>
-                    <span className={`text-sm font-semibold ${booking.guests?.is_vip ? 'text-yellow-600' : 'text-neutral-900'}`}>
+                    <span className={`text-sm font-semibold ${booking.guests?.is_vip ? 'text-neutral-600' : 'text-neutral-900'}`}>
                       {booking.guests?.is_vip ? '⭐ VIP Guest' : 'Regular Guest'}
                     </span>
                   </div>
@@ -167,7 +167,7 @@ const ViewForm = ({ isOpen, onClose, archivedBooking, currency = '$' }) => {
                         <span className="text-sm text-neutral-600">Status:</span>
                         <span className={`text-sm font-semibold capitalize ${
                           br.status === 'checked_out' ? 'text-neutral-600' :
-                          br.status === 'checked_in' ? 'text-green-600' : 'text-yellow-600'
+                          br.status === 'checked_in' ? 'text-neutral-600' : 'text-neutral-600'
                         }`}>{br.status?.replace('_', ' ') || 'N/A'}</span>
                       </div>
                     </div>
@@ -200,7 +200,7 @@ const ViewForm = ({ isOpen, onClose, archivedBooking, currency = '$' }) => {
                         <span className="text-sm text-neutral-600">Status:</span>
                         <span className={`text-sm font-semibold capitalize ${
                           bh.status === 'checked_out' ? 'text-neutral-600' :
-                          bh.status === 'checked_in' ? 'text-green-600' : 'text-yellow-600'
+                          bh.status === 'checked_in' ? 'text-neutral-600' : 'text-neutral-600'
                         }`}>{bh.status?.replace('_', ' ') || 'N/A'}</span>
                       </div>
                     </div>
@@ -261,8 +261,8 @@ const ViewForm = ({ isOpen, onClose, archivedBooking, currency = '$' }) => {
                     <span className="text-sm text-neutral-600 font-semibold">Balance:</span>
                     <span className={`text-sm font-bold ${
                       (parseFloat(booking.total_amount || 0) - parseFloat(booking.paid_amount || 0)) > 0
-                        ? 'text-red-600'
-                        : 'text-green-600'
+                        ? 'text-neutral-600'
+                        : 'text-neutral-600'
                     }`}>
                       {currency}{(parseFloat(booking.total_amount || 0) - parseFloat(booking.paid_amount || 0)).toFixed(2)}
                     </span>

@@ -30,7 +30,7 @@ const SearchableSelect = ({ label, value, onChange, options, placeholder, requir
   return (
     <div ref={dropdownRef} className="relative">
       <label className="block text-xs font-medium text-neutral-600 mb-1.5">
-        {label} {required && <span className="text-red-500">*</span>}
+        {label} {required && <span className="text-neutral-500">*</span>}
       </label>
       <div
         onClick={() => setIsOpen(!isOpen)}
@@ -51,7 +51,7 @@ const SearchableSelect = ({ label, value, onChange, options, placeholder, requir
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search..."
-                className="w-full pl-9 pr-3 py-2 text-sm border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#472F97] focus:border-transparent"
+                className="w-full pl-9 pr-3 py-2 text-sm border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#111111] focus:border-transparent"
                 onClick={(e) => e.stopPropagation()}
               />
             </div>
@@ -185,7 +185,7 @@ const EditForm = ({ isOpen, onClose, onSuccess, service, roomTypes, userId }) =>
             className="fixed right-0 top-0 h-screen w-full md:w-[600px] lg:w-[700px] bg-white shadow-2xl z-[60] flex flex-col"
           >
             {/* Header */}
-            <div className="bg-[#472F97] px-6 py-4 flex items-center justify-between">
+            <div className="bg-[#111111] px-6 py-4 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center">
                   <Briefcase className="w-5 h-5 text-white" />
@@ -214,13 +214,13 @@ const EditForm = ({ isOpen, onClose, onSuccess, service, roomTypes, userId }) =>
                   </h3>
                   <div>
                     <label className="block text-xs font-medium text-neutral-600 mb-1.5">
-                      Title <span className="text-red-500">*</span>
+                      Title <span className="text-neutral-500">*</span>
                     </label>
                     <input
                       type="text"
                       value={formData.title}
                       onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
-                      className="w-full border border-neutral-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#472F97] focus:border-transparent"
+                      className="w-full border border-neutral-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#111111] focus:border-transparent"
                       placeholder="e.g., Room Service"
                       required
                     />
@@ -267,7 +267,7 @@ const EditForm = ({ isOpen, onClose, onSuccess, service, roomTypes, userId }) =>
                         step="0.01"
                         value={formData.price}
                         onChange={(e) => setFormData(prev => ({ ...prev, price: e.target.value }))}
-                        className="w-full border border-neutral-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#472F97] focus:border-transparent"
+                        className="w-full border border-neutral-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#111111] focus:border-transparent"
                         placeholder="0.00"
                         min="0"
                       />
@@ -284,7 +284,7 @@ const EditForm = ({ isOpen, onClose, onSuccess, service, roomTypes, userId }) =>
                       id="edit-status"
                       checked={formData.status}
                       onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.checked }))}
-                      className="w-5 h-5 text-neutral-900 border-neutral-300 rounded focus:ring-[#472F97]"
+                      className="w-5 h-5 text-neutral-900 border-neutral-300 rounded focus:ring-[#111111]"
                     />
                     <label htmlFor="edit-status" className="text-sm font-semibold text-neutral-700">
                       Set as Active
@@ -305,7 +305,7 @@ const EditForm = ({ isOpen, onClose, onSuccess, service, roomTypes, userId }) =>
                         value={formData.description}
                         onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
                         rows={4}
-                        className="w-full border border-neutral-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#472F97] focus:border-transparent"
+                        className="w-full border border-neutral-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#111111] focus:border-transparent"
                         placeholder="Enter detailed description..."
                       />
                     </div>
@@ -315,7 +315,7 @@ const EditForm = ({ isOpen, onClose, onSuccess, service, roomTypes, userId }) =>
                         value={formData.short_description}
                         onChange={(e) => setFormData(prev => ({ ...prev, short_description: e.target.value }))}
                         rows={3}
-                        className="w-full border border-neutral-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#472F97] focus:border-transparent"
+                        className="w-full border border-neutral-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#111111] focus:border-transparent"
                         placeholder="Enter short description..."
                       />
                     </div>
@@ -335,7 +335,7 @@ const EditForm = ({ isOpen, onClose, onSuccess, service, roomTypes, userId }) =>
                 <button
                   type="submit"
                   disabled={saving}
-                  className="flex-1 px-4 py-2.5 bg-[#472F97] hover:bg-[#3a2578] text-white font-medium rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  className="flex-1 px-4 py-2.5 bg-[#111111] hover:bg-[#444444] text-white font-medium rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
                   <Save className="w-4 h-4" />
                   {saving ? 'Updating...' : 'Update Service'}

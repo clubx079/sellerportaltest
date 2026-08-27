@@ -154,20 +154,20 @@ const PaymentModal = ({ isOpen, onClose, booking, onSuccess, userId, currency = 
                   initial={{ opacity: 0, y: -20 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -20 }}
-                  className="bg-yellow-50 border-b border-yellow-200 px-4 sm:px-6 py-3"
+                  className="bg-neutral-50 border-b border-neutral-200 px-4 sm:px-6 py-3"
                 >
                   <div className="flex items-start gap-3">
-                    <AlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+                    <AlertCircle className="w-5 h-5 text-neutral-600 flex-shrink-0 mt-0.5" />
                     <div className="flex-1">
-                      <h3 className="text-sm font-semibold text-yellow-900">Add Security Deposit?</h3>
-                      <p className="text-xs text-yellow-700 mt-1">
+                      <h3 className="text-sm font-semibold text-neutral-900">Add Security Deposit?</h3>
+                      <p className="text-xs text-neutral-700 mt-1">
                         The amount exceeds the pending payment. Do you want to add the extra as a security deposit?
                       </p>
                       <div className="flex gap-2 mt-2">
                         <button
                           type="button"
                           onClick={() => handleSecurityDepositConfirm(true)}
-                          className="px-3 py-1.5 bg-yellow-600 hover:bg-yellow-700 text-white text-xs font-medium rounded-lg transition-colors"
+                          className="px-3 py-1.5 bg-neutral-600 hover:bg-neutral-700 text-white text-xs font-medium rounded-lg transition-colors"
                         >
                           Yes, add deposit
                         </button>
@@ -198,11 +198,11 @@ const PaymentModal = ({ isOpen, onClose, booking, onSuccess, userId, currency = 
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-neutral-500">Paid Amount</span>
-                      <span className="font-semibold text-green-600">{currency}{parseFloat(booking.paid_amount || 0).toFixed(2)}</span>
+                      <span className="font-semibold text-neutral-600">{currency}{parseFloat(booking.paid_amount || 0).toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between text-sm pt-2 border-t border-neutral-200">
                       <span className="text-neutral-700 font-medium">Pending Amount</span>
-                      <span className="font-bold text-red-600">{currency}{pendingAmount.toFixed(2)}</span>
+                      <span className="font-bold text-neutral-600">{currency}{pendingAmount.toFixed(2)}</span>
                     </div>
                   </div>
                 </div>
@@ -211,7 +211,7 @@ const PaymentModal = ({ isOpen, onClose, booking, onSuccess, userId, currency = 
                 <div className="bg-neutral-50 rounded-xl p-4 border border-neutral-200">
                   <h3 className="text-sm font-semibold text-neutral-900 mb-3 flex items-center gap-2">
                     <Calendar className="w-4 h-4" />
-                    Payment Date <span className="text-red-500">*</span>
+                    Payment Date <span className="text-neutral-500">*</span>
                   </h3>
                   <input
                     type="date"
@@ -226,7 +226,7 @@ const PaymentModal = ({ isOpen, onClose, booking, onSuccess, userId, currency = 
                 <div className="bg-neutral-50 rounded-xl p-4 border border-neutral-200">
                   <h3 className="text-sm font-semibold text-neutral-900 mb-3 flex items-center gap-2">
                     <CreditCard className="w-4 h-4" />
-                    Payment Method <span className="text-red-500">*</span>
+                    Payment Method <span className="text-neutral-500">*</span>
                   </h3>
                   <select
                     value={formData.payment_method}
@@ -248,7 +248,7 @@ const PaymentModal = ({ isOpen, onClose, booking, onSuccess, userId, currency = 
                 <div className="bg-neutral-50 rounded-xl p-4 border border-neutral-200">
                   <h3 className="text-sm font-semibold text-neutral-900 mb-3 flex items-center gap-2">
                     <DollarSign className="w-4 h-4" />
-                    Amount <span className="text-red-500">*</span>
+                    Amount <span className="text-neutral-500">*</span>
                   </h3>
                   <input
                     type="number"
@@ -312,8 +312,8 @@ const PaymentModal = ({ isOpen, onClose, booking, onSuccess, userId, currency = 
                   exit={{ opacity: 0, y: -20 }}
                   className={`fixed top-4 left-1/2 -translate-x-1/2 z-[70] px-4 py-3 rounded-xl shadow-lg flex items-center gap-3 ${
                     toast.type === 'error'
-                      ? 'bg-red-50 border border-red-200 text-red-700'
-                      : 'bg-green-50 border border-green-200 text-green-700'
+                      ? 'bg-neutral-50 border border-neutral-200 text-neutral-700'
+                      : 'bg-neutral-50 border border-neutral-200 text-neutral-700'
                   }`}
                 >
                   {toast.type === 'error' ? (

@@ -39,14 +39,14 @@ const ViewForm = ({ isOpen, onClose, bookedHall, currency = '$' }) => {
     switch (status?.toLowerCase()) {
       case 'checked_in':
       case 'checkedin':
-        return 'bg-green-100 text-green-800 border-green-200';
+        return 'bg-neutral-100 text-neutral-800 border-neutral-200';
       case 'booked':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+        return 'bg-neutral-100 text-neutral-800 border-neutral-200';
       case 'checked_out':
       case 'checkedout':
         return 'bg-neutral-100 text-neutral-800 border-neutral-200';
       default:
-        return 'bg-blue-100 text-blue-800 border-blue-200';
+        return 'bg-neutral-100 text-neutral-800 border-neutral-200';
     }
   };
 
@@ -74,7 +74,7 @@ const ViewForm = ({ isOpen, onClose, bookedHall, currency = '$' }) => {
             className="fixed right-0 top-0 h-screen w-full md:w-[600px] lg:w-[700px] bg-white shadow-2xl z-[60] flex flex-col"
           >
             {/* Header */}
-            <div className="bg-[#472F97] px-4 sm:px-6 py-4 flex items-center justify-between">
+            <div className="bg-[#111111] px-4 sm:px-6 py-4 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-white/10 flex items-center justify-center">
                   <Building2 className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
@@ -134,7 +134,7 @@ const ViewForm = ({ isOpen, onClose, bookedHall, currency = '$' }) => {
                       <Clock className="w-4 h-4" />
                       Booking Basis
                     </h3>
-                    <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold border bg-blue-100 text-blue-800 border-blue-200">
+                    <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold border bg-neutral-100 text-neutral-800 border-neutral-200">
                       {bookedHall.booking_basis.charAt(0).toUpperCase() + bookedHall.booking_basis.slice(1)}
                     </span>
                   </div>
@@ -151,7 +151,7 @@ const ViewForm = ({ isOpen, onClose, bookedHall, currency = '$' }) => {
                       <span className="text-xs text-neutral-500">Name</span>
                       <span className="text-sm font-medium text-neutral-900">
                         {bookedHall.bookings?.guests?.full_name || 'Walk-in Guest'}
-                        {bookedHall.bookings?.guests?.is_vip && <span className="ml-1 text-yellow-500">⭐</span>}
+                        {bookedHall.bookings?.guests?.is_vip && <span className="ml-1 text-neutral-500">⭐</span>}
                       </span>
                     </div>
                     {bookedHall.bookings?.guests?.phone && (
@@ -220,11 +220,11 @@ const ViewForm = ({ isOpen, onClose, bookedHall, currency = '$' }) => {
                       </div>
                       <div className="flex items-center justify-between">
                         <span className="text-xs text-neutral-500">Paid Amount</span>
-                        <span className="text-sm font-medium text-green-600">{currency}{paidAmount.toFixed(2)}</span>
+                        <span className="text-sm font-medium text-neutral-600">{currency}{paidAmount.toFixed(2)}</span>
                       </div>
                       <div className="flex items-center justify-between pt-2 border-t border-neutral-200">
                         <span className="text-xs font-medium text-neutral-700">Balance Due</span>
-                        <span className={`text-sm font-bold ${balanceAmount > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                        <span className={`text-sm font-bold ${balanceAmount > 0 ? 'text-neutral-600' : 'text-neutral-600'}`}>
                           {currency}{balanceAmount.toFixed(2)}
                         </span>
                       </div>
@@ -233,10 +233,10 @@ const ViewForm = ({ isOpen, onClose, bookedHall, currency = '$' }) => {
                           <span className="text-xs text-neutral-500">Payment Status</span>
                           <span className={`text-xs font-medium px-2 py-0.5 rounded border ${
                             bookedHall.bookings.payment_status === 'success' || bookedHall.bookings.payment_status === 'paid'
-                              ? 'bg-green-50 text-green-700 border-green-200'
+                              ? 'bg-neutral-50 text-neutral-700 border-neutral-200'
                               : bookedHall.bookings.payment_status === 'pending'
-                              ? 'bg-yellow-50 text-yellow-700 border-yellow-200'
-                              : 'bg-red-50 text-red-700 border-red-200'
+                              ? 'bg-neutral-50 text-neutral-700 border-neutral-200'
+                              : 'bg-neutral-50 text-neutral-700 border-neutral-200'
                           }`}>
                             {bookedHall.bookings.payment_status.charAt(0).toUpperCase() + bookedHall.bookings.payment_status.slice(1)}
                           </span>

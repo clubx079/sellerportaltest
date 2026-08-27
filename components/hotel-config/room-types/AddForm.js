@@ -174,7 +174,7 @@ const AddForm = ({ isOpen, onClose, onSuccess, amenities, userId }) => {
             className="fixed right-0 top-0 h-screen w-full md:w-[600px] lg:w-[700px] bg-white shadow-2xl z-[60] flex flex-col"
           >
             {/* Header */}
-            <div className="bg-[#472F97] px-4 sm:px-6 py-4 flex items-center justify-between">
+            <div className="bg-[#111111] px-4 sm:px-6 py-4 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-white/10 flex items-center justify-center">
                   <BedDouble className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
@@ -197,20 +197,20 @@ const AddForm = ({ isOpen, onClose, onSuccess, amenities, userId }) => {
               <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
                 {/* Basic Info Section */}
                 <div className="bg-neutral-50 rounded-xl p-4 border border-neutral-200">
-                  <h3 className="text-sm font-semibold text-[#472F97] mb-4 flex items-center gap-2">
+                  <h3 className="text-sm font-semibold text-[#111111] mb-4 flex items-center gap-2">
                     <BedDouble className="w-4 h-4" />
                     Basic Information
                   </h3>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                     <div className="sm:col-span-2">
                       <label className="block text-xs font-medium text-neutral-600 mb-1.5">
-                        Title <span className="text-red-500">*</span>
+                        Title <span className="text-neutral-500">*</span>
                       </label>
                       <input
                         type="text"
                         value={formData.title}
                         onChange={(e) => handleTitleChange(e.target.value)}
-                        className="w-full border border-neutral-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#472F97] focus:border-transparent"
+                        className="w-full border border-neutral-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#111111] focus:border-transparent"
                         placeholder="e.g., Deluxe Room"
                         required
                       />
@@ -231,7 +231,7 @@ const AddForm = ({ isOpen, onClose, onSuccess, amenities, userId }) => {
                         type="text"
                         value={formData.short_code}
                         onChange={(e) => setFormData(prev => ({ ...prev, short_code: e.target.value.toUpperCase() }))}
-                        className="w-full border border-neutral-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#472F97] focus:border-transparent"
+                        className="w-full border border-neutral-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#111111] focus:border-transparent"
                         placeholder="e.g., DLX"
                       />
                     </div>
@@ -240,7 +240,7 @@ const AddForm = ({ isOpen, onClose, onSuccess, amenities, userId }) => {
 
                 {/* Occupancy Section */}
                 <div className="bg-neutral-50 rounded-xl p-4 border border-neutral-200">
-                  <h3 className="text-sm font-semibold text-[#472F97] mb-4 flex items-center gap-2">
+                  <h3 className="text-sm font-semibold text-[#111111] mb-4 flex items-center gap-2">
                     <Users className="w-4 h-4" />
                     Occupancy Details
                   </h3>
@@ -251,7 +251,7 @@ const AddForm = ({ isOpen, onClose, onSuccess, amenities, userId }) => {
                         type="number"
                         value={formData.base_occupancy}
                         onChange={(e) => setFormData(prev => ({ ...prev, base_occupancy: e.target.value }))}
-                        className="w-full border border-neutral-200 rounded-lg px-2 sm:px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#472F97] focus:border-transparent"
+                        className="w-full border border-neutral-200 rounded-lg px-2 sm:px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#111111] focus:border-transparent"
                         placeholder="2"
                         min="1"
                       />
@@ -262,7 +262,7 @@ const AddForm = ({ isOpen, onClose, onSuccess, amenities, userId }) => {
                         type="number"
                         value={formData.higher_occupancy}
                         onChange={(e) => setFormData(prev => ({ ...prev, higher_occupancy: e.target.value }))}
-                        className="w-full border border-neutral-200 rounded-lg px-2 sm:px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#472F97] focus:border-transparent"
+                        className="w-full border border-neutral-200 rounded-lg px-2 sm:px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#111111] focus:border-transparent"
                         placeholder="4"
                         min="1"
                       />
@@ -273,7 +273,7 @@ const AddForm = ({ isOpen, onClose, onSuccess, amenities, userId }) => {
                         type="number"
                         value={formData.kids_occupancy}
                         onChange={(e) => setFormData(prev => ({ ...prev, kids_occupancy: e.target.value }))}
-                        className="w-full border border-neutral-200 rounded-lg px-2 sm:px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#472F97] focus:border-transparent"
+                        className="w-full border border-neutral-200 rounded-lg px-2 sm:px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#111111] focus:border-transparent"
                         placeholder="1"
                         min="0"
                       />
@@ -285,7 +285,7 @@ const AddForm = ({ isOpen, onClose, onSuccess, amenities, userId }) => {
                         type="checkbox"
                         checked={formData.extra_bed}
                         onChange={(e) => setFormData(prev => ({ ...prev, extra_bed: e.target.checked }))}
-                        className="w-4 h-4 text-[#472F97] rounded focus:ring-[#472F97] border-neutral-300"
+                        className="w-4 h-4 text-[#111111] rounded focus:ring-[#111111] border-neutral-300"
                       />
                       <span className="text-sm text-neutral-700">Extra Bed Available</span>
                     </label>
@@ -294,7 +294,7 @@ const AddForm = ({ isOpen, onClose, onSuccess, amenities, userId }) => {
 
                 {/* Pricing Section */}
                 <div className="bg-neutral-50 rounded-xl p-4 border border-neutral-200">
-                  <h3 className="text-sm font-semibold text-[#472F97] mb-4 flex items-center gap-2">
+                  <h3 className="text-sm font-semibold text-[#111111] mb-4 flex items-center gap-2">
                     <DollarSign className="w-4 h-4" />
                     Pricing
                   </h3>
@@ -306,7 +306,7 @@ const AddForm = ({ isOpen, onClose, onSuccess, amenities, userId }) => {
                         step="0.01"
                         value={formData.base_price}
                         onChange={(e) => setFormData(prev => ({ ...prev, base_price: e.target.value }))}
-                        className="w-full border border-neutral-200 rounded-lg px-2 sm:px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#472F97] focus:border-transparent"
+                        className="w-full border border-neutral-200 rounded-lg px-2 sm:px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#111111] focus:border-transparent"
                         placeholder="100.00"
                         min="0"
                       />
@@ -318,7 +318,7 @@ const AddForm = ({ isOpen, onClose, onSuccess, amenities, userId }) => {
                         step="0.01"
                         value={formData.additional_person_price}
                         onChange={(e) => setFormData(prev => ({ ...prev, additional_person_price: e.target.value }))}
-                        className="w-full border border-neutral-200 rounded-lg px-2 sm:px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#472F97] focus:border-transparent"
+                        className="w-full border border-neutral-200 rounded-lg px-2 sm:px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#111111] focus:border-transparent"
                         placeholder="20.00"
                         min="0"
                       />
@@ -330,7 +330,7 @@ const AddForm = ({ isOpen, onClose, onSuccess, amenities, userId }) => {
                         step="0.01"
                         value={formData.extra_bed_price}
                         onChange={(e) => setFormData(prev => ({ ...prev, extra_bed_price: e.target.value }))}
-                        className="w-full border border-neutral-200 rounded-lg px-2 sm:px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#472F97] focus:border-transparent"
+                        className="w-full border border-neutral-200 rounded-lg px-2 sm:px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#111111] focus:border-transparent"
                         placeholder="15.00"
                         min="0"
                       />
@@ -340,7 +340,7 @@ const AddForm = ({ isOpen, onClose, onSuccess, amenities, userId }) => {
 
                 {/* Image Upload Section */}
                 <div className="bg-neutral-50 rounded-xl p-4 border border-neutral-200">
-                  <h3 className="text-sm font-semibold text-[#472F97] mb-4 flex items-center gap-2">
+                  <h3 className="text-sm font-semibold text-[#111111] mb-4 flex items-center gap-2">
                     <ImageIcon className="w-4 h-4" />
                     Room Image
                   </h3>
@@ -378,7 +378,7 @@ const AddForm = ({ isOpen, onClose, onSuccess, amenities, userId }) => {
                             setImageFile(null);
                             setImagePreview(null);
                           }}
-                          className="absolute top-2 right-2 p-1.5 bg-[#472F97] hover:bg-[#3a2578] text-white rounded-lg transition-colors"
+                          className="absolute top-2 right-2 p-1.5 bg-[#111111] hover:bg-[#444444] text-white rounded-lg transition-colors"
                         >
                           <X className="w-4 h-4" />
                         </button>
@@ -394,14 +394,14 @@ const AddForm = ({ isOpen, onClose, onSuccess, amenities, userId }) => {
                     value={formData.description}
                     onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
                     rows={3}
-                    className="w-full border border-neutral-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#472F97] focus:border-transparent resize-none"
+                    className="w-full border border-neutral-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#111111] focus:border-transparent resize-none"
                     placeholder="Describe the room type..."
                   />
                 </div>
 
                 {/* Amenities */}
                 <div className="bg-neutral-50 rounded-xl p-4 border border-neutral-200">
-                  <h3 className="text-sm font-semibold text-[#472F97] mb-4 flex items-center gap-2">
+                  <h3 className="text-sm font-semibold text-[#111111] mb-4 flex items-center gap-2">
                     <Sparkles className="w-4 h-4" />
                     Amenities ({formData.amenities.length} selected)
                   </h3>
@@ -417,7 +417,7 @@ const AddForm = ({ isOpen, onClose, onSuccess, amenities, userId }) => {
                             type="checkbox"
                             checked={formData.amenities.includes(amenity.id)}
                             onChange={() => handleAmenityToggle(amenity.id)}
-                            className="w-4 h-4 text-[#472F97] rounded focus:ring-[#472F97] border-neutral-300"
+                            className="w-4 h-4 text-[#111111] rounded focus:ring-[#111111] border-neutral-300"
                           />
                           <span className="text-sm text-neutral-700">{amenity.name}</span>
                         </label>
@@ -439,7 +439,7 @@ const AddForm = ({ isOpen, onClose, onSuccess, amenities, userId }) => {
                 <button
                   type="submit"
                   disabled={saving}
-                  className="flex-1 px-3 sm:px-4 py-2.5 bg-[#472F97] hover:bg-[#3a2578] text-white text-sm font-medium rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  className="flex-1 px-3 sm:px-4 py-2.5 bg-[#111111] hover:bg-[#444444] text-white text-sm font-medium rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
                   <Save className="w-4 h-4" />
                   <span className="hidden sm:inline">{saving ? 'Saving...' : 'Save Room Type'}</span>

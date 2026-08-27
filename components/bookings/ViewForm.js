@@ -83,12 +83,12 @@ const ViewForm = ({ isOpen, onClose, booking, onOpenPayment, onOpenRoomAssignmen
     switch (status?.toLowerCase()) {
       case 'success':
       case 'confirmed':
-        return 'bg-green-100 text-green-800 border-green-200';
+        return 'bg-neutral-100 text-neutral-800 border-neutral-200';
       case 'pending':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+        return 'bg-neutral-100 text-neutral-800 border-neutral-200';
       case 'cancelled':
       case 'canceled':
-        return 'bg-red-100 text-red-800 border-red-200';
+        return 'bg-neutral-100 text-neutral-800 border-neutral-200';
       default:
         return 'bg-neutral-100 text-neutral-800 border-neutral-200';
     }
@@ -98,13 +98,13 @@ const ViewForm = ({ isOpen, onClose, booking, onOpenPayment, onOpenRoomAssignmen
     switch (status?.toLowerCase()) {
       case 'success':
       case 'paid':
-        return 'bg-green-100 text-green-800 border-green-200';
+        return 'bg-neutral-100 text-neutral-800 border-neutral-200';
       case 'pending':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+        return 'bg-neutral-100 text-neutral-800 border-neutral-200';
       case 'partial':
-        return 'bg-blue-100 text-blue-800 border-blue-200';
+        return 'bg-neutral-100 text-neutral-800 border-neutral-200';
       case 'failed':
-        return 'bg-red-100 text-red-800 border-red-200';
+        return 'bg-neutral-100 text-neutral-800 border-neutral-200';
       default:
         return 'bg-neutral-100 text-neutral-800 border-neutral-200';
     }
@@ -155,7 +155,7 @@ const ViewForm = ({ isOpen, onClose, booking, onOpenPayment, onOpenRoomAssignmen
             className="fixed right-0 top-0 h-screen w-full md:w-[600px] lg:w-[700px] bg-white shadow-2xl z-[60] flex flex-col"
           >
             {/* Header */}
-            <div className="bg-[#472F97] px-4 sm:px-6 py-4 flex items-center justify-between">
+            <div className="bg-[#111111] px-4 sm:px-6 py-4 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-white/10 flex items-center justify-center">
                   <Calendar className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
@@ -193,9 +193,9 @@ const ViewForm = ({ isOpen, onClose, booking, onOpenPayment, onOpenRoomAssignmen
                 </div>
 
                 {/* Head Guest Information */}
-                <div className="bg-gradient-to-br from-[#F5F3FF] to-white rounded-xl p-4 border-2 border-[#472F97]/20">
+                <div className="bg-gradient-to-br from-[#f7f7f7] to-white rounded-xl p-4 border-2 border-[#111111]/20">
                   <h3 className="text-sm font-semibold text-neutral-900 mb-3 flex items-center gap-2">
-                    <User className="w-4 h-4 text-[#472F97]" />
+                    <User className="w-4 h-4 text-[#111111]" />
                     Head Guest
                   </h3>
                   {loadingGuests ? (
@@ -208,7 +208,7 @@ const ViewForm = ({ isOpen, onClose, booking, onOpenPayment, onOpenRoomAssignmen
                         <span className="text-xs text-neutral-500">Name</span>
                         <span className="text-sm font-medium text-neutral-900">
                           {headGuest.full_name}
-                          {headGuest.is_vip && <span className="ml-1 text-yellow-500">⭐</span>}
+                          {headGuest.is_vip && <span className="ml-1 text-neutral-500">⭐</span>}
                         </span>
                       </div>
                       {headGuest.phone && (
@@ -249,7 +249,7 @@ const ViewForm = ({ isOpen, onClose, booking, onOpenPayment, onOpenRoomAssignmen
                           <div className="flex items-start justify-between mb-2">
                             <span className="text-xs font-medium text-neutral-700">
                               Guest {index + 1}
-                              {guest.is_vip && <span className="ml-1 text-yellow-500">⭐</span>}
+                              {guest.is_vip && <span className="ml-1 text-neutral-500">⭐</span>}
                             </span>
                           </div>
                           <div className="space-y-1.5">
@@ -379,11 +379,11 @@ const ViewForm = ({ isOpen, onClose, booking, onOpenPayment, onOpenRoomAssignmen
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-xs text-neutral-500">Paid Amount</span>
-                      <span className="text-sm font-medium text-green-600">{currency}{paidAmount.toFixed(2)}</span>
+                      <span className="text-sm font-medium text-neutral-600">{currency}{paidAmount.toFixed(2)}</span>
                     </div>
                     <div className="flex items-center justify-between pt-2 border-t border-neutral-200">
                       <span className="text-xs font-medium text-neutral-700">Balance Due</span>
-                      <span className={`text-sm font-bold ${balanceAmount > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                      <span className={`text-sm font-bold ${balanceAmount > 0 ? 'text-neutral-600' : 'text-neutral-600'}`}>
                         {currency}{balanceAmount.toFixed(2)}
                       </span>
                     </div>
@@ -394,7 +394,7 @@ const ViewForm = ({ isOpen, onClose, booking, onOpenPayment, onOpenRoomAssignmen
                       <div className="flex items-center gap-2 text-xs text-neutral-600">
                         <Tag className="w-3 h-3" />
                         Coupon Applied: <span className="font-semibold">{booking.coupons.coupon_code}</span>
-                        <span className="text-green-600">(-{currency}{booking.coupons.coupon_value})</span>
+                        <span className="text-neutral-600">(-{currency}{booking.coupons.coupon_value})</span>
                       </div>
                     </div>
                   )}
@@ -407,7 +407,7 @@ const ViewForm = ({ isOpen, onClose, booking, onOpenPayment, onOpenRoomAssignmen
                     <button
                       onClick={() => handleStatusUpdate('confirmed')}
                       disabled={updatingStatus || booking.booking_status === 'confirmed'}
-                      className="flex items-center justify-center gap-1.5 px-3 py-2 bg-green-50 hover:bg-green-100 text-green-700 text-xs font-medium rounded-lg border border-green-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="flex items-center justify-center gap-1.5 px-3 py-2 bg-neutral-50 hover:bg-neutral-100 text-neutral-700 text-xs font-medium rounded-lg border border-neutral-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <CheckCircle className="w-3.5 h-3.5" />
                       Confirm
@@ -415,21 +415,21 @@ const ViewForm = ({ isOpen, onClose, booking, onOpenPayment, onOpenRoomAssignmen
                     <button
                       onClick={() => handleStatusUpdate('cancelled')}
                       disabled={updatingStatus || booking.booking_status === 'cancelled'}
-                      className="flex items-center justify-center gap-1.5 px-3 py-2 bg-red-50 hover:bg-red-100 text-red-700 text-xs font-medium rounded-lg border border-red-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="flex items-center justify-center gap-1.5 px-3 py-2 bg-neutral-50 hover:bg-neutral-100 text-neutral-700 text-xs font-medium rounded-lg border border-neutral-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <XCircle className="w-3.5 h-3.5" />
                       Cancel
                     </button>
                     <button
                       onClick={() => onOpenPayment?.(booking)}
-                      className="flex items-center justify-center gap-1.5 px-3 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-medium rounded-lg border border-blue-200 transition-colors"
+                      className="flex items-center justify-center gap-1.5 px-3 py-2 bg-neutral-50 hover:bg-neutral-100 text-neutral-700 text-xs font-medium rounded-lg border border-neutral-200 transition-colors"
                     >
                       <DollarSign className="w-3.5 h-3.5" />
                       Payment
                     </button>
                     <button
                       onClick={() => onOpenRoomAssignment?.(booking)}
-                      className="flex items-center justify-center gap-1.5 px-3 py-2 bg-purple-50 hover:bg-purple-100 text-purple-700 text-xs font-medium rounded-lg border border-purple-200 transition-colors"
+                      className="flex items-center justify-center gap-1.5 px-3 py-2 bg-neutral-50 hover:bg-neutral-100 text-neutral-700 text-xs font-medium rounded-lg border border-neutral-200 transition-colors"
                     >
                       <BedDouble className="w-3.5 h-3.5" />
                       Assign Room
@@ -458,7 +458,7 @@ const ViewForm = ({ isOpen, onClose, booking, onOpenPayment, onOpenRoomAssignmen
             <div className="sticky bottom-0 bg-white border-t border-neutral-200 px-4 sm:px-6 py-4 flex items-center">
               <button
                 onClick={onClose}
-                className="w-full px-3 sm:px-4 py-2.5 bg-[#472F97] hover:bg-[#3a2578] text-white text-sm font-medium rounded-xl transition-colors"
+                className="w-full px-3 sm:px-4 py-2.5 bg-[#111111] hover:bg-[#444444] text-white text-sm font-medium rounded-xl transition-colors"
               >
                 Close
               </button>

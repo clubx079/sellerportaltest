@@ -29,7 +29,7 @@ const SearchableSelect = ({ label, value, onChange, options, placeholder, requir
   return (
     <div ref={dropdownRef} className="relative">
       <label className="block text-xs font-medium text-neutral-600 mb-1.5">
-        {label} {required && <span className="text-red-500">*</span>}
+        {label} {required && <span className="text-neutral-500">*</span>}
       </label>
       <div
         onClick={() => setIsOpen(!isOpen)}
@@ -50,7 +50,7 @@ const SearchableSelect = ({ label, value, onChange, options, placeholder, requir
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search..."
-                className="w-full pl-9 pr-3 py-2 text-sm border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#472F97] focus:border-transparent"
+                className="w-full pl-9 pr-3 py-2 text-sm border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#111111] focus:border-transparent"
                 onClick={(e) => e.stopPropagation()}
               />
             </div>
@@ -183,7 +183,7 @@ const EditForm = ({ isOpen, onClose, onSuccess, hall, floors, hallTypes, userId 
             className="fixed right-0 top-0 h-screen w-full md:w-[600px] lg:w-[700px] bg-white shadow-2xl z-[60] flex flex-col"
           >
             {/* Header */}
-            <div className="bg-[#472F97] px-6 py-4 flex items-center justify-between">
+            <div className="bg-[#111111] px-6 py-4 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center">
                   <Building2 className="w-5 h-5 text-white" />
@@ -205,7 +205,7 @@ const EditForm = ({ isOpen, onClose, onSuccess, hall, floors, hallTypes, userId 
             <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto">
               <div className="p-6 space-y-5">
                 <div className="bg-neutral-50 rounded-xl p-4 border border-neutral-200">
-                  <h3 className="text-sm font-semibold text-[#472F97] mb-4 flex items-center gap-2">
+                  <h3 className="text-sm font-semibold text-[#111111] mb-4 flex items-center gap-2">
                     <Building2 className="w-4 h-4" />
                     Hall Information
                   </h3>
@@ -238,13 +238,13 @@ const EditForm = ({ isOpen, onClose, onSuccess, hall, floors, hallTypes, userId 
                     {/* Hall Number Field */}
                     <div>
                       <label className="block text-xs font-medium text-neutral-600 mb-1.5">
-                        Hall Number <span className="text-red-500">*</span>
+                        Hall Number <span className="text-neutral-500">*</span>
                       </label>
                       <input
                         type="text"
                         value={formData.hall_number}
                         onChange={(e) => setFormData({ ...formData, hall_number: e.target.value })}
-                        className="w-full border border-neutral-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#472F97] focus:border-transparent"
+                        className="w-full border border-neutral-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#111111] focus:border-transparent"
                         placeholder="e.g., H101"
                         required
                       />
@@ -277,7 +277,7 @@ const EditForm = ({ isOpen, onClose, onSuccess, hall, floors, hallTypes, userId 
                 <button
                   type="submit"
                   disabled={saving}
-                  className="flex-1 px-4 py-2.5 bg-[#472F97] hover:bg-[#3a2578] text-white font-medium rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  className="flex-1 px-4 py-2.5 bg-[#111111] hover:bg-[#444444] text-white font-medium rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
                   <Save className="w-4 h-4" />
                   {saving ? 'Saving...' : 'Save Changes'}

@@ -34,7 +34,7 @@ const ViewForm = ({ isOpen, onClose, hallType, amenities }) => {
             className="fixed right-0 top-0 h-screen w-full md:w-[600px] lg:w-[700px] bg-white shadow-2xl z-[60] flex flex-col"
           >
             {/* Header */}
-            <div className="bg-[#472F97] px-6 py-4 flex items-center justify-between">
+            <div className="bg-[#111111] px-6 py-4 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center">
                   <Building2 className="w-5 h-5 text-white" />
@@ -58,7 +58,7 @@ const ViewForm = ({ isOpen, onClose, hallType, amenities }) => {
                 {/* Image */}
                 {hallType.image && (
                   <div className="bg-neutral-50 rounded-xl p-4 border border-neutral-200">
-                    <h3 className="text-sm font-semibold text-[#472F97] mb-4 flex items-center gap-2">
+                    <h3 className="text-sm font-semibold text-[#111111] mb-4 flex items-center gap-2">
                       <ImageIcon className="w-4 h-4" />
                       Hall Image
                     </h3>
@@ -72,7 +72,7 @@ const ViewForm = ({ isOpen, onClose, hallType, amenities }) => {
 
                 {/* Basic Info Section */}
                 <div className="bg-neutral-50 rounded-xl p-4 border border-neutral-200">
-                  <h3 className="text-sm font-semibold text-[#472F97] mb-4 flex items-center gap-2">
+                  <h3 className="text-sm font-semibold text-[#111111] mb-4 flex items-center gap-2">
                     <Building2 className="w-4 h-4" />
                     Basic Information
                   </h3>
@@ -102,7 +102,7 @@ const ViewForm = ({ isOpen, onClose, hallType, amenities }) => {
 
                 {/* Occupancy Section */}
                 <div className="bg-neutral-50 rounded-xl p-4 border border-neutral-200">
-                  <h3 className="text-sm font-semibold text-[#472F97] mb-4 flex items-center gap-2">
+                  <h3 className="text-sm font-semibold text-[#111111] mb-4 flex items-center gap-2">
                     <Users className="w-4 h-4" />
                     Occupancy Details
                   </h3>
@@ -120,7 +120,7 @@ const ViewForm = ({ isOpen, onClose, hallType, amenities }) => {
 
                 {/* Pricing Section */}
                 <div className="bg-neutral-50 rounded-xl p-4 border border-neutral-200">
-                  <h3 className="text-sm font-semibold text-[#472F97] mb-4 flex items-center gap-2">
+                  <h3 className="text-sm font-semibold text-[#111111] mb-4 flex items-center gap-2">
                     <DollarSign className="w-4 h-4" />
                     Pricing
                   </h3>
@@ -134,7 +134,7 @@ const ViewForm = ({ isOpen, onClose, hallType, amenities }) => {
 
                 {/* Amenities */}
                 <div className="bg-neutral-50 rounded-xl p-4 border border-neutral-200">
-                  <h3 className="text-sm font-semibold text-[#472F97] mb-4 flex items-center gap-2">
+                  <h3 className="text-sm font-semibold text-[#111111] mb-4 flex items-center gap-2">
                     <Sparkles className="w-4 h-4" />
                     Amenities ({selectedAmenities.length})
                   </h3>
@@ -142,7 +142,7 @@ const ViewForm = ({ isOpen, onClose, hallType, amenities }) => {
                     <div className="grid grid-cols-2 gap-2">
                       {selectedAmenities.map(amenity => (
                         <div key={amenity.id} className="flex items-center gap-2 bg-white rounded-lg p-2 border border-neutral-200">
-                          <div className="w-5 h-5 rounded bg-[#472F97] flex items-center justify-center flex-shrink-0">
+                          <div className="w-5 h-5 rounded bg-[#111111] flex items-center justify-center flex-shrink-0">
                             <span className="text-white text-xs">✓</span>
                           </div>
                           <span className="text-sm text-neutral-700">{amenity.name}</span>
@@ -159,7 +159,7 @@ const ViewForm = ({ isOpen, onClose, hallType, amenities }) => {
               <div className="sticky bottom-0 bg-white border-t border-neutral-200 px-6 py-4">
                 <button
                   onClick={onClose}
-                  className="w-full px-4 py-2.5 bg-[#472F97] hover:bg-[#3a2578] text-white font-medium rounded-xl transition-colors"
+                  className="w-full px-4 py-2.5 bg-[#111111] hover:bg-[#444444] text-white font-medium rounded-xl transition-colors"
                 >
                   Close
                 </button>

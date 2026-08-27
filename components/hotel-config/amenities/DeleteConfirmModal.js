@@ -26,7 +26,7 @@ const DeleteConfirmModal = ({ isOpen, onClose, onConfirm, itemName }) => {
           <div className="fixed inset-0 z-[60] flex items-center justify-center p-3 sm:p-4">
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
               {/* Header */}
-              <div className="relative bg-[#472F97] p-4 sm:p-6">
+              <div className="relative bg-[#111111] p-4 sm:p-6">
                 <div className="flex items-center gap-3 sm:gap-4">
                   <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-white/10 flex items-center justify-center flex-shrink-0">
                     <AlertTriangle className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
@@ -68,7 +68,7 @@ const DeleteConfirmModal = ({ isOpen, onClose, onConfirm, itemName }) => {
                     onConfirm();
                     onClose();
                   }}
-                  className="flex-1 px-3 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm bg-[#472F97] hover:bg-[#3a2578] text-white font-medium rounded-xl transition-colors"
+                  className="flex-1 px-3 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm bg-[#111111] hover:bg-[#444444] text-white font-medium rounded-xl transition-colors"
                 >
                   Delete
                 </button>

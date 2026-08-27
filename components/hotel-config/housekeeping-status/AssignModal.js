@@ -31,7 +31,7 @@ const SearchableSelect = ({ label, value, onChange, options, placeholder, requir
   return (
     <div ref={dropdownRef} className="relative">
       <label className="block text-xs font-medium text-neutral-600 mb-1.5">
-        {label} {required && <span className="text-red-500">*</span>}
+        {label} {required && <span className="text-neutral-500">*</span>}
       </label>
       <div
         onClick={() => setIsOpen(!isOpen)}
@@ -53,7 +53,7 @@ const SearchableSelect = ({ label, value, onChange, options, placeholder, requir
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search..."
-                className="w-full pl-9 pr-3 py-2 text-sm border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#472F97] focus:border-transparent"
+                className="w-full pl-9 pr-3 py-2 text-sm border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#111111] focus:border-transparent"
                 onClick={(e) => e.stopPropagation()}
               />
             </div>
@@ -118,13 +118,13 @@ const AssignModal = ({ isOpen, onClose, onSuccess, item, type, housekeepers, use
   const getStatusColor = (status) => {
     switch (status) {
       case 'clean':
-        return 'bg-green-100 text-green-700 border-green-200';
+        return 'bg-neutral-100 text-neutral-700 border-neutral-200';
       case 'dirty':
-        return 'bg-red-100 text-red-700 border-red-200';
+        return 'bg-neutral-100 text-neutral-700 border-neutral-200';
       case 'inspected':
-        return 'bg-blue-100 text-blue-700 border-blue-200';
+        return 'bg-neutral-100 text-neutral-700 border-neutral-200';
       case 'out of service':
-        return 'bg-orange-100 text-orange-700 border-orange-200';
+        return 'bg-neutral-100 text-neutral-700 border-neutral-200';
       default:
         return 'bg-gray-100 text-gray-700 border-gray-200';
     }
@@ -170,7 +170,7 @@ const AssignModal = ({ isOpen, onClose, onSuccess, item, type, housekeepers, use
           {/* Side Panel */}
           <div className="fixed right-0 top-0 h-screen w-full sm:w-[90%] md:w-[600px] lg:w-[700px] bg-white shadow-2xl z-[60] flex flex-col">
             {/* Header */}
-            <div className="bg-[#472F97] px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between">
+            <div className="bg-[#111111] px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between">
               <div className="flex items-center gap-2 sm:gap-3">
                 <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-white/10 flex items-center justify-center">
                   <User className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
@@ -267,7 +267,7 @@ const AssignModal = ({ isOpen, onClose, onSuccess, item, type, housekeepers, use
                 <button
                   type="submit"
                   disabled={saving}
-                  className="flex-1 px-3 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm bg-[#472F97] hover:bg-[#3a2578] text-white font-medium rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1.5 sm:gap-2"
+                  className="flex-1 px-3 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm bg-[#111111] hover:bg-[#444444] text-white font-medium rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1.5 sm:gap-2"
                 >
                   <Save className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                   {saving ? 'Assigning...' : 'Assign'}

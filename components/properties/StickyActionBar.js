@@ -25,7 +25,7 @@
 export default function StickyActionBar({ children, className = '' }) {
   return (
     <div
-      className={`sticky -bottom-4 md:-bottom-6 -mx-4 md:-mx-6 px-4 md:px-6 py-3 bg-white/95 backdrop-blur border-t border-[#E8E8E4] shadow-[0_-2px_8px_rgba(0,0,0,0.04)] flex items-center justify-between gap-3 z-10 ${className}`}
+      className={`sticky -bottom-4 md:-bottom-6 -mx-4 md:-mx-6 px-4 md:px-6 py-3 bg-white border-t-[1.5px] border-ink flex items-center justify-between gap-3 z-10 ${className}`}
     >
       {children}
     </div>

@@ -29,7 +29,7 @@ const ViewForm = ({ isOpen, onClose, floor }) => {
             className="fixed right-0 top-0 h-screen w-full md:w-[600px] lg:w-[700px] bg-white shadow-2xl z-[60] flex flex-col"
           >
             {/* Header */}
-            <div className="bg-[#472F97] px-6 py-4 flex items-center justify-between">
+            <div className="bg-[#111111] px-6 py-4 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center">
                   <Building2 className="w-5 h-5 text-white" />
@@ -92,15 +92,15 @@ const ViewForm = ({ isOpen, onClose, floor }) => {
                   <div className="flex items-center gap-2">
                     {floor.is_active ? (
                       <>
-                        <CheckCircle className="w-5 h-5 text-green-600" />
-                        <span className="px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700 border border-green-200">
+                        <CheckCircle className="w-5 h-5 text-neutral-600" />
+                        <span className="px-3 py-1 rounded-full text-xs font-semibold bg-neutral-100 text-neutral-700 border border-neutral-200">
                           Active
                         </span>
                       </>
                     ) : (
                       <>
-                        <XCircle className="w-5 h-5 text-red-600" />
-                        <span className="px-3 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-700 border border-red-200">
+                        <XCircle className="w-5 h-5 text-neutral-600" />
+                        <span className="px-3 py-1 rounded-full text-xs font-semibold bg-neutral-100 text-neutral-700 border border-neutral-200">
                           Inactive
                         </span>
                       </>
@@ -113,7 +113,7 @@ const ViewForm = ({ isOpen, onClose, floor }) => {
               <div className="sticky bottom-0 bg-white border-t border-neutral-200 px-6 py-4">
                 <button
                   onClick={onClose}
-                  className="w-full px-4 py-2.5 bg-[#472F97] hover:bg-[#3a2578] text-white font-medium rounded-xl transition-colors"
+                  className="w-full px-4 py-2.5 bg-[#111111] hover:bg-[#444444] text-white font-medium rounded-xl transition-colors"
                 >
                   Close
                 </button>

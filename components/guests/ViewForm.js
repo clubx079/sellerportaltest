@@ -47,7 +47,7 @@ const ViewForm = ({ isOpen, onClose, guest }) => {
             className="fixed right-0 top-0 h-screen w-full md:w-[500px] lg:w-[550px] bg-white shadow-2xl z-[60] flex flex-col"
           >
             {/* Header */}
-            <div className="bg-[#472F97] px-4 sm:px-6 py-4 flex items-center justify-between">
+            <div className="bg-[#111111] px-4 sm:px-6 py-4 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-white/10 flex items-center justify-center">
                   <User className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
@@ -114,13 +114,13 @@ const ViewForm = ({ isOpen, onClose, guest }) => {
                     VIP Status
                   </h3>
                   <div className="flex items-center gap-3 p-3 bg-white rounded-lg border border-neutral-200">
-                    <div className={`w-6 h-6 rounded flex items-center justify-center ${guest.is_vip ? 'bg-amber-500' : 'bg-neutral-300'}`}>
+                    <div className={`w-6 h-6 rounded flex items-center justify-center ${guest.is_vip ? 'bg-neutral-500' : 'bg-neutral-300'}`}>
                       {guest.is_vip && <Check className="w-4 h-4 text-white" />}
                     </div>
                     <div className="flex-1">
                       {guest.is_vip ? (
                         <>
-                          <span className="text-sm font-medium text-amber-700">VIP Guest</span>
+                          <span className="text-sm font-medium text-neutral-700">VIP Guest</span>
                           <p className="text-xs text-neutral-500 mt-0.5">This guest has VIP privileges</p>
                         </>
                       ) : (
@@ -152,7 +152,7 @@ const ViewForm = ({ isOpen, onClose, guest }) => {
               <div className="sticky bottom-0 bg-white border-t border-neutral-200 px-4 sm:px-6 py-4">
                 <button
                   onClick={onClose}
-                  className="w-full px-4 py-2.5 bg-[#472F97] hover:bg-[#3a2578] text-white text-sm font-medium rounded-xl transition-colors"
+                  className="w-full px-4 py-2.5 bg-[#111111] hover:bg-[#444444] text-white text-sm font-medium rounded-xl transition-colors"
                 >
                   Close
                 </button>

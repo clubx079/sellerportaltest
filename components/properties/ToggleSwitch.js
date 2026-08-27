@@ -47,10 +47,10 @@ export default function ToggleSwitch({
       onClick={() => onChange(!value)}
       className={`inline-flex items-center gap-2 ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
     >
-      <span className={`relative inline-flex items-center ${dims.track} rounded-full transition-colors ${value ? 'bg-[#0F6E56]' : 'bg-[#D4D4CF]'}`}>
-        <span className={`absolute left-0.5 ${dims.knob} bg-white rounded-full shadow-sm transition-transform ${value ? dims.translate : 'translate-x-0'}`} />
+      <span className={`relative inline-flex items-center ${dims.track} rounded-pill transition-colors duration-120 ${value ? 'bg-ink' : 'bg-line-2'}`}>
+        <span className={`absolute left-0.5 ${dims.knob} bg-white rounded-pill transition-transform duration-120 ${value ? dims.translate : 'translate-x-0'}`} />
       </span>
-      <span className={`text-[12px] font-medium ${value ? 'text-[#0F6E56]' : 'text-[#737370]'}`}>
+      <span className={`font-mono text-[11px] font-semibold uppercase tracking-[0.05em] ${value ? 'text-ink' : 'text-muted'}`}>
         {value ? onLabel : offLabel}
       </span>
     </button>

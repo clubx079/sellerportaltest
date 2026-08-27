@@ -61,11 +61,11 @@ const SORT_OPTIONS = [
 ];
 
 const AVATAR_PAIRS = [
-  { bg: '#FEF0EF', text: '#D03839' },
-  { bg: '#E4F5EC', text: '#0F6E56' },
-  { bg: '#FEF3E2', text: '#B5620A' },
-  { bg: '#EBF3FC', text: '#4A90E2' },
-  { bg: '#F3EEFF', text: '#7C3AED' },
+  { bg: '#f2f2f2', text: '#111111' },
+  { bg: '#f2f2f2', text: '#111111' },
+  { bg: '#f2f2f2', text: '#555555' },
+  { bg: '#f2f2f2', text: '#757575' },
+  { bg: '#f2f2f2', text: '#444444' },
 ];
 
 function getAvatarPair(seed = '') {
@@ -95,17 +95,17 @@ function scoreBuyer(b) {
 
 // One actionable, plain-English read on the funnel — what a wholesaler should DO next.
 function buildInsight(viewers, saves, offers) {
-  if (offers > 0) return { cls: 'bg-[#E4F5EC] border-[#A8DFBA] text-[#0F6E56]', text: `You've received ${offers} offer${offers !== 1 ? 's' : ''} — follow up with your hot buyers below to push this to contract.` };
-  if (saves > 0) return { cls: 'bg-[#FEF3E2] border-[#F5D9A0] text-[#B5620A]', text: `${saves} buyer${saves !== 1 ? 's' : ''} saved this but no offers yet — reach out to the hot buyers below before they cool off.` };
-  if (viewers >= 10) return { cls: 'bg-[#FEF3E2] border-[#F5D9A0] text-[#B5620A]', text: `${viewers} buyers viewed but none saved or offered — your price may be too high, or the photos/description need strengthening.` };
-  if (viewers > 0) return { cls: 'bg-[#F0F0EC] border-[#E8E8E4] text-[#737370]', text: 'Getting some early views — keep sharing the listing to build momentum.' };
-  return { cls: 'bg-[#F0F0EC] border-[#E8E8E4] text-[#737370]', text: 'No views yet — share this listing to get it in front of buyers.' };
+  if (offers > 0) return { cls: 'bg-tint border-ink text-ink', text: `You've received ${offers} offer${offers !== 1 ? 's' : ''} — follow up with your hot buyers below to push this to contract.` };
+  if (saves > 0) return { cls: 'bg-tint border-ink text-ink', text: `${saves} buyer${saves !== 1 ? 's' : ''} saved this but no offers yet — reach out to the hot buyers below before they cool off.` };
+  if (viewers >= 10) return { cls: 'bg-tint border-line text-smoke-3', text: `${viewers} buyers viewed but none saved or offered — your price may be too high, or the photos/description need strengthening.` };
+  if (viewers > 0) return { cls: 'bg-tint-2 border-hairline text-muted', text: 'Getting some early views — keep sharing the listing to build momentum.' };
+  return { cls: 'bg-tint-2 border-hairline text-muted', text: 'No views yet — share this listing to get it in front of buyers.' };
 }
 
 const TEMP_STYLE = {
-  hot:  { label: 'Hot',  cls: 'bg-[#FEF0EF] text-[#D03839] border-[#F5C4C0]' },
-  warm: { label: 'Warm', cls: 'bg-[#FEF3E2] text-[#B5620A] border-[#F5D9A0]' },
-  cold: { label: 'Cold', cls: 'bg-[#F0F0EC] text-[#737370] border-[#E8E8E4]' },
+  hot:  { label: 'Hot',  cls: 'bg-ink text-white border-ink' },
+  warm: { label: 'Warm', cls: 'bg-muted text-white border-muted' },
+  cold: { label: 'Cold', cls: 'bg-mist text-white border-mist' },
 };
 
 function isRealBuyer(row) {
@@ -258,25 +258,24 @@ export default function PropertyAnalyticsSidebar({ propertyId, propertyName, onC
     <>
       {/* Backdrop */}
       <div
-        className={`fixed inset-0 z-40 bg-black/30 transition-opacity duration-300 ease-out ${mounted ? 'opacity-100' : 'opacity-0'}`}
+        className="fixed inset-0 z-40 bg-ink/40"
         onClick={onClose}
         aria-hidden="true"
       />
 
       {/* Sidebar */}
       <aside
-        className={`fixed top-0 right-0 bottom-0 w-[480px] min-w-[320px] max-w-full z-50 flex flex-col overflow-hidden bg-white transition-transform duration-300 ease-out ${mounted ? 'translate-x-0' : 'translate-x-full'}`}
-        style={{ boxShadow: '-12px 0 40px rgba(0,0,0,0.10)' }}
+        className="fixed top-0 right-0 bottom-0 w-[480px] min-w-[320px] max-w-full z-50 flex flex-col overflow-hidden bg-white border-l-[1.5px] border-ink"
         aria-label="Property analytics"
       >
         {/* ── Header ── */}
-        <div className="flex-shrink-0 bg-[#D03839] px-5 py-4">
+        <div className="flex-shrink-0 bg-ink px-5 py-4">
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-center gap-3 min-w-0">
               <div className="min-w-0">
-                <p className="text-[11px] font-semibold text-white/70 uppercase tracking-[1.1px] mb-0.5">Property Analytics</p>
+                <p className="font-mono text-[11px] font-semibold text-mist uppercase tracking-[0.14em] mb-0.5">Property Analytics</p>
                 {propertyName && (
-                  <h2 className="text-[15px] font-bold text-white leading-snug truncate" title={propertyName}>
+                  <h2 className="font-display text-[15px] font-bold tracking-[-0.01em] text-white leading-snug truncate" title={propertyName}>
                     {propertyName}
                   </h2>
                 )}
@@ -294,16 +293,16 @@ export default function PropertyAnalyticsSidebar({ propertyId, propertyName, onC
         </div>
 
         {/* ── Period filter tabs ── */}
-        <div className="flex-shrink-0 flex items-center gap-1.5 px-5 py-3 bg-white border-b border-[#E8E8E4]">
-          <span className="text-[11px] font-semibold text-[#A8A8A4] uppercase tracking-[1px] mr-1">Period:</span>
+        <div className="flex-shrink-0 flex items-center gap-1.5 px-5 py-3 bg-white border-b-[1.5px] border-ink">
+          <span className="font-mono text-[11px] font-semibold text-muted uppercase tracking-[0.12em] mr-1">Period:</span>
           {PERIOD_OPTIONS.map((opt) => (
             <button
               key={opt.value}
               onClick={() => setPeriod(opt.value)}
-              className={`h-7 px-3 rounded text-[12px] font-semibold transition-colors duration-200 ${
+              className={`h-7 px-3 rounded-pill font-mono text-[11px] font-semibold tracking-[0.06em] border-[1.5px] border-ink transition-colors duration-120 ${
                 period === opt.value
-                  ? 'bg-[#1A1816] text-white'
-                  : 'bg-[#FAFAF8] text-[#737370] hover:bg-[#F0F0EC] hover:text-[#1A1816] border border-[#E8E8E4]'
+                  ? 'bg-ink text-white'
+                  : 'bg-white text-ink hover:bg-tint'
               }`}
             >
               {opt.label}
@@ -312,20 +311,20 @@ export default function PropertyAnalyticsSidebar({ propertyId, propertyName, onC
         </div>
 
         {/* ── Scrollable body ── */}
-        <div className="flex-1 overflow-y-auto bg-[#FAFAF8]">
+        <div className="flex-1 overflow-y-auto bg-tint-3">
 
           {/* Loading */}
           {loading && (
             <div className="flex flex-col items-center justify-center py-24 gap-3">
-              <div className="w-8 h-8 border-2 border-[#E8E8E4] border-t-[#D03839] rounded-full animate-spin" />
-              <p className="text-[13px] font-medium text-[#737370]">Loading analytics…</p>
+              <div className="w-8 h-8 border-2 border-hairline border-t-ink rounded-full motion-safe:animate-spin" />
+              <p className="text-[13px] font-medium text-muted">Loading analytics…</p>
             </div>
           )}
 
           {/* Error */}
           {error && (
-            <div className="mx-5 mt-5 p-4 rounded bg-[#FEF0EF] border border-[#F5C4C0]" role="alert">
-              <p className="text-[13px] text-[#D03839] font-semibold">{error}</p>
+            <div className="mx-5 mt-5 p-4 rounded-[10px] bg-tint border-[1.5px] border-ink" role="alert">
+              <p className="text-[13px] text-ink font-semibold">{error}</p>
             </div>
           )}
 
@@ -334,51 +333,51 @@ export default function PropertyAnalyticsSidebar({ propertyId, propertyName, onC
 
               {/* ── Deal funnel: Views → Saves → Offers (reads as a pipeline) ── */}
               <div>
-                <p className="text-[11px] font-semibold text-[#A8A8A4] uppercase tracking-[0.8px] mb-2">Deal Funnel</p>
+                <p className="font-mono text-[11px] font-semibold text-muted uppercase tracking-[0.14em] mb-2">Deal Funnel</p>
                 <div className="flex items-stretch">
                   {/* Viewers (unique people) */}
-                  <div className="flex-1 bg-white border border-[#E8E8E4] rounded p-3.5 text-center">
+                  <div className="flex-1 bg-white border-[1.5px] border-ink rounded-[12px] p-3.5 text-center">
                     <div className="flex items-center justify-center gap-1.5 mb-1.5">
-                      <Eye className="w-3.5 h-3.5 text-[#737370]" />
-                      <p className="text-[10px] font-semibold text-[#A8A8A4] uppercase tracking-[0.5px]">Viewers</p>
+                      <Eye className="w-3.5 h-3.5 text-muted" />
+                      <p className="font-mono text-[10px] font-semibold text-muted uppercase tracking-[0.08em]">Viewers</p>
                     </div>
-                    <p className="text-[24px] font-bold text-[#1A1816] leading-none">{uniqueViewers}</p>
+                    <p className="font-display text-[24px] font-bold text-body leading-none">{uniqueViewers}</p>
                   </div>
                   {/* → */}
                   <div className="flex items-center justify-center px-1 shrink-0">
-                    <ChevronRight className="w-4 h-4 text-[#C9C9C4]" />
+                    <ChevronRight className="w-4 h-4 text-mist" />
                   </div>
                   {/* Saves */}
-                  <div className="flex-1 bg-white border border-[#E8E8E4] rounded p-3.5 text-center">
+                  <div className="flex-1 bg-white border-[1.5px] border-ink rounded-[12px] p-3.5 text-center">
                     <div className="flex items-center justify-center gap-1.5 mb-1.5">
-                      <Heart className="w-3.5 h-3.5 text-[#D03839]" />
-                      <p className="text-[10px] font-semibold text-[#A8A8A4] uppercase tracking-[0.5px]">Saves</p>
+                      <Heart className="w-3.5 h-3.5 text-ink" />
+                      <p className="font-mono text-[10px] font-semibold text-muted uppercase tracking-[0.08em]">Saves</p>
                     </div>
-                    <p className="text-[24px] font-bold text-[#1A1816] leading-none">{savesCount}</p>
+                    <p className="font-display text-[24px] font-bold text-body leading-none">{savesCount}</p>
                   </div>
                   {/* → */}
                   <div className="flex items-center justify-center px-1 shrink-0">
-                    <ChevronRight className="w-4 h-4 text-[#C9C9C4]" />
+                    <ChevronRight className="w-4 h-4 text-mist" />
                   </div>
                   {/* Offers */}
-                  <div className="flex-1 bg-white border border-[#E8E8E4] rounded p-3.5 text-center">
+                  <div className="flex-1 bg-white border-[1.5px] border-ink rounded-[12px] p-3.5 text-center">
                     <div className="flex items-center justify-center gap-1.5 mb-1.5">
-                      <FileText className="w-3.5 h-3.5 text-[#0F6E56]" />
-                      <p className="text-[10px] font-semibold text-[#A8A8A4] uppercase tracking-[0.5px]">Offers</p>
+                      <FileText className="w-3.5 h-3.5 text-ink" />
+                      <p className="font-mono text-[10px] font-semibold text-muted uppercase tracking-[0.08em]">Offers</p>
                     </div>
-                    <p className="text-[24px] font-bold text-[#1A1816] leading-none">{offersCount}</p>
+                    <p className="font-display text-[24px] font-bold text-body leading-none">{offersCount}</p>
                   </div>
                 </div>
                 {/* Conversion micro-line */}
                 {uniqueViewers > 0 && (
-                  <p className="text-[11px] text-[#A8A8A4] mt-2">
+                  <p className="font-mono text-[11px] text-mist mt-2">
                     {savesCount > 0 ? `${Math.min(100, Math.round((savesCount / uniqueViewers) * 100))}% of viewers saved this deal` : 'No saves yet from these viewers'}
                     {totalViews > uniqueViewers ? ` · ${totalViews} total views` : ''}
                   </p>
                 )}
 
                 {/* Action insight — the "so what / do this next" line */}
-                <div className={`mt-3 flex items-start gap-2 rounded border px-3 py-2.5 ${insight.cls}`}>
+                <div className={`mt-3 flex items-start gap-2 rounded-[10px] border-[1.5px] px-3 py-2.5 ${insight.cls}`}>
                   <Lightbulb className="w-4 h-4 flex-shrink-0 mt-0.5" />
                   <p className="text-[12px] font-medium leading-snug">{insight.text}</p>
                 </div>
@@ -389,9 +388,9 @@ export default function PropertyAnalyticsSidebar({ propertyId, propertyName, onC
                 {/* Section header */}
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
-                    <span className="w-1 h-4 rounded-full bg-[#D03839] flex-shrink-0" />
-                    <h3 className="text-[13px] font-bold text-[#1A1816]">Interested Buyers</h3>
-                    <span className="text-[11px] font-semibold text-[#737370] bg-[#F0F0EC] px-2 py-0.5 rounded-full">
+                    <span className="w-1 h-4 rounded-pill bg-ink flex-shrink-0" />
+                    <h3 className="font-display text-[13px] font-bold text-body">Interested Buyers</h3>
+                    <span className="font-mono text-[11px] font-semibold text-ink bg-tint px-2 py-0.5 rounded-pill">
                       {scoredBuyers.length}
                     </span>
                   </div>
@@ -402,16 +401,16 @@ export default function PropertyAnalyticsSidebar({ propertyId, propertyName, onC
                       <button
                         onClick={exportBuyersCSV}
                         title="Export buyers as CSV"
-                        className="flex items-center gap-1 h-7 px-2 bg-white border border-[#E8E8E4] rounded text-[12px] font-semibold text-[#1A1816] hover:border-[#1A1816] transition-colors"
+                        className="flex items-center gap-1 h-7 px-2 bg-white border-[1.5px] border-ink rounded-[8px] font-mono text-[11px] font-semibold text-ink hover:bg-tint transition-colors duration-120"
                       >
-                        <Download className="w-3 h-3 text-[#737370]" /> CSV
+                        <Download className="w-3 h-3 text-muted" /> CSV
                       </button>
                       <button
                         onClick={exportBuyersPDF}
                         title="Export buyers as PDF"
-                        className="flex items-center gap-1 h-7 px-2 bg-white border border-[#E8E8E4] rounded text-[12px] font-semibold text-[#1A1816] hover:border-[#1A1816] transition-colors"
+                        className="flex items-center gap-1 h-7 px-2 bg-white border-[1.5px] border-ink rounded-[8px] font-mono text-[11px] font-semibold text-ink hover:bg-tint transition-colors duration-120"
                       >
-                        <Download className="w-3 h-3 text-[#737370]" /> PDF
+                        <Download className="w-3 h-3 text-muted" /> PDF
                       </button>
                     </>
                   )}
@@ -419,19 +418,19 @@ export default function PropertyAnalyticsSidebar({ propertyId, propertyName, onC
                   <div className="relative">
                     <button
                       onClick={() => setSortOpen(v => !v)}
-                      className="flex items-center gap-1.5 h-7 px-2.5 bg-white border border-[#E8E8E4] rounded text-[12px] font-semibold text-[#1A1816] hover:border-[#1A1816] transition-colors"
+                      className="flex items-center gap-1.5 h-7 px-2.5 bg-white border-[1.5px] border-ink rounded-[8px] text-[12px] font-semibold text-ink hover:bg-tint transition-colors duration-120"
                     >
                       {sortLabel}
-                      <ChevronDown className={`w-3 h-3 text-[#737370] transition-transform duration-200 ${sortOpen ? 'rotate-180' : ''}`} />
+                      <ChevronDown className={`w-3 h-3 text-muted transition-transform duration-120 ${sortOpen ? 'rotate-180' : ''}`} />
                     </button>
                     {sortOpen && (
-                      <div className="absolute top-full right-0 mt-1.5 bg-white border border-[#E8E8E4] rounded shadow-lg z-10 w-36 overflow-hidden">
+                      <div className="absolute top-full right-0 mt-1.5 bg-white border-[1.5px] border-ink rounded-[10px] shadow-offset-3 z-10 w-36 overflow-hidden">
                         {SORT_OPTIONS.map((opt) => (
                           <button
                             key={opt.value}
                             onClick={() => { setSortBy(opt.value); setSortOpen(false); }}
-                            className={`w-full text-left px-3 py-2 text-[12px] transition-colors hover:bg-[#FAFAF8] ${
-                              sortBy === opt.value ? 'font-bold text-[#1A1816]' : 'text-[#444441]'
+                            className={`w-full text-left px-3 py-2 text-[12px] transition-colors duration-120 hover:bg-tint ${
+                              sortBy === opt.value ? 'font-bold text-ink' : 'text-smoke-2'
                             }`}
                           >
                             {opt.label}
@@ -445,12 +444,12 @@ export default function PropertyAnalyticsSidebar({ propertyId, propertyName, onC
 
                 {/* Empty state */}
                 {scoredBuyers.length === 0 ? (
-                  <div className="rounded border border-dashed border-[#E8E8E4] bg-white py-12 text-center">
-                    <div className="w-10 h-10 rounded-full bg-[#F0F0EC] flex items-center justify-center mx-auto mb-3">
-                      <Eye className="w-5 h-5 text-[#A8A8A4]" />
+                  <div className="rounded-[12px] border-[1.5px] border-dashed border-line bg-white py-12 text-center">
+                    <div className="w-10 h-10 rounded-pill bg-tint flex items-center justify-center mx-auto mb-3">
+                      <Eye className="w-5 h-5 text-mist" />
                     </div>
-                    <p className="text-[14px] font-semibold text-[#1A1816] mb-1">No activity yet</p>
-                    <p className="text-[12px] text-[#737370] max-w-[200px] mx-auto">
+                    <p className="text-[14px] font-semibold text-body mb-1">No activity yet</p>
+                    <p className="text-[12px] text-muted max-w-[200px] mx-auto">
                       When identified buyers view this listing, they'll appear here.
                     </p>
                   </div>
@@ -484,7 +483,7 @@ export default function PropertyAnalyticsSidebar({ propertyId, propertyName, onC
                       return (
                         <div
                           key={(row.user_email || 'guest') + (row.view_start_time || '') + idx}
-                          className="bg-white border border-[#E8E8E4] rounded p-3.5 hover:border-[#D03839]/30 transition-colors duration-200"
+                          className="bg-white border-[1.5px] border-ink rounded-[12px] p-3.5 hover:bg-tint-3 transition-colors duration-120"
                         >
                           <div className="flex gap-3">
                             {/* Avatar */}
@@ -495,43 +494,43 @@ export default function PropertyAnalyticsSidebar({ propertyId, propertyName, onC
                             <div className="min-w-0 flex-1">
                               {/* Name + lead temp + repeat + source row */}
                               <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mb-1.5">
-                                <p className="text-[13px] font-bold text-[#1A1816] leading-none capitalize">
+                                <p className="text-[13px] font-bold text-body leading-none capitalize">
                                   {name}
                                 </p>
                                 {row.offered && (
-                                  <span className="inline-flex items-center gap-1 h-5 px-2 rounded-full bg-[#E4F5EC] text-[#0F6E56] text-[10px] font-semibold border border-[#A8DFBA]">
+                                  <span className="inline-flex items-center gap-1 h-5 px-2 rounded-pill bg-ink text-white font-mono text-[10px] font-semibold uppercase tracking-[0.05em] border border-ink">
                                     <FileText className="w-2.5 h-2.5" /> Offered
                                   </span>
                                 )}
                                 {row.saved && !row.offered && (
-                                  <span className="inline-flex items-center gap-1 h-5 px-2 rounded-full bg-[#FEF0EF] text-[#D03839] text-[10px] font-semibold border border-[#F5C4C0]">
+                                  <span className="inline-flex items-center gap-1 h-5 px-2 rounded-pill bg-tint text-ink font-mono text-[10px] font-semibold uppercase tracking-[0.05em] border border-ink">
                                     <Heart className="w-2.5 h-2.5" /> Saved
                                   </span>
                                 )}
                                 {(row._eng?.temp === 'hot' || row._eng?.temp === 'warm') && (() => {
                                   const t = TEMP_STYLE[row._eng.temp];
                                   return (
-                                    <span className={`inline-flex items-center gap-1 h-5 px-2 rounded-full text-[10px] font-semibold border ${t.cls}`}>
+                                    <span className={`inline-flex items-center gap-1 h-5 px-2 rounded-pill font-mono text-[10px] font-semibold uppercase tracking-[0.05em] border ${t.cls}`}>
                                       {row._eng.temp === 'hot' && <Flame className="w-2.5 h-2.5" />}
                                       {t.label}
                                     </span>
                                   );
                                 })()}
                                 {(row.visit_count || 1) > 1 && (
-                                  <span className="inline-flex items-center gap-1 h-5 px-2 rounded-full bg-[#F0F0EC] text-[#444441] text-[10px] font-semibold border border-[#E8E8E4]">
+                                  <span className="inline-flex items-center gap-1 h-5 px-2 rounded-pill bg-tint text-smoke-2 font-mono text-[10px] font-semibold border border-line">
                                     <RefreshCw className="w-2.5 h-2.5" />
                                     {row.visit_count}× visits
                                   </span>
                                 )}
                                 {row.utm_source && (
-                                  <span className="inline-flex items-center h-5 px-2 rounded-full bg-[#FEF0EF] text-[#D03839] text-[10px] font-semibold capitalize border border-[#F5C4C0]">
+                                  <span className="inline-flex items-center h-5 px-2 rounded-pill bg-tint text-ink font-mono text-[10px] font-semibold capitalize border border-line">
                                     {row.utm_source}
                                   </span>
                                 )}
                               </div>
 
                               {/* Stats row */}
-                              <div className="flex items-center gap-3 text-[12px] text-[#737370] mb-1.5">
+                              <div className="flex items-center gap-3 font-mono text-[11px] text-muted mb-1.5">
                                 <span className="flex items-center gap-1">
                                   <Eye className="w-3 h-3" />
                                   {views} view{views !== 1 ? 's' : ''}
@@ -556,7 +555,7 @@ export default function PropertyAnalyticsSidebar({ propertyId, propertyName, onC
                                   {engagementTags.map((t) => (
                                     <span
                                       key={t}
-                                      className="inline-flex items-center h-5 px-2 rounded-full bg-[#E4F5EC] text-[#0F6E56] text-[10px] font-semibold"
+                                      className="inline-flex items-center h-5 px-2 rounded-pill bg-tint text-ink font-mono text-[10px] font-semibold"
                                     >
                                       {t}
                                     </span>
@@ -566,7 +565,7 @@ export default function PropertyAnalyticsSidebar({ propertyId, propertyName, onC
 
                               {/* Last seen */}
                               {lastSeen && (
-                                <p className="text-[11px] text-[#A8A8A4]">
+                                <p className="font-mono text-[10.5px] text-mist">
                                   Last seen: {lastSeen}
                                 </p>
                               )}
@@ -575,7 +574,7 @@ export default function PropertyAnalyticsSidebar({ propertyId, propertyName, onC
                               {isEnterprise && row.user_id && (
                                 <button
                                   onClick={() => messageBuyer(row)}
-                                  className="mt-2 inline-flex items-center gap-1.5 h-7 px-3 rounded bg-[#1A1816] hover:bg-black text-white text-[11px] font-semibold transition-colors"
+                                  className="mt-2 inline-flex items-center gap-1.5 h-7 px-3 rounded-[8px] bg-ink hover:bg-smoke-2 text-white border border-ink text-[11px] font-semibold transition-colors duration-120"
                                 >
                                   <MessageSquare className="w-3 h-3" /> Message buyer
                                 </button>
@@ -589,7 +588,7 @@ export default function PropertyAnalyticsSidebar({ propertyId, propertyName, onC
                       <button
                         type="button"
                         onClick={() => setVisibleViewers(v => v + VIEWER_PAGE)}
-                        className="w-full flex items-center justify-center gap-1 py-2.5 text-[12px] font-semibold text-[#D03839] hover:text-[#E0493B] transition-colors"
+                        className="w-full flex items-center justify-center gap-1 py-2.5 font-mono text-[11px] font-semibold uppercase tracking-[0.05em] text-ink hover:text-smoke-2 transition-colors duration-120"
                       >
                         Show {Math.min(VIEWER_PAGE, scoredBuyers.length - visibleViewers)} more
                         <ChevronDown className="w-3.5 h-3.5" />
