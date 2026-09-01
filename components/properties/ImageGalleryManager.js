@@ -15,6 +15,32 @@ const isPhoto = f => ALLOWED_PHOTO_TYPES.includes(f.type) || checkHeic(f)
 const isReadableImageType = f => /^image\/(jpe?g|png|webp|gif)$/i.test(f.type)
 const needsHeicConvert = f => f.type === 'image/heic' || f.type === 'image/heif' || (/\.(heic|heif)$/i.test(f.name) && !isReadableImageType(f))
 
+// Server-side HEIC→JPEG fallback (heic-convert via /api/convert-heic) for the HEIC
+// variants the browser's heic2any can't decode. Returns a JPEG File, or throws.
+async function serverConvertHeic(file) {
+  const fd = new FormData()
+  fd.append('file', file, file.name || 'image.heic')
+  const res = await fetch('/api/convert-heic', { method: 'POST', body: fd })
+  if (!res.ok) throw new Error(`server HEIC convert failed (${res.status})`)
+  const blob = await res.blob()
+  if (!blob?.size) throw new Error('server HEIC convert returned empty')
+  return new File([blob], (file.name || 'image').replace(/\.(heic|heif)$/i, '') + '.jpg', { type: 'image/jpeg' })
+}
+// Sniff the first bytes for a browser-viewable image format → returns its MIME, else null.
+// Used as a last resort so a readable JPEG/PNG that merely carries a .heic name (some
+// browsers pre-transcode) still uploads, while genuinely-HEIC bytes are rejected.
+async function sniffViewable(file) {
+  try {
+    const b = new Uint8Array(await file.slice(0, 4).arrayBuffer())
+    const hex = [...b].map(x => x.toString(16).padStart(2, '0')).join('')
+    if (hex.startsWith('ffd8ff')) return 'image/jpeg'
+    if (hex.startsWith('89504e47')) return 'image/png'
+    if (hex.startsWith('52494646')) return 'image/webp'
+    if (hex.startsWith('47494638')) return 'image/gif'
+  } catch { /* ignore */ }
+  return null
+}
+
 export default function ImageGalleryManager({ images = [], onImagesChange, sellerId, storageBucket = 'sellerpropertyimages', uploadPathPrefix = null }) {
   const [localImages, setLocalImages] = useState(images);
   const [dragActive, setDragActive] = useState(false);
@@ -88,15 +114,32 @@ export default function ImageGalleryManager({ images = [], onImagesChange, selle
       const renameToJpg = () => new File([image.file], image.file.name.replace(/\.(heic|heif)$/i, '.jpg'), { type: image.file.type || 'image/jpeg' })
 
       if (typeIsHeic || (nameIsHeic && !typeIsReadable)) {
+        // Tier 1 — convert in the browser (fast, no upload round-trip).
         try {
           const heic2any = (await import('heic2any')).default
           const converted = await heic2any({ blob: image.file, toType: 'image/jpeg', quality: 0.85 })
           const jpegBlob = Array.isArray(converted) ? converted[0] : converted
           uploadFile = new File([jpegBlob], image.file.name.replace(/\.(heic|heif)$/i, '.jpg'), { type: 'image/jpeg' })
         } catch (err) {
-          // Already browser-readable (or conversion unavailable) — upload the original bytes.
-          console.warn('HEIC conversion skipped, using original file:', err?.message || err)
-          uploadFile = nameIsHeic ? renameToJpg() : image.file
+          // Tier 2 — heic2any couldn't decode it (common when the browser reports an
+          // empty MIME type for .heic, e.g. Windows Chrome). Try the server converter
+          // (heic-convert), which handles variants heic2any chokes on. We must NEVER
+          // fall back to uploading the raw HEIC bytes — that produced "completed" but
+          // unrenderable (broken) tiles.
+          console.warn('heic2any failed, trying server convert:', err?.message || err)
+          try {
+            uploadFile = await serverConvertHeic(image.file)
+          } catch (err2) {
+            // Neither converter could read it. If the bytes are actually a browser-
+            // viewable image that merely carries a .heic name, upload with the real type;
+            // otherwise surface an error instead of storing bytes the browser can't show.
+            const viewable = await sniffViewable(image.file)
+            if (viewable) {
+              uploadFile = new File([image.file], image.file.name.replace(/\.(heic|heif)$/i, '.jpg'), { type: viewable })
+            } else {
+              throw new Error('Could not convert this HEIC photo — please re-save it as JPEG and upload again.')
+            }
+          }
         }
       } else if (nameIsHeic && typeIsReadable) {
         // Browser already gave us a readable JPEG that just carries a .HEIC name.
@@ -423,7 +466,7 @@ export default function ImageGalleryManager({ images = [], onImagesChange, selle
                   />
                   <div className="text-center p-4 relative z-10">
                     <X className="w-8 h-8 text-red-500 mx-auto mb-2" />
-                    <p className="text-xs text-red-600 mb-2">Upload failed</p>
+                    <p className="text-xs text-red-600 mb-2 px-1">{image.error || 'Upload failed'}</p>
                     <button
                       onClick={() => handleRetry(image.id)}
                       className="px-3 py-1.5 bg-[#D03839] hover:bg-[#E0493B] text-white text-xs rounded transition-colors"
